@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BSK F2014 – Spelarutveckling
 
-## Getting Started
+Webbapp för tränare och föräldrar i BSK F2014 (Bollstanäs SK). Byggd enligt SvFF:s
+riktlinjer för barn- och ungdomsfotboll, med fokus på utveckling i stället för resultat.
 
-First, run the development server:
+## Funktioner
+
+- **Tränarutvärderingar** enligt SvFF:s spelarutbildningsplan (16 färdigheter i 5 områden,
+  fyra utvecklingsnivåer – inga betyg eller rankningar)
+- **Utveckling över tid** – radar- och linjediagram per spelare, jämförelse med föregående utvärdering
+- **Matchstatistik** – speltid, mål och assist per spelare; föräldrar kan hjälpa till att registrera
+- **Jämn speltid** – automatisk varning när spelare ligger under 75 % av lagets snitt (SvFF: alla spelar lika mycket)
+- **Roller** – tränarkod ger full åtkomst, föräldrakod ger enbart åtkomst till matchdelen
+- **White label** – klubbnamn, lagnamn, färger och koder byts under Inställningar, så appen
+  kan säljas in till andra klubbar och lag
+
+## Kom igång
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Standardkoder (byt under Inställningar):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Roll | Kod |
+| --- | --- |
+| Tränare | `TRANARE2014` |
+| Förälder | `BSK2014` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Truppen innehåller exempelspelare vid första start – byt namn eller ta bort dem under **Spelare**.
 
-## Learn More
+## Teknik
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- SQLite via better-sqlite3 – databasen ligger i `data/bsk.db` (skapas automatiskt, ingår inte i git)
+- Recharts för diagram
+- Sessioner via signerad HTTP-only-cookie (`data/session-secret` genereras automatiskt)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Produktion
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+npm start
+```
 
-## Deploy on Vercel
+Lägg `data/`-katalogen på beständig lagring vid driftsättning (t.ex. på VPS:en).
+Säkerhetskopiera `data/bsk.db` regelbundet – den innehåller all lagdata.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Integritet
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Appen lagrar barns namn och utvecklingsdata. Tänk på att:
+
+- Bara dela tränarkoden med tränarteamet
+- Byta koderna om de sprids
+- Köra appen bakom HTTPS i produktion
+- Inhämta vårdnadshavares samtycke enligt GDPR innan spelare läggs in
