@@ -1,30 +1,41 @@
 // Databaslager: Turso (libSQL) i produktion, lokal SQLite-fil vid utveckling.
 // Sätt TURSO_DATABASE_URL + TURSO_AUTH_TOKEN i miljön (Vercel) – utan dem
 // används data/bsk.db lokalt med samma API.
+//
+// I produktion används @libsql/client/web (ren JavaScript, inga binärer) som
+// fungerar på Vercels serverless-miljö. Lokalt används node-klienten för
+// att kunna läsa en fil (file:).
 
-import { createClient, type Client, type InArgs, type ResultSet } from "@libsql/client";
-import path from "path";
-import fs from "fs";
+import type { Client, InArgs, ResultSet } from "@libsql/client";
 
-function makeClient(): Client {
+let clientPromise: Promise<Client> | null = null;
+
+async function makeClient(): Promise<Client> {
   const url = process.env.TURSO_DATABASE_URL;
   if (url) {
+    const { createClient } = await import("@libsql/client/web");
     return createClient({
       url,
       authToken: process.env.TURSO_AUTH_TOKEN,
       intMode: "number",
     });
   }
+  const path = await import("path");
+  const fs = await import("fs");
   const dataDir = path.join(process.cwd(), "data");
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  const { createClient } = await import("@libsql/client");
   return createClient({ url: `file:${path.join(dataDir, "bsk.db")}`, intMode: "number" });
 }
 
-const client = makeClient();
+function getClient(): Promise<Client> {
+  if (!clientPromise) clientPromise = makeClient();
+  return clientPromise;
+}
 
 async function tryExec(sql: string) {
   try {
-    await client.execute(sql);
+    await (await getClient()).execute(sql);
   } catch (e) {
     // "duplicate column name" m.m. vid återkörda migrationer är förväntat
     const msg = e instanceof Error ? e.message : String(e);
@@ -92,7 +103,7 @@ async function init(): Promise<void> {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id)`,
   ];
-  for (const sql of tables) await client.execute(sql);
+  for (const sql of tables) await (await getClient()).execute(sql);
 
   // Migrationer – körs om utan att fela på redan gjorda ändringar
   const migrations = [
@@ -120,7 +131,7 @@ async function init(): Promise<void> {
   );
 
   // Seed – inställningar
-  const settingsCount = await client.execute("SELECT COUNT(*) AS c FROM settings");
+  const settingsCount = await (await getClient()).execute("SELECT COUNT(*) AS c FROM settings");
   if (Number(settingsCount.rows[0].c) === 0) {
     const defaults: [string, string][] = [
       ["club_name", "Bollstanäs SK"],
@@ -133,15 +144,15 @@ async function init(): Promise<void> {
       ["season", "2026"],
     ];
     for (const [k, v] of defaults) {
-      await client.execute({ sql: "INSERT INTO settings (key, value) VALUES (?, ?)", args: [k, v] });
+      await (await getClient()).execute({ sql: "INSERT INTO settings (key, value) VALUES (?, ?)", args: [k, v] });
     }
   }
-  await client.execute(
+  await (await getClient()).execute(
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')"
   );
 
   // Seed – exempelspelare
-  const playerCount = await client.execute("SELECT COUNT(*) AS c FROM players");
+  const playerCount = await (await getClient()).execute("SELECT COUNT(*) AS c FROM players");
   if (Number(playerCount.rows[0].c) === 0) {
     const demo = [
       "Exempel: Alva", "Exempel: Ebba", "Exempel: Elsa", "Exempel: Freja",
@@ -149,7 +160,7 @@ async function init(): Promise<void> {
       "Exempel: Stella", "Exempel: Vera",
     ];
     for (let i = 0; i < demo.length; i++) {
-      await client.execute({
+      await (await getClient()).execute({
         sql: "INSERT INTO players (name, jersey_number) VALUES (?, ?)",
         args: [demo[i], i + 2],
       });
@@ -157,9 +168,9 @@ async function init(): Promise<void> {
   }
 
   // Backfyll matchkoder
-  const withoutCode = await client.execute("SELECT id FROM matches WHERE code IS NULL");
+  const withoutCode = await (await getClient()).execute("SELECT id FROM matches WHERE code IS NULL");
   for (const row of withoutCode.rows) {
-    await client.execute({
+    await (await getClient()).execute({
       sql: "UPDATE matches SET code = ? WHERE id = ?",
       args: [await generateMatchCodeRaw(), row.id as number],
     });
@@ -180,7 +191,7 @@ function rowToObject<T>(columns: string[], row: Record<string, unknown>): T {
 
 export async function all<T>(sql: string, args: InArgs = []): Promise<T[]> {
   await ready();
-  const res = await client.execute({ sql, args });
+  const res = await (await getClient()).execute({ sql, args });
   return res.rows.map((r) => rowToObject<T>(res.columns, r as unknown as Record<string, unknown>));
 }
 
@@ -191,14 +202,14 @@ export async function get<T>(sql: string, args: InArgs = []): Promise<T | undefi
 
 export async function run(sql: string, args: InArgs = []): Promise<ResultSet> {
   await ready();
-  return client.execute({ sql, args });
+  return (await getClient()).execute({ sql, args });
 }
 
 // Flera skrivningar i en transaktion
 export async function batch(statements: { sql: string; args?: InArgs }[]): Promise<void> {
   await ready();
   if (statements.length === 0) return;
-  await client.batch(
+  await (await getClient()).batch(
     statements.map((s) => ({ sql: s.sql, args: s.args ?? [] })),
     "write"
   );
@@ -228,7 +239,7 @@ export async function getAllSettings(): Promise<Record<string, string>> {
 async function generateMatchCodeRaw(): Promise<string> {
   for (let i = 0; i < 50; i++) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    const exists = await client.execute({
+    const exists = await (await getClient()).execute({
       sql: "SELECT 1 FROM matches WHERE code = ?",
       args: [code],
     });
