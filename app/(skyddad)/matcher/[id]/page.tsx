@@ -5,7 +5,7 @@ import { getMatch, getMatchPlayers, getPlayers, getMatchEvents } from "@/lib/que
 import { deleteMatch, regenerateMatchCode } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import MatchForm from "@/components/MatchForm";
-import EventTimeline from "@/components/EventTimeline";
+import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import { IconArrowLeft } from "@/components/Icons";
 
@@ -98,7 +98,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
 
-          <EventTimeline events={events} />
+          {events.length > 0 && (
+            <div className="card p-6">
+              <h2 className="font-semibold">Matchflöde</h2>
+              <p className="text-xs mt-1 mb-5" style={{ color: "var(--ink-faint)" }}>
+                Live-rapporterade händelser – tiderna gör det lätt att hitta rätt i matchvideon.
+              </p>
+              <LiveFeed events={events} opponent={match.opponent} />
+            </div>
+          )}
 
           <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
         </>
@@ -150,7 +158,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          <EventTimeline events={events} />
+          {events.length > 0 && (
+            <div className="card p-6">
+              <h2 className="font-semibold">Matchflöde</h2>
+              <p className="text-xs mt-1 mb-5" style={{ color: "var(--ink-faint)" }}>
+                Live-rapporterade händelser med matchtid.
+              </p>
+              <LiveFeed events={events} opponent={match.opponent} />
+            </div>
+          )}
 
           <div className="card p-5 text-sm" style={{ color: "var(--ink-soft)" }}>
             Ska du rapportera den här matchen? Be tränaren om matchkoden och ange den på{" "}

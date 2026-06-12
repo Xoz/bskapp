@@ -11,6 +11,7 @@ import {
   formatEventTime,
 } from "@/lib/liveTypes";
 import Avatar from "@/components/Avatar";
+import LiveFeed from "@/components/LiveFeed";
 
 const STAT_LABEL: Record<string, string> = Object.fromEntries(
   STAT_FIELDS.map((f) => [f.id, f.label])
@@ -32,7 +33,6 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
   const [selected, setSelected] = useState<string[] | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [activeStat, setActiveStat] = useState<string>("");
-  const [eventsOpen, setEventsOpen] = useState(false);
   const [flash, setFlash] = useState<number | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -301,16 +301,16 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                   key={p.id}
                   type="button"
                   onClick={() => tap(p.id)}
-                  className="card card-hover relative flex items-center gap-3 p-3.5 text-left active:scale-[0.97] transition-transform"
+                  className="card card-hover relative flex items-center gap-2 p-2.5 text-left active:scale-[0.97] transition-transform"
                   style={
                     flash === p.id
                       ? { borderColor: "var(--primary)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--primary), transparent 75%)" }
                       : undefined
                   }
                 >
-                  <Avatar name={p.name} size={38} />
+                  <Avatar name={p.name} size={32} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-[0.95rem]" style={{ fontFamily: "var(--font-display)" }}>
+                    <span className="block truncate font-semibold text-[0.85rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                       {firstName(p.name)}
                     </span>
                     <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
@@ -318,7 +318,7 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                     </span>
                   </span>
                   <span
-                    className="stat-number text-xl min-w-9 h-9 px-1.5 rounded-xl flex items-center justify-center"
+                    className="stat-number text-base min-w-8 h-8 px-1 rounded-lg flex items-center justify-center"
                     style={{
                       background: (isPlayedTab ? playedOn : count > 0)
                         ? "var(--primary)"
@@ -333,38 +333,14 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
             })}
           </div>
 
-          {/* Händelselogg */}
-          <div className="px-4 pt-5">
-            <button
-              type="button"
-              onClick={() => setEventsOpen((o) => !o)}
-              className="text-sm font-semibold"
-              style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
-            >
-              {eventsOpen ? "Dölj händelser" : `Visa händelser (${live.events.length})`}
-            </button>
-            {eventsOpen && (
-              <ul className="mt-3 card divide-y" style={{ borderColor: "var(--line)" }}>
-                {live.events.length === 0 && (
-                  <li className="px-4 py-3 text-sm" style={{ color: "var(--ink-faint)" }}>
-                    Inga händelser ännu.
-                  </li>
-                )}
-                {live.events.map((e) => (
-                  <li key={e.id} className="px-4 py-2.5 flex items-center gap-3 text-sm" style={{ borderColor: "var(--line)" }}>
-                    <span className="stat-number text-xs w-16" style={{ color: "var(--ink-faint)" }}>
-                      {formatEventTime(e.period, e.match_second)}
-                    </span>
-                    <span className="flex-1 truncate">
-                      {e.player_name ? firstName(e.player_name) : "Motståndaren"}
-                    </span>
-                    <span className="font-medium" style={{ color: "var(--ink-soft)" }}>
-                      {STAT_LABEL[e.stat_id] ?? e.stat_id}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+          {/* Live score-flöde */}
+          <div className="px-4 pt-6">
+            <p className="eyebrow mb-3 text-center">Matchhändelser</p>
+            <LiveFeed
+              events={[...live.events].reverse()}
+              opponent={live.opponent}
+              emptyText="Flödet fylls på när ni börjar räkna – mål visas med ställning."
+            />
           </div>
         </>
       )}

@@ -149,6 +149,13 @@ export const IconShield = (p: SVGProps<SVGSVGElement>) => (
   </Base>
 );
 
+export const IconGlove = (p: SVGProps<SVGSVGElement>) => (
+  <Base {...p}>
+    <path d="M7.5 11V5.8a1.4 1.4 0 0 1 2.8 0V10M10.3 9.5V4.6a1.4 1.4 0 0 1 2.8 0V10M13.1 9.7V5.4a1.4 1.4 0 0 1 2.8 0V11" />
+    <path d="M15.9 11.2l1.6-2.2a1.35 1.35 0 0 1 2.2 1.6l-3.2 4.9V19a2 2 0 0 1-2 2H10a2 2 0 0 1-1.7-.9L5 15.4a1.4 1.4 0 0 1 2.3-1.6l.2.3V11" />
+  </Base>
+);
+
 export const IconHeart = (p: SVGProps<SVGSVGElement>) => (
   <Base {...p}>
     <path d="M12 20.5C6.5 16.7 3.5 13.6 3.5 9.9 3.5 7.2 5.6 5 8.2 5c1.6 0 3 .8 3.8 2 .8-1.2 2.2-2 3.8-2 2.6 0 4.7 2.2 4.7 4.9 0 3.7-3 6.8-8.5 10.6Z" />
