@@ -10,7 +10,7 @@ export default async function LoginPage() {
   if (role === "coach") redirect("/");
   if (role === "parent") redirect("/matcher");
 
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
 
   return (
     <main

@@ -14,7 +14,7 @@ export default async function SettingsPage({
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
   const { sparad, kalender } = await searchParams;
 
   return (

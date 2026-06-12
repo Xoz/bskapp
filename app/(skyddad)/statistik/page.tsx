@@ -12,8 +12,8 @@ export default async function StatsPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const stats = getSeasonStats();
-  const matches = getMatches();
+  const stats = await getSeasonStats();
+  const matches = await getMatches();
 
   const playing = stats.filter((s) => s.matches_played > 0);
   const average =

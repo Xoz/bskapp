@@ -34,15 +34,21 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   if (role !== "coach") redirect("/matcher");
 
   const { id } = await params;
-  const player = getPlayer(Number(id));
+  const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const evaluations = getEvaluations(player.id);
-  const development = getPlayerDevelopment(player.id);
+  const evaluations = await getEvaluations(player.id);
+  const development = await getPlayerDevelopment(player.id);
   const latest = evaluations[0];
   const previous = evaluations[1];
-  const latestScores = latest ? getScores(latest.id) : null;
-  const previousScores = previous ? getScores(previous.id) : null;
+  const latestScores = latest ? await getScores(latest.id) : null;
+  const previousScores = previous ? await getScores(previous.id) : null;
+  // Förhämta alla utvärderingars nivåer för historiklistan
+  const scoresByEval = new Map(
+    await Promise.all(
+      evaluations.map(async (ev) => [ev.id, await getScores(ev.id)] as const)
+    )
+  );
 
   return (
     <div className="space-y-6">
@@ -156,7 +162,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <h2 className="font-semibold mb-5">Alla utvärderingar</h2>
           <div className="space-y-7">
             {evaluations.map((ev) => {
-              const scores = getScores(ev.id);
+              const scores = scoresByEval.get(ev.id) ?? {};
               return (
                 <div
                   key={ev.id}

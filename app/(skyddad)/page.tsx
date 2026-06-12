@@ -28,12 +28,12 @@ export default async function Dashboard() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const settings = getAllSettings();
-  const players = getPlayers();
-  const matches = getMatches();
-  const stats = getSeasonStats();
-  const latestEvals = getLatestEvaluationDates();
-  const totalEvals = countEvaluations();
+  const settings = await getAllSettings();
+  const players = await getPlayers();
+  const matches = await getMatches();
+  const stats = await getSeasonStats();
+  const latestEvals = await getLatestEvaluationDates();
+  const totalEvals = await countEvaluations();
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);

@@ -17,19 +17,19 @@ const mono = DM_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
   return {
     title: `${settings.team_name} – Spelarutveckling`,
     description: `Spelarutveckling och matchstatistik för ${settings.team_name}, ${settings.club_name}`,
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
   return (
     <html lang="sv" className={`${display.variable} ${mono.variable} h-full antialiased`}>
       <body

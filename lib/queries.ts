@@ -1,4 +1,4 @@
-import db from "./db";
+import { all, get } from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
 import { STAT_IDS } from "./stats";
 
@@ -44,37 +44,39 @@ export interface MatchPlayerRow {
   saves: number;
 }
 
-export function getPlayers(): Player[] {
-  return db
-    .prepare("SELECT * FROM players WHERE active = 1 ORDER BY name COLLATE NOCASE")
-    .all() as Player[];
+export async function getPlayers(): Promise<Player[]> {
+  return all<Player>("SELECT * FROM players WHERE active = 1 ORDER BY name COLLATE NOCASE");
 }
 
-export function getPlayer(id: number): Player | undefined {
-  return db.prepare("SELECT * FROM players WHERE id = ?").get(id) as Player | undefined;
+export async function getPlayer(id: number): Promise<Player | undefined> {
+  return get<Player>("SELECT * FROM players WHERE id = ?", [id]);
 }
 
-export function getEvaluations(playerId: number): Evaluation[] {
-  return db
-    .prepare("SELECT * FROM evaluations WHERE player_id = ? ORDER BY date DESC, id DESC")
-    .all(playerId) as Evaluation[];
+export async function getEvaluations(playerId: number): Promise<Evaluation[]> {
+  return all<Evaluation>(
+    "SELECT * FROM evaluations WHERE player_id = ? ORDER BY date DESC, id DESC",
+    [playerId]
+  );
 }
 
-export function getScores(evaluationId: number): Record<string, number> {
-  const rows = db
-    .prepare("SELECT skill_id, level FROM evaluation_scores WHERE evaluation_id = ?")
-    .all(evaluationId) as { skill_id: string; level: number }[];
+export async function getScores(evaluationId: number): Promise<Record<string, number>> {
+  const rows = await all<{ skill_id: string; level: number }>(
+    "SELECT skill_id, level FROM evaluation_scores WHERE evaluation_id = ?",
+    [evaluationId]
+  );
   return Object.fromEntries(rows.map((r) => [r.skill_id, r.level]));
 }
 
 // Kategorisnitt per utvärdering, kronologiskt – för utvecklingsgrafen
-export function getPlayerDevelopment(playerId: number) {
-  const evals = db
-    .prepare("SELECT * FROM evaluations WHERE player_id = ? ORDER BY date ASC, id ASC")
-    .all(playerId) as Evaluation[];
+export async function getPlayerDevelopment(playerId: number) {
+  const evals = await all<Evaluation>(
+    "SELECT * FROM evaluations WHERE player_id = ? ORDER BY date ASC, id ASC",
+    [playerId]
+  );
+  const scoresPerEval = await Promise.all(evals.map((ev) => getScores(ev.id)));
 
-  return evals.map((ev) => {
-    const scores = getScores(ev.id);
+  return evals.map((ev, i) => {
+    const scores = scoresPerEval[i];
     const point: Record<string, number | string> = { date: ev.date };
     let total = 0;
     let count = 0;
@@ -92,22 +94,20 @@ export function getPlayerDevelopment(playerId: number) {
   });
 }
 
-export function getMatches(): Match[] {
-  return db.prepare("SELECT * FROM matches ORDER BY date DESC, id DESC").all() as Match[];
+export async function getMatches(): Promise<Match[]> {
+  return all<Match>("SELECT * FROM matches ORDER BY date DESC, id DESC");
 }
 
-export function getMatch(id: number): Match | undefined {
-  return db.prepare("SELECT * FROM matches WHERE id = ?").get(id) as Match | undefined;
+export async function getMatch(id: number): Promise<Match | undefined> {
+  return get<Match>("SELECT * FROM matches WHERE id = ?", [id]);
 }
 
-export function getMatchByCode(code: string): Match | undefined {
-  return db.prepare("SELECT * FROM matches WHERE code = ?").get(code) as Match | undefined;
+export async function getMatchByCode(code: string): Promise<Match | undefined> {
+  return get<Match>("SELECT * FROM matches WHERE code = ?", [code]);
 }
 
-export function getMatchPlayers(matchId: number): MatchPlayerRow[] {
-  return db
-    .prepare("SELECT * FROM match_players WHERE match_id = ?")
-    .all(matchId) as MatchPlayerRow[];
+export async function getMatchPlayers(matchId: number): Promise<MatchPlayerRow[]> {
+  return all<MatchPlayerRow>("SELECT * FROM match_players WHERE match_id = ?", [matchId]);
 }
 
 export interface SeasonStatRow {
@@ -125,20 +125,18 @@ export interface SeasonStatRow {
 }
 
 // Säsongsstatistik per spelare – deltagande (SvFF: alla ska spela) och insatser
-export function getSeasonStats(): SeasonStatRow[] {
+export async function getSeasonStats(): Promise<SeasonStatRow[]> {
   const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n              ");
-  return db
-    .prepare(
-      `SELECT p.id, p.name, p.jersey_number,
-              COUNT(mp.match_id) AS matches_played,
-              ${sums}
-       FROM players p
-       LEFT JOIN match_players mp ON mp.player_id = p.id
-       WHERE p.active = 1
-       GROUP BY p.id
-       ORDER BY p.name COLLATE NOCASE`
-    )
-    .all() as SeasonStatRow[];
+  return all<SeasonStatRow>(
+    `SELECT p.id, p.name, p.jersey_number,
+            COUNT(mp.match_id) AS matches_played,
+            ${sums}
+     FROM players p
+     LEFT JOIN match_players mp ON mp.player_id = p.id
+     WHERE p.active = 1
+     GROUP BY p.id
+     ORDER BY p.name COLLATE NOCASE`
+  );
 }
 
 export interface MatchEventRow {
@@ -150,26 +148,26 @@ export interface MatchEventRow {
   period: number | null;
 }
 
-// Händelser i kronologisk ordning – för tidslinjen på matchsidan
-export function getMatchEvents(matchId: number): MatchEventRow[] {
-  return db
-    .prepare(
-      `SELECT e.id, e.player_id, p.name AS player_name, e.stat_id, e.match_second, e.period
-       FROM match_events e LEFT JOIN players p ON p.id = e.player_id
-       WHERE e.match_id = ? ORDER BY e.id ASC`
-    )
-    .all(matchId) as MatchEventRow[];
+// Händelser i kronologisk ordning – för matchflödet på matchsidan
+export async function getMatchEvents(matchId: number): Promise<MatchEventRow[]> {
+  return all<MatchEventRow>(
+    `SELECT e.id, e.player_id, p.name AS player_name, e.stat_id, e.match_second, e.period
+     FROM match_events e LEFT JOIN players p ON p.id = e.player_id
+     WHERE e.match_id = ? ORDER BY e.id ASC`,
+    [matchId]
+  );
 }
 
-export function getLatestEvaluationDates(): Record<number, string> {
-  const rows = db
-    .prepare("SELECT player_id, MAX(date) AS latest FROM evaluations GROUP BY player_id")
-    .all() as { player_id: number; latest: string }[];
+export async function getLatestEvaluationDates(): Promise<Record<number, string>> {
+  const rows = await all<{ player_id: number; latest: string }>(
+    "SELECT player_id, MAX(date) AS latest FROM evaluations GROUP BY player_id"
+  );
   return Object.fromEntries(rows.map((r) => [r.player_id, r.latest]));
 }
 
-export function countEvaluations(): number {
-  return (db.prepare("SELECT COUNT(*) AS c FROM evaluations").get() as { c: number }).c;
+export async function countEvaluations(): Promise<number> {
+  const row = await get<{ c: number }>("SELECT COUNT(*) AS c FROM evaluations");
+  return Number(row?.c ?? 0);
 }
 
 export { ALL_SKILLS, CATEGORIES };

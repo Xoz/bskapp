@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const role = await getRole();
   if (!role) redirect("/login");
 
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
 
   const crest = (
     <div

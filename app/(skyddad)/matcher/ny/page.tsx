@@ -11,7 +11,7 @@ export default async function NewMatchPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const players = getPlayers();
+  const players = await getPlayers();
 
   return (
     <div className="space-y-6 max-w-3xl">

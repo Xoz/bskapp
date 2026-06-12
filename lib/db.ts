@@ -1,170 +1,243 @@
-import Database from "better-sqlite3";
+// Databaslager: Turso (libSQL) i produktion, lokal SQLite-fil vid utveckling.
+// Sätt TURSO_DATABASE_URL + TURSO_AUTH_TOKEN i miljön (Vercel) – utan dem
+// används data/bsk.db lokalt med samma API.
+
+import { createClient, type Client, type InArgs, type ResultSet } from "@libsql/client";
 import path from "path";
 import fs from "fs";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const db = new Database(path.join(DATA_DIR, "bsk.db"));
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS players (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    jersey_number INTEGER,
-    notes TEXT DEFAULT '',
-    active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS evaluations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    date TEXT NOT NULL,
-    strengths TEXT DEFAULT '',
-    development_goals TEXT DEFAULT '',
-    coach_name TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS evaluation_scores (
-    evaluation_id INTEGER NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
-    skill_id TEXT NOT NULL,
-    level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 4),
-    PRIMARY KEY (evaluation_id, skill_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS matches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    opponent TEXT NOT NULL,
-    home_away TEXT NOT NULL DEFAULT 'home',
-    match_type TEXT NOT NULL DEFAULT 'seriespel',
-    our_score INTEGER,
-    opponent_score INTEGER,
-    notes TEXT DEFAULT '',
-    created_by_role TEXT DEFAULT 'coach',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS match_players (
-    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    minutes INTEGER NOT NULL DEFAULT 0,
-    goals INTEGER NOT NULL DEFAULT 0,
-    assists INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (match_id, player_id)
-  );
-
-  -- Händelselogg från live-rapporteringen: varje tryck = en händelse med matchtid,
-  -- så att tränarna kan hitta rätt ögonblick i matchvideon
-  CREATE TABLE IF NOT EXISTS match_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
-    stat_id TEXT NOT NULL,
-    match_second INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-  CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id);
-`);
-
-// ---- Migrationer ----
-function columnNames(table: string): string[] {
-  return (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((r) => r.name);
+function makeClient(): Client {
+  const url = process.env.TURSO_DATABASE_URL;
+  if (url) {
+    return createClient({
+      url,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+      intMode: "number",
+    });
+  }
+  const dataDir = path.join(process.cwd(), "data");
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  return createClient({ url: `file:${path.join(dataDir, "bsk.db")}`, intMode: "number" });
 }
 
-const mpCols = columnNames("match_players");
-for (const col of ["shots", "shots_on_target", "passes_completed", "interceptions", "saves"]) {
-  if (!mpCols.includes(col)) {
-    db.exec(`ALTER TABLE match_players ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+const client = makeClient();
+
+async function tryExec(sql: string) {
+  try {
+    await client.execute(sql);
+  } catch (e) {
+    // "duplicate column name" m.m. vid återkörda migrationer är förväntat
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column|already exists/i.test(msg)) throw e;
   }
 }
 
-const matchCols = columnNames("matches");
-if (!matchCols.includes("code")) db.exec(`ALTER TABLE matches ADD COLUMN code TEXT`);
-if (!matchCols.includes("source")) db.exec(`ALTER TABLE matches ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`);
-if (!matchCols.includes("external_uid")) db.exec(`ALTER TABLE matches ADD COLUMN external_uid TEXT`);
-// Matchklocka – delas av alla som rapporterar samma match
-if (!matchCols.includes("clock_started_at")) db.exec(`ALTER TABLE matches ADD COLUMN clock_started_at INTEGER`);
-if (!matchCols.includes("clock_offset")) db.exec(`ALTER TABLE matches ADD COLUMN clock_offset INTEGER NOT NULL DEFAULT 0`);
-if (!matchCols.includes("clock_running")) db.exec(`ALTER TABLE matches ADD COLUMN clock_running INTEGER NOT NULL DEFAULT 0`);
-// Period (7 mot 7 spelas 3 × 20 min) – klockan nollställs per period
-if (!matchCols.includes("clock_period")) db.exec(`ALTER TABLE matches ADD COLUMN clock_period INTEGER NOT NULL DEFAULT 1`);
+async function init(): Promise<void> {
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS players (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      jersey_number INTEGER,
+      notes TEXT DEFAULT '',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS evaluations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      strengths TEXT DEFAULT '',
+      development_goals TEXT DEFAULT '',
+      coach_name TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS evaluation_scores (
+      evaluation_id INTEGER NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
+      skill_id TEXT NOT NULL,
+      level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 4),
+      PRIMARY KEY (evaluation_id, skill_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS matches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      opponent TEXT NOT NULL,
+      home_away TEXT NOT NULL DEFAULT 'home',
+      match_type TEXT NOT NULL DEFAULT 'seriespel',
+      our_score INTEGER,
+      opponent_score INTEGER,
+      notes TEXT DEFAULT '',
+      created_by_role TEXT DEFAULT 'coach',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS match_players (
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      minutes INTEGER NOT NULL DEFAULT 0,
+      goals INTEGER NOT NULL DEFAULT 0,
+      assists INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (match_id, player_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS match_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
+      stat_id TEXT NOT NULL,
+      match_second INTEGER,
+      period INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id)`,
+  ];
+  for (const sql of tables) await client.execute(sql);
 
-const eventCols = columnNames("match_events");
-if (!eventCols.includes("period")) db.exec(`ALTER TABLE match_events ADD COLUMN period INTEGER`);
-db.exec(`
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL;
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL;
-`);
+  // Migrationer – körs om utan att fela på redan gjorda ändringar
+  const migrations = [
+    `ALTER TABLE match_players ADD COLUMN shots INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE match_players ADD COLUMN shots_on_target INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE match_players ADD COLUMN passes_completed INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE match_players ADD COLUMN interceptions INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE match_players ADD COLUMN saves INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE matches ADD COLUMN code TEXT`,
+    `ALTER TABLE matches ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`,
+    `ALTER TABLE matches ADD COLUMN external_uid TEXT`,
+    `ALTER TABLE matches ADD COLUMN clock_started_at INTEGER`,
+    `ALTER TABLE matches ADD COLUMN clock_offset INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE matches ADD COLUMN clock_running INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE matches ADD COLUMN clock_period INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE match_events ADD COLUMN period INTEGER`,
+  ];
+  for (const sql of migrations) await tryExec(sql);
 
-export function generateMatchCode(): string {
-  // 6 siffror, unik bland matcher
+  await tryExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL`
+  );
+  await tryExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL`
+  );
+
+  // Seed – inställningar
+  const settingsCount = await client.execute("SELECT COUNT(*) AS c FROM settings");
+  if (Number(settingsCount.rows[0].c) === 0) {
+    const defaults: [string, string][] = [
+      ["club_name", "Bollstanäs SK"],
+      ["team_name", "BSK F2014"],
+      ["birth_year", "2014"],
+      ["primary_color", "#13306e"],
+      ["accent_color", "#ffd23f"],
+      ["coach_code", "TRANARE2014"],
+      ["parent_code", "BSK2014"],
+      ["season", "2026"],
+    ];
+    for (const [k, v] of defaults) {
+      await client.execute({ sql: "INSERT INTO settings (key, value) VALUES (?, ?)", args: [k, v] });
+    }
+  }
+  await client.execute(
+    "INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')"
+  );
+
+  // Seed – exempelspelare
+  const playerCount = await client.execute("SELECT COUNT(*) AS c FROM players");
+  if (Number(playerCount.rows[0].c) === 0) {
+    const demo = [
+      "Exempel: Alva", "Exempel: Ebba", "Exempel: Elsa", "Exempel: Freja",
+      "Exempel: Lilly", "Exempel: Maja", "Exempel: Nora", "Exempel: Saga",
+      "Exempel: Stella", "Exempel: Vera",
+    ];
+    for (let i = 0; i < demo.length; i++) {
+      await client.execute({
+        sql: "INSERT INTO players (name, jersey_number) VALUES (?, ?)",
+        args: [demo[i], i + 2],
+      });
+    }
+  }
+
+  // Backfyll matchkoder
+  const withoutCode = await client.execute("SELECT id FROM matches WHERE code IS NULL");
+  for (const row of withoutCode.rows) {
+    await client.execute({
+      sql: "UPDATE matches SET code = ? WHERE id = ?",
+      args: [await generateMatchCodeRaw(), row.id as number],
+    });
+  }
+}
+
+let readyPromise: Promise<void> | null = null;
+function ready(): Promise<void> {
+  if (!readyPromise) readyPromise = init();
+  return readyPromise;
+}
+
+function rowToObject<T>(columns: string[], row: Record<string, unknown>): T {
+  return Object.fromEntries(columns.map((c) => [c, row[c]])) as T;
+}
+
+// ---- Frågehjälpare ----
+
+export async function all<T>(sql: string, args: InArgs = []): Promise<T[]> {
+  await ready();
+  const res = await client.execute({ sql, args });
+  return res.rows.map((r) => rowToObject<T>(res.columns, r as unknown as Record<string, unknown>));
+}
+
+export async function get<T>(sql: string, args: InArgs = []): Promise<T | undefined> {
+  const rows = await all<T>(sql, args);
+  return rows[0];
+}
+
+export async function run(sql: string, args: InArgs = []): Promise<ResultSet> {
+  await ready();
+  return client.execute({ sql, args });
+}
+
+// Flera skrivningar i en transaktion
+export async function batch(statements: { sql: string; args?: InArgs }[]): Promise<void> {
+  await ready();
+  if (statements.length === 0) return;
+  await client.batch(
+    statements.map((s) => ({ sql: s.sql, args: s.args ?? [] })),
+    "write"
+  );
+}
+
+// ---- Inställningar ----
+
+export async function getSetting(key: string): Promise<string> {
+  const row = await get<{ value: string }>("SELECT value FROM settings WHERE key = ?", [key]);
+  return row?.value ?? "";
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+  await run(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, value]
+  );
+}
+
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const rows = await all<{ key: string; value: string }>("SELECT key, value FROM settings");
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+}
+
+// ---- Matchkoder ----
+
+async function generateMatchCodeRaw(): Promise<string> {
   for (let i = 0; i < 50; i++) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    const exists = db.prepare("SELECT 1 FROM matches WHERE code = ?").get(code);
-    if (!exists) return code;
+    const exists = await client.execute({
+      sql: "SELECT 1 FROM matches WHERE code = ?",
+      args: [code],
+    });
+    if (exists.rows.length === 0) return code;
   }
   throw new Error("Kunde inte generera en unik matchkod");
 }
 
-// Backfyll koder för matcher som saknar
-{
-  const withoutCode = db.prepare("SELECT id FROM matches WHERE code IS NULL").all() as { id: number }[];
-  const setCode = db.prepare("UPDATE matches SET code = ? WHERE id = ?");
-  for (const m of withoutCode) setCode.run(generateMatchCode(), m.id);
+export async function generateMatchCode(): Promise<string> {
+  await ready();
+  return generateMatchCodeRaw();
 }
-
-// ---- Seed ----
-const settingsCount = db.prepare("SELECT COUNT(*) AS c FROM settings").get() as { c: number };
-if (settingsCount.c === 0) {
-  const insert = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)");
-  const defaults: [string, string][] = [
-    ["club_name", "Bollstanäs SK"],
-    ["team_name", "BSK F2014"],
-    ["birth_year", "2014"],
-    ["primary_color", "#13306e"],
-    ["accent_color", "#ffd23f"],
-    ["coach_code", "TRANARE2014"],
-    ["parent_code", "BSK2014"],
-    ["season", "2026"],
-  ];
-  for (const [k, v] of defaults) insert.run(k, v);
-}
-db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')").run();
-
-const playerCount = db.prepare("SELECT COUNT(*) AS c FROM players").get() as { c: number };
-if (playerCount.c === 0) {
-  const insert = db.prepare("INSERT INTO players (name, jersey_number) VALUES (?, ?)");
-  // Exempelspelare – ersätts med riktiga spelare under Spelare
-  const demo = [
-    "Exempel: Alva", "Exempel: Ebba", "Exempel: Elsa", "Exempel: Freja",
-    "Exempel: Lilly", "Exempel: Maja", "Exempel: Nora", "Exempel: Saga",
-    "Exempel: Stella", "Exempel: Vera",
-  ];
-  demo.forEach((name, i) => insert.run(name, i + 2));
-}
-
-export function getSetting(key: string): string {
-  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined;
-  return row?.value ?? "";
-}
-
-export function setSetting(key: string, value: string) {
-  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
-}
-
-export function getAllSettings(): Record<string, string> {
-  const rows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[];
-  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
-}
-
-export default db;

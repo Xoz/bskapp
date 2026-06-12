@@ -13,10 +13,10 @@ export default async function ReportMatchPage({
 }) {
   const { code } = await params;
   const clean = code.replace(/\D/g, "");
-  const match = getMatchRowByCode(clean);
+  const match = await getMatchRowByCode(clean);
   if (!match) notFound();
 
-  const initial = getLiveState(match.id);
+  const initial = await getLiveState(match.id);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>

@@ -14,11 +14,11 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
   if (role !== "coach") redirect("/matcher");
 
   const { id } = await params;
-  const player = getPlayer(Number(id));
+  const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const latest = getEvaluations(player.id)[0];
-  const latestScores = latest ? getScores(latest.id) : {};
+  const latest = (await getEvaluations(player.id))[0];
+  const latestScores = latest ? await getScores(latest.id) : {};
   const today = new Date().toISOString().slice(0, 10);
   const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
 

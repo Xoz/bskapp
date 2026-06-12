@@ -6,7 +6,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function ReportPage() {
-  const settings = getAllSettings();
+  const settings = await getAllSettings();
 
   return (
     <main

@@ -12,9 +12,9 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const players = getPlayers();
-  const latestEvals = getLatestEvaluationDates();
-  const stats = getSeasonStats();
+  const players = await getPlayers();
+  const latestEvals = await getLatestEvaluationDates();
+  const stats = await getSeasonStats();
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
 

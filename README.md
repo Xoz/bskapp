@@ -33,19 +33,30 @@ Truppen innehåller exempelspelare vid första start – byt namn eller ta bort 
 ## Teknik
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
-- SQLite via better-sqlite3 – databasen ligger i `data/bsk.db` (skapas automatiskt, ingår inte i git)
+- Databas via `@libsql/client`: **Turso** i produktion, lokal SQLite-fil (`data/bsk.db`) vid utveckling
 - Recharts för diagram
-- Sessioner via signerad HTTP-only-cookie (`data/session-secret` genereras automatiskt)
+- Sessioner via signerad HTTP-only-cookie
+- Design: "Dark Mono Dashboard" – Syne + DM Mono, mörk palett, grain-textur
 
-## Produktion
+## Produktion (Vercel + Turso)
+
+Sätt följande miljövariabler i Vercel:
+
+| Variabel | Värde |
+| --- | --- |
+| `TURSO_DATABASE_URL` | `libsql://<din-databas>.turso.io` |
+| `TURSO_AUTH_TOKEN` | Token från Turso |
+| `SESSION_SECRET` | Lång slumpsträng, t.ex. `openssl rand -hex 32` |
+
+Utan `TURSO_DATABASE_URL` används den lokala filen `data/bsk.db` (utveckling).
+Schemat skapas och migreras automatiskt vid första anropet.
+
+Flytta lokal data till Turso:
 
 ```bash
-npm run build
-npm start
+sqlite3 data/bsk.db .dump > dump.sql
+turso db shell <din-databas> < dump.sql
 ```
-
-Lägg `data/`-katalogen på beständig lagring vid driftsättning (t.ex. på VPS:en).
-Säkerhetskopiera `data/bsk.db` regelbundet – den innehåller all lagdata.
 
 ## Integritet
 

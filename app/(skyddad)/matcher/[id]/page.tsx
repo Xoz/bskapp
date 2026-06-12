@@ -16,12 +16,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (!role) redirect("/login");
 
   const { id } = await params;
-  const match = getMatch(Number(id));
+  const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const players = getPlayers();
-  const matchPlayers = getMatchPlayers(match.id);
-  const events = getMatchEvents(match.id);
+  const players = await getPlayers();
+  const matchPlayers = await getMatchPlayers(match.id);
+  const events = await getMatchEvents(match.id);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
 
   return (

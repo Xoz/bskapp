@@ -16,7 +16,7 @@ export default async function MatchesPage() {
   const role = await getRole();
   if (!role) redirect("/login");
 
-  const matches = getMatches();
+  const matches = await getMatches();
 
   return (
     <div className="space-y-6">

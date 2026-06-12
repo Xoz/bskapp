@@ -11,7 +11,7 @@ import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
 export const dynamic = "force-dynamic";
 
-function matchFromCode(code: string) {
+async function matchFromCode(code: string) {
   const clean = code.replace(/\D/g, "");
   if (clean.length !== 6) return undefined;
   return getMatchRowByCode(clean);
@@ -22,9 +22,9 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
-  const match = matchFromCode(code);
+  const match = await matchFromCode(code);
   if (!match) return NextResponse.json({ error: "Ogiltig kod" }, { status: 404 });
-  return NextResponse.json(getLiveState(match.id));
+  return NextResponse.json(await getLiveState(match.id));
 }
 
 export async function POST(
@@ -32,7 +32,7 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
-  const match = matchFromCode(code);
+  const match = await matchFromCode(code);
   if (!match) return NextResponse.json({ error: "Ogiltig kod" }, { status: 404 });
 
   let action: LiveAction;
@@ -45,19 +45,19 @@ export async function POST(
   try {
     switch (action.type) {
       case "event":
-        recordEvent(match.id, action.playerId, action.statId);
+        await recordEvent(match.id, action.playerId, action.statId);
         break;
       case "opponent_goal":
-        recordEvent(match.id, null, OPPONENT_GOAL);
+        await recordEvent(match.id, null, OPPONENT_GOAL);
         break;
       case "undo":
-        undoLastEvent(match.id);
+        await undoLastEvent(match.id);
         break;
       case "clock":
-        setClock(match.id, action.op);
+        await setClock(match.id, action.op);
         break;
       case "toggle_played":
-        togglePlayed(match.id, action.playerId);
+        await togglePlayed(match.id, action.playerId);
         break;
       default:
         return NextResponse.json({ error: "Okänd åtgärd" }, { status: 400 });
@@ -66,5 +66,5 @@ export async function POST(
     return NextResponse.json({ error: "Kunde inte spara" }, { status: 500 });
   }
 
-  return NextResponse.json(getLiveState(match.id));
+  return NextResponse.json(await getLiveState(match.id));
 }
