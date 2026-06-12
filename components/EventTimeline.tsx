@@ -1,5 +1,5 @@
 import { STAT_FIELDS } from "@/lib/stats";
-import { OPPONENT_GOAL } from "@/lib/liveTypes";
+import { OPPONENT_GOAL, formatEventTime } from "@/lib/liveTypes";
 import type { MatchEventRow } from "@/lib/queries";
 import Avatar from "@/components/Avatar";
 
@@ -7,12 +7,6 @@ const STAT_LABEL: Record<string, string> = Object.fromEntries(
   STAT_FIELDS.map((f) => [f.id, f.label])
 );
 STAT_LABEL[OPPONENT_GOAL] = "Mål motståndare";
-
-function formatTime(totalSeconds: number) {
-  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const ss = String(totalSeconds % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
-}
 
 // Tidslinje över matchhändelser – matchtiden gör det lätt att hitta i videon
 export default function EventTimeline({ events }: { events: MatchEventRow[] }) {
@@ -30,8 +24,8 @@ export default function EventTimeline({ events }: { events: MatchEventRow[] }) {
       <ul className="divide-y" style={{ borderColor: "var(--line)" }}>
         {events.map((e) => (
           <li key={e.id} className="px-6 py-2.5 flex items-center gap-3 text-sm" style={{ borderColor: "var(--line)" }}>
-            <span className="stat-number w-14 shrink-0" style={{ color: e.stat_id === "goals" || e.stat_id === OPPONENT_GOAL ? "var(--primary)" : "var(--ink-faint)" }}>
-              {e.match_second != null ? formatTime(e.match_second) : "–"}
+            <span className="stat-number w-20 shrink-0" style={{ color: e.stat_id === "goals" || e.stat_id === OPPONENT_GOAL ? "var(--primary)" : "var(--ink-faint)" }}>
+              {formatEventTime(e.period, e.match_second)}
             </span>
             {e.player_name ? (
               <span className="flex items-center gap-2.5 flex-1 min-w-0">

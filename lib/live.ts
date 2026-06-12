@@ -3,7 +3,7 @@
 
 import db from "./db";
 import { STAT_IDS } from "./stats";
-import { OPPONENT_GOAL, LiveState, LiveEvent } from "./liveTypes";
+import { OPPONENT_GOAL, MAX_PERIODS, LiveState, LiveEvent } from "./liveTypes";
 
 interface MatchRow {
   id: number;
@@ -15,6 +15,7 @@ interface MatchRow {
   clock_started_at: number | null;
   clock_offset: number;
   clock_running: number;
+  clock_period: number;
 }
 
 export function getMatchRowByCode(code: string): MatchRow | undefined {
@@ -49,7 +50,7 @@ export function getLiveState(matchId: number): LiveState {
 
   const events = db
     .prepare(
-      `SELECT e.id, e.player_id, p.name AS player_name, e.stat_id, e.match_second
+      `SELECT e.id, e.player_id, p.name AS player_name, e.stat_id, e.match_second, e.period
        FROM match_events e LEFT JOIN players p ON p.id = e.player_id
        WHERE e.match_id = ? ORDER BY e.id DESC LIMIT 200`
     )
@@ -64,6 +65,7 @@ export function getLiveState(matchId: number): LiveState {
     oppScore: m.opponent_score ?? 0,
     clockRunning: !!m.clock_running,
     clockSeconds: clockSeconds(m),
+    period: m.clock_period ?? 1,
     players,
     counts,
     played,
@@ -79,12 +81,14 @@ const ensureRow = db.prepare(
 export function recordEvent(matchId: number, playerId: number | null, statId: string) {
   if (statId !== OPPONENT_GOAL && !STAT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId) as MatchRow;
-  const second = m.clock_running || m.clock_offset > 0 ? clockSeconds(m) : null;
+  const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
+  const second = clockTouched ? clockSeconds(m) : null;
+  const period = clockTouched ? (m.clock_period ?? 1) : null;
 
   const tx = db.transaction(() => {
     db.prepare(
-      "INSERT INTO match_events (match_id, player_id, stat_id, match_second) VALUES (?, ?, ?, ?)"
-    ).run(matchId, playerId, statId, second);
+      "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period) VALUES (?, ?, ?, ?, ?)"
+    ).run(matchId, playerId, statId, second, period);
 
     if (statId === OPPONENT_GOAL) {
       db.prepare(
@@ -130,7 +134,7 @@ export function undoLastEvent(matchId: number) {
   tx();
 }
 
-export function setClock(matchId: number, op: "start" | "pause" | "reset") {
+export function setClock(matchId: number, op: "start" | "pause" | "reset" | "next_period") {
   const m = db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId) as MatchRow;
   const now = Math.floor(Date.now() / 1000);
 
@@ -140,9 +144,14 @@ export function setClock(matchId: number, op: "start" | "pause" | "reset") {
     db.prepare(
       "UPDATE matches SET clock_running = 0, clock_offset = ?, clock_started_at = NULL WHERE id = ?"
     ).run(clockSeconds(m), matchId);
+  } else if (op === "next_period" && (m.clock_period ?? 1) < MAX_PERIODS) {
+    // Ny period: nollställ periodklockan och starta direkt
+    db.prepare(
+      "UPDATE matches SET clock_period = ?, clock_running = 1, clock_offset = 0, clock_started_at = ? WHERE id = ?"
+    ).run((m.clock_period ?? 1) + 1, now, matchId);
   } else if (op === "reset") {
     db.prepare(
-      "UPDATE matches SET clock_running = 0, clock_offset = 0, clock_started_at = NULL WHERE id = ?"
+      "UPDATE matches SET clock_running = 0, clock_offset = 0, clock_started_at = NULL, clock_period = 1 WHERE id = ?"
     ).run(matchId);
   }
 }

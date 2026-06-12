@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { STAT_FIELDS } from "@/lib/stats";
-import { LiveState, LiveAction, OPPONENT_GOAL } from "@/lib/liveTypes";
+import {
+  LiveState,
+  LiveAction,
+  OPPONENT_GOAL,
+  MAX_PERIODS,
+  formatClock,
+  formatEventTime,
+} from "@/lib/liveTypes";
 import Avatar from "@/components/Avatar";
 
 const STAT_LABEL: Record<string, string> = Object.fromEntries(
@@ -12,13 +19,6 @@ STAT_LABEL[OPPONENT_GOAL] = "Mål motståndare";
 
 // Specialflik för att bocka av vilka som spelade
 const PLAYED_TAB = "__played";
-
-function formatTime(totalSeconds: number) {
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const mm = String(Math.floor(s / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
-}
 
 function firstName(name: string) {
   return name.replace(/^Exempel:\s*/, "").split(" ")[0];
@@ -164,27 +164,60 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
         </div>
 
         <div className="mt-4 flex items-center gap-3 relative">
-          <p
-            className="stat-number text-[2.7rem] leading-none tabular-nums"
-            style={{ color: "var(--accent)" }}
-            aria-label="Matchklocka"
-          >
-            {formatTime(clockNow)}
-          </p>
+          <div>
+            <span
+              className="badge mb-1"
+              style={{ background: "rgba(255,255,255,0.12)", color: "var(--accent)" }}
+            >
+              Period {live.period} av {MAX_PERIODS}
+            </span>
+            <p
+              className="stat-number text-[2.7rem] leading-none tabular-nums"
+              style={{ color: "var(--accent)" }}
+              aria-label="Matchklocka"
+            >
+              {formatClock(clockNow)}
+            </p>
+          </div>
           <div className="flex-1" />
-          <button
-            type="button"
-            onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
-            className="btn-accent px-5 py-2.5"
-          >
-            {live.clockRunning ? "Pausa" : clockNow > 0 ? "Fortsätt" : "Starta match"}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
+              className="btn-accent px-5 py-2.5"
+            >
+              {live.clockRunning
+                ? "Pausa"
+                : clockNow > 0 || live.period > 1
+                  ? "Fortsätt"
+                  : "Starta period 1"}
+            </button>
+            {live.period < MAX_PERIODS && (clockNow > 0 || live.clockRunning) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
+                    post({ type: "clock", op: "next_period" });
+                }}
+                className="text-xs font-semibold rounded-full px-3.5 py-1.5"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#fff",
+                }}
+              >
+                Starta period {live.period + 1} →
+              </button>
+            )}
+          </div>
         </div>
         <div className="mt-3 flex items-center justify-between relative">
           <button
             type="button"
             onClick={() => {
-              if (confirm("Nollställa matchklockan?")) post({ type: "clock", op: "reset" });
+              if (confirm("Nollställa matchklockan till period 1, 00:00?"))
+                post({ type: "clock", op: "reset" });
             }}
             className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
             style={{ fontFamily: "var(--font-display)" }}
@@ -319,8 +352,8 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                 )}
                 {live.events.map((e) => (
                   <li key={e.id} className="px-4 py-2.5 flex items-center gap-3 text-sm" style={{ borderColor: "var(--line)" }}>
-                    <span className="stat-number text-xs w-12" style={{ color: "var(--ink-faint)" }}>
-                      {e.match_second != null ? formatTime(e.match_second) : "–"}
+                    <span className="stat-number text-xs w-16" style={{ color: "var(--ink-faint)" }}>
+                      {formatEventTime(e.period, e.match_second)}
                     </span>
                     <span className="flex-1 truncate">
                       {e.player_name ? firstName(e.player_name) : "Motståndaren"}
@@ -345,7 +378,8 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
               <span className="font-semibold" style={{ color: "var(--ink)" }}>
                 {lastEvent.player_name ? firstName(lastEvent.player_name) : "Motståndaren"} ·{" "}
                 {STAT_LABEL[lastEvent.stat_id] ?? lastEvent.stat_id}
-                {lastEvent.match_second != null && ` · ${formatTime(lastEvent.match_second)}`}
+                {lastEvent.match_second != null &&
+                  ` · ${formatEventTime(lastEvent.period, lastEvent.match_second)}`}
               </span>
             </span>
             <span

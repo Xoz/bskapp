@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches } from "@/lib/queries";
+import { getMatches, type Match as MatchType } from "@/lib/queries";
 import { IconPlus, IconPitch, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -75,52 +75,105 @@ export default async function MatchesPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-3">
-          {matches.map((m) => {
-            const hasResult = m.our_score != null && m.opponent_score != null;
-            return (
-              <Link key={m.id} href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
-                <div
-                  className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-                >
-                  <IconPitch width={20} height={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
-                    {m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                    {m.date}
-                    {role === "coach" && (
-                      <>
-                        {" · kod "}
-                        <span className="stat-number tracking-wider" style={{ color: "var(--ink-soft)" }}>
-                          {m.code}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-                <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
-                  {TYPE_LABELS[m.match_type] ?? m.match_type}
-                </span>
-                <span
-                  className="stat-number text-lg w-16 text-right"
-                  style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
-                >
-                  {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <MatchSections matches={matches} role={role} />
       )}
 
       <p className="text-xs max-w-xl" style={{ color: "var(--ink-faint)" }}>
         Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling – inte på resultat och
         tabeller. Resultatet är frivilligt att fylla i.
       </p>
+    </div>
+  );
+}
+
+function MatchCard({ m, role, today }: { m: MatchType; role: string; today: string }) {
+  const hasResult = m.our_score != null && m.opponent_score != null;
+  return (
+    <Link href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
+      <div
+        className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+      >
+        <IconPitch width={20} height={20} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
+          {m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}
+        </p>
+        <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+          {m.date}
+          {role === "coach" && (
+            <>
+              {" · kod "}
+              <span className="stat-number tracking-wider" style={{ color: "var(--ink-soft)" }}>
+                {m.code}
+              </span>
+            </>
+          )}
+        </p>
+      </div>
+      {m.date === today && (
+        <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>
+          I dag
+        </span>
+      )}
+      <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+        {TYPE_LABELS[m.match_type] ?? m.match_type}
+      </span>
+      <span
+        className="stat-number text-lg w-16 text-right"
+        style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
+      >
+        {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
+      </span>
+    </Link>
+  );
+}
+
+function MatchSections({ matches, role }: { matches: MatchType[]; role: string }) {
+  const today = new Date().toISOString().slice(0, 10);
+  // Kommande närmast först, spelade senast först
+  const upcoming = matches.filter((m) => m.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const past = matches.filter((m) => m.date < today);
+
+  return (
+    <div className="space-y-8">
+      <section>
+        <div className="flex items-baseline gap-2.5 mb-3">
+          <h2 className="font-semibold text-[1.05rem]">Kommande</h2>
+          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            {upcoming.length} matcher
+          </span>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="text-sm card p-5" style={{ color: "var(--ink-soft)" }}>
+            Inga kommande matcher – hämta från kalendern under Inställningar när nya matcher
+            planerats.
+          </p>
+        ) : (
+          <div className="grid gap-3">
+            {upcoming.map((m) => (
+              <MatchCard key={m.id} m={m} role={role} today={today} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {past.length > 0 && (
+        <section>
+          <div className="flex items-baseline gap-2.5 mb-3">
+            <h2 className="font-semibold text-[1.05rem]">Spelade</h2>
+            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              {past.length} matcher
+            </span>
+          </div>
+          <div className="grid gap-3">
+            {past.map((m) => (
+              <MatchCard key={m.id} m={m} role={role} today={today} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

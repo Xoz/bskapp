@@ -13,6 +13,7 @@ export interface LiveEvent {
   player_name: string | null;
   stat_id: string;
   match_second: number | null;
+  period: number | null;
 }
 
 export interface LiveState {
@@ -23,7 +24,8 @@ export interface LiveState {
   ourScore: number;
   oppScore: number;
   clockRunning: boolean;
-  clockSeconds: number; // sekunder på matchklockan i serverögonblicket
+  clockSeconds: number; // sekunder på periodklockan i serverögonblicket
+  period: number;
   players: LivePlayer[];
   // counts[playerId][statId] = antal
   counts: Record<number, Record<string, number>>;
@@ -35,7 +37,23 @@ export type LiveAction =
   | { type: "event"; playerId: number; statId: string }
   | { type: "opponent_goal" }
   | { type: "undo" }
-  | { type: "clock"; op: "start" | "pause" | "reset" }
+  | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "toggle_played"; playerId: number };
 
 export const OPPONENT_GOAL = "opponent_goal";
+
+// Spelform 7 mot 7: 3 × 20 minuter
+export const MAX_PERIODS = 3;
+
+export function formatClock(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
+// "P2 05:30" – periodmarkerad matchtid för händelser
+export function formatEventTime(period: number | null, second: number | null) {
+  if (second == null) return "–";
+  return period != null ? `P${period} ${formatClock(second)}` : formatClock(second);
+}

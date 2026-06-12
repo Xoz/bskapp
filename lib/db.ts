@@ -96,6 +96,11 @@ if (!matchCols.includes("external_uid")) db.exec(`ALTER TABLE matches ADD COLUMN
 if (!matchCols.includes("clock_started_at")) db.exec(`ALTER TABLE matches ADD COLUMN clock_started_at INTEGER`);
 if (!matchCols.includes("clock_offset")) db.exec(`ALTER TABLE matches ADD COLUMN clock_offset INTEGER NOT NULL DEFAULT 0`);
 if (!matchCols.includes("clock_running")) db.exec(`ALTER TABLE matches ADD COLUMN clock_running INTEGER NOT NULL DEFAULT 0`);
+// Period (7 mot 7 spelas 3 × 20 min) – klockan nollställs per period
+if (!matchCols.includes("clock_period")) db.exec(`ALTER TABLE matches ADD COLUMN clock_period INTEGER NOT NULL DEFAULT 1`);
+
+const eventCols = columnNames("match_events");
+if (!eventCols.includes("period")) db.exec(`ALTER TABLE match_events ADD COLUMN period INTEGER`);
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL;
