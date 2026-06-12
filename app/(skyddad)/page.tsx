@@ -40,12 +40,14 @@ export default async function Dashboard() {
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
 
-  const withMinutes = stats.filter((s) => s.total_minutes > 0);
-  const avgMinutes =
-    withMinutes.length > 0
-      ? withMinutes.reduce((a, b) => a + b.total_minutes, 0) / withMinutes.length
+  const playing = stats.filter((s) => s.matches_played > 0);
+  const avgMatches =
+    playing.length > 0
+      ? playing.reduce((a, b) => a + b.matches_played, 0) / playing.length
       : 0;
-  const lowPlaytime = stats.filter((s) => avgMinutes > 0 && s.total_minutes < avgMinutes * 0.75);
+  const lowParticipation = stats.filter(
+    (s) => avgMatches > 0 && s.matches_played < avgMatches * 0.75
+  );
 
   const kpis = [
     { label: "Spelare i truppen", value: players.length, href: "/spelare", Icon: IconPlayers },
@@ -172,13 +174,13 @@ export default async function Dashboard() {
           )}
         </div>
 
-        {/* Jämn speltid */}
+        {/* Jämnt deltagande */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-[1.05rem]">Jämn speltid</h2>
+              <h2 className="font-semibold text-[1.05rem]">Jämnt deltagande</h2>
               <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                SvFF: alla ska spela lika mycket
+                SvFF: alla ska få spela lika mycket
               </p>
             </div>
             <Link
@@ -189,31 +191,31 @@ export default async function Dashboard() {
               Visa allt <IconArrowRight width={13} height={13} />
             </Link>
           </div>
-          {avgMinutes === 0 ? (
+          {avgMatches === 0 ? (
             <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
               <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
                 <IconClock />
               </span>
               <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-                Registrera matchstatistik så ser du speltidsfördelningen här.
+                När matchstatistik rapporterats ser du deltagandet här.
               </p>
             </div>
-          ) : lowPlaytime.length === 0 ? (
+          ) : lowParticipation.length === 0 ? (
             <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--ok)", color: "#fff" }}>
                 <IconCheck width={16} height={16} />
               </span>
               <p className="text-sm" style={{ color: "var(--ok)" }}>
-                Speltiden är jämnt fördelad i truppen.
+                Deltagandet är jämnt fördelat i truppen.
               </p>
             </div>
           ) : (
             <>
               <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-                Under 75 % av lagets snitt ({Math.round(avgMinutes)} min) – prioritera i nästa match:
+                Färre matcher än 75 % av lagets snitt – prioritera i nästa match:
               </p>
               <ul className="space-y-2">
-                {lowPlaytime.map((p) => (
+                {lowParticipation.map((p) => (
                   <li
                     key={p.id}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5"
@@ -222,7 +224,7 @@ export default async function Dashboard() {
                     <Avatar name={p.name} size={30} />
                     <span className="flex-1 text-sm font-medium">{p.name.replace(/^Exempel:\s*/, "")}</span>
                     <span className="stat-number text-sm" style={{ color: "var(--warn)" }}>
-                      {p.total_minutes} min
+                      {p.matches_played} {p.matches_played === 1 ? "match" : "matcher"}
                     </span>
                   </li>
                 ))}

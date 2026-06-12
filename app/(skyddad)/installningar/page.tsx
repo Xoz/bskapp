@@ -1,21 +1,21 @@
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
-import { updateSettings } from "@/lib/actions";
-import { IconCheck, IconShield } from "@/components/Icons";
+import { updateSettings, importCalendarMatches } from "@/lib/actions";
+import { IconCheck, IconShield, IconAlert, IconPitch } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sparad?: string }>;
+  searchParams: Promise<{ sparad?: string; kalender?: string }>;
 }) {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
   const settings = getAllSettings();
-  const { sparad } = await searchParams;
+  const { sparad, kalender } = await searchParams;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -36,6 +36,75 @@ export default async function SettingsPage({
           Inställningarna är sparade.
         </div>
       )}
+
+      {kalender === "fel" && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+        >
+          <IconAlert width={16} height={16} />
+          Kunde inte hämta kalendern. Kontrollera att länken är rätt och försök igen.
+        </div>
+      )}
+      {kalender === "saknas" && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+        >
+          <IconAlert width={16} height={16} />
+          Spara en kalenderlänk först, sedan kan du hämta matcher.
+        </div>
+      )}
+      {kalender != null && kalender !== "fel" && kalender !== "saknas" && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+        >
+          <IconCheck width={16} height={16} />
+          {Number(kalender) === 0
+            ? "Kalendern är synkad – inga nya matcher hittades."
+            : `${kalender} ${Number(kalender) === 1 ? "ny match hämtades" : "nya matcher hämtades"} från kalendern.`}
+        </div>
+      )}
+
+      {/* Kalenderkoppling */}
+      <div className="card p-6 md:p-7 space-y-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconPitch width={17} height={17} />
+          </span>
+          <div>
+            <h2 className="font-semibold">Matchkalender</h2>
+            <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Klistra in lagets iCal-länk från svenskalag.se (Kalender → Prenumerera/iCal) så
+              hämtas matcherna automatiskt. Händelser som innehåller &quot;match&quot;,
+              &quot;sammandrag&quot; eller &quot;cup&quot; importeras.
+            </p>
+          </div>
+        </div>
+        <form action={updateSettings} className="flex gap-2.5 items-end flex-wrap">
+          <div className="flex-1 min-w-64">
+            <label className="label" htmlFor="calendar_url">iCal-länk</label>
+            <input
+              id="calendar_url"
+              name="calendar_url"
+              type="url"
+              defaultValue={settings.calendar_url}
+              placeholder="https://www.svenskalag.se/…/calendar.ics"
+              className="input"
+            />
+          </div>
+          <button type="submit" className="btn-secondary">Spara länk</button>
+        </form>
+        <form action={importCalendarMatches}>
+          <button type="submit" className="btn-primary" disabled={!settings.calendar_url}>
+            Hämta matcher nu
+          </button>
+        </form>
+      </div>
 
       <form action={updateSettings} className="space-y-6">
         <div className="card p-6 md:p-7 space-y-5">

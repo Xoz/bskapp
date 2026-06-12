@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewMatchPage() {
   const role = await getRole();
-  if (!role) redirect("/login");
+  if (role !== "coach") redirect("/matcher");
 
   const players = getPlayers();
 
@@ -23,7 +23,11 @@ export default async function NewMatchPage() {
         >
           <IconArrowLeft width={15} height={15} /> Matcher
         </Link>
-        <h1 className="text-[1.7rem] font-bold mt-2">Registrera match</h1>
+        <h1 className="text-[1.7rem] font-bold mt-2">Lägg till match manuellt</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          Tips: koppla lagets kalender från svenskalag.se under Inställningar så hämtas matcherna
+          automatiskt.
+        </p>
       </div>
       <MatchForm players={players} />
     </div>

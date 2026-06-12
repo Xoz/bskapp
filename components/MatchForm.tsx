@@ -1,7 +1,7 @@
 import { saveMatch } from "@/lib/actions";
 import type { Match, MatchPlayerRow, Player } from "@/lib/queries";
-import { GAME_FORMAT } from "@/lib/svff";
-import Avatar from "@/components/Avatar";
+import { STAT_FIELDS } from "@/lib/stats";
+import StatsFields from "@/components/StatsFields";
 import Link from "next/link";
 
 export default function MatchForm({
@@ -13,7 +13,6 @@ export default function MatchForm({
   match?: Match;
   matchPlayers?: MatchPlayerRow[];
 }) {
-  const byPlayer = Object.fromEntries((matchPlayers ?? []).map((mp) => [mp.player_id, mp]));
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -62,81 +61,10 @@ export default function MatchForm({
         <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--line)" }}>
           <h2 className="font-semibold">Spelarstatistik</h2>
           <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
-            Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} = max {GAME_FORMAT.totalMinutes} min
-            per spelare. Bocka i de som spelade och fyll i speltid.
+            {STAT_FIELDS.map((f) => `${f.short} = ${f.label}`).join(" · ")}
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Spelade</th>
-                <th>Spelare</th>
-                <th>Minuter</th>
-                <th>Mål</th>
-                <th>Assist</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => {
-                const mp = byPlayer[p.id];
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        name={`played_${p.id}`}
-                        defaultChecked={!!mp}
-                        className="h-5 w-5 rounded accent-[var(--primary)]"
-                        aria-label={`${p.name} spelade`}
-                      />
-                    </td>
-                    <td>
-                      <span className="flex items-center gap-2.5 font-medium">
-                        <Avatar name={p.name} size={30} />
-                        {p.name}
-                      </span>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        name={`minutes_${p.id}`}
-                        min="0"
-                        max={GAME_FORMAT.totalMinutes}
-                        defaultValue={mp?.minutes ?? ""}
-                        placeholder="0"
-                        className="input w-20"
-                        aria-label={`Minuter för ${p.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        name={`goals_${p.id}`}
-                        min="0"
-                        defaultValue={mp?.goals ?? ""}
-                        placeholder="0"
-                        className="input w-16"
-                        aria-label={`Mål för ${p.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        name={`assists_${p.id}`}
-                        min="0"
-                        defaultValue={mp?.assists ?? ""}
-                        placeholder="0"
-                        className="input w-16"
-                        aria-label={`Assist för ${p.name}`}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <StatsFields players={players} matchPlayers={matchPlayers} />
       </div>
 
       <div className="flex gap-3">

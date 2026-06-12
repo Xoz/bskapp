@@ -3,9 +3,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import db, { getSetting, setSetting } from "./db";
+import db, { getSetting, setSetting, generateMatchCode } from "./db";
 import { sessionToken, getRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
+import { STAT_IDS } from "./stats";
+import { fetchCalendar, extractMatches } from "./ical";
 
 async function requireRole(allowed: Role[]): Promise<Role> {
   const role = await getRole();
@@ -123,9 +125,37 @@ export async function deleteEvaluation(formData: FormData) {
   revalidatePath(`/spelare/${playerId}`);
 }
 
-// ---- Matcher ----
+// ---- Matchstatistik (delas av tränarformuläret och kodrapporteringen) ----
+function savePlayerStats(matchId: number, formData: FormData) {
+  const players = db.prepare("SELECT id FROM players WHERE active = 1").all() as { id: number }[];
+  const statCols = STAT_IDS.join(", ");
+  const statPlaceholders = STAT_IDS.map(() => "?").join(", ");
+  const statUpdates = STAT_IDS.map((c) => `${c} = excluded.${c}`).join(", ");
+  const upsert = db.prepare(
+    `INSERT INTO match_players (match_id, player_id, ${statCols}) VALUES (?, ?, ${statPlaceholders})
+     ON CONFLICT(match_id, player_id) DO UPDATE SET ${statUpdates}`
+  );
+  const remove = db.prepare("DELETE FROM match_players WHERE match_id = ? AND player_id = ?");
+  const tx = db.transaction(() => {
+    for (const p of players) {
+      const played = formData.get(`played_${p.id}`);
+      if (!played) {
+        remove.run(matchId, p.id);
+        continue;
+      }
+      const values = STAT_IDS.map((c) => {
+        const v = Number(formData.get(`${c}_${p.id}`) ?? 0);
+        return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+      });
+      upsert.run(matchId, p.id, ...values);
+    }
+  });
+  tx();
+}
+
+// ---- Matcher (tränare) ----
 export async function saveMatch(formData: FormData) {
-  const role = await requireRole(["coach", "parent"]);
+  await requireRole(["coach"]);
   const id = formData.get("id") ? Number(formData.get("id")) : null;
   const date = String(formData.get("date") ?? "").slice(0, 10);
   const opponent = String(formData.get("opponent") ?? "").trim();
@@ -148,33 +178,13 @@ export async function saveMatch(formData: FormData) {
   } else {
     const res = db
       .prepare(
-        "INSERT INTO matches (date, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO matches (date, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')"
       )
-      .run(date, opponent, homeAway, matchType, ourScore, oppScore, notes, role);
+      .run(date, opponent, homeAway, matchType, ourScore, oppScore, notes, generateMatchCode());
     matchId = Number(res.lastInsertRowid);
   }
 
-  // Spelarstatistik
-  const players = db.prepare("SELECT id FROM players WHERE active = 1").all() as { id: number }[];
-  const upsert = db.prepare(
-    `INSERT INTO match_players (match_id, player_id, minutes, goals, assists) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(match_id, player_id) DO UPDATE SET minutes = excluded.minutes, goals = excluded.goals, assists = excluded.assists`
-  );
-  const remove = db.prepare("DELETE FROM match_players WHERE match_id = ? AND player_id = ?");
-  const tx = db.transaction(() => {
-    for (const p of players) {
-      const played = formData.get(`played_${p.id}`);
-      if (!played) {
-        remove.run(matchId, p.id);
-        continue;
-      }
-      const minutes = Number(formData.get(`minutes_${p.id}`) ?? 0) || 0;
-      const goals = Number(formData.get(`goals_${p.id}`) ?? 0) || 0;
-      const assists = Number(formData.get(`assists_${p.id}`) ?? 0) || 0;
-      upsert.run(matchId, p.id, minutes, goals, assists);
-    }
-  });
-  tx();
+  savePlayerStats(matchId, formData);
 
   revalidatePath("/matcher");
   revalidatePath("/statistik");
@@ -188,6 +198,79 @@ export async function deleteMatch(formData: FormData) {
   db.prepare("DELETE FROM matches WHERE id = ?").run(id);
   revalidatePath("/matcher");
   redirect("/matcher");
+}
+
+export async function regenerateMatchCode(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  db.prepare("UPDATE matches SET code = ? WHERE id = ?").run(generateMatchCode(), id);
+  revalidatePath(`/matcher/${id}`);
+}
+
+// ---- Kalenderimport (svenskalag.se m.fl.) ----
+export async function importCalendarMatches() {
+  await requireRole(["coach"]);
+  const url = getSetting("calendar_url").trim();
+  if (!url) redirect("/installningar?kalender=saknas");
+
+  let imported = 0;
+  try {
+    const ics = await fetchCalendar(url);
+    const ownNames = [getSetting("team_name"), getSetting("club_name")].filter(Boolean);
+    const matches = extractMatches(ics, ownNames);
+
+    const exists = db.prepare("SELECT 1 FROM matches WHERE external_uid = ?");
+    const insert = db.prepare(
+      "INSERT INTO matches (date, opponent, home_away, match_type, notes, created_by_role, code, source, external_uid) VALUES (?, ?, ?, 'seriespel', ?, 'coach', ?, 'calendar', ?)"
+    );
+    for (const m of matches) {
+      if (!m.date || exists.get(m.uid)) continue;
+      insert.run(m.date, m.opponent, m.homeAway, m.summary, generateMatchCode(), m.uid);
+      imported++;
+    }
+  } catch {
+    redirect("/installningar?kalender=fel");
+  }
+
+  revalidatePath("/matcher");
+  redirect(`/installningar?kalender=${imported}`);
+}
+
+// ---- Rapportering med matchkod (publik, ingen inloggning) ----
+export async function openReport(_prev: { error?: string } | null, formData: FormData) {
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
+  if (code.length !== 6) return { error: "Koden består av 6 siffror." };
+  const match = db.prepare("SELECT id FROM matches WHERE code = ?").get(code);
+  if (!match) return { error: "Ingen match hittades med den koden. Kontrollera med tränaren." };
+  redirect(`/rapportera/${code}`);
+}
+
+export async function submitStatsByCode(formData: FormData) {
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
+  const match = db.prepare("SELECT id FROM matches WHERE code = ?").get(code) as
+    | { id: number }
+    | undefined;
+  if (!match) redirect("/rapportera");
+
+  // Resultat får också fyllas i av rapportören
+  const ourScoreRaw = formData.get("our_score");
+  const oppScoreRaw = formData.get("opponent_score");
+  if (ourScoreRaw !== null && ourScoreRaw !== "") {
+    db.prepare("UPDATE matches SET our_score = ? WHERE id = ?").run(Number(ourScoreRaw), match.id);
+  }
+  if (oppScoreRaw !== null && oppScoreRaw !== "") {
+    db.prepare("UPDATE matches SET opponent_score = ? WHERE id = ?").run(
+      Number(oppScoreRaw),
+      match.id
+    );
+  }
+
+  savePlayerStats(match.id, formData);
+
+  revalidatePath("/matcher");
+  revalidatePath("/statistik");
+  redirect(`/rapportera/${code}?tack=1`);
 }
 
 // ---- Inställningar ----
@@ -206,6 +289,10 @@ export async function updateSettings(formData: FormData) {
     const value = formData.get(key);
     if (value !== null && String(value).trim() !== "") setSetting(key, String(value).trim());
   }
+  // Kalender-URL får vara tom (rensar kopplingen)
+  const cal = formData.get("calendar_url");
+  if (cal !== null) setSetting("calendar_url", String(cal).trim());
+
   revalidatePath("/", "layout");
   redirect("/installningar?sparad=1");
 }

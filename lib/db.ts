@@ -64,6 +64,44 @@ db.exec(`
   );
 `);
 
+// ---- Migrationer ----
+function columnNames(table: string): string[] {
+  return (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((r) => r.name);
+}
+
+const mpCols = columnNames("match_players");
+for (const col of ["shots", "shots_on_target", "passes_completed", "interceptions", "saves"]) {
+  if (!mpCols.includes(col)) {
+    db.exec(`ALTER TABLE match_players ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+  }
+}
+
+const matchCols = columnNames("matches");
+if (!matchCols.includes("code")) db.exec(`ALTER TABLE matches ADD COLUMN code TEXT`);
+if (!matchCols.includes("source")) db.exec(`ALTER TABLE matches ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`);
+if (!matchCols.includes("external_uid")) db.exec(`ALTER TABLE matches ADD COLUMN external_uid TEXT`);
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL;
+`);
+
+export function generateMatchCode(): string {
+  // 6 siffror, unik bland matcher
+  for (let i = 0; i < 50; i++) {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const exists = db.prepare("SELECT 1 FROM matches WHERE code = ?").get(code);
+    if (!exists) return code;
+  }
+  throw new Error("Kunde inte generera en unik matchkod");
+}
+
+// Backfyll koder för matcher som saknar
+{
+  const withoutCode = db.prepare("SELECT id FROM matches WHERE code IS NULL").all() as { id: number }[];
+  const setCode = db.prepare("UPDATE matches SET code = ? WHERE id = ?");
+  for (const m of withoutCode) setCode.run(generateMatchCode(), m.id);
+}
+
 // ---- Seed ----
 const settingsCount = db.prepare("SELECT COUNT(*) AS c FROM settings").get() as { c: number };
 if (settingsCount.c === 0) {
@@ -80,6 +118,7 @@ if (settingsCount.c === 0) {
   ];
   for (const [k, v] of defaults) insert.run(k, v);
 }
+db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')").run();
 
 const playerCount = db.prepare("SELECT COUNT(*) AS c FROM players").get() as { c: number };
 if (playerCount.c === 0) {

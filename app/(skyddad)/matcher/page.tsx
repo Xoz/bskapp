@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches } from "@/lib/queries";
-import { IconPlus, IconPitch } from "@/components/Icons";
+import { IconPlus, IconPitch, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +26,24 @@ export default async function MatchesPage() {
           <h1 className="text-[1.7rem] font-bold mt-0.5">Matcher</h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
             {role === "parent"
-              ? "Tack för att du hjälper till med matchstatistiken!"
+              ? "Har du fått en matchkod? Rapportera statistik utan inloggning."
               : `${matches.length} ${matches.length === 1 ? "match registrerad" : "matcher registrerade"}`}
           </p>
         </div>
-        <Link href="/matcher/ny" className="btn-primary">
-          <IconPlus width={15} height={15} /> Registrera match
-        </Link>
+        {role === "coach" ? (
+          <div className="flex gap-2.5">
+            <Link href="/installningar" className="btn-secondary">
+              Hämta från kalender
+            </Link>
+            <Link href="/matcher/ny" className="btn-primary">
+              <IconPlus width={15} height={15} /> Lägg till match
+            </Link>
+          </div>
+        ) : (
+          <Link href="/rapportera" className="btn-primary">
+            Rapportera med matchkod <IconArrowRight width={15} height={15} />
+          </Link>
+        )}
       </div>
 
       {matches.length === 0 ? (
@@ -46,10 +57,22 @@ export default async function MatchesPage() {
           <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
             Inga matcher ännu
           </p>
-          <p className="text-sm mb-5 max-w-xs mx-auto" style={{ color: "var(--ink-soft)" }}>
-            Registrera lagets första match med speltid, mål och assist per spelare.
-          </p>
-          <Link href="/matcher/ny" className="btn-primary">Registrera match</Link>
+          {role === "coach" ? (
+            <>
+              <p className="text-sm mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
+                Koppla lagets kalender från svenskalag.se under Inställningar, eller lägg till en
+                match manuellt.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link href="/installningar" className="btn-secondary">Till Inställningar</Link>
+                <Link href="/matcher/ny" className="btn-primary">Lägg till match</Link>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
+              Tränaren har inte lagt in några matcher ännu.
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -69,6 +92,14 @@ export default async function MatchesPage() {
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
                     {m.date}
+                    {role === "coach" && (
+                      <>
+                        {" · kod "}
+                        <span className="stat-number tracking-wider" style={{ color: "var(--ink-soft)" }}>
+                          {m.code}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
@@ -87,8 +118,8 @@ export default async function MatchesPage() {
       )}
 
       <p className="text-xs max-w-xl" style={{ color: "var(--ink-faint)" }}>
-        Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling och jämn speltid – inte
-        på resultat och tabeller. Resultatet är frivilligt att fylla i.
+        Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling – inte på resultat och
+        tabeller. Resultatet är frivilligt att fylla i.
       </p>
     </div>
   );

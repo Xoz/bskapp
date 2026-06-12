@@ -60,7 +60,7 @@ export default async function PlayersPage() {
               <th>Spelare</th>
               <th>Senast utvärderad</th>
               <th>Matcher</th>
-              <th>Speltid</th>
+              <th>Mål</th>
               <th></th>
             </tr>
           </thead>
@@ -90,7 +90,7 @@ export default async function PlayersPage() {
                     )}
                   </td>
                   <td>{s?.matches_played ?? 0}</td>
-                  <td>{s?.total_minutes ?? 0} min</td>
+                  <td>{s?.goals ?? 0}</td>
                   <td className="text-right">
                     <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">
                       Utvärdera

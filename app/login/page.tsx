@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
@@ -58,6 +59,12 @@ export default async function LoginPage() {
           }}
         >
           <LoginForm />
+          <p className="mt-5 text-center text-xs text-white/45">
+            Har du en matchkod?{" "}
+            <Link href="/rapportera" className="underline font-semibold text-white/70 hover:text-white">
+              Rapportera statistik
+            </Link>
+          </p>
         </div>
 
         <div className="mt-8 flex items-center justify-center gap-3 text-[0.7rem] tracking-[0.14em] uppercase text-white/35" style={{ fontFamily: "var(--font-display)" }}>

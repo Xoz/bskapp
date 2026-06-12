@@ -1,5 +1,6 @@
 import db from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
+import { STAT_IDS } from "./stats";
 
 export interface Player {
   id: number;
@@ -27,14 +28,20 @@ export interface Match {
   our_score: number | null;
   opponent_score: number | null;
   notes: string;
+  code: string;
+  source: string;
 }
 
 export interface MatchPlayerRow {
   match_id: number;
   player_id: number;
-  minutes: number;
   goals: number;
   assists: number;
+  shots: number;
+  shots_on_target: number;
+  passes_completed: number;
+  interceptions: number;
+  saves: number;
 }
 
 export function getPlayers(): Player[] {
@@ -93,37 +100,45 @@ export function getMatch(id: number): Match | undefined {
   return db.prepare("SELECT * FROM matches WHERE id = ?").get(id) as Match | undefined;
 }
 
+export function getMatchByCode(code: string): Match | undefined {
+  return db.prepare("SELECT * FROM matches WHERE code = ?").get(code) as Match | undefined;
+}
+
 export function getMatchPlayers(matchId: number): MatchPlayerRow[] {
   return db
     .prepare("SELECT * FROM match_players WHERE match_id = ?")
     .all(matchId) as MatchPlayerRow[];
 }
 
-// Säsongsstatistik per spelare – för jämn speltid (SvFF) och utveckling
-export function getSeasonStats() {
-  const rows = db
+export interface SeasonStatRow {
+  id: number;
+  name: string;
+  jersey_number: number | null;
+  matches_played: number;
+  goals: number;
+  assists: number;
+  shots: number;
+  shots_on_target: number;
+  passes_completed: number;
+  interceptions: number;
+  saves: number;
+}
+
+// Säsongsstatistik per spelare – deltagande (SvFF: alla ska spela) och insatser
+export function getSeasonStats(): SeasonStatRow[] {
+  const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n              ");
+  return db
     .prepare(
       `SELECT p.id, p.name, p.jersey_number,
               COUNT(mp.match_id) AS matches_played,
-              COALESCE(SUM(mp.minutes), 0) AS total_minutes,
-              COALESCE(SUM(mp.goals), 0) AS total_goals,
-              COALESCE(SUM(mp.assists), 0) AS total_assists
+              ${sums}
        FROM players p
        LEFT JOIN match_players mp ON mp.player_id = p.id
        WHERE p.active = 1
        GROUP BY p.id
        ORDER BY p.name COLLATE NOCASE`
     )
-    .all() as {
-    id: number;
-    name: string;
-    jersey_number: number | null;
-    matches_played: number;
-    total_minutes: number;
-    total_goals: number;
-    total_assists: number;
-  }[];
-  return rows;
+    .all() as SeasonStatRow[];
 }
 
 export function getLatestEvaluationDates(): Record<number, string> {
