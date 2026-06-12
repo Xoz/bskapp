@@ -4,6 +4,8 @@ import { getRole } from "@/lib/auth";
 import { getPlayer, getEvaluations, getScores } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { createEvaluation } from "@/lib/actions";
+import Avatar from "@/components/Avatar";
+import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -15,31 +17,55 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
   const player = getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  // Förifyll med senaste utvärderingen som utgångspunkt
   const latest = getEvaluations(player.id)[0];
   const latestScores = latest ? getScores(latest.id) : {};
   const today = new Date().toISOString().slice(0, 10);
+  const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <Link href={`/spelare/${player.id}`} className="text-sm font-medium" style={{ color: "var(--ink-soft)" }}>
-          ← {player.name}
-        </Link>
-        <h1 className="text-2xl font-bold mt-1">Ny utvärdering</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          Enligt SvFF:s spelarutbildningsplan. Jämför spelaren med sig själv – inte med andra.
-          {latest && " Förra utvärderingens nivåer är förifyllda."}
-        </p>
+      <Link
+        href={`/spelare/${player.id}`}
+        className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
+        style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+      >
+        <IconArrowLeft width={15} height={15} /> {player.name}
+      </Link>
+
+      <div className="card p-6 md:p-7 flex items-center gap-5">
+        <Avatar name={player.name} size={56} />
+        <div>
+          <p className="eyebrow">Ny utvärdering</p>
+          <h1 className="text-[1.5rem] font-bold leading-tight mt-0.5">{player.name}</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+            Jämför {firstName} med sig själv – inte med andra.
+            {latest && " Förra utvärderingen är förifylld."}
+          </p>
+        </div>
       </div>
 
-      <div className="card p-4 text-sm" style={{ background: "#eef3ff", borderColor: "#c7d6f5" }}>
-        <p className="font-semibold mb-1" style={{ color: "var(--primary)" }}>Nivåerna</p>
-        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
+      {/* Nivålegend */}
+      <div className="card p-5" style={{ background: "var(--primary-ghost)" }}>
+        <p className="eyebrow mb-3" style={{ color: "var(--primary)" }}>
+          Utvecklingsnivåer – inte betyg
+        </p>
+        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
           {LEVELS.map((l) => (
-            <p key={l.value} style={{ color: "var(--ink-soft)" }}>
-              <span className="font-semibold" style={{ color: "var(--ink)" }}>{l.label}</span> – {l.description}
-            </p>
+            <div key={l.value} className="flex items-start gap-3">
+              <span className="level-meter mt-1.5 shrink-0">
+                {[1, 2, 3, 4].map((i) => (
+                  <i key={i} className={i <= l.value ? "on" : ""} />
+                ))}
+              </span>
+              <p className="text-sm leading-snug">
+                <span className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                  {l.label}
+                </span>
+                <span className="block text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  {l.description}
+                </span>
+              </p>
+            </div>
           ))}
         </div>
       </div>
@@ -58,16 +84,27 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        {CATEGORIES.map((cat) => (
-          <div key={cat.id} className="card p-6">
-            <h2 className="font-semibold mb-1" style={{ color: cat.color }}>
-              {cat.name}
-            </h2>
-            <div className="space-y-5 mt-4">
+        {CATEGORIES.map((cat, idx) => (
+          <div key={cat.id} className="card overflow-hidden">
+            <div
+              className="px-6 py-4 flex items-center gap-3"
+              style={{ borderBottom: "1px solid var(--line)", background: `color-mix(in srgb, ${cat.color}, #ffffff 95%)` }}
+            >
+              <span
+                className="stat-number flex h-7 w-7 items-center justify-center rounded-lg text-xs text-white"
+                style={{ background: cat.color }}
+              >
+                {idx + 1}
+              </span>
+              <h2 className="font-semibold" style={{ color: cat.color }}>
+                {cat.name}
+              </h2>
+            </div>
+            <div className="space-y-6 p-6">
               {cat.skills.map((skill) => (
                 <div key={skill.id}>
                   <p className="font-medium text-sm">{skill.name}</p>
-                  <p className="text-xs mb-2" style={{ color: "var(--ink-soft)" }}>
+                  <p className="text-xs mb-2.5" style={{ color: "var(--ink-faint)" }}>
                     {skill.description}
                   </p>
                   <div className="grid grid-cols-4 gap-2">
@@ -90,9 +127,11 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
           </div>
         ))}
 
-        <div className="card p-6 space-y-4">
+        <div className="card p-6 space-y-5">
           <div>
-            <label className="label" htmlFor="strengths">💪 Styrkor – vad är {player.name.split(" ")[0]} bra på?</label>
+            <label className="label" htmlFor="strengths">
+              Styrkor – vad är {firstName} bra på?
+            </label>
             <textarea
               id="strengths"
               name="strengths"
@@ -103,7 +142,9 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
             />
           </div>
           <div>
-            <label className="label" htmlFor="development_goals">🎯 Utvecklingsmål – vad tränar vi på härnäst?</label>
+            <label className="label" htmlFor="development_goals">
+              Utvecklingsmål – vad tränar vi på härnäst?
+            </label>
             <textarea
               id="development_goals"
               name="development_goals"
@@ -116,7 +157,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary">Spara utvärdering</button>
+          <button type="submit" className="btn-primary px-6">Spara utvärdering</button>
           <Link href={`/spelare/${player.id}`} className="btn-secondary">Avbryt</Link>
         </div>
       </form>

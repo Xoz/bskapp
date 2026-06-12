@@ -4,6 +4,7 @@ import { getRole } from "@/lib/auth";
 import { getMatch, getMatchPlayers, getPlayers } from "@/lib/queries";
 import { deleteMatch } from "@/lib/actions";
 import MatchForm from "@/components/MatchForm";
+import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -20,24 +21,38 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/matcher" className="text-sm font-medium" style={{ color: "var(--ink-soft)" }}>
-            ← Matcher
+          <Link
+            href="/matcher"
+            className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
+            style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          >
+            <IconArrowLeft width={15} height={15} /> Matcher
           </Link>
-          <h1 className="text-2xl font-bold mt-1">
+          <h1 className="text-[1.7rem] font-bold mt-2">
             {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
             {match.date}
-            {match.our_score != null && match.opponent_score != null &&
-              ` · Resultat ${match.our_score} – ${match.opponent_score}`}
+            {match.our_score != null && match.opponent_score != null && (
+              <>
+                {" · Resultat "}
+                <span className="stat-number" style={{ color: "var(--ink)" }}>
+                  {match.our_score}–{match.opponent_score}
+                </span>
+              </>
+            )}
           </p>
         </div>
         {role === "coach" && (
           <form action={deleteMatch}>
             <input type="hidden" name="id" value={match.id} />
-            <button type="submit" className="text-sm text-red-500 hover:underline cursor-pointer">
+            <button
+              type="submit"
+              className="text-sm hover:underline cursor-pointer"
+              style={{ color: "var(--danger)" }}
+            >
               Ta bort match
             </button>
           </form>

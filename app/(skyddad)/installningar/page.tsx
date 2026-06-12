@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { updateSettings } from "@/lib/actions";
+import { IconCheck, IconShield } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -19,22 +20,27 @@ export default async function SettingsPage({
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold">Inställningar</h1>
+        <p className="eyebrow">Klubben</p>
+        <h1 className="text-[1.7rem] font-bold mt-0.5">Inställningar</h1>
         <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          Appen är byggd för att kunna anpassas till vilken klubb som helst – byt namn, färger och koder.
+          Appen anpassas till vilken klubb som helst – byt namn, färger och koder.
         </p>
       </div>
 
       {sparad && (
-        <div className="card p-4 text-sm border-green-200 bg-green-50 text-green-800">
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+        >
+          <IconCheck width={16} height={16} />
           Inställningarna är sparade.
         </div>
       )}
 
       <form action={updateSettings} className="space-y-6">
-        <div className="card p-6 space-y-4">
+        <div className="card p-6 md:p-7 space-y-5">
           <h2 className="font-semibold">Klubb och lag</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="label" htmlFor="club_name">Klubbnamn</label>
               <input id="club_name" name="club_name" defaultValue={settings.club_name} className="input" />
@@ -50,9 +56,14 @@ export default async function SettingsPage({
           </div>
         </div>
 
-        <div className="card p-6 space-y-4">
-          <h2 className="font-semibold">Klubbfärger</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+        <div className="card p-6 md:p-7 space-y-5">
+          <div>
+            <h2 className="font-semibold">Klubbfärger</h2>
+            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+              Primärfärgen bör vara mörk (marinblå, mörkgrön, vinröd) – accentfärgen ljus och varm.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="label" htmlFor="primary_color">Primärfärg</label>
               <input
@@ -76,13 +87,23 @@ export default async function SettingsPage({
           </div>
         </div>
 
-        <div className="card p-6 space-y-4">
-          <h2 className="font-semibold">Inloggningskoder</h2>
-          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-            Tränarkoden ger full åtkomst. Föräldrakoden ger bara åtkomst till matchstatistiken –
-            dela den i föräldragruppen.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-4">
+        <div className="card p-6 md:p-7 space-y-5">
+          <div className="flex items-start gap-3">
+            <span
+              className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            >
+              <IconShield width={17} height={17} />
+            </span>
+            <div>
+              <h2 className="font-semibold">Inloggningskoder</h2>
+              <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                Tränarkoden ger full åtkomst. Föräldrakoden ger bara åtkomst till matchstatistiken
+                – dela den i föräldragruppen.
+              </p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="label" htmlFor="coach_code">Tränarkod</label>
               <input id="coach_code" name="coach_code" defaultValue={settings.coach_code} className="input" />
@@ -94,7 +115,7 @@ export default async function SettingsPage({
           </div>
         </div>
 
-        <button type="submit" className="btn-primary">Spara inställningar</button>
+        <button type="submit" className="btn-primary px-6">Spara inställningar</button>
       </form>
     </div>
   );

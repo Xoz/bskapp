@@ -2,11 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches } from "@/lib/queries";
+import { IconPlus, IconPitch } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
 const TYPE_LABELS: Record<string, string> = {
-  seriespel: "Sammandrag/serie",
+  seriespel: "Sammandrag",
   cup: "Cup",
   traningsmatch: "Träningsmatch",
 };
@@ -19,74 +20,75 @@ export default async function MatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Matcher</h1>
+          <p className="eyebrow">Säsongen</p>
+          <h1 className="text-[1.7rem] font-bold mt-0.5">Matcher</h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
             {role === "parent"
-              ? "Tack för att du hjälper till med matchstatistiken! Klicka på en match eller registrera en ny."
-              : `${matches.length} matcher registrerade`}
+              ? "Tack för att du hjälper till med matchstatistiken!"
+              : `${matches.length} ${matches.length === 1 ? "match registrerad" : "matcher registrerade"}`}
           </p>
         </div>
         <Link href="/matcher/ny" className="btn-primary">
-          + Registrera match
+          <IconPlus width={15} height={15} /> Registrera match
         </Link>
       </div>
 
       {matches.length === 0 ? (
-        <div className="card p-8 text-center">
-          <p className="font-medium mb-1">Inga matcher ännu</p>
-          <p className="text-sm mb-4" style={{ color: "var(--ink-soft)" }}>
+        <div className="card p-10 text-center">
+          <span
+            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconPitch width={22} height={22} />
+          </span>
+          <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
+            Inga matcher ännu
+          </p>
+          <p className="text-sm mb-5 max-w-xs mx-auto" style={{ color: "var(--ink-soft)" }}>
             Registrera lagets första match med speltid, mål och assist per spelare.
           </p>
           <Link href="/matcher/ny" className="btn-primary">Registrera match</Link>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Datum</th>
-                <th>Motståndare</th>
-                <th>Typ</th>
-                <th>Resultat</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {matches.map((m) => (
-                <tr key={m.id}>
-                  <td style={{ color: "var(--ink-soft)" }}>{m.date}</td>
-                  <td>
-                    <Link href={`/matcher/${m.id}`} className="font-medium hover:underline" style={{ color: "var(--primary)" }}>
-                      {m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}
-                    </Link>
-                  </td>
-                  <td>
-                    <span className="badge" style={{ background: "#eef3ff", color: "var(--primary)" }}>
-                      {TYPE_LABELS[m.match_type] ?? m.match_type}
-                    </span>
-                  </td>
-                  <td className="font-semibold">
-                    {m.our_score != null && m.opponent_score != null
-                      ? `${m.our_score} – ${m.opponent_score}`
-                      : "–"}
-                  </td>
-                  <td className="text-right">
-                    <Link href={`/matcher/${m.id}`} className="text-sm font-medium" style={{ color: "var(--primary)" }}>
-                      Öppna →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid gap-3">
+          {matches.map((m) => {
+            const hasResult = m.our_score != null && m.opponent_score != null;
+            return (
+              <Link key={m.id} href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
+                <div
+                  className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  <IconPitch width={20} height={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
+                    {m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                    {m.date}
+                  </p>
+                </div>
+                <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+                  {TYPE_LABELS[m.match_type] ?? m.match_type}
+                </span>
+                <span
+                  className="stat-number text-lg w-16 text-right"
+                  style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
+                >
+                  {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
-      <p className="text-xs" style={{ color: "var(--ink-soft)" }}>
-        Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling och jämn speltid –
-        inte på resultat och tabeller. Resultatet är frivilligt att fylla i.
+      <p className="text-xs max-w-xl" style={{ color: "var(--ink-faint)" }}>
+        Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling och jämn speltid – inte
+        på resultat och tabeller. Resultatet är frivilligt att fylla i.
       </p>
     </div>
   );

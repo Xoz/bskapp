@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
 import { addPlayer } from "@/lib/actions";
+import Avatar from "@/components/Avatar";
+import { IconPlus, IconAlert } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +20,15 @@ export default async function PlayersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Spelare</h1>
+          <p className="eyebrow">Truppen</p>
+          <h1 className="text-[1.7rem] font-bold mt-0.5">Spelare</h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-            {players.length} spelare i truppen
+            {players.length} spelare · klicka på en spelare för utvecklingsprofil
           </p>
         </div>
-        <form action={addPlayer} className="flex gap-2 items-end">
+        <form action={addPlayer} className="card flex gap-2 items-end p-3">
           <div>
             <label className="label" htmlFor="name">Namn</label>
             <input id="name" name="name" required className="input w-44" placeholder="Förnamn Efternamn" />
@@ -34,14 +37,19 @@ export default async function PlayersPage() {
             <label className="label" htmlFor="jersey_number">Nr</label>
             <input id="jersey_number" name="jersey_number" type="number" min="1" max="99" className="input w-16" />
           </div>
-          <button type="submit" className="btn-primary">Lägg till</button>
+          <button type="submit" className="btn-primary">
+            <IconPlus width={15} height={15} /> Lägg till
+          </button>
         </form>
       </div>
 
       {hasDemo && (
-        <div className="card p-4 border-amber-200 bg-amber-50 text-sm text-amber-800">
-          Listan innehåller exempelspelare. Klicka på en spelare för att byta namn till en riktig
-          spelare, eller ta bort den från spelarens sida.
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          style={{ background: "var(--warn-bg)", color: "var(--warn)", border: "1px solid color-mix(in srgb, var(--warn), transparent 75%)" }}
+        >
+          <IconAlert width={17} height={17} />
+          Truppen innehåller exempelspelare – klicka på en spelare för att byta namn eller ta bort.
         </div>
       )}
 
@@ -49,8 +57,7 @@ export default async function PlayersPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Namn</th>
+              <th>Spelare</th>
               <th>Senast utvärderad</th>
               <th>Matcher</th>
               <th>Speltid</th>
@@ -62,21 +69,30 @@ export default async function PlayersPage() {
               const s = statsById[p.id];
               return (
                 <tr key={p.id}>
-                  <td className="font-semibold" style={{ color: "var(--ink-soft)" }}>
-                    {p.jersey_number ?? "–"}
-                  </td>
                   <td>
-                    <Link href={`/spelare/${p.id}`} className="font-medium hover:underline" style={{ color: "var(--primary)" }}>
-                      {p.name}
+                    <Link href={`/spelare/${p.id}`} className="flex items-center gap-3 group">
+                      <Avatar name={p.name} size={36} />
+                      <span>
+                        <span className="block font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
+                          {p.name}
+                        </span>
+                        <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
+                          {p.jersey_number != null ? `Tröja #${p.jersey_number}` : "Inget tröjnummer"}
+                        </span>
+                      </span>
                     </Link>
                   </td>
                   <td style={{ color: "var(--ink-soft)" }}>
-                    {latestEvals[p.id] ?? <span className="text-amber-600 font-medium">Aldrig</span>}
+                    {latestEvals[p.id] ?? (
+                      <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+                        Aldrig
+                      </span>
+                    )}
                   </td>
                   <td>{s?.matches_played ?? 0}</td>
                   <td>{s?.total_minutes ?? 0} min</td>
                   <td className="text-right">
-                    <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3">
+                    <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">
                       Utvärdera
                     </Link>
                   </td>

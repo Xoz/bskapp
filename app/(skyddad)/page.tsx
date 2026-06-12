@@ -10,6 +10,17 @@ import {
   countEvaluations,
 } from "@/lib/queries";
 import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
+import Avatar from "@/components/Avatar";
+import PitchLines from "@/components/PitchLines";
+import {
+  IconPlayers,
+  IconPitch,
+  IconTrendUp,
+  IconAlert,
+  IconClock,
+  IconCheck,
+  IconArrowRight,
+} from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -24,80 +35,135 @@ export default async function Dashboard() {
   const latestEvals = getLatestEvaluationDates();
   const totalEvals = countEvaluations();
 
-  // Spelare som inte utvärderats på 60 dagar (eller aldrig)
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
 
-  // Jämn speltid – avvikelse från snittet
   const withMinutes = stats.filter((s) => s.total_minutes > 0);
   const avgMinutes =
     withMinutes.length > 0
       ? withMinutes.reduce((a, b) => a + b.total_minutes, 0) / withMinutes.length
       : 0;
-  const lowPlaytime = stats.filter(
-    (s) => avgMinutes > 0 && s.total_minutes < avgMinutes * 0.75
-  );
+  const lowPlaytime = stats.filter((s) => avgMinutes > 0 && s.total_minutes < avgMinutes * 0.75);
+
+  const kpis = [
+    { label: "Spelare i truppen", value: players.length, href: "/spelare", Icon: IconPlayers },
+    { label: "Matcher", value: matches.length, href: "/matcher", Icon: IconPitch },
+    { label: "Utvärderingar", value: totalEvals, href: "/spelare", Icon: IconTrendUp },
+    {
+      label: "Att utvärdera",
+      value: needsEval.length,
+      href: "/spelare",
+      Icon: IconAlert,
+      warn: needsEval.length > 0,
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Översikt</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          Säsong {settings.season} · Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods}
-        </p>
+      {/* Hero */}
+      <div className="panel-dark p-7 md:p-9">
+        <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 text-white/[0.06]" />
+        <div className="relative">
+          <p className="eyebrow text-white/45">Säsong {settings.season}</p>
+          <h1
+            className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {settings.team_name}
+          </h1>
+          <p className="mt-2 text-sm text-white/60 max-w-lg">
+            Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} · {GAME_FORMAT.ballSize}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/matcher/ny" className="btn-accent">
+              Registrera match
+            </Link>
+            <Link
+              href="/spelare"
+              className="btn-secondary"
+              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff" }}
+            >
+              Till truppen
+            </Link>
+          </div>
+        </div>
       </div>
 
+      {/* KPI:er */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Spelare i truppen", value: players.length, href: "/spelare" },
-          { label: "Matcher", value: matches.length, href: "/matcher" },
-          { label: "Utvärderingar", value: totalEvals, href: "/spelare" },
-          {
-            label: "Att utvärdera",
-            value: needsEval.length,
-            href: "/spelare",
-            warn: needsEval.length > 0,
-          },
-        ].map((kpi) => (
-          <Link key={kpi.label} href={kpi.href} className="card p-5 hover:shadow-md transition-shadow">
+        {kpis.map(({ label, value, href, Icon, warn }) => (
+          <Link key={label} href={href} className="card card-hover p-5">
+            <div className="flex items-start justify-between">
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                style={{
+                  background: warn ? "var(--warn-bg)" : "var(--primary-soft)",
+                  color: warn ? "var(--warn)" : "var(--primary)",
+                }}
+              >
+                <Icon />
+              </span>
+            </div>
             <p
-              className="text-3xl font-bold"
-              style={{ color: kpi.warn ? "#d97706" : "var(--primary)" }}
+              className="stat-number mt-4 text-[2rem] leading-none"
+              style={{ color: warn ? "var(--warn)" : "var(--ink)" }}
             >
-              {kpi.value}
+              {value}
             </p>
-            <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-              {kpi.label}
+            <p className="mt-1.5 text-[0.8rem]" style={{ color: "var(--ink-soft)" }}>
+              {label}
             </p>
           </Link>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Dags att utvärdera */}
         <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Dags att utvärdera</h2>
-            <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>
-              60+ dagar sedan
-            </span>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-semibold text-[1.05rem]">Dags att utvärdera</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                Ingen utvärdering på 60 dagar
+              </p>
+            </div>
+            {needsEval.length > 0 && (
+              <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+                {needsEval.length} st
+              </span>
+            )}
           </div>
           {needsEval.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-              Alla spelare har en aktuell utvärdering. Bra jobbat! 🎉
-            </p>
+            <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--ok)", color: "#fff" }}>
+                <IconCheck width={16} height={16} />
+              </span>
+              <p className="text-sm" style={{ color: "var(--ok)" }}>
+                Alla spelare har en aktuell utvärdering. Bra jobbat!
+              </p>
+            </div>
           ) : (
-            <ul className="space-y-2">
-              {needsEval.slice(0, 8).map((p) => (
+            <ul className="-mx-2">
+              {needsEval.slice(0, 6).map((p) => (
                 <li key={p.id}>
                   <Link
                     href={`/spelare/${p.id}/utvardera`}
-                    className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors"
+                    className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--primary-ghost)]"
                   >
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                      {latestEvals[p.id] ? `Senast ${latestEvals[p.id]}` : "Aldrig utvärderad"} →
+                    <Avatar name={p.name} size={34} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{p.name}</p>
+                      <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                        {latestEvals[p.id] ? `Senast ${latestEvals[p.id]}` : "Aldrig utvärderad"}
+                      </p>
+                    </div>
+                    <span
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: "var(--primary)" }}
+                    >
+                      <IconArrowRight width={16} height={16} />
                     </span>
                   </Link>
                 </li>
@@ -106,32 +172,58 @@ export default async function Dashboard() {
           )}
         </div>
 
+        {/* Jämn speltid */}
         <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Jämn speltid</h2>
-            <Link href="/statistik" className="text-sm font-medium" style={{ color: "var(--primary)" }}>
-              Visa allt →
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-semibold text-[1.05rem]">Jämn speltid</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                SvFF: alla ska spela lika mycket
+              </p>
+            </div>
+            <Link
+              href="/statistik"
+              className="text-xs font-semibold flex items-center gap-1"
+              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
+            >
+              Visa allt <IconArrowRight width={13} height={13} />
             </Link>
           </div>
           {avgMinutes === 0 ? (
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-              Registrera matchstatistik så ser du speltidsfördelningen här – enligt SvFF ska alla
-              spela lika mycket.
-            </p>
+            <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+                <IconClock />
+              </span>
+              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                Registrera matchstatistik så ser du speltidsfördelningen här.
+              </p>
+            </div>
           ) : lowPlaytime.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-              Speltiden är jämnt fördelad i truppen. 👍
-            </p>
+            <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--ok)", color: "#fff" }}>
+                <IconCheck width={16} height={16} />
+              </span>
+              <p className="text-sm" style={{ color: "var(--ok)" }}>
+                Speltiden är jämnt fördelad i truppen.
+              </p>
+            </div>
           ) : (
             <>
-              <p className="text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
-                Dessa spelare ligger under 75 % av lagets snitt ({Math.round(avgMinutes)} min):
+              <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
+                Under 75 % av lagets snitt ({Math.round(avgMinutes)} min) – prioritera i nästa match:
               </p>
               <ul className="space-y-2">
                 {lowPlaytime.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50">
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-sm font-semibold text-amber-700">{p.total_minutes} min</span>
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    style={{ background: "var(--warn-bg)" }}
+                  >
+                    <Avatar name={p.name} size={30} />
+                    <span className="flex-1 text-sm font-medium">{p.name.replace(/^Exempel:\s*/, "")}</span>
+                    <span className="stat-number text-sm" style={{ color: "var(--warn)" }}>
+                      {p.total_minutes} min
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -140,12 +232,19 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      <div className="card p-6">
-        <h2 className="font-semibold mb-3">SvFF:s riktlinjer som appen bygger på</h2>
-        <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+      {/* SvFF-principer */}
+      <div className="card p-6 md:p-7">
+        <p className="eyebrow mb-1">Vår grund</p>
+        <h2 className="font-semibold text-[1.05rem] mb-4">SvFF:s riktlinjer som appen bygger på</h2>
+        <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3">
           {SVFF_PRINCIPLES.map((p) => (
-            <li key={p} className="flex gap-2 text-sm" style={{ color: "var(--ink-soft)" }}>
-              <span style={{ color: "var(--primary)" }}>✓</span>
+            <li key={p} className="flex gap-3 text-sm items-start" style={{ color: "var(--ink-soft)" }}>
+              <span
+                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+              >
+                <IconCheck width={11} height={11} strokeWidth={2.6} />
+              </span>
               {p}
             </li>
           ))}

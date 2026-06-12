@@ -1,6 +1,7 @@
 import { saveMatch } from "@/lib/actions";
 import type { Match, MatchPlayerRow, Player } from "@/lib/queries";
 import { GAME_FORMAT } from "@/lib/svff";
+import Avatar from "@/components/Avatar";
 import Link from "next/link";
 
 export default function MatchForm({
@@ -19,7 +20,7 @@ export default function MatchForm({
     <form action={saveMatch} className="space-y-6">
       {match && <input type="hidden" name="id" value={match.id} />}
 
-      <div className="card p-6 grid gap-4 sm:grid-cols-2">
+      <div className="card p-6 grid gap-5 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="date">Datum</label>
           <input id="date" name="date" type="date" required defaultValue={match?.date ?? today} className="input" />
@@ -57,12 +58,14 @@ export default function MatchForm({
         </div>
       </div>
 
-      <div className="card p-6">
-        <h2 className="font-semibold mb-1">Spelarstatistik</h2>
-        <p className="text-sm mb-4" style={{ color: "var(--ink-soft)" }}>
-          Spelform {GAME_FORMAT.format}, {GAME_FORMAT.periods} = max {GAME_FORMAT.totalMinutes} min per
-          spelare. Bocka i de som spelade och fyll i speltid.
-        </p>
+      <div className="card overflow-hidden">
+        <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--line)" }}>
+          <h2 className="font-semibold">Spelarstatistik</h2>
+          <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+            Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} = max {GAME_FORMAT.totalMinutes} min
+            per spelare. Bocka i de som spelade och fyll i speltid.
+          </p>
+        </div>
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
@@ -84,15 +87,15 @@ export default function MatchForm({
                         type="checkbox"
                         name={`played_${p.id}`}
                         defaultChecked={!!mp}
-                        className="h-5 w-5 accent-[var(--primary)]"
+                        className="h-5 w-5 rounded accent-[var(--primary)]"
                         aria-label={`${p.name} spelade`}
                       />
                     </td>
-                    <td className="font-medium">
-                      {p.jersey_number != null && (
-                        <span className="mr-1.5" style={{ color: "var(--ink-soft)" }}>#{p.jersey_number}</span>
-                      )}
-                      {p.name}
+                    <td>
+                      <span className="flex items-center gap-2.5 font-medium">
+                        <Avatar name={p.name} size={30} />
+                        {p.name}
+                      </span>
                     </td>
                     <td>
                       <input
@@ -137,7 +140,7 @@ export default function MatchForm({
       </div>
 
       <div className="flex gap-3">
-        <button type="submit" className="btn-primary">Spara match</button>
+        <button type="submit" className="btn-primary px-6">Spara match</button>
         <Link href="/matcher" className="btn-secondary">Avbryt</Link>
       </div>
     </form>

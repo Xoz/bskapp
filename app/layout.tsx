@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Space_Grotesk({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const body = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
@@ -23,7 +29,7 @@ export default function RootLayout({
 }>) {
   const settings = getAllSettings();
   return (
-    <html lang="sv" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="sv" className={`${display.variable} ${body.variable} h-full antialiased`}>
       <body
         className="min-h-full flex flex-col"
         style={
