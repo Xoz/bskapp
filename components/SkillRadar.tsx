@@ -29,27 +29,28 @@ export default function SkillRadar({
   return (
     <ResponsiveContainer width="100%" height={300}>
       <RadarChart data={merged} outerRadius="72%">
-        <PolarGrid stroke="#e5e8ef" />
+        <PolarGrid stroke="rgba(255,255,255,0.07)" />
         <PolarAngleAxis
           dataKey="category"
-          tick={{ fontSize: 11.5, fill: "#5a6276", fontFamily: "var(--font-display)" }}
+          tick={{ fontSize: 11.5, fill: "#9a9890", fontFamily: "var(--font-display)" }}
         />
-        <PolarRadiusAxis domain={[0, 4]} tickCount={5} tick={{ fontSize: 9, fill: "#9aa2b4" }} stroke="#e5e8ef" />
+        <PolarRadiusAxis domain={[0, 4]} tickCount={5} tick={{ fontSize: 9, fill: "#5c5a56" }} stroke="rgba(255,255,255,0.07)" />
         <Tooltip
           formatter={(value) => Number(value).toFixed(1)}
           contentStyle={{
-            borderRadius: 12,
-            border: "1px solid #e5e8ef",
-            boxShadow: "0 8px 24px -12px rgba(20,27,46,0.25)",
-            fontSize: 13,
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "#1c1d22",
+            color: "#e8e6de",
+            fontSize: 12,
           }}
         />
         {compare && (
           <Radar
             name="Föregående"
             dataKey="Föregående"
-            stroke="#9aa2b4"
-            fill="#9aa2b4"
+            stroke="#5c5a56"
+            fill="#5c5a56"
             fillOpacity={0.12}
             strokeDasharray="4 3"
           />

@@ -1,7 +1,8 @@
-// Deterministisk spelaravatar – initialer på färgad platta
+// Deterministisk spelaravatar – initialer på accentfärgad platta
+// Färgerna kommer från designsystemets accentpalett (Dark Mono Dashboard)
 const PALETTE = [
-  "#1d44a0", "#0e7490", "#7c3aed", "#0f766e",
-  "#b45309", "#be185d", "#4338ca", "#15803d",
+  "#4d8ef0", "#1fba8a", "#a78bfa", "#f59e0b",
+  "#f87171", "#86efac", "#6b7280", "#e8e6de",
 ];
 
 function hash(s: string) {
@@ -26,9 +27,8 @@ export default function Avatar({ name, size = 36 }: { name: string; size?: numbe
       style={{
         width: size,
         height: size,
-        fontSize: size * 0.38,
-        background: `linear-gradient(145deg, color-mix(in srgb, ${color}, #ffffff 22%), ${color})`,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px -2px ${color}66`,
+        fontSize: size * 0.36,
+        background: color,
       }}
     >
       {initials || "?"}

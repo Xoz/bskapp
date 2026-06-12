@@ -24,12 +24,12 @@ export default function DevelopmentChart({
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e8ef" vertical={false} />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9aa2b4" }} axisLine={{ stroke: "#e5e8ef" }} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" vertical={false} />
+        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#5c5a56" }} axisLine={{ stroke: "rgba(255,255,255,0.07)" }} tickLine={false} />
         <YAxis
           domain={[1, 4]}
           ticks={[1, 2, 3, 4]}
-          tick={{ fontSize: 10.5, fill: "#5a6276", fontFamily: "var(--font-display)" }}
+          tick={{ fontSize: 10.5, fill: "#9a9890", fontFamily: "var(--font-display)" }}
           tickFormatter={(v) => String(levelLabel(v))}
           width={80}
           axisLine={false}
@@ -39,10 +39,11 @@ export default function DevelopmentChart({
           formatter={(value) => [Number(value).toFixed(1), undefined]}
           labelFormatter={(label) => `Utvärdering ${label}`}
           contentStyle={{
-            borderRadius: 12,
-            border: "1px solid #e5e8ef",
-            boxShadow: "0 8px 24px -12px rgba(20,27,46,0.25)",
-            fontSize: 13,
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "#1c1d22",
+            color: "#e8e6de",
+            fontSize: 12,
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12.5 }} iconType="plainline" />
@@ -52,7 +53,7 @@ export default function DevelopmentChart({
           name="Helhet"
           stroke={primary}
           strokeWidth={2.5}
-          dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+          dot={{ r: 4, strokeWidth: 2, fill: "#0e0f11" }}
         />
         {CATEGORIES.map((cat) => (
           <Line

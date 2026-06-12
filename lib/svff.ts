@@ -31,7 +31,7 @@ export const CATEGORIES: SkillCategory[] = [
     id: "anfall_boll",
     name: "Anfallsspel – med boll",
     short: "Med boll",
-    color: "#2563eb",
+    color: "#4d8ef0",
     skills: [
       { id: "driva", name: "Driva bollen", description: "Driver bollen med kontroll i olika riktningar och tempo" },
       { id: "utmana", name: "Utmana och finta", description: "Vågar utmana en mot en och använder finter" },
@@ -44,7 +44,7 @@ export const CATEGORIES: SkillCategory[] = [
     id: "anfall_utan_boll",
     name: "Anfallsspel – utan boll",
     short: "Utan boll",
-    color: "#0891b2",
+    color: "#1fba8a",
     skills: [
       { id: "spelbarhet", name: "Spelbarhet", description: "Erbjuder sig och gör sig spelbar i rätt ytor" },
       { id: "speldjup_bredd", name: "Speldjup och spelbredd", description: "Förstår och skapar djup och bredd i anfallsspelet" },
@@ -54,7 +54,7 @@ export const CATEGORIES: SkillCategory[] = [
     id: "forsvar",
     name: "Försvarsspel",
     short: "Försvar",
-    color: "#7c3aed",
+    color: "#a78bfa",
     skills: [
       { id: "press", name: "Press på bollhållare", description: "Sätter press på rätt sätt och i rätt läge" },
       { id: "positionering", name: "Positionering", description: "Täcker yta och har rätt position i förhållande till boll och medspelare" },
@@ -65,7 +65,7 @@ export const CATEGORIES: SkillCategory[] = [
     id: "fysik",
     name: "Fysik och motorik",
     short: "Fysik",
-    color: "#059669",
+    color: "#86efac",
     skills: [
       { id: "motorik", name: "Motorik och koordination", description: "Allsidig rörelseförmåga, balans och kroppskontroll" },
       { id: "snabbhet", name: "Snabbhet och rörlighet", description: "Snabba fötter, riktningsförändringar och löpteknik" },
@@ -75,7 +75,7 @@ export const CATEGORIES: SkillCategory[] = [
     id: "psykosocialt",
     name: "Psykosocialt",
     short: "Psykosocialt",
-    color: "#d97706",
+    color: "#f59e0b",
     skills: [
       { id: "traningsvilja", name: "Träningsvilja och fokus", description: "Vill träna, lyssnar och anstränger sig på övningar" },
       { id: "lagkansla", name: "Samarbete och lagkänsla", description: "Stöttar lagkamrater och bidrar till en bra stämning" },

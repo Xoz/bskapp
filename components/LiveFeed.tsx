@@ -91,21 +91,16 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
       <div
         className="rounded-2xl px-3.5 py-2.5"
         style={{
-          background: ourGoal
-            ? "linear-gradient(135deg, var(--primary-light), var(--primary))"
-            : "#fff",
-          border: ourGoal ? "none" : "1.5px solid var(--line-strong)",
-          boxShadow: ourGoal
-            ? "0 6px 16px -8px color-mix(in srgb, var(--primary), transparent 30%)"
-            : "var(--shadow-card)",
+          background: ourGoal ? "var(--primary)" : "var(--bg3)",
+          border: ourGoal ? "1px solid transparent" : "1px solid var(--coral)",
         }}
       >
         <div className="flex items-center gap-2">
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
             style={{
-              background: ourGoal ? "var(--accent)" : "var(--warn-bg)",
-              color: ourGoal ? "var(--primary-deep)" : "var(--warn)",
+              background: ourGoal ? "var(--primary-deep)" : "var(--coral-dim)",
+              color: ourGoal ? "var(--primary)" : "var(--coral)",
             }}
           >
             <Icon width={15} height={15} />
@@ -115,21 +110,21 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
               className="text-[0.7rem] font-bold uppercase tracking-[0.1em] leading-none"
               style={{
                 fontFamily: "var(--font-display)",
-                color: ourGoal ? "var(--accent)" : "var(--warn)",
+                color: ourGoal ? "var(--primary-deep)" : "var(--coral)",
               }}
             >
               Mål!
             </p>
             <p
               className="truncate text-sm font-semibold mt-0.5"
-              style={{ color: ourGoal ? "#fff" : "var(--ink)" }}
+              style={{ color: ourGoal ? "var(--primary-deep)" : "var(--ink)" }}
             >
               {ourGoal ? (e.player_name ? firstName(e.player_name) : "Vi") : opponent}
             </p>
           </div>
           <span
             className="stat-number ml-auto text-lg whitespace-nowrap"
-            style={{ color: ourGoal ? "#fff" : "var(--ink)" }}
+            style={{ color: ourGoal ? "var(--primary-deep)" : "var(--ink)" }}
           >
             {row.ourScore}–{row.oppScore}
           </span>
@@ -140,8 +135,8 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
 
   return (
     <div
-      className="rounded-2xl bg-white px-3.5 py-2 flex items-center gap-2"
-      style={{ border: "1px solid var(--line)", boxShadow: "var(--shadow-card)" }}
+      className="rounded-2xl px-3.5 py-2 flex items-center gap-2"
+      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
     >
       <span
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
@@ -200,7 +195,7 @@ export default function LiveFeed({
                   className="badge relative"
                   style={{
                     background: "var(--primary)",
-                    color: "#fff",
+                    color: "var(--primary-deep)",
                     boxShadow: "0 0 0 4px var(--bg)",
                   }}
                 >
@@ -213,7 +208,7 @@ export default function LiveFeed({
             <span
               className="stat-number relative z-10 flex h-7 min-w-12 items-center justify-center rounded-full px-1.5 text-[0.7rem]"
               style={{
-                background: "#fff",
+                background: "var(--bg2)",
                 border: "1px solid var(--line-strong)",
                 color: "var(--ink-soft)",
                 boxShadow: "0 0 0 3px var(--bg)",

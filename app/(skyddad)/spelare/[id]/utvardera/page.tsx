@@ -88,11 +88,11 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
           <div key={cat.id} className="card overflow-hidden">
             <div
               className="px-6 py-4 flex items-center gap-3"
-              style={{ borderBottom: "1px solid var(--line)", background: `color-mix(in srgb, ${cat.color}, #ffffff 95%)` }}
+              style={{ borderBottom: "1px solid var(--line)", background: `color-mix(in srgb, ${cat.color}, transparent 92%)` }}
             >
               <span
-                className="stat-number flex h-7 w-7 items-center justify-center rounded-lg text-xs text-white"
-                style={{ background: cat.color }}
+                className="stat-number flex h-7 w-7 items-center justify-center rounded-lg text-xs"
+                style={{ background: cat.color, color: "var(--bg)" }}
               >
                 {idx + 1}
               </span>

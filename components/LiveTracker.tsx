@@ -204,7 +204,7 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                   fontFamily: "var(--font-display)",
                   background: "rgba(255,255,255,0.1)",
                   border: "1px solid rgba(255,255,255,0.18)",
-                  color: "#fff",
+                  color: "var(--ink)",
                 }}
               >
                 Starta period {live.period + 1} →
@@ -232,7 +232,7 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
               fontFamily: "var(--font-display)",
               background: "rgba(255,255,255,0.1)",
               border: "1px solid rgba(255,255,255,0.18)",
-              color: "#fff",
+              color: "var(--ink)",
             }}
           >
             +1 Mål motståndare
@@ -261,8 +261,8 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                 className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: activeStat === statId ? "var(--primary)" : "#fff",
-                  color: activeStat === statId ? "#fff" : "var(--ink-soft)",
+                  background: activeStat === statId ? "var(--primary)" : "var(--bg2)",
+                  color: activeStat === statId ? "var(--primary-deep)" : "var(--ink-soft)",
                   border: "1px solid " + (activeStat === statId ? "var(--primary)" : "var(--line-strong)"),
                 }}
               >
@@ -323,7 +323,7 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
                       background: (isPlayedTab ? playedOn : count > 0)
                         ? "var(--primary)"
                         : "var(--primary-ghost)",
-                      color: (isPlayedTab ? playedOn : count > 0) ? "#fff" : "var(--ink-faint)",
+                      color: (isPlayedTab ? playedOn : count > 0) ? "var(--primary-deep)" : "var(--ink-faint)",
                     }}
                   >
                     {isPlayedTab ? (playedOn ? "✓" : "–") : count}
@@ -408,8 +408,8 @@ function SetupCard({
                 className="rounded-full px-4 py-2.5 text-sm font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: on ? "var(--primary)" : "#fff",
-                  color: on ? "#fff" : "var(--ink-soft)",
+                  background: on ? "var(--primary)" : "var(--bg2)",
+                  color: on ? "var(--primary-deep)" : "var(--ink-soft)",
                   border: "1.5px solid " + (on ? "var(--primary)" : "var(--line-strong)"),
                 }}
               >

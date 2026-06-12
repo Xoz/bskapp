@@ -39,7 +39,7 @@ export default async function StatsPage() {
       <div className="card p-6 md:p-7">
         <h2 className="font-semibold mb-1">Spelade matcher per spelare</h2>
         <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
-          Gula staplar ligger under 75 % av lagets snitt – prioritera dem i kommande matcher.
+          Röda staplar ligger under 75 % av lagets snitt – prioritera dem i kommande matcher.
         </p>
         {matches.length === 0 ? (
           <div className="rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--line-strong)" }}>

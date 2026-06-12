@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
 
-const display = Space_Grotesk({
+// Designsystem "Dark Mono Dashboard": Syne för display, DM Mono för allt annat
+const display = Syne({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const body = Inter({
+const mono = DM_Mono({
   variable: "--font-body",
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,13 +31,14 @@ export default function RootLayout({
 }>) {
   const settings = getAllSettings();
   return (
-    <html lang="sv" className={`${display.variable} ${body.variable} h-full antialiased`}>
+    <html lang="sv" className={`${display.variable} ${mono.variable} h-full antialiased`}>
       <body
         className="min-h-full flex flex-col"
         style={
           {
-            "--primary": settings.primary_color || "#13306e",
-            "--accent": settings.accent_color || "#ffd23f",
+            // Klubbens accentfärg driver hela accentskalan på det mörka temat
+            "--primary": settings.accent_color || "#f59e0b",
+            "--accent": settings.accent_color || "#f59e0b",
           } as React.CSSProperties
         }
       >

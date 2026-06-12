@@ -85,7 +85,7 @@ export default async function Dashboard() {
             <Link
               href="/spelare"
               className="btn-secondary"
-              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff" }}
+              style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
             >
               Till truppen
             </Link>
@@ -139,7 +139,7 @@ export default async function Dashboard() {
           </div>
           {needsEval.length === 0 ? (
             <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--ok)", color: "#fff" }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--teal-dim)", color: "var(--ok)" }}>
                 <IconCheck width={16} height={16} />
               </span>
               <p className="text-sm" style={{ color: "var(--ok)" }}>
@@ -202,7 +202,7 @@ export default async function Dashboard() {
             </div>
           ) : lowParticipation.length === 0 ? (
             <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--ok)", color: "#fff" }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--teal-dim)", color: "var(--ok)" }}>
                 <IconCheck width={16} height={16} />
               </span>
               <p className="text-sm" style={{ color: "var(--ok)" }}>
