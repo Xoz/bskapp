@@ -1,12 +1,21 @@
 // Hämtar och tolkar iCal-kalendern från svenskalag.se (eller annan iCal-källa)
 // och plockar ut matchhändelser.
+//
+// Svenskalag-format på matchrubriker:
+//   "Match: Sollentuna FK 2 - Bollstanäs SK 3 (F2014- 3) // F2014-Gul - Bollstanäs SK FB"
+//   "Stockholm Football Cup // F2014-Gul - Bollstanäs SK FB"
+//   "Träning // ..." (ska INTE importeras)
 
 export interface CalendarMatch {
   uid: string;
   date: string; // YYYY-MM-DD
+  time: string | null; // HH:MM avspark
   summary: string;
   opponent: string;
   homeAway: "home" | "away";
+  location: string;
+  series: string | null;
+  matchType: "seriespel" | "cup" | "traningsmatch";
 }
 
 // Viker upp rader enligt RFC 5545 (fortsättningsrader inleds med blanksteg/tab)
@@ -30,6 +39,12 @@ function parseDate(value: string): string | null {
   return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
+function parseTime(value: string): string | null {
+  const m = value.match(/T(\d{2})(\d{2})/);
+  if (!m) return null;
+  return `${m[1]}:${m[2]}`;
+}
+
 function decodeText(value: string): string {
   return value
     .replace(/\\n/g, " ")
@@ -43,6 +58,7 @@ interface RawEvent {
   uid: string;
   summary: string;
   date: string;
+  time: string | null;
   location: string;
 }
 
@@ -62,6 +78,7 @@ export function parseEvents(ics: string): RawEvent[] {
           uid: current.uid,
           summary: current.summary,
           date: current.date,
+          time: current.time ?? null,
           location: current.location ?? "",
         });
       }
@@ -78,47 +95,95 @@ export function parseEvents(ics: string): RawEvent[] {
 
     if (key === "UID") current.uid = value.trim();
     else if (key === "SUMMARY") current.summary = decodeText(value);
-    else if (key === "DTSTART") current.date = parseDate(value.trim()) ?? "";
-    else if (key === "LOCATION") current.location = decodeText(value);
+    else if (key === "DTSTART") {
+      current.date = parseDate(value.trim()) ?? "";
+      current.time = parseTime(value.trim());
+    } else if (key === "LOCATION") current.location = decodeText(value);
   }
   return events;
 }
 
-// Plockar ut motståndare ur en matchrubrik, t.ex.
-// "Match: Bollstanäs SK F2014 - Väsby IK" eller "BSK F2014 vs Täby FK"
+function cleanTeamName(s: string): string {
+  return s.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s{2,}/g, " ").trim();
+}
+
+// Plockar ut motståndare ur en matchrubrik
 function extractOpponent(
   summary: string,
   ownNames: string[]
-): { opponent: string; homeAway: "home" | "away" } {
-  let s = summary.replace(/^(match|sammandrag|seriespel|cup)[:\s]*/i, "").trim();
-  const parts = s.split(/\s+-\s+|\s+–\s+|\s+vs\.?\s+/i).map((p) => p.trim()).filter(Boolean);
+): { opponent: string; homeAway: "home" | "away"; series: string | null } {
+  // Klipp bort svenskalags lagsuffix: "... // F2014-Gul - Bollstanäs SK FB"
+  let s = summary.split("//")[0].trim();
+  s = s.replace(/^(match|sammandrag|seriespel|cup|träningsmatch)[:\s]+/i, "").trim();
+
+  const series = s.match(/\(([^)]+)\)/)?.[1]?.replace(/\s+/g, " ").trim() ?? null;
+
+  const parts = s
+    .split(/\s+-\s+|\s+–\s+|\s+vs\.?\s+/i)
+    .map((p) => cleanTeamName(p))
+    .filter(Boolean);
 
   const isOwn = (part: string) =>
     ownNames.some((n) => n && part.toLowerCase().includes(n.toLowerCase()));
 
   if (parts.length >= 2) {
-    if (isOwn(parts[0])) return { opponent: parts[1], homeAway: "home" };
-    if (isOwn(parts[1])) return { opponent: parts[0], homeAway: "away" };
-    return { opponent: parts.join(" – "), homeAway: "home" };
+    if (isOwn(parts[0])) return { opponent: parts[1], homeAway: "home", series };
+    if (isOwn(parts[1])) return { opponent: parts[0], homeAway: "away", series };
+    return { opponent: parts.join(" – "), homeAway: "home", series };
   }
-  // Kunde inte dela upp – ta bort egna lagnamn ur texten
+  // Kunde inte dela upp (t.ex. cupdagar) – ta bort egna lagnamn ur texten
   for (const n of ownNames) {
     if (n) s = s.replace(new RegExp(n, "ig"), "").trim();
   }
-  return { opponent: s.replace(/^[-–\s]+|[-–\s]+$/g, "") || summary, homeAway: "home" };
+  const opponent = cleanTeamName(s.replace(/^[-–\s]+|[-–\s]+$/g, "")) || cleanTeamName(summary.split("//")[0]);
+  return { opponent, homeAway: "home", series };
 }
 
+const VERSUS_SPLIT = /\s+-\s+|\s+–\s+|\s+vs\.?\s+/i;
+
 export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[] {
+  const isOwn = (part: string) =>
+    ownNames.some((n) => n && part.toLowerCase().includes(n.toLowerCase()));
+
   return parseEvents(ics)
-    .filter((e) => /match|seriespel|sammandrag|cup/i.test(e.summary))
+    .filter((e) => {
+      const head = e.summary.split("//")[0];
+      // "match" täcker även "Träningsmatch" – men inte "Träning"/"Träningspass"
+      if (/match|seriespel|sammandrag|cup/i.test(head)) return true;
+      // "LagA - LagB" där vårt lag ingår är också en match, även utan nyckelord
+      // (t.ex. cupmatcher som "Mariebergs IK Vit - Bollstanäs SK")
+      const parts = head.split(VERSUS_SPLIT).map((p) => p.trim());
+      return parts.length >= 2 && parts.some(isOwn);
+    })
     .map((e) => {
-      const { opponent, homeAway } = extractOpponent(e.summary, ownNames);
-      return { uid: e.uid, date: e.date, summary: e.summary, opponent, homeAway };
+      const { opponent, homeAway, series } = extractOpponent(e.summary, ownNames);
+      const head = e.summary.split("//")[0];
+      const matchType: CalendarMatch["matchType"] = /träningsmatch/i.test(head)
+        ? "traningsmatch"
+        : /cup/i.test(head)
+          ? "cup"
+          : /match|seriespel|sammandrag/i.test(head)
+            ? "seriespel"
+            : // Ren "LagA - LagB"-rubrik utan nyckelord – troligen tränings-/cupmatch
+              "traningsmatch";
+      return {
+        uid: e.uid,
+        date: e.date,
+        time: e.time,
+        summary: e.summary,
+        opponent,
+        homeAway,
+        location: e.location,
+        series,
+        matchType,
+      };
     });
 }
 
 export async function fetchCalendar(url: string): Promise<string> {
-  const res = await fetch(url, {
+  // webcal:// är bara https:// med annat namn
+  const httpUrl = url.replace(/^webcal:\/\//i, "https://");
+  const res = await fetch(httpUrl, {
     headers: { Accept: "text/calendar, text/plain, */*" },
     signal: AbortSignal.timeout(15000),
   });

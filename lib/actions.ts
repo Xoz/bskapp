@@ -70,6 +70,49 @@ export async function updatePlayer(formData: FormData) {
   revalidatePath("/spelare");
 }
 
+// Klistra in truppen från svenskalag.se – ett namn per rad
+export async function addPlayersBulk(formData: FormData) {
+  await requireRole(["coach"]);
+  const raw = String(formData.get("names") ?? "");
+  const existing = new Set(
+    (db.prepare("SELECT name FROM players WHERE active = 1").all() as { name: string }[]).map((r) =>
+      r.name.toLowerCase()
+    )
+  );
+  const insert = db.prepare("INSERT INTO players (name, jersey_number) VALUES (?, ?)");
+  const tx = db.transaction(() => {
+    for (const line of raw.split(/\r?\n/)) {
+      // Plocka ev. tröjnummer: "7 Alva Svensson", "Alva Svensson 7" eller "#7 Alva"
+      let name = line.replace(/\s+/g, " ").trim();
+      if (!name) continue;
+      let jersey: number | null = null;
+      const lead = name.match(/^#?(\d{1,2})[.\s]+(.+)$/);
+      const trail = name.match(/^(.+?)[\s#]+(\d{1,2})$/);
+      if (lead) {
+        jersey = Number(lead[1]);
+        name = lead[2].trim();
+      } else if (trail) {
+        jersey = Number(trail[2]);
+        name = trail[1].trim();
+      }
+      if (!name || existing.has(name.toLowerCase())) continue;
+      insert.run(name, jersey);
+      existing.add(name.toLowerCase());
+    }
+  });
+  tx();
+  revalidatePath("/spelare");
+  redirect("/spelare");
+}
+
+// Tar bort alla exempelspelare i ett klick (mjuk borttagning)
+export async function removeDemoPlayers() {
+  await requireRole(["coach"]);
+  db.prepare("UPDATE players SET active = 0 WHERE name LIKE 'Exempel:%'").run();
+  revalidatePath("/spelare");
+  redirect("/spelare");
+}
+
 export async function removePlayer(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));
@@ -222,11 +265,18 @@ export async function importCalendarMatches() {
 
     const exists = db.prepare("SELECT 1 FROM matches WHERE external_uid = ?");
     const insert = db.prepare(
-      "INSERT INTO matches (date, opponent, home_away, match_type, notes, created_by_role, code, source, external_uid) VALUES (?, ?, ?, 'seriespel', ?, 'coach', ?, 'calendar', ?)"
+      "INSERT INTO matches (date, opponent, home_away, match_type, notes, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)"
     );
     for (const m of matches) {
       if (!m.date || exists.get(m.uid)) continue;
-      insert.run(m.date, m.opponent, m.homeAway, m.summary, generateMatchCode(), m.uid);
+      const notes = [
+        m.series && `Serie: ${m.series}`,
+        m.time && `Avspark ${m.time}`,
+        m.location && `Plats: ${m.location}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      insert.run(m.date, m.opponent, m.homeAway, m.matchType, notes, generateMatchCode(), m.uid);
       imported++;
     }
   } catch {

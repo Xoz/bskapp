@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
-import { addPlayer } from "@/lib/actions";
+import { addPlayer, addPlayersBulk, removeDemoPlayers } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
 import { IconPlus, IconAlert } from "@/components/Icons";
 
@@ -45,13 +45,46 @@ export default async function PlayersPage() {
 
       {hasDemo && (
         <div
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm flex-wrap"
           style={{ background: "var(--warn-bg)", color: "var(--warn)", border: "1px solid color-mix(in srgb, var(--warn), transparent 75%)" }}
         >
           <IconAlert width={17} height={17} />
-          Truppen innehåller exempelspelare – klicka på en spelare för att byta namn eller ta bort.
+          <span className="flex-1 min-w-48">
+            Truppen innehåller exempelspelare – klistra in din riktiga trupp nedan och rensa sedan
+            exemplen.
+          </span>
+          <form action={removeDemoPlayers}>
+            <button type="submit" className="font-semibold underline cursor-pointer">
+              Ta bort alla exempelspelare
+            </button>
+          </form>
         </div>
       )}
+
+      {/* Klistra in truppen från svenskalag.se */}
+      <details className="card p-5">
+        <summary
+          className="cursor-pointer font-semibold text-sm select-none"
+          style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
+        >
+          Klistra in hela truppen från svenskalag.se
+        </summary>
+        <form action={addPlayersBulk} className="mt-4 space-y-3">
+          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            Truppsidan på svenskalag.se kräver inloggning, så kopiera namnlistan därifrån när du är
+            inloggad och klistra in här – ett namn per rad. Tröjnummer före eller efter namnet
+            plockas upp automatiskt (t.ex. &quot;7 Alva Svensson&quot;). Dubbletter hoppas över.
+          </p>
+          <textarea
+            name="names"
+            rows={8}
+            required
+            className="input font-mono text-sm"
+            placeholder={"Alva Svensson\nEbba Karlsson 5\n7 Maja Lindqvist"}
+          />
+          <button type="submit" className="btn-primary">Lägg till spelarna</button>
+        </form>
+      </details>
 
       <div className="card overflow-hidden">
         <table className="data-table">
