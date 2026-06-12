@@ -246,33 +246,6 @@ export async function openReport(_prev: { error?: string } | null, formData: For
   redirect(`/rapportera/${code}`);
 }
 
-export async function submitStatsByCode(formData: FormData) {
-  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
-  const match = db.prepare("SELECT id FROM matches WHERE code = ?").get(code) as
-    | { id: number }
-    | undefined;
-  if (!match) redirect("/rapportera");
-
-  // Resultat får också fyllas i av rapportören
-  const ourScoreRaw = formData.get("our_score");
-  const oppScoreRaw = formData.get("opponent_score");
-  if (ourScoreRaw !== null && ourScoreRaw !== "") {
-    db.prepare("UPDATE matches SET our_score = ? WHERE id = ?").run(Number(ourScoreRaw), match.id);
-  }
-  if (oppScoreRaw !== null && oppScoreRaw !== "") {
-    db.prepare("UPDATE matches SET opponent_score = ? WHERE id = ?").run(
-      Number(oppScoreRaw),
-      match.id
-    );
-  }
-
-  savePlayerStats(match.id, formData);
-
-  revalidatePath("/matcher");
-  revalidatePath("/statistik");
-  redirect(`/rapportera/${code}?tack=1`);
-}
-
 // ---- Inställningar ----
 export async function updateSettings(formData: FormData) {
   await requireRole(["coach"]);

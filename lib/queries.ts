@@ -141,6 +141,25 @@ export function getSeasonStats(): SeasonStatRow[] {
     .all() as SeasonStatRow[];
 }
 
+export interface MatchEventRow {
+  id: number;
+  player_id: number | null;
+  player_name: string | null;
+  stat_id: string;
+  match_second: number | null;
+}
+
+// Händelser i kronologisk ordning – för tidslinjen på matchsidan
+export function getMatchEvents(matchId: number): MatchEventRow[] {
+  return db
+    .prepare(
+      `SELECT e.id, e.player_id, p.name AS player_name, e.stat_id, e.match_second
+       FROM match_events e LEFT JOIN players p ON p.id = e.player_id
+       WHERE e.match_id = ? ORDER BY e.id ASC`
+    )
+    .all(matchId) as MatchEventRow[];
+}
+
 export function getLatestEvaluationDates(): Record<number, string> {
   const rows = db
     .prepare("SELECT player_id, MAX(date) AS latest FROM evaluations GROUP BY player_id")

@@ -62,6 +62,18 @@ db.exec(`
     assists INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (match_id, player_id)
   );
+
+  -- Händelselogg från live-rapporteringen: varje tryck = en händelse med matchtid,
+  -- så att tränarna kan hitta rätt ögonblick i matchvideon
+  CREATE TABLE IF NOT EXISTS match_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
+    stat_id TEXT NOT NULL,
+    match_second INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id);
 `);
 
 // ---- Migrationer ----
@@ -80,6 +92,10 @@ const matchCols = columnNames("matches");
 if (!matchCols.includes("code")) db.exec(`ALTER TABLE matches ADD COLUMN code TEXT`);
 if (!matchCols.includes("source")) db.exec(`ALTER TABLE matches ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`);
 if (!matchCols.includes("external_uid")) db.exec(`ALTER TABLE matches ADD COLUMN external_uid TEXT`);
+// Matchklocka – delas av alla som rapporterar samma match
+if (!matchCols.includes("clock_started_at")) db.exec(`ALTER TABLE matches ADD COLUMN clock_started_at INTEGER`);
+if (!matchCols.includes("clock_offset")) db.exec(`ALTER TABLE matches ADD COLUMN clock_offset INTEGER NOT NULL DEFAULT 0`);
+if (!matchCols.includes("clock_running")) db.exec(`ALTER TABLE matches ADD COLUMN clock_running INTEGER NOT NULL DEFAULT 0`);
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL;

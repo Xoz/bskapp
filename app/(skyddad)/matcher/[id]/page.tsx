@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers } from "@/lib/queries";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents } from "@/lib/queries";
 import { deleteMatch, regenerateMatchCode } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import MatchForm from "@/components/MatchForm";
+import EventTimeline from "@/components/EventTimeline";
 import Avatar from "@/components/Avatar";
 import { IconArrowLeft } from "@/components/Icons";
 
@@ -20,6 +21,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const players = getPlayers();
   const matchPlayers = getMatchPlayers(match.id);
+  const events = getMatchEvents(match.id);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
 
   return (
@@ -96,6 +98,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
 
+          <EventTimeline events={events} />
+
           <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
         </>
       ) : (
@@ -145,6 +149,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </div>
             )}
           </div>
+
+          <EventTimeline events={events} />
 
           <div className="card p-5 text-sm" style={{ color: "var(--ink-soft)" }}>
             Ska du rapportera den här matchen? Be tränaren om matchkoden och ange den på{" "}
