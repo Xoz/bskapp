@@ -9,6 +9,11 @@ function statusLabel(m: Match): { text: string; tone: "live" | "done" | "soon" }
     const hasResult = m.our_score != null && m.opponent_score != null;
     return { text: hasResult ? `${m.our_score}–${m.opponent_score}` : "Avslutad", tone: "done" };
   }
+  const today = new Date().toISOString().slice(0, 10);
+  // Matcher senare under cupen (annan dag) – visa tid om satt, annars "Senare"
+  if (m.date > today) {
+    return { text: m.start_time ?? "Senare", tone: "soon" };
+  }
   if (m.start_time) {
     const [h, min] = m.start_time.split(":").map(Number);
     const start = new Date(`${m.date}T${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`);
@@ -43,6 +48,9 @@ export default function CupReportSwitcher({
           {matches.map((m) => {
             const isCurrent = m.code === currentCode;
             const st = statusLabel(m);
+            // Bara den match man faktiskt rapporterar just nu (och som inte är
+            // avslutad) markeras som pågående – annars visas matchens status.
+            const showLive = isCurrent && !m.finished;
             const toneColor =
               st.tone === "done" ? "var(--ok)" : st.tone === "soon" ? "var(--ink-faint)" : "var(--primary)";
             return (
@@ -71,7 +79,7 @@ export default function CupReportSwitcher({
                   className="stat-number text-xs shrink-0"
                   style={{ color: isCurrent ? "var(--primary-deep)" : toneColor }}
                 >
-                  {isCurrent ? "● pågår" : st.text}
+                  {showLive ? "● pågår" : st.text}
                 </span>
               </Link>
             );
