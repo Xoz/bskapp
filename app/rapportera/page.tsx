@@ -6,23 +6,6 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-function reportingStatus(date: string, startTime: string | null): {
-  open: boolean;
-  label: string;
-  minutesLeft: number | null;
-} {
-  if (!startTime) return { open: true, label: "Öppen", minutesLeft: null };
-
-  const now = new Date();
-  const [h, m] = startTime.split(":").map(Number);
-  const matchStart = new Date(`${date}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
-  const opensAt = new Date(matchStart.getTime() - 15 * 60 * 1000);
-  const diff = Math.ceil((opensAt.getTime() - now.getTime()) / 60000);
-
-  if (diff <= 0) return { open: true, label: `Avspark ${startTime}`, minutesLeft: null };
-  return { open: false, label: `Öppnar ${diff} min före ${startTime}`, minutesLeft: diff };
-}
-
 export default async function ReportPage() {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -74,7 +57,6 @@ export default async function ReportPage() {
               Dagens matcher
             </p>
             {todayMatches.map((match) => {
-              const status = reportingStatus(match.date, match.start_time);
               const finished = !!match.finished;
 
               if (finished) {
@@ -102,40 +84,20 @@ export default async function ReportPage() {
               }
 
               return (
-                <div key={match.id}>
-                  {status.open ? (
-                    <Link
-                      href={`/rapportera/${match.code}`}
-                      className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
-                      style={{ background: "var(--primary)", color: "var(--primary-deep)" }}
-                    >
-                      <div>
-                        <p className="font-semibold text-sm">
-                          {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
-                        </p>
-                        <p className="text-[0.7rem] opacity-70 mt-0.5">{status.label}</p>
-                      </div>
-                      <span className="text-lg">→</span>
-                    </Link>
-                  ) : (
-                    <div
-                      className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4"
-                      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
-                    >
-                      <div>
-                        <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
-                          {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
-                        </p>
-                        <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                          {status.label}
-                        </p>
-                      </div>
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: "var(--bg3)", color: "var(--ink-faint)" }}>
-                        Stängt
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <Link
+                  key={match.id}
+                  href={`/rapportera/${match.code}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+                  style={{ background: "var(--primary)", color: "var(--primary-deep)" }}
+                >
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+                    </p>
+                    <p className="text-[0.7rem] opacity-70 mt-0.5">{match.start_time ?? "Öppen"}</p>
+                  </div>
+                  <span className="text-lg">→</span>
+                </Link>
               );
             })}
           </div>
