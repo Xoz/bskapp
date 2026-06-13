@@ -73,18 +73,28 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Matchnivå – sätts/ändras här */}
-      <form action={setMatchLevel} className="card p-5 flex items-end gap-4 flex-wrap" style={{ background: "var(--primary-ghost)" }}>
+      <form action={setMatchLevel} className="card p-5 space-y-3" style={{ background: "var(--primary-ghost)" }}>
         <input type="hidden" name="id" value={match.id} />
-        <div className="flex-1 min-w-48">
-          <label className="label" htmlFor="level">Matchens svårighetsnivå</label>
-          <select id="level" name="level" defaultValue={match.level ?? ""} className="input">
-            <option value="">Ej satt</option>
-            {LEVELS.map((l) => (
-              <option key={l.id} value={l.id}>{l.label}</option>
-            ))}
-          </select>
+        <div className="flex items-end gap-4 flex-wrap">
+          <div className="flex-1 min-w-48">
+            <label className="label" htmlFor="level">
+              {cupSize > 1 ? "Cupens svårighetsnivå" : "Matchens svårighetsnivå"}
+            </label>
+            <select id="level" name="level" defaultValue={match.level ?? ""} className="input">
+              <option value="">Ej satt</option>
+              {LEVELS.map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-secondary">Spara nivå</button>
         </div>
-        <button type="submit" className="btn-secondary">Spara nivå</button>
+        {cupSize > 1 && (
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer">
+            <input type="checkbox" name="apply_cup" defaultChecked className="h-4.5 w-4.5 rounded accent-[var(--primary)]" />
+            Gäller alla {cupSize} matcher i {match.cup_name}
+          </label>
+        )}
       </form>
 
       {!mLevel ? (

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches, type Match as MatchType } from "@/lib/queries";
-import { level as levelInfo } from "@/lib/levels";
+import { level as levelInfo, LEVELS } from "@/lib/levels";
+import { setMatchLevel } from "@/lib/actions";
 import { IconPlus, IconPitch, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -175,6 +176,8 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
   const range = first === last ? first : `${first} – ${last}`;
   const ongoing = matches.some((m) => m.date === today);
   const played = matches.filter((m) => m.our_score != null && m.opponent_score != null).length;
+  // Cupens nivå – matcherna delar nivå; ta den första som har en satt
+  const cupLevel = levelInfo(matches.find((m) => m.level)?.level);
 
   return (
     <details className="card overflow-hidden" open={ongoing}>
@@ -194,8 +197,27 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
         {ongoing && (
           <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
         )}
+        {cupLevel && (
+          <span className="badge inline-flex" style={{ background: "var(--bg2)", color: cupLevel.color }}>{cupLevel.label}</span>
+        )}
         <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>Cup</span>
       </summary>
+      {role === "coach" && (
+        <form action={setMatchLevel} className="flex items-end gap-3 px-5 py-3 flex-wrap" style={{ borderTop: "1px solid var(--line)", background: "var(--primary-ghost)" }}>
+          <input type="hidden" name="id" value={matches[0].id} />
+          <input type="hidden" name="apply_cup" value="on" />
+          <div className="flex-1 min-w-44">
+            <label className="label" htmlFor={`cuplevel-${matches[0].id}`}>Cupens nivå</label>
+            <select id={`cuplevel-${matches[0].id}`} name="level" defaultValue={cupLevel?.id ?? ""} className="input">
+              <option value="">Ej satt</option>
+              {LEVELS.map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-secondary">Spara nivå</button>
+        </form>
+      )}
       <div style={{ borderTop: "1px solid var(--line)" }}>
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;

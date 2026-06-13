@@ -272,12 +272,25 @@ export async function saveMatch(formData: FormData) {
   redirect(`/matcher/${matchId}`);
 }
 
-// Sätt/ändra matchens svårighetsnivå (snabbt, från laguttagningssidan)
+// Sätt/ändra matchens svårighetsnivå. Med "apply_cup" sätts samma nivå på alla
+// matcher i cupen (matcherna i en cup spelas på samma nivå).
 export async function setMatchLevel(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   const level = String(formData.get("level") ?? "");
   if (!id) return;
+
+  const applyCup = formData.get("apply_cup") === "on";
+  if (applyCup) {
+    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [id]);
+    if (m?.cup_name) {
+      await run("UPDATE matches SET level = ? WHERE cup_name = ?", [level, m.cup_name]);
+      revalidatePath(`/matcher/${id}/laguttagning`);
+      revalidatePath(`/matcher/${id}`);
+      revalidatePath("/matcher");
+      return;
+    }
+  }
   await run("UPDATE matches SET level = ? WHERE id = ?", [level, id]);
   revalidatePath(`/matcher/${id}/laguttagning`);
   revalidatePath(`/matcher/${id}`);
