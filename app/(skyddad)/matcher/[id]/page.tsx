@@ -7,6 +7,7 @@ import { STAT_FIELDS } from "@/lib/stats";
 import MatchForm from "@/components/MatchForm";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
+import ConfirmForm from "@/components/ConfirmForm";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -53,27 +54,24 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </div>
         {role === "coach" && (
           <div className="flex gap-3 items-center">
-            <form action={resetMatch}>
+            <ConfirmForm
+              action={resetMatch}
+              message="Nollställa all statistik och klocka för den här matchen?"
+            >
               <input type="hidden" name="id" value={match.id} />
-              <button
-                type="submit"
-                onClick={(e) => { if (!confirm("Nollställa all statistik och klocka för den här matchen?")) e.preventDefault(); }}
-                className="text-sm hover:underline cursor-pointer"
-                style={{ color: "var(--ink-faint)" }}
-              >
+              <button type="submit" className="text-sm hover:underline cursor-pointer" style={{ color: "var(--ink-faint)" }}>
                 Nollställ match
               </button>
-            </form>
-            <form action={deleteMatch}>
+            </ConfirmForm>
+            <ConfirmForm
+              action={deleteMatch}
+              message="Ta bort matchen permanent?"
+            >
               <input type="hidden" name="id" value={match.id} />
-              <button
-                type="submit"
-                className="text-sm hover:underline cursor-pointer"
-                style={{ color: "var(--danger)" }}
-              >
+              <button type="submit" className="text-sm hover:underline cursor-pointer" style={{ color: "var(--danger)" }}>
                 Ta bort match
               </button>
-            </form>
+            </ConfirmForm>
           </div>
         )}
       </div>
