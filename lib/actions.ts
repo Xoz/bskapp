@@ -274,6 +274,46 @@ export async function resetMatch(formData: FormData) {
   redirect(`/matcher/${id}`);
 }
 
+export async function addManualEvent(
+  _prev: { error?: string; ok?: boolean } | null,
+  formData: FormData
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireRole(["coach"]);
+  const matchId = Number(formData.get("match_id"));
+  const playerId = formData.get("player_id") === "opponent" ? null : Number(formData.get("player_id")) || null;
+  const statId = String(formData.get("stat_id") ?? "");
+  const period = Number(formData.get("period")) || null;
+  const minutes = Number(formData.get("minutes") ?? 0);
+  const seconds = Number(formData.get("seconds") ?? 0);
+  const matchSecond = (minutes > 0 || seconds > 0) ? minutes * 60 + seconds : null;
+  const isOpponentGoal = formData.get("player_id") === "opponent";
+
+  if (!matchId || !statId) return { error: "Ogiltiga värden" };
+
+  const ENSURE_ROW = "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT(match_id, player_id) DO NOTHING";
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [
+    {
+      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period) VALUES (?, ?, ?, ?, ?)",
+      args: [matchId, playerId, statId, matchSecond, period],
+    },
+  ];
+
+  if (isOpponentGoal) {
+    stmts.push({ sql: "UPDATE matches SET opponent_score = COALESCE(opponent_score, 0) + 1 WHERE id = ?", args: [matchId] });
+  } else if (playerId != null && STAT_IDS.includes(statId)) {
+    stmts.push({ sql: ENSURE_ROW, args: [matchId, playerId] });
+    stmts.push({ sql: `UPDATE match_players SET ${statId} = ${statId} + 1 WHERE match_id = ? AND player_id = ?`, args: [matchId, playerId] });
+    if (statId === "goals") {
+      stmts.push({ sql: "UPDATE matches SET our_score = COALESCE(our_score, 0) + 1 WHERE id = ?", args: [matchId] });
+    }
+  }
+
+  await batch(stmts);
+  revalidatePath(`/matcher/${matchId}`);
+  return { ok: true };
+}
+
 export async function regenerateMatchCode(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));

@@ -9,6 +9,7 @@ import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import ManualEventForm from "@/components/ManualEventForm";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -177,6 +178,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
             </div>
           )}
+
+          <div className="card p-6 md:p-7">
+            <h2 className="font-semibold mb-1">Lägg till händelse</h2>
+            <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
+              Komplettera statistik vid videogenomgång – händelsen sparas i matchflödet.
+            </p>
+            <ManualEventForm matchId={match.id} players={players} periods={match.periods} />
+          </div>
 
           <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
         </>
