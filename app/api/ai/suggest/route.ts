@@ -69,30 +69,31 @@ Svara exakt i detta format utan rubriker eller förklaringar:
 STYRKOR: [text]
 FOKUS: [text]`;
 
-  const apiKey = process.env.MOONSHOT_API_KEY?.trim();
-  if (!apiKey) return NextResponse.json({ error: "MOONSHOT_API_KEY saknas" }, { status: 500 });
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY saknas" }, { status: 500 });
 
-  const res = await fetch("https://api.moonshot.cn/v1/chat/completions", {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "moonshot-v1-8k",
-      temperature: 0.7,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    console.error("Moonshot error", res.status, err, "key prefix:", apiKey.slice(0, 8));
-    return NextResponse.json({ error: `Kimi-fel: ${err}` }, { status: 500 });
+    console.error("Anthropic error", res.status, err);
+    return NextResponse.json({ error: `AI-fel: ${err}` }, { status: 500 });
   }
 
   const data = await res.json();
-  const text: string = data.choices?.[0]?.message?.content ?? "";
+  const text: string = data.content?.[0]?.text ?? "";
 
   const strengthsMatch = text.match(/STYRKOR:\s*([\s\S]*?)(?=FOKUS:|$)/);
   const focusMatch = text.match(/FOKUS:\s*([\s\S]*?)$/);
