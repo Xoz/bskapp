@@ -4,6 +4,7 @@ import { getRole } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
 import { addPlayer, addPlayersBulk, removeDemoPlayers } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
+import { level as levelInfo } from "@/lib/levels";
 import { IconPlus, IconAlert } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -106,8 +107,16 @@ export default async function PlayersPage() {
                     <Link href={`/spelare/${p.id}`} className="flex items-center gap-3 group">
                       <Avatar name={p.name} jersey={p.jersey_number} size={36} />
                       <span>
-                        <span className="block font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
+                        <span className="flex items-center gap-2 font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
                           {p.name}
+                          {(() => {
+                            const pl = levelInfo(p.level);
+                            return pl ? (
+                              <span className="badge" style={{ background: "var(--bg2)", color: pl.color, fontSize: "0.62rem" }}>
+                                {pl.short}
+                              </span>
+                            ) : null;
+                          })()}
                         </span>
                         <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                           {p.jersey_number != null ? `Tröja #${p.jersey_number}` : "Inget tröjnummer"}

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters } from "@/lib/queries";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
 import { deleteMatch, regenerateMatchCode, resetMatch } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
+import { level as levelInfo } from "@/lib/levels";
 import MatchForm from "@/components/MatchForm";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
@@ -23,13 +24,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [players, matchPlayers, events, reporters] = await Promise.all([
+  const [players, matchPlayers, events, reporters, squadIds] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
     getMatchReporters(match.id),
+    getMatchSquad(match.id),
   ]);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
+  const mLevel = levelInfo(match.level);
+  const today = new Date().toISOString().slice(0, 10);
+  const isUpcoming = match.date >= today;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -42,8 +47,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           >
             <IconArrowLeft width={15} height={15} /> Matcher
           </Link>
-          <h1 className="text-[1.7rem] font-bold mt-2">
+          <h1 className="text-[1.7rem] font-bold mt-2 flex items-center gap-3 flex-wrap">
             {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
+            {mLevel && (
+              <span className="badge" style={{ background: "var(--bg2)", color: mLevel.color, fontSize: "0.7rem" }}>
+                {mLevel.label}
+              </span>
+            )}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
             {match.date}{match.start_time ? ` · ${match.start_time}` : ""}
@@ -136,6 +146,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {role === "coach" ? (
         <>
+          {/* Laguttagning */}
+          <Link
+            href={`/matcher/${match.id}/laguttagning`}
+            className="card card-hover p-5 flex items-center gap-4"
+            style={isUpcoming ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
+          >
+            <span className="text-2xl">📋</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold">Laguttagning</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                {squadIds.length > 0
+                  ? `${squadIds.length} spelare uttagna${mLevel ? ` · nivå ${mLevel.label}` : ""}`
+                  : mLevel
+                    ? `Ta ut truppen för en ${mLevel.label.toLowerCase()} match`
+                    : "Sätt matchnivå och ta ut truppen"}
+              </p>
+            </div>
+            <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+              {squadIds.length > 0 ? "Ändra" : "Öppna"}
+            </span>
+          </Link>
+
           {/* Matchkod – delas med den som rapporterar statistik */}
           <div className="panel-dark p-6 md:p-7 flex items-center gap-6 flex-wrap">
             <div className="flex-1 min-w-52 relative">

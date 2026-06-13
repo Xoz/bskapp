@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches, type Match as MatchType } from "@/lib/queries";
+import { level as levelInfo } from "@/lib/levels";
 import { IconPlus, IconPitch, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -117,6 +118,14 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
           I dag
         </span>
       )}
+      {(() => {
+        const ml = levelInfo(m.level);
+        return ml ? (
+          <span className="badge hidden sm:inline-flex" style={{ background: "var(--bg2)", color: ml.color }}>
+            {ml.label}
+          </span>
+        ) : null;
+      })()}
       <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
         {TYPE_LABELS[m.match_type] ?? m.match_type}
       </span>

@@ -1,6 +1,7 @@
 import { saveMatch } from "@/lib/actions";
 import type { Match, MatchPlayerRow, Player } from "@/lib/queries";
 import { STAT_FIELDS } from "@/lib/stats";
+import { LEVELS } from "@/lib/levels";
 import StatsFields from "@/components/StatsFields";
 import Link from "next/link";
 
@@ -58,6 +59,16 @@ export default function MatchForm({
             <option value="cup">Cup</option>
             <option value="traningsmatch">Träningsmatch</option>
           </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="level">Svårighetsnivå</label>
+          <select id="level" name="level" defaultValue={match?.level ?? ""} className="input">
+            <option value="">Ej satt</option>
+            {LEVELS.map((l) => (
+              <option key={l.id} value={l.id}>{l.label}</option>
+            ))}
+          </select>
+          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Styr laguttagningen</p>
         </div>
         <div>
           <label className="label" htmlFor="our_score">Våra mål (frivilligt)</label>

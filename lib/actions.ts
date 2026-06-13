@@ -105,12 +105,14 @@ export async function updatePlayer(formData: FormData) {
   const jersey = formData.get("jersey_number");
   const notes = String(formData.get("notes") ?? "");
   const position = String(formData.get("position") ?? "");
+  const level = String(formData.get("level") ?? "");
   if (!id || !name) return;
-  await run("UPDATE players SET name = ?, jersey_number = ?, notes = ?, position = ? WHERE id = ?", [
+  await run("UPDATE players SET name = ?, jersey_number = ?, notes = ?, position = ?, level = ? WHERE id = ?", [
     name,
     jersey ? Number(jersey) : null,
     notes,
     position,
+    level,
     id,
   ]);
   revalidatePath(`/spelare/${id}`);
@@ -241,6 +243,7 @@ export async function saveMatch(formData: FormData) {
   const periods = [2, 3, 4].includes(periodsRaw) ? periodsRaw : 3;
   const periodMinutesRaw = Number(formData.get("period_minutes") ?? 20);
   const periodMinutes = periodMinutesRaw > 0 && periodMinutesRaw <= 60 ? periodMinutesRaw : 20;
+  const level = String(formData.get("level") ?? "");
   if (!date || !opponent) return;
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -249,14 +252,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ? WHERE id = ?",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, id]
+      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ? WHERE id = ?",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, await generateMatchCode()]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, await generateMatchCode()]
     );
     matchId = Number(res.lastInsertRowid);
   }
@@ -268,6 +271,38 @@ export async function saveMatch(formData: FormData) {
   redirect(`/matcher/${matchId}`);
 }
 
+// Sätt/ändra matchens svårighetsnivå (snabbt, från laguttagningssidan)
+export async function setMatchLevel(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  const level = String(formData.get("level") ?? "");
+  if (!id) return;
+  await run("UPDATE matches SET level = ? WHERE id = ?", [level, id]);
+  revalidatePath(`/matcher/${id}/laguttagning`);
+  revalidatePath(`/matcher/${id}`);
+  revalidatePath("/matcher");
+}
+
+// Spara uttagen trupp för en match (ersätter tidigare urval)
+export async function saveSquad(formData: FormData) {
+  await requireRole(["coach"]);
+  const matchId = Number(formData.get("match_id"));
+  if (!matchId) return;
+  const ids = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [
+    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [matchId] },
+    ...ids.map((pid) => ({
+      sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)",
+      args: [matchId, pid] as (string | number | null)[],
+    })),
+  ];
+  await batch(stmts);
+  revalidatePath(`/matcher/${matchId}/laguttagning`);
+  revalidatePath(`/matcher/${matchId}`);
+  redirect(`/matcher/${matchId}`);
+}
+
 export async function deleteMatch(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));
@@ -275,6 +310,7 @@ export async function deleteMatch(formData: FormData) {
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
   ]);
   revalidatePath("/matcher");

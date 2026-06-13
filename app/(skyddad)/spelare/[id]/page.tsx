@@ -11,6 +11,7 @@ import {
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
+import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
 import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import SkillRadar from "@/components/SkillRadar";
@@ -49,6 +50,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
+  // Nivåförslag från senaste utvärderingens snitt
+  const lastDev = development[development.length - 1];
+  const evalAvg = lastDev && typeof lastDev.total === "number" ? lastDev.total : null;
+  const suggestedLevel = suggestLevel(evalAvg);
   const latest = evaluations[0];
   const previous = evaluations[1];
   const latestScores = latest ? await getScores(latest.id) : null;
@@ -388,6 +393,20 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             </select>
             <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
               Hjälper AI:n tolka matchstatistiken rätt – t.ex. att en back inte bedöms på antal mål.
+            </p>
+          </div>
+          <div>
+            <label className="label" htmlFor="level">Spelnivå</label>
+            <select id="level" name="level" defaultValue={player.level ?? ""} className="input">
+              <option value="">Ej graderad</option>
+              {MATCH_LEVELS.map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
+            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+              {suggestedLevel
+                ? <>Förslag från utvärderingen: <strong style={{ color: "var(--ink-soft)" }}>{suggestedLevel.label}</strong>. Styr laguttagningen till matcher.</>
+                : "Gör en utvärdering för att få ett nivåförslag. Styr laguttagningen till matcher."}
             </p>
           </div>
           <div>

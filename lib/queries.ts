@@ -13,6 +13,7 @@ export interface Player {
   share_token: string | null;
   share_expires: number | null;
   share_summary: string | null;
+  level: string;
 }
 
 // Spelarlänkar gäller i 48 timmar – tänkta att aktiveras inför ett spelarsamtal
@@ -42,6 +43,7 @@ export interface Match {
   code: string;
   source: string;
   finished: number;
+  level: string;
 }
 
 export interface MatchPlayerRow {
@@ -217,6 +219,52 @@ export interface MatchEventRow {
   stat_id: string;
   match_second: number | null;
   period: number | null;
+}
+
+// Spelare med graderad nivå + snitt från senaste utvärderingen (för förslag)
+export interface PlayerLevelRow {
+  id: number;
+  name: string;
+  jersey_number: number | null;
+  position: string;
+  level: string;
+  eval_avg: number | null;
+}
+
+export async function getPlayersLevelInfo(): Promise<PlayerLevelRow[]> {
+  return all<PlayerLevelRow>(
+    `SELECT p.id, p.name, p.jersey_number, p.position, p.level,
+            (SELECT AVG(es.level) FROM evaluation_scores es
+               WHERE es.evaluation_id = (
+                 SELECT e.id FROM evaluations e WHERE e.player_id = p.id
+                 ORDER BY e.date DESC, e.id DESC LIMIT 1
+               )) AS eval_avg
+     FROM players p
+     WHERE p.active = 1
+     ORDER BY p.name COLLATE NOCASE`
+  );
+}
+
+// Snitt i senaste utvärderingen för en enskild spelare (för nivåförslag)
+export async function getPlayerEvalAverage(playerId: number): Promise<number | null> {
+  const row = await get<{ avg: number | null }>(
+    `SELECT AVG(es.level) AS avg FROM evaluation_scores es
+     WHERE es.evaluation_id = (
+       SELECT e.id FROM evaluations e WHERE e.player_id = ?
+       ORDER BY e.date DESC, e.id DESC LIMIT 1
+     )`,
+    [playerId]
+  );
+  return row?.avg ?? null;
+}
+
+// Uttagen trupp för en match – lista med spelar-id
+export async function getMatchSquad(matchId: number): Promise<number[]> {
+  const rows = await all<{ player_id: number }>(
+    "SELECT player_id FROM match_squad WHERE match_id = ?",
+    [matchId]
+  );
+  return rows.map((r) => r.player_id);
 }
 
 // Händelser i kronologisk ordning – för matchflödet på matchsidan

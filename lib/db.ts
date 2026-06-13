@@ -109,6 +109,11 @@ async function init(): Promise<void> {
       stats TEXT NOT NULL DEFAULT '[]',
       UNIQUE(match_id, name)
     )`,
+    `CREATE TABLE IF NOT EXISTS match_squad (
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      PRIMARY KEY (match_id, player_id)
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 
@@ -137,6 +142,8 @@ async function init(): Promise<void> {
     `ALTER TABLE players ADD COLUMN share_token TEXT`,
     `ALTER TABLE players ADD COLUMN share_expires INTEGER`,
     `ALTER TABLE players ADD COLUMN share_summary TEXT`,
+    `ALTER TABLE players ADD COLUMN level TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE matches ADD COLUMN level TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) await tryExec(sql);
 
