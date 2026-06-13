@@ -114,6 +114,13 @@ async function init(): Promise<void> {
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       PRIMARY KEY (match_id, player_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS match_lineup (
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      x REAL NOT NULL,
+      y REAL NOT NULL,
+      PRIMARY KEY (match_id, player_id)
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 
@@ -145,6 +152,7 @@ async function init(): Promise<void> {
     `ALTER TABLE players ADD COLUMN level TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE matches ADD COLUMN level TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE matches ADD COLUMN cup_name TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE matches ADD COLUMN formation TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

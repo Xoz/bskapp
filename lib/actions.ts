@@ -331,6 +331,63 @@ export async function saveSquad(formData: FormData) {
   redirect(`/matcher/${matchId}`);
 }
 
+// Spara laguttagning: kallad trupp + formation + utplacerade spelare (startelva).
+// Truppen kan appliceras på hela cupen; utplaceringen sparas bara för matchen.
+export async function saveLineup(formData: FormData) {
+  await requireRole(["coach"]);
+  const matchId = Number(formData.get("match_id"));
+  if (!matchId) return;
+
+  const squadIds = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  const formation = String(formData.get("formation") ?? "");
+  const applyCup = formData.get("apply_cup") === "on";
+
+  let positions: { id: number; x: number; y: number }[] = [];
+  try {
+    const raw = JSON.parse(String(formData.get("positions") ?? "[]"));
+    if (Array.isArray(raw)) {
+      const clamp = (v: number) => Math.min(0.97, Math.max(0.03, Number(v)));
+      positions = raw
+        .filter((p) => squadIds.includes(Number(p.id)) && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y)))
+        .map((p) => ({ id: Number(p.id), x: clamp(p.x), y: clamp(p.y) }));
+    }
+  } catch {
+    positions = [];
+  }
+
+  // Trupp + formation: gäller matchen, eller hela cupen om valt
+  let squadTargets = [matchId];
+  if (applyCup) {
+    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [matchId]);
+    if (m?.cup_name) {
+      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [m.cup_name]);
+      if (rows.length > 0) squadTargets = rows.map((r) => r.id);
+    }
+  }
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
+  for (const mid of squadTargets) {
+    stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
+    for (const pid of squadIds) {
+      stmts.push({ sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)", args: [mid, pid] });
+    }
+    stmts.push({ sql: "UPDATE matches SET formation = ? WHERE id = ?", args: [formation, mid] });
+    revalidatePath(`/matcher/${mid}/laguttagning`);
+    revalidatePath(`/matcher/${mid}`);
+  }
+  // Utplacering (positioner) sparas bara för den här matchen
+  stmts.push({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [matchId] });
+  for (const p of positions) {
+    stmts.push({
+      sql: "INSERT OR IGNORE INTO match_lineup (match_id, player_id, x, y) VALUES (?, ?, ?, ?)",
+      args: [matchId, p.id, p.x, p.y],
+    });
+  }
+
+  await batch(stmts);
+  redirect(`/matcher/${matchId}`);
+}
+
 export async function deleteMatch(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));
@@ -339,6 +396,7 @@ export async function deleteMatch(formData: FormData) {
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
   ]);
   revalidatePath("/matcher");

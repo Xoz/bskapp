@@ -45,6 +45,7 @@ export interface Match {
   finished: number;
   level: string;
   cup_name: string;
+  formation: string;
 }
 
 // Matcher som ingår i samma cup/turnering (samma cup_name)
@@ -292,6 +293,20 @@ export async function getMatchSquad(matchId: number): Promise<number[]> {
     [matchId]
   );
   return rows.map((r) => r.player_id);
+}
+
+// Utplacerade spelare på planen (startelvan) med normaliserade koordinater
+export interface LineupSpot {
+  player_id: number;
+  x: number;
+  y: number;
+}
+
+export async function getMatchLineup(matchId: number): Promise<LineupSpot[]> {
+  return all<LineupSpot>(
+    "SELECT player_id, x, y FROM match_lineup WHERE match_id = ?",
+    [matchId]
+  );
 }
 
 // Händelser i kronologisk ordning – för matchflödet på matchsidan
