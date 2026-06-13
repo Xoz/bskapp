@@ -3,7 +3,7 @@
 
 import { all, get, run, batch } from "./db";
 import { STAT_IDS } from "./stats";
-import { OPPONENT_GOAL, MAX_PERIODS, LiveState, LiveEvent } from "./liveTypes";
+import { OPPONENT_GOAL, MAX_PERIODS, LiveState, LiveEvent, Reporter } from "./liveTypes";
 
 interface MatchRow {
   id: number;
@@ -56,6 +56,15 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     [matchId]
   );
 
+  const reporterRows = await all<{ name: string; stats: string }>(
+    "SELECT name, stats FROM match_reporters WHERE match_id = ?",
+    [matchId]
+  );
+  const reporters: Reporter[] = reporterRows.map((r) => ({
+    name: r.name,
+    stats: JSON.parse(r.stats) as string[],
+  }));
+
   return {
     matchId: m.id,
     opponent: m.opponent,
@@ -70,7 +79,19 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     counts,
     played,
     events,
+    reporters,
   };
+}
+
+export async function claimStats(matchId: number, name: string, stats: string[]): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  await run(
+    `INSERT INTO match_reporters (match_id, name, stats)
+     VALUES (?, ?, ?)
+     ON CONFLICT(match_id, name) DO UPDATE SET stats = excluded.stats`,
+    [matchId, trimmed, JSON.stringify(stats)]
+  );
 }
 
 const ENSURE_ROW =

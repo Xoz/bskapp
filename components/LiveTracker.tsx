@@ -5,6 +5,7 @@ import { STAT_FIELDS } from "@/lib/stats";
 import {
   LiveState,
   LiveAction,
+  Reporter,
   OPPONENT_GOAL,
   MAX_PERIODS,
   formatClock,
@@ -31,19 +32,23 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
   const [, setTick] = useState(0);
   const [pending, setPending] = useState(0);
   const [selected, setSelected] = useState<string[] | null>(null);
+  const [myName, setMyName] = useState<string>("");
   const [setupOpen, setSetupOpen] = useState(false);
   const [activeStat, setActiveStat] = useState<string>("");
   const [flash, setFlash] = useState<number | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const reclaimedRef = useRef(false);
 
-  // Läs förälderns val av statistik från localStorage
+  // Läs förälderns val av statistik och namn från localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`live-stats-${code}`);
+      const storedName = localStorage.getItem(`live-name-${code}`) ?? "";
       if (raw) {
         const arr = JSON.parse(raw) as string[];
         if (Array.isArray(arr) && arr.length > 0) {
           setSelected(arr);
+          setMyName(storedName);
           setActiveStat(arr[0]);
           return;
         }
@@ -128,14 +133,25 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
     post({ type: "event", playerId, statId: activeStat });
   };
 
-  const saveSelection = (stats: string[]) => {
-    if (stats.length === 0) return;
+  // Återregistrera på servern vid sidladdning (t.ex. efter refresh)
+  useEffect(() => {
+    if (reclaimedRef.current || !selected || !myName.trim()) return;
+    reclaimedRef.current = true;
+    post({ type: "claim_stats", name: myName.trim(), stats: selected });
+  }, [selected, myName, post]);
+
+  const saveSelection = (name: string, stats: string[]) => {
+    if (stats.length === 0 || !name.trim()) return;
+    setMyName(name);
     setSelected(stats);
     setActiveStat((prev) => (stats.includes(prev) ? prev : stats[0]));
     setSetupOpen(false);
+    reclaimedRef.current = true;
     try {
       localStorage.setItem(`live-stats-${code}`, JSON.stringify(stats));
+      localStorage.setItem(`live-name-${code}`, name);
     } catch {}
+    post({ type: "claim_stats", name: name.trim(), stats });
   };
 
   const lastEvent = live.events[0];
@@ -244,6 +260,8 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
       {(setupOpen || !selected) && (
         <SetupCard
           initial={selected ?? []}
+          initialName={myName}
+          reporters={live.reporters}
           onSave={saveSelection}
           onCancel={selected ? () => setSetupOpen(false) : undefined}
         />
@@ -251,6 +269,12 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
 
       {selected && !setupOpen && (
         <>
+          {myName && (
+            <p className="px-4 pt-3 text-xs" style={{ color: "var(--ink-faint)" }}>
+              Loggar som{" "}
+              <span className="font-semibold" style={{ color: "var(--ink-soft)" }}>{myName}</span>
+            </p>
+          )}
           {/* Statistikflikar */}
           <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center">
             {[...selected, PLAYED_TAB].map((statId) => (
@@ -376,45 +400,80 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
 
 function SetupCard({
   initial,
+  initialName,
+  reporters,
   onSave,
   onCancel,
 }: {
   initial: string[];
-  onSave: (stats: string[]) => void;
+  initialName: string;
+  reporters: Reporter[];
+  onSave: (name: string, stats: string[]) => void;
   onCancel?: () => void;
 }) {
+  const [name, setName] = useState(initialName);
   const [picked, setPicked] = useState<string[]>(initial);
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    const takenByOther = reporters.find(
+      (r) => r.name.toLowerCase() !== name.trim().toLowerCase() && r.stats.includes(id)
+    );
+    if (takenByOther) return;
     setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
 
   return (
     <div className="px-4 pt-5">
       <div className="card p-5">
         <p className="eyebrow mb-1" style={{ color: "var(--primary)" }}>Innan du börjar</p>
-        <h2 className="font-semibold text-lg">Vad räknar du i dag?</h2>
+        <h2 className="font-semibold text-lg">Vem rapporterar?</h2>
         <p className="text-sm mt-1 mb-4" style={{ color: "var(--ink-soft)" }}>
-          Välj en eller flera. Dela gärna upp er – en förälder räknar passningar, en annan
+          Ange ditt namn och välj vad du räknar. Dela upp er – en räknar passningar, en annan
           brytningar.
         </p>
+
+        <label className="eyebrow block mb-1.5">Ditt namn</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="T.ex. Annas mamma"
+          className="w-full px-3 py-2.5 rounded-lg text-sm mb-5"
+          style={{
+            background: "var(--bg2)",
+            border: "1.5px solid var(--line-strong)",
+            color: "var(--ink)",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
+        />
+
+        <label className="eyebrow block mb-2">Välj statistik</label>
         <div className="flex flex-wrap gap-2">
           {STAT_FIELDS.map((f) => {
             const on = picked.includes(f.id);
+            const takenBy = reporters.find(
+              (r) => r.name.toLowerCase() !== name.trim().toLowerCase() && r.stats.includes(f.id)
+            );
             return (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => toggle(f.id)}
+                disabled={!!takenBy}
+                title={takenBy ? `Bokad av ${takenBy.name}` : undefined}
                 className="rounded-full px-4 py-2.5 text-sm font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: on ? "var(--primary)" : "var(--bg2)",
-                  color: on ? "var(--primary-deep)" : "var(--ink-soft)",
-                  border: "1.5px solid " + (on ? "var(--primary)" : "var(--line-strong)"),
+                  background: takenBy ? "var(--bg2)" : on ? "var(--primary)" : "var(--bg2)",
+                  color: takenBy ? "var(--ink-faint)" : on ? "var(--primary-deep)" : "var(--ink-soft)",
+                  border: "1.5px solid " + (takenBy ? "var(--line)" : on ? "var(--primary)" : "var(--line-strong)"),
+                  opacity: takenBy ? 0.55 : 1,
+                  cursor: takenBy ? "not-allowed" : "pointer",
                 }}
               >
-                {f.label}
-                {f.hint ? ` (${f.hint})` : ""}
+                {f.label}{f.hint ? ` (${f.hint})` : ""}
+                {takenBy && <span className="ml-1 text-[0.7em]">· {takenBy.name}</span>}
               </button>
             );
           })}
@@ -422,8 +481,8 @@ function SetupCard({
         <div className="mt-5 flex gap-2.5">
           <button
             type="button"
-            onClick={() => onSave(picked)}
-            disabled={picked.length === 0}
+            onClick={() => onSave(name.trim(), picked)}
+            disabled={picked.length === 0 || !name.trim()}
             className="btn-primary flex-1 py-3 disabled:opacity-50"
           >
             Börja räkna

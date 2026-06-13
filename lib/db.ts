@@ -102,6 +102,13 @@ async function init(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`,
     `CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id)`,
+    `CREATE TABLE IF NOT EXISTS match_reporters (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      stats TEXT NOT NULL DEFAULT '[]',
+      UNIQUE(match_id, name)
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 

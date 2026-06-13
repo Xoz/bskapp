@@ -16,6 +16,11 @@ export interface LiveEvent {
   period: number | null;
 }
 
+export interface Reporter {
+  name: string;
+  stats: string[];
+}
+
 export interface LiveState {
   matchId: number;
   opponent: string;
@@ -31,6 +36,7 @@ export interface LiveState {
   counts: Record<number, Record<string, number>>;
   played: number[];
   events: LiveEvent[];
+  reporters: Reporter[];
 }
 
 export type LiveAction =
@@ -38,7 +44,8 @@ export type LiveAction =
   | { type: "opponent_goal" }
   | { type: "undo" }
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
-  | { type: "toggle_played"; playerId: number };
+  | { type: "toggle_played"; playerId: number }
+  | { type: "claim_stats"; name: string; stats: string[] };
 
 export const OPPONENT_GOAL = "opponent_goal";
 
