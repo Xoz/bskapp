@@ -8,6 +8,7 @@ import { renewShareToken, revokeShareToken } from "./queries";
 import { sessionToken, getRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS } from "./stats";
+import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches } from "./ical";
 
 async function requireRole(allowed: Role[]): Promise<Role> {
@@ -333,6 +334,45 @@ export async function addManualEvent(
   await batch(stmts);
   revalidatePath(`/matcher/${matchId}`);
   return { ok: true };
+}
+
+// Ta bort en enskild felaktig händelse ur matchflödet och justera räknarna
+export async function deleteMatchEvent(formData: FormData) {
+  await requireRole(["coach"]);
+  const eventId = Number(formData.get("event_id"));
+  const matchId = Number(formData.get("match_id"));
+  if (!eventId || !matchId) return;
+
+  const ev = await get<{ id: number; player_id: number | null; stat_id: string }>(
+    "SELECT id, player_id, stat_id FROM match_events WHERE id = ? AND match_id = ?",
+    [eventId, matchId]
+  );
+  if (!ev) return;
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [
+    { sql: "DELETE FROM match_events WHERE id = ?", args: [ev.id] },
+  ];
+
+  if (ev.stat_id === OPPONENT_GOAL) {
+    stmts.push({
+      sql: "UPDATE matches SET opponent_score = MAX(COALESCE(opponent_score, 0) - 1, 0) WHERE id = ?",
+      args: [matchId],
+    });
+  } else if (ev.player_id != null && STAT_IDS.includes(ev.stat_id)) {
+    stmts.push({
+      sql: `UPDATE match_players SET ${ev.stat_id} = MAX(${ev.stat_id} - 1, 0) WHERE match_id = ? AND player_id = ?`,
+      args: [matchId, ev.player_id],
+    });
+    if (ev.stat_id === "goals") {
+      stmts.push({
+        sql: "UPDATE matches SET our_score = MAX(COALESCE(our_score, 0) - 1, 0) WHERE id = ?",
+        args: [matchId],
+      });
+    }
+  }
+
+  await batch(stmts);
+  revalidatePath(`/matcher/${matchId}`);
 }
 
 export async function regenerateMatchCode(formData: FormData) {

@@ -10,6 +10,7 @@ import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import ManualEventForm from "@/components/ManualEventForm";
+import EventEditor from "@/components/EventEditor";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -177,6 +178,21 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </p>
               <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
             </div>
+          )}
+
+          {events.length > 0 && (
+            <details className="card p-6">
+              <summary className="font-semibold cursor-pointer">
+                Rätta statistik
+                <span className="font-normal text-xs ml-2" style={{ color: "var(--ink-faint)" }}>
+                  ta bort felaktiga händelser
+                </span>
+              </summary>
+              <p className="text-xs mt-1 mb-4" style={{ color: "var(--ink-faint)" }}>
+                Tar du bort en händelse justeras både matchflödet och spelarens siffror automatiskt.
+              </p>
+              <EventEditor events={events} matchId={match.id} reporters={reporters} />
+            </details>
           )}
 
           <div className="card p-6 md:p-7">
