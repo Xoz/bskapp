@@ -80,10 +80,19 @@ function buildRows(events: FeedEvent[]): Row[] {
   return rows.reverse();
 }
 
-function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; opponent: string }) {
+function EventCard({
+  row,
+  opponent,
+  reporters,
+}: {
+  row: Extract<Row, { kind: "event" }>;
+  opponent: string;
+  reporters: Record<string, string>;
+}) {
   const { event: e, side } = row;
   const isGoal = e.stat_id === "goals" || e.stat_id === OPPONENT_GOAL;
   const Icon = STAT_ICON[e.stat_id] ?? IconTarget;
+  const reporter = reporters[e.stat_id];
 
   if (isGoal) {
     const ourGoal = side === "us";
@@ -105,7 +114,7 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
           >
             <Icon width={15} height={15} />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p
               className="text-[0.7rem] font-bold uppercase tracking-[0.1em] leading-none"
               style={{
@@ -121,6 +130,11 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
             >
               {ourGoal ? (e.player_name ? firstName(e.player_name) : "Vi") : opponent}
             </p>
+            {reporter && (
+              <p className="text-[0.65rem] mt-0.5 opacity-60" style={{ color: ourGoal ? "var(--primary-deep)" : "var(--ink)" }}>
+                via {reporter}
+              </p>
+            )}
           </div>
           <span
             className="stat-number ml-auto text-lg whitespace-nowrap"
@@ -150,6 +164,7 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
         </span>
         <span className="block text-xs leading-tight" style={{ color: "var(--ink-soft)" }}>
           {STAT_LABEL[e.stat_id] ?? e.stat_id}
+          {reporter && <span className="opacity-60"> · via {reporter}</span>}
         </span>
       </p>
     </div>
@@ -159,10 +174,12 @@ function EventCard({ row, opponent }: { row: Extract<Row, { kind: "event" }>; op
 export default function LiveFeed({
   events,
   opponent,
+  reporters = {},
   emptyText = "Inga händelser ännu – flödet fylls på när matchen börjar.",
 }: {
-  events: FeedEvent[]; // kronologisk ordning, äldst först
+  events: FeedEvent[];
   opponent: string;
+  reporters?: Record<string, string>;
   emptyText?: string;
 }) {
   const rows = buildRows(events);
@@ -219,9 +236,9 @@ export default function LiveFeed({
           );
           return (
             <li key={row.key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <div>{row.side === "us" && <EventCard row={row} opponent={opponent} />}</div>
+              <div>{row.side === "us" && <EventCard row={row} opponent={opponent} reporters={reporters} />}</div>
               {time}
-              <div>{row.side === "them" && <EventCard row={row} opponent={opponent} />}</div>
+              <div>{row.side === "them" && <EventCard row={row} opponent={opponent} reporters={reporters} />}</div>
             </li>
           );
         })}

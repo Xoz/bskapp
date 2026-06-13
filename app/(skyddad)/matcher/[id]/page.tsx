@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers, getMatchEvents } from "@/lib/queries";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters } from "@/lib/queries";
 import { deleteMatch, regenerateMatchCode, resetMatch } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import MatchForm from "@/components/MatchForm";
@@ -21,9 +21,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const players = await getPlayers();
-  const matchPlayers = await getMatchPlayers(match.id);
-  const events = await getMatchEvents(match.id);
+  const [players, matchPlayers, events, reporters] = await Promise.all([
+    getPlayers(),
+    getMatchPlayers(match.id),
+    getMatchEvents(match.id),
+    getMatchReporters(match.id),
+  ]);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
 
   return (
@@ -140,7 +143,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <p className="text-xs mt-1 mb-5" style={{ color: "var(--ink-faint)" }}>
                 Live-rapporterade händelser – tiderna gör det lätt att hitta rätt i matchvideon.
               </p>
-              <LiveFeed events={events} opponent={match.opponent} />
+              <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
             </div>
           )}
 
@@ -200,7 +203,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <p className="text-xs mt-1 mb-5" style={{ color: "var(--ink-faint)" }}>
                 Live-rapporterade händelser med matchtid.
               </p>
-              <LiveFeed events={events} opponent={match.opponent} />
+              <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
             </div>
           )}
 

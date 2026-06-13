@@ -191,6 +191,19 @@ export async function getMatchEvents(matchId: number): Promise<MatchEventRow[]> 
   );
 }
 
+export async function getMatchReporters(matchId: number): Promise<Record<string, string>> {
+  const rows = await all<{ name: string; stats: string }>(
+    "SELECT name, stats FROM match_reporters WHERE match_id = ?",
+    [matchId]
+  );
+  const map: Record<string, string> = {};
+  for (const row of rows) {
+    const stats: string[] = JSON.parse(row.stats);
+    for (const stat of stats) map[stat] = row.name;
+  }
+  return map;
+}
+
 export async function getLatestEvaluationDates(): Promise<Record<number, string>> {
   const rows = await all<{ player_id: number; latest: string }>(
     "SELECT player_id, MAX(date) AS latest FROM evaluations GROUP BY player_id"
