@@ -5,6 +5,7 @@ import { getPlayer, getEvaluations, getScores } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { createEvaluation } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
+import AISuggestButton from "@/components/AISuggestButton";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -128,6 +129,15 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
         ))}
 
         <div className="card p-6 space-y-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-semibold text-sm">Styrkor & fokusområden</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                Fyll i nivåerna ovan och tryck AI-förslag för att generera text automatiskt.
+              </p>
+            </div>
+            <AISuggestButton playerId={player.id} />
+          </div>
           <div>
             <label className="label" htmlFor="strengths">
               Styrkor – vad är {firstName} bra på?
