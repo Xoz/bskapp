@@ -440,7 +440,16 @@ export async function importCalendarMatches() {
       const exists = await get<{ 1: number }>("SELECT 1 FROM matches WHERE external_uid = ?", [
         m.uid,
       ]);
-      if (exists) continue;
+      if (exists) {
+        // Fyll i nivån på redan importerade matcher som saknar den
+        if (m.level) {
+          await run(
+            "UPDATE matches SET level = ? WHERE external_uid = ? AND (level IS NULL OR level = '')",
+            [m.level, m.uid]
+          );
+        }
+        continue;
+      }
       const notes = [
         m.series && `Serie: ${m.series}`,
         m.time && `Avspark ${m.time}`,
@@ -449,8 +458,8 @@ export async function importCalendarMatches() {
         .filter(Boolean)
         .join(" · ");
       await run(
-        "INSERT INTO matches (date, opponent, home_away, match_type, notes, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)",
-        [m.date, m.opponent, m.homeAway, m.matchType, notes, await generateMatchCode(), m.uid]
+        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)",
+        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, await generateMatchCode(), m.uid]
       );
       imported++;
     }

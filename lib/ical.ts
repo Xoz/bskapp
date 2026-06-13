@@ -6,6 +6,8 @@
 //   "Stockholm Football Cup // F2014-Gul - Bollstanäs SK FB"
 //   "Träning // ..." (ska INTE importeras)
 
+import { levelFromSvenskalag } from "./levels";
+
 export interface CalendarMatch {
   uid: string;
   date: string; // YYYY-MM-DD
@@ -15,7 +17,18 @@ export interface CalendarMatch {
   homeAway: "home" | "away";
   location: string;
   series: string | null;
+  level: string; // nivå-id, härlett ur serieparentesen (kan vara "")
   matchType: "seriespel" | "cup" | "traningsmatch";
+}
+
+// Sista siffran i serieparentesen anger nivån, t.ex. "(F2014- 3)" → 3 (medel).
+// Svenskalag: 1 = svårast … 5 = lättast.
+function levelFromSeries(series: string | null): string {
+  if (!series) return "";
+  const nums = series.match(/\d+/g);
+  if (!nums) return "";
+  const last = Number(nums[nums.length - 1]);
+  return levelFromSvenskalag(last)?.id ?? "";
 }
 
 // Viker upp rader enligt RFC 5545 (fortsättningsrader inleds med blanksteg/tab)
@@ -175,6 +188,7 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
         homeAway,
         location: e.location,
         series,
+        level: matchType === "seriespel" ? levelFromSeries(series) : "",
         matchType,
       };
     });

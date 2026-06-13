@@ -22,6 +22,17 @@ export function level(id: string | null | undefined): Level | null {
   return LEVELS.find((l) => l.id === id) ?? null;
 }
 
+export function levelByRank(rank: number): Level | null {
+  return LEVELS.find((l) => l.rank === rank) ?? null;
+}
+
+// Svenskalag anger seriens nivå som en siffra 1–5 där 1 = svårast.
+// Vår rank är omvänd (5 = svårast), så rank = 6 − siffran.
+export function levelFromSvenskalag(n: number): Level | null {
+  if (!Number.isInteger(n) || n < 1 || n > 5) return null;
+  return levelByRank(6 - n);
+}
+
 export function levelLabel(id: string | null | undefined): string | null {
   return level(id)?.label ?? null;
 }
