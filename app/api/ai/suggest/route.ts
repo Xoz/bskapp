@@ -69,7 +69,7 @@ Svara exakt i detta format utan rubriker eller förklaringar:
 STYRKOR: [text]
 FOKUS: [text]`;
 
-  const apiKey = process.env.MOONSHOT_API_KEY;
+  const apiKey = process.env.MOONSHOT_API_KEY?.trim();
   if (!apiKey) return NextResponse.json({ error: "MOONSHOT_API_KEY saknas" }, { status: 500 });
 
   const res = await fetch("https://api.moonshot.cn/v1/chat/completions", {
@@ -87,6 +87,7 @@ FOKUS: [text]`;
 
   if (!res.ok) {
     const err = await res.text();
+    console.error("Moonshot error", res.status, err, "key prefix:", apiKey.slice(0, 8));
     return NextResponse.json({ error: `Kimi-fel: ${err}` }, { status: 500 });
   }
 
