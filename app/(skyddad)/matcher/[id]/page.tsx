@@ -8,6 +8,7 @@ import MatchForm from "@/components/MatchForm";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -108,15 +109,18 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 <span className="font-semibold text-white">/rapportera</span> och kräver ingen
                 inloggning.
               </p>
-              <form action={regenerateMatchCode} className="mt-3">
-                <input type="hidden" name="id" value={match.id} />
-                <button
-                  type="submit"
-                  className="text-xs text-white/45 hover:text-white underline cursor-pointer"
-                >
-                  Generera ny kod
-                </button>
-              </form>
+              <div className="flex items-center gap-4 mt-3">
+                <CopyLinkButton code={match.code} />
+                <form action={regenerateMatchCode}>
+                  <input type="hidden" name="id" value={match.id} />
+                  <button
+                    type="submit"
+                    className="text-xs text-white/45 hover:text-white underline cursor-pointer"
+                  >
+                    Generera ny kod
+                  </button>
+                </form>
+              </div>
             </div>
             <p
               className="stat-number relative text-[2.6rem] tracking-[0.18em] px-6 py-2.5 rounded-2xl"
