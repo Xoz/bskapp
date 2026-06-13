@@ -35,7 +35,19 @@ export function clockSeconds(m: MatchRow): number {
 }
 
 export async function getLiveState(matchId: number): Promise<LiveState> {
-  const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
+  let m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
+
+  // Auto-avslut baserat på verklig tid – om avsparktid är satt och matchen borde vara klar
+  if (!m.finished && m.start_time) {
+    const [h, min] = m.start_time.split(":").map(Number);
+    const matchStart = new Date(`${m.date}T${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`);
+    const totalMinutes = (m.periods ?? 3) * (m.period_minutes ?? 20) + 5;
+    const expectedEnd = new Date(matchStart.getTime() + totalMinutes * 60000);
+    if (Date.now() > expectedEnd.getTime()) {
+      await run("UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL WHERE id = ?", [matchId]);
+      m = { ...m, finished: 1, clock_running: 0, clock_started_at: null };
+    }
+  };
 
   const players = await all<LiveState["players"][number]>(
     "SELECT id, name, jersey_number FROM players WHERE active = 1 ORDER BY name COLLATE NOCASE"
