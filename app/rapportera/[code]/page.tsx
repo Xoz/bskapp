@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMatchRowByCode, getLiveState } from "@/lib/live";
+import { getMatchesByCup } from "@/lib/queries";
 import { getRole } from "@/lib/auth";
 import LiveTracker from "@/components/LiveTracker";
+import CupReportSwitcher from "@/components/CupReportSwitcher";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,8 @@ export default async function ReportMatchPage({
 
   const [initial, role] = await Promise.all([getLiveState(match.id), getRole()]);
   const isCoach = role === "coach";
+  // Ingår matchen i en cup? Visa då alla cupens matcher att hoppa mellan.
+  const cupMatches = match.cup_name ? await getMatchesByCup(match.cup_name) : [];
 
   // 15-minuterspärr – gäller bara om avsparktid är angiven
   if (initial.startTime) {
@@ -46,6 +50,9 @@ export default async function ReportMatchPage({
               {initial.date} · {initial.startTime}
             </span>
           </div>
+          {match.cup_name && (
+            <CupReportSwitcher cupName={match.cup_name} matches={cupMatches} currentCode={clean} />
+          )}
           <div className="flex-1 flex items-center justify-center px-4">
             <div className="card p-8 max-w-sm w-full text-center">
               <p className="text-4xl mb-4">⏳</p>
@@ -82,6 +89,9 @@ export default async function ReportMatchPage({
           {initial.date}{initial.startTime ? ` · ${initial.startTime}` : ""} · kod {clean}
         </span>
       </div>
+      {match.cup_name && (
+        <CupReportSwitcher cupName={match.cup_name} matches={cupMatches} currentCode={clean} />
+      )}
       <LiveTracker code={clean} initial={initial} isCoach={isCoach} />
     </div>
   );

@@ -20,6 +20,7 @@ interface MatchRow {
   clock_running: number;
   clock_period: number;
   finished: number;
+  cup_name: string;
 }
 
 export async function getMatchRowByCode(code: string): Promise<MatchRow | undefined> {
