@@ -75,6 +75,32 @@ export default async function ReportPage() {
             </p>
             {todayMatches.map((match) => {
               const status = reportingStatus(match.date, match.start_time);
+              const finished = !!match.finished;
+
+              if (finished) {
+                const hasResult = match.our_score != null && match.opponent_score != null;
+                return (
+                  <Link
+                    key={match.id}
+                    href={`/rapportera/${match.code}`}
+                    className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+                    style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+                  >
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
+                        {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+                      </p>
+                      <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                        {hasResult ? `Slutresultat ${match.our_score}–${match.opponent_score}` : "Avslutad"}
+                      </p>
+                    </div>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+                      Avslutad →
+                    </span>
+                  </Link>
+                );
+              }
+
               return (
                 <div key={match.id}>
                   {status.open ? (

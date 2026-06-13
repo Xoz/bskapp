@@ -7,6 +7,7 @@ import {
   setClock,
   togglePlayed,
   claimStats,
+  finishMatch,
 } from "@/lib/live";
 import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
@@ -62,6 +63,9 @@ export async function POST(
         break;
       case "claim_stats":
         await claimStats(match.id, action.name, action.stats);
+        break;
+      case "finish_match":
+        await finishMatch(match.id);
         break;
       default:
         return NextResponse.json({ error: "Okänd åtgärd" }, { status: 400 });

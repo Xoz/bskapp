@@ -18,7 +18,6 @@ const STAT_LABEL: Record<string, string> = Object.fromEntries(
 );
 STAT_LABEL[OPPONENT_GOAL] = "Mål motståndare";
 
-// Specialflik för att bocka av vilka som spelade
 const PLAYED_TAB = "__played";
 
 function firstName(name: string) {
@@ -37,8 +36,8 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const [flash, setFlash] = useState<number | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const reclaimedRef = useRef(false);
+  const autoFinishedRef = useRef(false);
 
-  // Läs förälderns val av statistik och namn från localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`live-stats-${code}`);
@@ -56,7 +55,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     setSetupOpen(true);
   }, [code]);
 
-  // Klockan tickar lokalt mellan serversvaren
   useEffect(() => {
     if (!live.clockRunning) return;
     const t = setInterval(() => setTick((n) => n + 1), 1000);
@@ -87,7 +85,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     [code, applyState]
   );
 
-  // Synka från servern var tionde sekund (andra föräldrar rapporterar samtidigt)
   useEffect(() => {
     const t = setInterval(async () => {
       if (pending > 0 || document.hidden) return;
@@ -102,6 +99,16 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const clockNow =
     live.clockSeconds + (live.clockRunning ? (Date.now() - fetchedAt) / 1000 : 0);
 
+  // Auto-avslut: 5 min efter sista periodens sluttid
+  useEffect(() => {
+    if (live.finished || autoFinishedRef.current) return;
+    const autoFinishThreshold = live.periodMinutes * 60 + 300;
+    if (live.period >= live.periods && clockNow >= autoFinishThreshold) {
+      autoFinishedRef.current = true;
+      post({ type: "finish_match" });
+    }
+  }, [live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
+
   const tap = (playerId: number) => {
     if (!activeStat) return;
     if (activeStat === PLAYED_TAB) {
@@ -114,7 +121,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
       post({ type: "toggle_played", playerId });
       return;
     }
-    // Optimistisk uppdatering så knappen svarar direkt
     setLive((prev) => ({
       ...prev,
       counts: {
@@ -132,7 +138,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     post({ type: "event", playerId, statId: activeStat });
   };
 
-  // Återregistrera på servern vid sidladdning (t.ex. efter refresh)
   useEffect(() => {
     if (reclaimedRef.current || !selected || !myName.trim()) return;
     reclaimedRef.current = true;
@@ -153,6 +158,100 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     post({ type: "claim_stats", name: name.trim(), stats });
   };
 
+  // --- Avslutad match: visa sammanfattning + flöde ---
+  if (live.finished) {
+    const reporters: Record<string, string> = {};
+    for (const r of live.reporters) {
+      for (const s of r.stats) reporters[s] = r.name;
+    }
+    const totals = STAT_FIELDS.reduce((acc, f) => {
+      acc[f.id] = Object.values(live.counts).reduce((s, c) => s + (c[f.id] ?? 0), 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    return (
+      <div className="max-w-md mx-auto pb-10">
+        {/* Header */}
+        <div className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="eyebrow text-white/45">
+                {live.homeAway === "home" ? "Hemma mot" : "Borta mot"}
+              </p>
+              <p className="font-semibold text-white truncate text-[1.05rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+                {live.opponent}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="stat-number text-3xl text-white whitespace-nowrap">
+                {live.ourScore}<span className="text-white/40 mx-1">–</span>{live.oppScore}
+              </p>
+              <span className="badge mt-1" style={{ background: "rgba(255,255,255,0.12)", color: "var(--accent)" }}>
+                Avslutad
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sammanställning */}
+        <div className="px-4 pt-5 space-y-5">
+          <div className="card p-5">
+            <h2 className="font-semibold mb-3">Matchsammanställning</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              {STAT_FIELDS.map((f) => (
+                <div key={f.id} className="text-center rounded-xl py-3 px-1" style={{ background: "var(--bg2)" }}>
+                  <p className="stat-number text-2xl">{totals[f.id]}</p>
+                  <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Spelarstatistik */}
+          {Object.keys(live.counts).length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+                <h2 className="font-semibold">Spelarstatistik</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Spelare</th>
+                      {STAT_FIELDS.map((f) => <th key={f.id} title={f.label}>{f.short}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {live.players.filter((p) => live.played.includes(p.id) || live.counts[p.id]).map((p) => (
+                      <tr key={p.id}>
+                        <td className="font-medium whitespace-nowrap">{firstName(p.name)}</td>
+                        {STAT_FIELDS.map((f) => (
+                          <td key={f.id}>{live.counts[p.id]?.[f.id] ?? 0}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Matchflöde */}
+          <div className="card p-5">
+            <h2 className="font-semibold mb-4">Matchhändelser</h2>
+            <LiveFeed
+              events={[...live.events].reverse()}
+              opponent={live.opponent}
+              reporters={reporters}
+              emptyText="Inga händelser registrerade."
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Pågående match ---
   const lastEvent = live.events[0];
 
   return (
@@ -231,17 +330,30 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
         </div>
         {isCoach && (
           <div className="mt-3 flex items-center justify-between relative">
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm("Nollställa matchklockan till period 1, 00:00?"))
-                  post({ type: "clock", op: "reset" });
-              }}
-              className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Nollställ klocka
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Nollställa matchklockan till period 1, 00:00?"))
+                    post({ type: "clock", op: "reset" });
+                }}
+                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Nollställ klocka
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Avsluta matchen? Rapportering stängs för alla."))
+                    post({ type: "finish_match" });
+                }}
+                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Avsluta match
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => post({ type: "opponent_goal" })}
@@ -259,7 +371,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
         )}
       </div>
 
-      {/* Välj statistik */}
       {(setupOpen || !selected) && (
         <SetupCard
           initial={selected ?? []}
@@ -278,7 +389,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
               <span className="font-semibold" style={{ color: "var(--ink-soft)" }}>{myName}</span>
             </p>
           )}
-          {/* Statistikflikar */}
           <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center">
             {[...selected, ...(isCoach ? [PLAYED_TAB] : [])].map((statId) => (
               <button
@@ -317,7 +427,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
               : "Tryck på spelaren när det händer – varje tryck sparas direkt med matchtid."}
           </p>
 
-          {/* Spelarknappar */}
           <div className="px-4 pt-2 grid grid-cols-2 gap-2.5">
             {live.players.map((p) => {
               const isPlayedTab = activeStat === PLAYED_TAB;
@@ -341,7 +450,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
                       {firstName(p.name)}
                     </span>
                     <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
-                      {p.jersey_number != null ? `#${p.jersey_number}` : " "}
+                      {p.jersey_number != null ? `#${p.jersey_number}` : " "}
                     </span>
                   </span>
                   <span
@@ -360,7 +469,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             })}
           </div>
 
-          {/* Live score-flöde */}
           <div className="px-4 pt-6">
             <p className="eyebrow mb-3 text-center">Matchhändelser</p>
             <LiveFeed
@@ -372,7 +480,6 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
         </>
       )}
 
-      {/* Ångra-rad */}
       {lastEvent && (
         <div className="fixed bottom-0 inset-x-0 z-30">
           <div className="max-w-md mx-auto m-3 card flex items-center gap-3 p-3 shadow-lg" style={{ boxShadow: "var(--shadow-lift)" }}>

@@ -19,6 +19,7 @@ interface MatchRow {
   clock_offset: number;
   clock_running: number;
   clock_period: number;
+  finished: number;
 }
 
 export async function getMatchRowByCode(code: string): Promise<MatchRow | undefined> {
@@ -86,7 +87,15 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     played,
     events,
     reporters,
+    finished: !!m.finished,
   };
+}
+
+export async function finishMatch(matchId: number): Promise<void> {
+  await run(
+    "UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL WHERE id = ?",
+    [matchId]
+  );
 }
 
 export async function claimStats(matchId: number, name: string, stats: string[]): Promise<void> {

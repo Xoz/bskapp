@@ -33,6 +33,7 @@ export interface Match {
   notes: string;
   code: string;
   source: string;
+  finished: number;
 }
 
 export interface MatchPlayerRow {

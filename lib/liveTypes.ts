@@ -40,6 +40,7 @@ export interface LiveState {
   played: number[];
   events: LiveEvent[];
   reporters: Reporter[];
+  finished: boolean;
 }
 
 export type LiveAction =
@@ -48,7 +49,8 @@ export type LiveAction =
   | { type: "undo" }
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "toggle_played"; playerId: number }
-  | { type: "claim_stats"; name: string; stats: string[] };
+  | { type: "claim_stats"; name: string; stats: string[] }
+  | { type: "finish_match" };
 
 export const OPPONENT_GOAL = "opponent_goal";
 
