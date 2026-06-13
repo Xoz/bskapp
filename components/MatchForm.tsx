@@ -79,6 +79,11 @@ export default function MatchForm({
           <input id="opponent_score" name="opponent_score" type="number" min="0" defaultValue={match?.opponent_score ?? ""} className="input" />
         </div>
         <div className="sm:col-span-2">
+          <label className="label" htmlFor="cup_name">Cup/turnering <span style={{ fontWeight: 400, opacity: 0.6 }}>(frivilligt)</span></label>
+          <input id="cup_name" name="cup_name" defaultValue={match?.cup_name ?? ""} className="input" placeholder="T.ex. Bollstanäs Cup – grupperar matcherna ihop" />
+          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Matcher med samma namn grupperas och kan dela trupp</p>
+        </div>
+        <div className="sm:col-span-2">
           <label className="label" htmlFor="notes">Anteckningar</label>
           <textarea id="notes" name="notes" rows={2} defaultValue={match?.notes ?? ""} className="input" placeholder="T.ex. vad laget tränade på i matchen" />
         </div>

@@ -244,6 +244,7 @@ export async function saveMatch(formData: FormData) {
   const periodMinutesRaw = Number(formData.get("period_minutes") ?? 20);
   const periodMinutes = periodMinutesRaw > 0 && periodMinutesRaw <= 60 ? periodMinutesRaw : 20;
   const level = String(formData.get("level") ?? "");
+  const cupName = String(formData.get("cup_name") ?? "").trim();
   if (!date || !opponent) return;
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -252,14 +253,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ? WHERE id = ?",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, id]
+      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ?, cup_name = ? WHERE id = ?",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, await generateMatchCode()]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, await generateMatchCode()]
     );
     matchId = Number(res.lastInsertRowid);
   }
@@ -283,23 +284,37 @@ export async function setMatchLevel(formData: FormData) {
   revalidatePath("/matcher");
 }
 
-// Spara uttagen trupp för en match (ersätter tidigare urval)
+// Spara uttagen trupp för en match (ersätter tidigare urval). Om "apply_cup"
+// är satt och matchen ingår i en cup appliceras truppen på alla matcher i cupen.
 export async function saveSquad(formData: FormData) {
   await requireRole(["coach"]);
   const matchId = Number(formData.get("match_id"));
   if (!matchId) return;
   const ids = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  const applyCup = formData.get("apply_cup") === "on";
 
-  const stmts: { sql: string; args?: (string | number | null)[] }[] = [
-    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [matchId] },
-    ...ids.map((pid) => ({
-      sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)",
-      args: [matchId, pid] as (string | number | null)[],
-    })),
-  ];
+  let targetIds = [matchId];
+  if (applyCup) {
+    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [matchId]);
+    if (m?.cup_name) {
+      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [m.cup_name]);
+      if (rows.length > 0) targetIds = rows.map((r) => r.id);
+    }
+  }
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
+  for (const mid of targetIds) {
+    stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
+    for (const pid of ids) {
+      stmts.push({
+        sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)",
+        args: [mid, pid],
+      });
+    }
+    revalidatePath(`/matcher/${mid}/laguttagning`);
+    revalidatePath(`/matcher/${mid}`);
+  }
   await batch(stmts);
-  revalidatePath(`/matcher/${matchId}/laguttagning`);
-  revalidatePath(`/matcher/${matchId}`);
   redirect(`/matcher/${matchId}`);
 }
 
@@ -441,11 +456,17 @@ export async function importCalendarMatches() {
         m.uid,
       ]);
       if (exists) {
-        // Fyll i nivån på redan importerade matcher som saknar den
+        // Fyll i nivå/cup på redan importerade matcher som saknar det
         if (m.level) {
           await run(
             "UPDATE matches SET level = ? WHERE external_uid = ? AND (level IS NULL OR level = '')",
             [m.level, m.uid]
+          );
+        }
+        if (m.cupName) {
+          await run(
+            "UPDATE matches SET cup_name = ? WHERE external_uid = ? AND (cup_name IS NULL OR cup_name = '')",
+            [m.cupName, m.uid]
           );
         }
         continue;
@@ -458,8 +479,8 @@ export async function importCalendarMatches() {
         .filter(Boolean)
         .join(" · ");
       await run(
-        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)",
-        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, await generateMatchCode(), m.uid]
+        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, cup_name, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)",
+        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, await generateMatchCode(), m.uid]
       );
       imported++;
     }

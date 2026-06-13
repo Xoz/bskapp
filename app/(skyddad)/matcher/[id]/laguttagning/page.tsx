@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getPlayersLevelInfo, getMatchSquad } from "@/lib/queries";
+import { getMatch, getPlayersLevelInfo, getMatchSquad, getMatchesByCup } from "@/lib/queries";
 import { LEVELS, level as levelInfo, suggestLevel, fit, type Fit } from "@/lib/levels";
 import { setMatchLevel, saveSquad } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
@@ -25,12 +25,14 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [playersInfo, squadIds] = await Promise.all([
+  const [playersInfo, squadIds, cupMatches] = await Promise.all([
     getPlayersLevelInfo(),
     getMatchSquad(match.id),
+    getMatchesByCup(match.cup_name),
   ]);
   const squad = new Set(squadIds);
   const mLevel = levelInfo(match.level);
+  const cupSize = cupMatches.length; // > 1 om matchen ingår i en cup med flera matcher
 
   // Bygg rader med passform och gruppera
   const rows = playersInfo.map((p) => ({
@@ -157,9 +159,22 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
             Inga aktiva spelare i truppen ännu.
           </div>
         ) : (
-          <div className="flex gap-3">
-            <button type="submit" className="btn-primary px-6">Spara trupp</button>
-            <Link href={`/matcher/${match.id}`} className="btn-secondary">Avbryt</Link>
+          <div className="space-y-3">
+            {cupSize > 1 && (
+              <label className="card p-4 flex items-center gap-3 cursor-pointer" style={{ background: "var(--primary-ghost)" }}>
+                <input type="checkbox" name="apply_cup" defaultChecked className="h-5 w-5 rounded accent-[var(--primary)] shrink-0" />
+                <span className="text-sm">
+                  Använd samma trupp för hela <strong>{match.cup_name}</strong>
+                  <span className="block text-xs" style={{ color: "var(--ink-soft)" }}>
+                    Gäller alla {cupSize} matcher i cupen
+                  </span>
+                </span>
+              </label>
+            )}
+            <div className="flex gap-3">
+              <button type="submit" className="btn-primary px-6">Spara trupp</button>
+              <Link href={`/matcher/${match.id}`} className="btn-secondary">Avbryt</Link>
+            </div>
           </div>
         )}
       </form>

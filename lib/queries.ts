@@ -44,6 +44,16 @@ export interface Match {
   source: string;
   finished: number;
   level: string;
+  cup_name: string;
+}
+
+// Matcher som ingår i samma cup/turnering (samma cup_name)
+export async function getMatchesByCup(cupName: string): Promise<Match[]> {
+  if (!cupName) return [];
+  return all<Match>(
+    "SELECT * FROM matches WHERE cup_name = ? ORDER BY date, start_time, id",
+    [cupName]
+  );
 }
 
 export interface MatchPlayerRow {

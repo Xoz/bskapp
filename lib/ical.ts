@@ -18,17 +18,33 @@ export interface CalendarMatch {
   location: string;
   series: string | null;
   level: string; // nivå-id, härlett ur serieparentesen (kan vara "")
+  cupName: string; // cup/turneringsnamn för gruppering (bara cup-matcher)
   matchType: "seriespel" | "cup" | "traningsmatch";
 }
 
-// Sista siffran i serieparentesen anger nivån, t.ex. "(F2014- 3)" → 3 (medel).
-// Svenskalag: 1 = svårast … 5 = lättast.
-function levelFromSeries(series: string | null): string {
-  if (!series) return "";
-  const nums = series.match(/\d+/g);
+// Sista siffran (1–5) i en text anger nivån. Svenskalag: 1 = svårast … 5 = lättast.
+function levelFromLastNumber(s: string | null): string {
+  if (!s) return "";
+  const nums = s.match(/\d+/g);
   if (!nums) return "";
   const last = Number(nums[nums.length - 1]);
   return levelFromSvenskalag(last)?.id ?? "";
+}
+
+// Härleder nivån. Helst ur serieparentesen "(F2014- 3)". För sammandrag som
+// saknar parentes ligger nivån sist i rubriken ("Sammandrag F2014- 3 // …") –
+// vi läser den bara när rubriken inte är en "LagA - LagB"-uppställning, så att
+// vi inte råkar tolka ett lagsuffixnummer (t.ex. "Bollstanäs SK 3") som nivå.
+function deriveLevel(summary: string, series: string | null): string {
+  const fromSeries = levelFromLastNumber(series);
+  if (fromSeries) return fromSeries;
+
+  let head = summary.split("//")[0];
+  head = head.replace(/^(match|sammandrag|seriespel|cup|träningsmatch)[:\s]+/i, "").trim();
+  // Ta bort ev. parentes så den inte stör – den hanterades redan via series
+  head = head.replace(/\([^)]*\)/g, "").trim();
+  if (VERSUS_SPLIT.test(head)) return ""; // två lag → nivån ska komma från parentes
+  return levelFromLastNumber(head);
 }
 
 // Viker upp rader enligt RFC 5545 (fortsättningsrader inleds med blanksteg/tab)
@@ -188,7 +204,8 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
         homeAway,
         location: e.location,
         series,
-        level: matchType === "seriespel" ? levelFromSeries(series) : "",
+        level: matchType === "seriespel" ? deriveLevel(e.summary, series) : "",
+        cupName: matchType === "cup" ? opponent : "",
         matchType,
       };
     });
