@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getRole } from "@/lib/auth";
+import { getRealRole, getViewRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { logout } from "@/lib/actions";
 import { IconLogout } from "@/components/Icons";
@@ -7,9 +7,15 @@ import NavLinks from "@/components/NavLinks";
 import RoleSwitcher from "@/components/RoleSwitcher";
 
 export default async function Navbar() {
-  const [role, settings] = await Promise.all([getRole(), getAllSettings()]);
+  const [realRole, view, settings] = await Promise.all([
+    getRealRole(),
+    getViewRole(),
+    getAllSettings(),
+  ]);
+  // Vad navlänkarna ska visa följer visningsrollen ("player" → utloggad meny)
+  const role = view === "player" ? null : view;
 
-  const homeHref = role === "coach" ? "/" : role === "parent" ? "/matcher" : "/rapportera";
+  const homeHref = view === "coach" ? "/" : view === "parent" ? "/matcher" : "/rapportera";
 
   return (
     <header
@@ -44,8 +50,8 @@ export default async function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <RoleSwitcher role={role} />
-          {role && (
+          <RoleSwitcher view={view} />
+          {realRole && (
             <form action={logout}>
               <button
                 type="submit"

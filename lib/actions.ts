@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, generateMatchCode } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
-import { sessionToken, getRole, Role } from "./auth";
+import { sessionToken, getRole, getRealRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
@@ -34,12 +34,40 @@ export async function login(_prev: { error?: string } | null, formData: FormData
     maxAge: 60 * 60 * 24 * 90,
     path: "/",
   });
+  store.delete("bsk_view");
   redirect(role === "coach" ? "/" : "/matcher");
 }
 
 export async function logout() {
   const store = await cookies();
   store.delete("bsk_session");
+  store.delete("bsk_view");
+  redirect("/login");
+}
+
+// Växla visningsroll. En tränare kan förhandsvisa som förälder/spelare (sätter
+// bsk_view) och växla tillbaka. Övriga roller dirigeras till rätt vy/inloggning.
+export async function setViewAs(formData: FormData) {
+  const real = await getRealRole();
+  const target = String(formData.get("view") ?? "");
+  const store = await cookies();
+
+  if (real === "coach") {
+    if (target === "parent" || target === "player") {
+      store.set("bsk_view", target, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      });
+      redirect(target === "player" ? "/rapportera" : "/matcher");
+    }
+    store.delete("bsk_view");
+    redirect("/");
+  }
+
+  if (target === "player") redirect("/rapportera");
+  if (real === "parent" && target === "parent") redirect("/matcher");
   redirect("/login");
 }
 

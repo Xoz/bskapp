@@ -4,6 +4,8 @@ import path from "path";
 import fs from "fs";
 
 export type Role = "coach" | "parent";
+// Visningsroll inkl. "player" (publik vy) – används för navigering och växeln.
+export type ViewRole = "coach" | "parent" | "player";
 
 // I produktion (Vercel) MÅSTE SESSION_SECRET sättas som miljövariabel –
 // filsystemet är flyktigt där. Lokalt genereras en hemlighet i data/.
@@ -26,11 +28,31 @@ export function sessionToken(role: Role): string {
   return `${role}.${sign(role)}`;
 }
 
-export async function getRole(): Promise<Role | null> {
+// Den verkligt inloggade rollen (från den signerade sessionscookien).
+export async function getRealRole(): Promise<Role | null> {
   const store = await cookies();
   const token = store.get("bsk_session")?.value;
   if (!token) return null;
   const [role, sig] = token.split(".");
   if ((role === "coach" || role === "parent") && sig === sign(role)) return role;
   return null;
+}
+
+// Visningsrollen. En tränare kan förhandsvisa appen som förälder eller spelare
+// via cookien bsk_view (sätts bara nedåt – ingen behörighetshöjning sker här).
+export async function getViewRole(): Promise<ViewRole> {
+  const real = await getRealRole();
+  if (real === "coach") {
+    const v = (await cookies()).get("bsk_view")?.value;
+    if (v === "parent" || v === "player") return v;
+    return "coach";
+  }
+  if (real === "parent") return "parent";
+  return "player";
+}
+
+// Effektiv roll för behörighet/sidoskydd. "player" motsvarar utloggad (publik).
+export async function getRole(): Promise<Role | null> {
+  const view = await getViewRole();
+  return view === "player" ? null : view;
 }
