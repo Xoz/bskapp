@@ -444,7 +444,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
                       : undefined
                   }
                 >
-                  <Avatar name={p.name} size={32} />
+                  <Avatar name={p.name} jersey={p.jersey_number} size={32} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-[0.85rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                       {firstName(p.name)}

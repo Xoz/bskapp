@@ -169,6 +169,19 @@ async function init(): Promise<void> {
   await (await getClient()).execute(
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')"
   );
+  // Matchtröjefärger – seedas för redan installerade appar utan att skriva över
+  const jerseyDefaults: [string, string][] = [
+    ["jersey_color", "#ffd23f"],
+    ["jersey_text_color", "#111111"],
+    ["gk_jersey_color", "#1f9d57"],
+    ["gk_jersey_text_color", "#ffffff"],
+  ];
+  for (const [k, v] of jerseyDefaults) {
+    await (await getClient()).execute({
+      sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+      args: [k, v],
+    });
+  }
 
   // Seed – exempelspelare
   const playerCount = await (await getClient()).execute("SELECT COUNT(*) AS c FROM players");

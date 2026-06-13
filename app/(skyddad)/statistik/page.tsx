@@ -83,7 +83,7 @@ export default async function StatsPage() {
                   <tr key={s.id}>
                     <td>
                       <span className="flex items-center gap-2.5 font-medium whitespace-nowrap">
-                        <Avatar name={s.name} size={30} />
+                        <Avatar name={s.name} jersey={s.jersey_number} size={30} />
                         {s.name}
                       </span>
                     </td>

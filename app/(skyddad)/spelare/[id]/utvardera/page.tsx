@@ -34,7 +34,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
       </Link>
 
       <div className="card p-6 md:p-7 flex items-center gap-5">
-        <Avatar name={player.name} size={56} />
+        <Avatar name={player.name} jersey={player.jersey_number} size={56} />
         <div>
           <p className="eyebrow">Ny utvärdering</p>
           <h1 className="text-[1.5rem] font-bold leading-tight mt-0.5">{player.name}</h1>

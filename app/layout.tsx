@@ -39,6 +39,11 @@ export default async function RootLayout({
             // Klubbens accentfärg driver hela accentskalan på det mörka temat
             "--primary": settings.accent_color || "#f59e0b",
             "--accent": settings.accent_color || "#f59e0b",
+            // Matchtröjefärger för spelaravatarerna
+            "--jersey": settings.jersey_color || "#ffd23f",
+            "--jersey-ink": settings.jersey_text_color || "#111111",
+            "--gk-jersey": settings.gk_jersey_color || "#1f9d57",
+            "--gk-jersey-ink": settings.gk_jersey_text_color || "#ffffff",
           } as React.CSSProperties
         }
       >

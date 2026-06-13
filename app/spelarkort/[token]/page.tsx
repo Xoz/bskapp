@@ -78,7 +78,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
 
         {/* Spelarhuvud */}
         <div className="card p-6 flex items-center gap-5 flex-wrap">
-          <Avatar name={player.name} size={64} />
+          <Avatar name={player.name} jersey={player.jersey_number} size={64} />
           <div className="flex-1 min-w-40">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-[1.6rem] font-bold leading-tight">{player.name}</h1>

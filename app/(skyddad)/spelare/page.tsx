@@ -104,7 +104,7 @@ export default async function PlayersPage() {
                 <tr key={p.id}>
                   <td>
                     <Link href={`/spelare/${p.id}`} className="flex items-center gap-3 group">
-                      <Avatar name={p.name} size={36} />
+                      <Avatar name={p.name} jersey={p.jersey_number} size={36} />
                       <span>
                         <span className="block font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
                           {p.name}

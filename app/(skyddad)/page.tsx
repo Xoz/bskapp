@@ -161,7 +161,7 @@ export default async function Dashboard() {
                     href={`/spelare/${p.id}/utvardera`}
                     className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--primary-ghost)]"
                   >
-                    <Avatar name={p.name} size={34} />
+                    <Avatar name={p.name} jersey={p.jersey_number} size={34} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{p.name}</p>
                       <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
@@ -228,7 +228,7 @@ export default async function Dashboard() {
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                     style={{ background: "var(--warn-bg)" }}
                   >
-                    <Avatar name={p.name} size={30} />
+                    <Avatar name={p.name} jersey={p.jersey_number} size={30} />
                     <span className="flex-1 text-sm font-medium">{p.name.replace(/^Exempel:\s*/, "")}</span>
                     <span className="stat-number text-sm" style={{ color: "var(--warn)" }}>
                       {p.matches_played} {p.matches_played === 1 ? "match" : "matcher"}

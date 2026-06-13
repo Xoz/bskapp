@@ -43,7 +43,7 @@ export default function StatsFields({
                 </td>
                 <td>
                   <span className="flex items-center gap-2.5 font-medium whitespace-nowrap">
-                    <Avatar name={p.name} size={30} />
+                    <Avatar name={p.name} jersey={p.jersey_number} size={30} />
                     {p.name}
                   </span>
                 </td>

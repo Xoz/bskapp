@@ -6,6 +6,24 @@ import { IconCheck, IconShield, IconAlert, IconPitch } from "@/components/Icons"
 
 export const dynamic = "force-dynamic";
 
+// Statisk tröjförhandsvisning med valda färger (speglar Avatar-formen)
+function JerseyPreview({ fill, ink, label }: { fill: string; ink: string; label: string }) {
+  return (
+    <svg viewBox="0 0 100 100" width={44} height={44}>
+      <path
+        d="M28,22 L40,22 L50,31 L60,22 L72,22 L90,34 L80,47 L70,41 L70,84 Q70,86 68,86 L32,86 Q30,86 30,84 L30,41 L20,47 L10,34 Z"
+        fill={fill}
+        stroke="rgba(0,0,0,0.16)"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+      />
+      <text x="50" y="64" textAnchor="middle" dominantBaseline="middle" fontSize={38} fontWeight="700" fontFamily="var(--font-display)" fill={ink}>
+        {label}
+      </text>
+    </svg>
+  );
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -153,6 +171,46 @@ export default async function SettingsPage({
                 className="input h-12 cursor-pointer"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="card p-6 md:p-7 space-y-5">
+          <div>
+            <h2 className="font-semibold">Matchtröjor</h2>
+            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+              Spelaravatarerna visas som lagets matchtröja med tröjnumret. Målvakten (nummer 1) får en egen färg.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-x-5 gap-y-4">
+            <div>
+              <label className="label" htmlFor="jersey_color">Utespelartröja</label>
+              <input id="jersey_color" name="jersey_color" type="color" defaultValue={settings.jersey_color || "#ffd23f"} className="input h-12 cursor-pointer" />
+            </div>
+            <div>
+              <label className="label" htmlFor="jersey_text_color">Siffror utespelare</label>
+              <input id="jersey_text_color" name="jersey_text_color" type="color" defaultValue={settings.jersey_text_color || "#111111"} className="input h-12 cursor-pointer" />
+            </div>
+            <div>
+              <label className="label" htmlFor="gk_jersey_color">Målvaktströja (nr 1)</label>
+              <input id="gk_jersey_color" name="gk_jersey_color" type="color" defaultValue={settings.gk_jersey_color || "#1f9d57"} className="input h-12 cursor-pointer" />
+            </div>
+            <div>
+              <label className="label" htmlFor="gk_jersey_text_color">Siffror målvakt</label>
+              <input id="gk_jersey_text_color" name="gk_jersey_text_color" type="color" defaultValue={settings.gk_jersey_text_color || "#ffffff"} className="input h-12 cursor-pointer" />
+            </div>
+          </div>
+          <div className="flex items-center gap-4 pt-1">
+            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>Förhandsvisning:</span>
+            <JerseyPreview
+              fill={settings.jersey_color || "#ffd23f"}
+              ink={settings.jersey_text_color || "#111111"}
+              label="7"
+            />
+            <JerseyPreview
+              fill={settings.gk_jersey_color || "#1f9d57"}
+              ink={settings.gk_jersey_text_color || "#ffffff"}
+              label="1"
+            />
           </div>
         </div>
 
