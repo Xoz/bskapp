@@ -27,7 +27,18 @@ export default function MatchForm({
         <div>
           <label className="label" htmlFor="start_time">Avsparktid <span style={{ fontWeight: 400, opacity: 0.6 }}>(frivilligt)</span></label>
           <input id="start_time" name="start_time" type="time" defaultValue={match?.start_time ?? ""} className="input" />
-          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Statistikrapportering öppnar 15 min innan</p>
+          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Rapportering öppnar 15 min innan</p>
+        </div>
+        <div>
+          <label className="label" htmlFor="periods">Antal perioder</label>
+          <select id="periods" name="periods" defaultValue={match?.periods ?? 3} className="input">
+            <option value={2}>2 perioder (cup)</option>
+            <option value={3}>3 perioder (serie)</option>
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="period_minutes">Minuter per period</label>
+          <input id="period_minutes" name="period_minutes" type="number" min="5" max="60" defaultValue={match?.period_minutes ?? 20} className="input" />
         </div>
         <div>
           <label className="label" htmlFor="opponent">Motståndare</label>

@@ -211,6 +211,10 @@ export async function saveMatch(formData: FormData) {
   const notes = String(formData.get("notes") ?? "");
   const startTimeRaw = String(formData.get("start_time") ?? "").trim();
   const startTime = /^\d{2}:\d{2}$/.test(startTimeRaw) ? startTimeRaw : null;
+  const periodsRaw = Number(formData.get("periods") ?? 3);
+  const periods = [2, 3, 4].includes(periodsRaw) ? periodsRaw : 3;
+  const periodMinutesRaw = Number(formData.get("period_minutes") ?? 20);
+  const periodMinutes = periodMinutesRaw > 0 && periodMinutesRaw <= 60 ? periodMinutesRaw : 20;
   if (!date || !opponent) return;
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -219,14 +223,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ? WHERE id = ?",
-      [date, startTime, opponent, homeAway, matchType, ourScore, oppScore, notes, id]
+      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ? WHERE id = ?",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
-      [date, startTime, opponent, homeAway, matchType, ourScore, oppScore, notes, await generateMatchCode()]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, await generateMatchCode()]
     );
     matchId = Number(res.lastInsertRowid);
   }

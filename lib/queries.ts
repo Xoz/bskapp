@@ -23,6 +23,8 @@ export interface Match {
   id: number;
   date: string;
   start_time: string | null;
+  periods: number;
+  period_minutes: number;
   opponent: string;
   home_away: string;
   match_type: string;

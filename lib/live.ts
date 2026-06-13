@@ -3,7 +3,7 @@
 
 import { all, get, run, batch } from "./db";
 import { STAT_IDS } from "./stats";
-import { OPPONENT_GOAL, MAX_PERIODS, LiveState, LiveEvent, Reporter } from "./liveTypes";
+import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter } from "./liveTypes";
 
 interface MatchRow {
   id: number;
@@ -11,6 +11,8 @@ interface MatchRow {
   home_away: string;
   date: string;
   start_time: string | null;
+  periods: number;
+  period_minutes: number;
   our_score: number | null;
   opponent_score: number | null;
   clock_started_at: number | null;
@@ -79,6 +81,8 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     players,
     counts,
     startTime: m.start_time ?? null,
+    periods: m.periods ?? 3,
+    periodMinutes: m.period_minutes ?? 20,
     played,
     events,
     reporters,
@@ -179,7 +183,7 @@ export async function setClock(matchId: number, op: "start" | "pause" | "reset" 
       "UPDATE matches SET clock_running = 0, clock_offset = ?, clock_started_at = NULL WHERE id = ?",
       [clockSeconds(m), matchId]
     );
-  } else if (op === "next_period" && (m.clock_period ?? 1) < MAX_PERIODS) {
+  } else if (op === "next_period" && (m.clock_period ?? 1) < (m.periods ?? 3)) {
     // Ny period: nollställ periodklockan och starta direkt
     await run(
       "UPDATE matches SET clock_period = ?, clock_running = 1, clock_offset = 0, clock_started_at = ? WHERE id = ?",

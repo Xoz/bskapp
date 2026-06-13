@@ -76,6 +76,27 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
+      {/* Matchsammanställning – totaler, synlig för båda roller */}
+      {matchPlayers.length > 0 && (() => {
+        const totals = STAT_FIELDS.map((f) => ({
+          ...f,
+          total: matchPlayers.reduce((sum, mp) => sum + ((mp as unknown as Record<string, number>)[f.id] ?? 0), 0),
+        }));
+        return (
+          <div className="card p-5 md:p-6">
+            <h2 className="font-semibold mb-4">Matchsammanställning</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
+              {totals.map((f) => (
+                <div key={f.id} className="text-center rounded-xl py-3 px-2" style={{ background: "var(--bg2)" }}>
+                  <p className="stat-number text-2xl">{f.total}</p>
+                  <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {role === "coach" ? (
         <>
           {/* Matchkod – delas med den som rapporterar statistik */}

@@ -27,6 +27,8 @@ export interface LiveState {
   homeAway: string;
   date: string;
   startTime: string | null;
+  periods: number;
+  periodMinutes: number;
   ourScore: number;
   oppScore: number;
   clockRunning: boolean;
@@ -49,9 +51,6 @@ export type LiveAction =
   | { type: "claim_stats"; name: string; stats: string[] };
 
 export const OPPONENT_GOAL = "opponent_goal";
-
-// Spelform 7 mot 7: 3 × 20 minuter
-export const MAX_PERIODS = 3;
 
 export function formatClock(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds));

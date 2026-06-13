@@ -7,7 +7,6 @@ import {
   LiveAction,
   Reporter,
   OPPONENT_GOAL,
-  MAX_PERIODS,
   formatClock,
   formatEventTime,
 } from "@/lib/liveTypes";
@@ -185,7 +184,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
               className="badge mb-1"
               style={{ background: "rgba(255,255,255,0.12)", color: "var(--accent)" }}
             >
-              Period {live.period} av {MAX_PERIODS}
+              Period {live.period} av {live.periods} · {live.periodMinutes} min
             </span>
             <p
               className="stat-number text-[2.7rem] leading-none tabular-nums"
@@ -196,64 +195,68 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             </p>
           </div>
           <div className="flex-1" />
-          <div className="flex flex-col items-end gap-2">
-            <button
-              type="button"
-              onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
-              className="btn-accent px-5 py-2.5"
-            >
-              {live.clockRunning
-                ? "Pausa"
-                : clockNow > 0 || live.period > 1
-                  ? "Fortsätt"
-                  : "Starta period 1"}
-            </button>
-            {live.period < MAX_PERIODS && (clockNow > 0 || live.clockRunning) && (
+          {isCoach && (
+            <div className="flex flex-col items-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
-                    post({ type: "clock", op: "next_period" });
-                }}
-                className="text-xs font-semibold rounded-full px-3.5 py-1.5"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  background: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  color: "var(--ink)",
-                }}
+                onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
+                className="btn-accent px-5 py-2.5"
               >
-                Starta period {live.period + 1} →
+                {live.clockRunning
+                  ? "Pausa"
+                  : clockNow > 0 || live.period > 1
+                    ? "Fortsätt"
+                    : "Starta period 1"}
               </button>
-            )}
+              {live.period < live.periods && (clockNow > 0 || live.clockRunning) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
+                      post({ type: "clock", op: "next_period" });
+                  }}
+                  className="text-xs font-semibold rounded-full px-3.5 py-1.5"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    color: "var(--ink)",
+                  }}
+                >
+                  Starta period {live.period + 1} →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {isCoach && (
+          <div className="mt-3 flex items-center justify-between relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Nollställa matchklockan till period 1, 00:00?"))
+                  post({ type: "clock", op: "reset" });
+              }}
+              className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Nollställ klocka
+            </button>
+            <button
+              type="button"
+              onClick={() => post({ type: "opponent_goal" })}
+              className="text-xs font-semibold rounded-full px-3.5 py-1.5"
+              style={{
+                fontFamily: "var(--font-display)",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "var(--ink)",
+              }}
+            >
+              +1 Mål motståndare
+            </button>
           </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between relative">
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Nollställa matchklockan till period 1, 00:00?"))
-                post({ type: "clock", op: "reset" });
-            }}
-            className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Nollställ klocka
-          </button>
-          <button
-            type="button"
-            onClick={() => post({ type: "opponent_goal" })}
-            className="text-xs font-semibold rounded-full px-3.5 py-1.5"
-            style={{
-              fontFamily: "var(--font-display)",
-              background: "rgba(255,255,255,0.1)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "var(--ink)",
-            }}
-          >
-            +1 Mål motståndare
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Välj statistik */}
