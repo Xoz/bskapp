@@ -26,7 +26,7 @@ function firstName(name: string) {
   return name.replace(/^Exempel:\s*/, "").split(" ")[0];
 }
 
-export default function LiveTracker({ code, initial }: { code: string; initial: LiveState }) {
+export default function LiveTracker({ code, initial, isCoach = false }: { code: string; initial: LiveState; isCoach?: boolean }) {
   const [live, setLive] = useState<LiveState>(initial);
   const [fetchedAt, setFetchedAt] = useState(() => Date.now());
   const [, setTick] = useState(0);
@@ -277,7 +277,7 @@ export default function LiveTracker({ code, initial }: { code: string; initial: 
           )}
           {/* Statistikflikar */}
           <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center">
-            {[...selected, PLAYED_TAB].map((statId) => (
+            {[...selected, ...(isCoach ? [PLAYED_TAB] : [])].map((statId) => (
               <button
                 key={statId}
                 type="button"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMatchRowByCode, getLiveState } from "@/lib/live";
+import { getRole } from "@/lib/auth";
 import LiveTracker from "@/components/LiveTracker";
 import { IconArrowLeft } from "@/components/Icons";
 
@@ -24,7 +25,8 @@ export default async function ReportMatchPage({
   const match = await getMatchRowByCode(clean);
   if (!match) notFound();
 
-  const initial = await getLiveState(match.id);
+  const [initial, role] = await Promise.all([getLiveState(match.id), getRole()]);
+  const isCoach = role === "coach";
 
   // 15-minuterspärr – gäller bara om avsparktid är angiven
   if (initial.startTime) {
@@ -80,7 +82,7 @@ export default async function ReportMatchPage({
           {initial.date}{initial.startTime ? ` · ${initial.startTime}` : ""} · kod {clean}
         </span>
       </div>
-      <LiveTracker code={clean} initial={initial} />
+      <LiveTracker code={clean} initial={initial} isCoach={isCoach} />
     </div>
   );
 }
