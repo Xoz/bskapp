@@ -86,6 +86,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           ...f,
           total: matchPlayers.reduce((sum, mp) => sum + ((mp as unknown as Record<string, number>)[f.id] ?? 0), 0),
         }));
+
+        // Räkna händelser per reporter
+        const reporterCounts: Record<string, number> = {};
+        for (const ev of events) {
+          const name = reporters[ev.stat_id];
+          if (name) reporterCounts[name] = (reporterCounts[name] ?? 0) + 1;
+        }
+        const reporterRanking = Object.entries(reporterCounts).sort((a, b) => b[1] - a[1]);
+
         return (
           <div className="card p-5 md:p-6">
             <h2 className="font-semibold mb-4">Matchsammanställning</h2>
@@ -97,6 +106,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 </div>
               ))}
             </div>
+            {reporterRanking.length > 0 && (
+              <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
+                <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>Bästa rapportör</p>
+                <div className="flex flex-wrap gap-2">
+                  {reporterRanking.map(([name, count], i) => (
+                    <span
+                      key={name}
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+                      style={{
+                        background: i === 0 ? "var(--primary-soft)" : "var(--bg2)",
+                        color: i === 0 ? "var(--primary)" : "var(--ink-soft)",
+                        fontWeight: i === 0 ? 600 : 400,
+                      }}
+                    >
+                      {i === 0 && <span>🏆</span>}
+                      {name}
+                      <span className="stat-number text-xs opacity-70">{count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
