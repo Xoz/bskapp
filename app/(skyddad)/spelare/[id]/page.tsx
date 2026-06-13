@@ -291,17 +291,21 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Matchstatistik */}
-      {matchStats.length > 0 && (() => {
+      {/* Matchstatistik – bara matcher med faktiskt rapporterad aktivitet */}
+      {(() => {
+        const playedMatches = matchStats.filter((m) =>
+          STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0)
+        );
+        if (playedMatches.length === 0) return null;
         const totals = STAT_FIELDS.reduce((acc, f) => {
-          acc[f.id] = matchStats.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
+          acc[f.id] = playedMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
           return acc;
         }, {} as Record<string, number>);
         return (
           <div className="card p-6 md:p-7">
             <h2 className="font-semibold mb-1">Matchstatistik</h2>
             <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
-              {matchStats.length} {matchStats.length === 1 ? "match" : "matcher"} rapporterade
+              {playedMatches.length} {playedMatches.length === 1 ? "match" : "matcher"} rapporterade
             </p>
             <div className="overflow-x-auto -mx-2">
               <table className="data-table">
@@ -314,7 +318,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   </tr>
                 </thead>
                 <tbody>
-                  {matchStats.map((m) => {
+                  {playedMatches.map((m) => {
                     const row = m as unknown as Record<string, number>;
                     const hasResult = m.our_score != null && m.opponent_score != null;
                     return (
