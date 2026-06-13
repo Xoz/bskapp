@@ -127,6 +127,7 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN clock_running INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE matches ADD COLUMN clock_period INTEGER NOT NULL DEFAULT 1`,
     `ALTER TABLE match_events ADD COLUMN period INTEGER`,
+    `ALTER TABLE matches ADD COLUMN start_time TEXT`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

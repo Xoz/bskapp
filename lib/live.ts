@@ -10,6 +10,7 @@ interface MatchRow {
   opponent: string;
   home_away: string;
   date: string;
+  start_time: string | null;
   our_score: number | null;
   opponent_score: number | null;
   clock_started_at: number | null;
@@ -77,6 +78,7 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     period: m.clock_period ?? 1,
     players,
     counts,
+    startTime: m.start_time ?? null,
     played,
     events,
     reporters,

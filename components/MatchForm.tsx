@@ -25,6 +25,11 @@ export default function MatchForm({
           <input id="date" name="date" type="date" required defaultValue={match?.date ?? today} className="input" />
         </div>
         <div>
+          <label className="label" htmlFor="start_time">Avsparktid <span style={{ fontWeight: 400, opacity: 0.6 }}>(frivilligt)</span></label>
+          <input id="start_time" name="start_time" type="time" defaultValue={match?.start_time ?? ""} className="input" />
+          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Statistikrapportering öppnar 15 min innan</p>
+        </div>
+        <div>
           <label className="label" htmlFor="opponent">Motståndare</label>
           <input id="opponent" name="opponent" required defaultValue={match?.opponent ?? ""} className="input" placeholder="T.ex. Väsby IK F2014" />
         </div>

@@ -209,6 +209,8 @@ export async function saveMatch(formData: FormData) {
   const ourScoreRaw = formData.get("our_score");
   const oppScoreRaw = formData.get("opponent_score");
   const notes = String(formData.get("notes") ?? "");
+  const startTimeRaw = String(formData.get("start_time") ?? "").trim();
+  const startTime = /^\d{2}:\d{2}$/.test(startTimeRaw) ? startTimeRaw : null;
   if (!date || !opponent) return;
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -217,14 +219,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ? WHERE id = ?",
-      [date, opponent, homeAway, matchType, ourScore, oppScore, notes, id]
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ? WHERE id = ?",
+      [date, startTime, opponent, homeAway, matchType, ourScore, oppScore, notes, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
-      [date, opponent, homeAway, matchType, ourScore, oppScore, notes, await generateMatchCode()]
+      "INSERT INTO matches (date, start_time, opponent, home_away, match_type, our_score, opponent_score, notes, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
+      [date, startTime, opponent, homeAway, matchType, ourScore, oppScore, notes, await generateMatchCode()]
     );
     matchId = Number(res.lastInsertRowid);
   }
@@ -247,6 +249,25 @@ export async function deleteMatch(formData: FormData) {
   ]);
   revalidatePath("/matcher");
   redirect("/matcher");
+}
+
+export async function resetMatch(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await batch([
+    { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_reporters WHERE match_id = ?", args: [id] },
+    {
+      sql: "UPDATE matches SET our_score = NULL, opponent_score = NULL, clock_running = 0, clock_offset = 0, clock_started_at = NULL, clock_period = 1 WHERE id = ?",
+      args: [id],
+    },
+  ]);
+  revalidatePath(`/matcher/${id}`);
+  revalidatePath("/matcher");
+  revalidatePath("/statistik");
+  redirect(`/matcher/${id}`);
 }
 
 export async function regenerateMatchCode(formData: FormData) {

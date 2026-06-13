@@ -46,12 +46,18 @@ export default async function ReportPage() {
           <ReportCodeForm />
         </div>
 
-        <p className="mt-6 text-center text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
-          Tränare?{" "}
-          <Link href="/login" className="underline hover:text-[var(--ink)]" style={{ color: "var(--ink-soft)" }}>
-            Logga in här
+        <div className="mt-6 flex justify-center gap-4 text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
+          <span>
+            Tränare?{" "}
+            <Link href="/login" className="underline hover:text-[var(--ink)]" style={{ color: "var(--ink-soft)" }}>
+              Logga in
+            </Link>
+          </span>
+          <span>·</span>
+          <Link href="/guide" className="underline hover:text-[var(--ink)]" style={{ color: "var(--ink-soft)" }}>
+            Guide
           </Link>
-        </p>
+        </div>
       </div>
     </main>
   );

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatch, getMatchPlayers, getPlayers, getMatchEvents } from "@/lib/queries";
-import { deleteMatch, regenerateMatchCode } from "@/lib/actions";
+import { deleteMatch, regenerateMatchCode, resetMatch } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import MatchForm from "@/components/MatchForm";
 import LiveFeed from "@/components/LiveFeed";
@@ -39,7 +39,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-            {match.date}
+            {match.date}{match.start_time ? ` · ${match.start_time}` : ""}
             {match.source === "calendar" && " · hämtad från kalendern"}
             {match.our_score != null && match.opponent_score != null && (
               <>
@@ -52,16 +52,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </p>
         </div>
         {role === "coach" && (
-          <form action={deleteMatch}>
-            <input type="hidden" name="id" value={match.id} />
-            <button
-              type="submit"
-              className="text-sm hover:underline cursor-pointer"
-              style={{ color: "var(--danger)" }}
-            >
-              Ta bort match
-            </button>
-          </form>
+          <div className="flex gap-3 items-center">
+            <form action={resetMatch}>
+              <input type="hidden" name="id" value={match.id} />
+              <button
+                type="submit"
+                onClick={(e) => { if (!confirm("Nollställa all statistik och klocka för den här matchen?")) e.preventDefault(); }}
+                className="text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--ink-faint)" }}
+              >
+                Nollställ match
+              </button>
+            </form>
+            <form action={deleteMatch}>
+              <input type="hidden" name="id" value={match.id} />
+              <button
+                type="submit"
+                className="text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--danger)" }}
+              >
+                Ta bort match
+              </button>
+            </form>
+          </div>
         )}
       </div>
 

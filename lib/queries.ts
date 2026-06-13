@@ -22,6 +22,7 @@ export interface Evaluation {
 export interface Match {
   id: number;
   date: string;
+  start_time: string | null;
   opponent: string;
   home_away: string;
   match_type: string;

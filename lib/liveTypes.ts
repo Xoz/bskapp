@@ -26,6 +26,7 @@ export interface LiveState {
   opponent: string;
   homeAway: string;
   date: string;
+  startTime: string | null;
   ourScore: number;
   oppScore: number;
   clockRunning: boolean;
