@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import type { Match } from "@/lib/queries";
-import { parseSwedishTime } from "@/lib/time";
 
 function statusLabel(m: Match): { text: string; tone: "live" | "done" | "soon" } {
   if (m.finished) {
@@ -11,20 +10,10 @@ function statusLabel(m: Match): { text: string; tone: "live" | "done" | "soon" }
     return { text: hasResult ? `${m.our_score}–${m.opponent_score}` : "Avslutad", tone: "done" };
   }
   const today = new Date().toISOString().slice(0, 10);
-  // Matcher senare under cupen (annan dag) – visa tid om satt, annars "Senare"
   if (m.date > today) {
     return { text: m.start_time ?? "Senare", tone: "soon" };
   }
-  if (m.start_time) {
-    const start = parseSwedishTime(m.date, m.start_time);
-    const opensAt = start.getTime() - 15 * 60 * 1000;
-    if (Date.now() < opensAt) {
-      const mins = Math.ceil((opensAt - Date.now()) / 60000);
-      return { text: `om ${mins} min`, tone: "soon" };
-    }
-    return { text: m.start_time, tone: "live" };
-  }
-  return { text: "Öppen", tone: "live" };
+  return { text: m.start_time ?? "Öppen", tone: "live" };
 }
 
 export default function CupReportSwitcher({
