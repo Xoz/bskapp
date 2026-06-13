@@ -292,12 +292,13 @@ export async function getMatchesByDate(date: string): Promise<Match[]> {
 }
 
 export async function getAllTimeReporterHighscore(): Promise<{ name: string; events: number }[]> {
+  // Gruppera skiftlägesokänsligt så samma rapportör inte splittras på casing
   return all<{ name: string; events: number }>(
-    `SELECT mr.name, COUNT(me.id) AS events
+    `SELECT MIN(mr.name) AS name, COUNT(me.id) AS events
      FROM match_reporters mr
      JOIN match_events me ON me.match_id = mr.match_id
        AND me.stat_id IN (SELECT value FROM json_each(mr.stats))
-     GROUP BY mr.name
+     GROUP BY LOWER(mr.name)
      ORDER BY events DESC`
   );
 }

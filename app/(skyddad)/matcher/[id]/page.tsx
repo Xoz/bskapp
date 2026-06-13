@@ -99,13 +99,19 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           total: matchPlayers.reduce((sum, mp) => sum + ((mp as unknown as Record<string, number>)[f.id] ?? 0), 0),
         }));
 
-        // Räkna händelser per reporter
-        const reporterCounts: Record<string, number> = {};
+        // Räkna händelser per reporter – skiftlägesokänsligt (slå ihop t.ex.
+        // "Itzas Pappa" och "itzas pappa"), behåll först sedda stavningen
+        const reporterCounts: Record<string, { name: string; count: number }> = {};
         for (const ev of events) {
           const name = reporters[ev.stat_id];
-          if (name) reporterCounts[name] = (reporterCounts[name] ?? 0) + 1;
+          if (!name) continue;
+          const key = name.toLowerCase();
+          if (!reporterCounts[key]) reporterCounts[key] = { name, count: 0 };
+          reporterCounts[key].count++;
         }
-        const reporterRanking = Object.entries(reporterCounts).sort((a, b) => b[1] - a[1]);
+        const reporterRanking = Object.values(reporterCounts)
+          .map((r) => [r.name, r.count] as [string, number])
+          .sort((a, b) => b[1] - a[1]);
 
         return (
           <div className="card p-5 md:p-6">

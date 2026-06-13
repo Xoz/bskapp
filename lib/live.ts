@@ -113,14 +113,21 @@ export async function finishMatch(matchId: number): Promise<void> {
 }
 
 export async function claimStats(matchId: number, name: string, stats: string[]): Promise<void> {
-  const trimmed = name.trim();
+  const trimmed = name.trim().replace(/\s+/g, " ");
   if (!trimmed) return;
   const now = Math.floor(Date.now() / 1000);
+  // Skiftlägesokänsligt: återanvänd en redan registrerad rapportör med samma
+  // namn oavsett stora/små bokstäver ("Itzas Pappa" == "itzas pappa").
+  const existing = await get<{ name: string }>(
+    "SELECT name FROM match_reporters WHERE match_id = ? AND name = ? COLLATE NOCASE",
+    [matchId, trimmed]
+  );
+  const finalName = existing?.name ?? trimmed;
   await run(
     `INSERT INTO match_reporters (match_id, name, stats, last_seen)
      VALUES (?, ?, ?, ?)
      ON CONFLICT(match_id, name) DO UPDATE SET stats = excluded.stats, last_seen = excluded.last_seen`,
-    [matchId, trimmed, JSON.stringify(stats), now]
+    [matchId, finalName, JSON.stringify(stats), now]
   );
 }
 
