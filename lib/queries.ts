@@ -127,6 +127,36 @@ export interface SeasonStatRow {
   saves: number;
 }
 
+export interface PlayerMatchRow {
+  match_id: number;
+  date: string;
+  opponent: string;
+  home_away: string;
+  our_score: number | null;
+  opponent_score: number | null;
+  goals: number;
+  assists: number;
+  shots: number;
+  shots_on_target: number;
+  passes_completed: number;
+  interceptions: number;
+  saves: number;
+}
+
+export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatchRow[]> {
+  return all<PlayerMatchRow>(
+    `SELECT m.id AS match_id, m.date, m.opponent, m.home_away,
+            m.our_score, m.opponent_score,
+            mp.goals, mp.assists, mp.shots, mp.shots_on_target,
+            mp.passes_completed, mp.interceptions, mp.saves
+     FROM match_players mp
+     JOIN matches m ON m.id = mp.match_id
+     WHERE mp.player_id = ?
+     ORDER BY m.date DESC, m.id DESC`,
+    [playerId]
+  );
+}
+
 // Säsongsstatistik per spelare – deltagande (SvFF: alla ska spela) och insatser
 export async function getSeasonStats(): Promise<SeasonStatRow[]> {
   const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n              ");

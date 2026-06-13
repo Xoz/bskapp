@@ -6,12 +6,14 @@ import {
   getEvaluations,
   getScores,
   getPlayerDevelopment,
+  getPlayerMatchStats,
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { updatePlayer, removePlayer, deleteEvaluation } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
+import { STAT_FIELDS } from "@/lib/stats";
 import { IconArrowLeft, IconPlus, IconSpark, IconTarget } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +39,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const evaluations = await getEvaluations(player.id);
-  const development = await getPlayerDevelopment(player.id);
+  const [evaluations, development, matchStats] = await Promise.all([
+    getEvaluations(player.id),
+    getPlayerDevelopment(player.id),
+    getPlayerMatchStats(player.id),
+  ]);
   const latest = evaluations[0];
   const previous = evaluations[1];
   const latestScores = latest ? await getScores(latest.id) : null;
@@ -227,6 +232,67 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       )}
+
+      {/* Matchstatistik */}
+      {matchStats.length > 0 && (() => {
+        const totals = STAT_FIELDS.reduce((acc, f) => {
+          acc[f.id] = matchStats.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
+          return acc;
+        }, {} as Record<string, number>);
+        return (
+          <div className="card p-6 md:p-7">
+            <h2 className="font-semibold mb-1">Matchstatistik</h2>
+            <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
+              {matchStats.length} {matchStats.length === 1 ? "match" : "matcher"} rapporterade
+            </p>
+            <div className="overflow-x-auto -mx-2">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Match</th>
+                    {STAT_FIELDS.map((f) => (
+                      <th key={f.id} title={f.label}>{f.short}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchStats.map((m) => {
+                    const row = m as unknown as Record<string, number>;
+                    const hasResult = m.our_score != null && m.opponent_score != null;
+                    return (
+                      <tr key={m.match_id}>
+                        <td>
+                          <Link
+                            href={`/matcher/${m.match_id}`}
+                            className="hover:underline font-medium whitespace-nowrap"
+                            style={{ color: "var(--primary)" }}
+                          >
+                            {m.opponent}
+                          </Link>
+                          <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
+                            {m.date}{hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}
+                          </span>
+                        </td>
+                        {STAT_FIELDS.map((f) => (
+                          <td key={f.id}>{row[f.id] || 0}</td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: "2px solid var(--line-strong)", fontWeight: 600 }}>
+                    <td>Totalt</td>
+                    {STAT_FIELDS.map((f) => (
+                      <td key={f.id}>{totals[f.id]}</td>
+                    ))}
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="card p-6 md:p-7">
         <h2 className="font-semibold mb-5">Redigera spelare</h2>
