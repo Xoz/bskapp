@@ -1,12 +1,36 @@
 import { getAllSettings } from "@/lib/db";
+import { getMatchesByDate, getAllTimeReporterHighscore } from "@/lib/queries";
 import PitchLines from "@/components/PitchLines";
 import ReportCodeForm from "./ReportCodeForm";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+function reportingStatus(date: string, startTime: string | null): {
+  open: boolean;
+  label: string;
+  minutesLeft: number | null;
+} {
+  if (!startTime) return { open: true, label: "Öppen", minutesLeft: null };
+
+  const now = new Date();
+  const [h, m] = startTime.split(":").map(Number);
+  const matchStart = new Date(`${date}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+  const opensAt = new Date(matchStart.getTime() - 15 * 60 * 1000);
+  const diff = Math.ceil((opensAt.getTime() - now.getTime()) / 60000);
+
+  if (diff <= 0) return { open: true, label: `Avspark ${startTime}`, minutesLeft: null };
+  return { open: false, label: `Öppnar ${diff} min före ${startTime}`, minutesLeft: diff };
+}
+
 export default async function ReportPage() {
-  const settings = await getAllSettings();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [settings, todayMatches, highscore] = await Promise.all([
+    getAllSettings(),
+    getMatchesByDate(today),
+    getAllTimeReporterHighscore(),
+  ]);
 
   return (
     <main
@@ -15,8 +39,9 @@ export default async function ReportPage() {
     >
       <PitchLines className="pointer-events-none absolute -left-28 top-1/2 -translate-y-1/2 h-[130%] text-white/[0.025]" />
 
-      <div className="w-full max-w-sm relative rise">
-        <div className="text-center mb-8">
+      <div className="w-full max-w-sm relative rise space-y-6">
+        {/* Header */}
+        <div className="text-center">
           <div
             className="mx-auto mb-4 flex h-12 w-12 items-center justify-center text-xl font-bold"
             style={{
@@ -38,15 +63,106 @@ export default async function ReportPage() {
             className="mt-2 text-[0.625rem] uppercase tracking-[0.12em]"
             style={{ color: "var(--ink-faint)" }}
           >
-            {settings.team_name} · Ange matchkoden från tränaren
+            {settings.team_name}
           </p>
         </div>
 
-        <div className="p-8" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
-          <ReportCodeForm />
-        </div>
+        {/* Dagens matcher */}
+        {todayMatches.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold px-1" style={{ color: "var(--ink-soft)" }}>
+              Dagens matcher
+            </p>
+            {todayMatches.map((match) => {
+              const status = reportingStatus(match.date, match.start_time);
+              return (
+                <div key={match.id}>
+                  {status.open ? (
+                    <Link
+                      href={`/rapportera/${match.code}`}
+                      className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+                      style={{ background: "var(--primary)", color: "var(--primary-deep)" }}
+                    >
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+                        </p>
+                        <p className="text-[0.7rem] opacity-70 mt-0.5">{status.label}</p>
+                      </div>
+                      <span className="text-lg">→</span>
+                    </Link>
+                  ) : (
+                    <div
+                      className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4"
+                      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+                    >
+                      <div>
+                        <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
+                          {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+                        </p>
+                        <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                          {status.label}
+                        </p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: "var(--bg3)", color: "var(--ink-faint)" }}>
+                        Stängt
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            className="rounded-2xl px-5 py-4 text-center text-sm"
+            style={{ background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--ink-soft)" }}
+          >
+            Inga matcher inlagda för idag
+          </div>
+        )}
 
-        <div className="mt-6 flex justify-center gap-4 text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
+        {/* Kod-formulär som fallback */}
+        <details className="group">
+          <summary
+            className="cursor-pointer text-xs text-center list-none"
+            style={{ color: "var(--ink-faint)" }}
+          >
+            Har du en matchkod? <span className="underline">Ange den här</span>
+          </summary>
+          <div className="mt-3 p-6 rounded-2xl" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+            <ReportCodeForm />
+          </div>
+        </details>
+
+        {/* Total highscore */}
+        {highscore.length > 0 && (
+          <div className="rounded-2xl px-5 py-4" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: "var(--ink-soft)" }}>
+              Säsongens bästa rapportörer
+            </p>
+            <ol className="space-y-2">
+              {highscore.slice(0, 5).map((r, i) => (
+                <li key={r.name} className="flex items-center gap-2.5">
+                  <span
+                    className="stat-number text-xs w-5 text-center shrink-0"
+                    style={{ color: i === 0 ? "var(--primary)" : "var(--ink-faint)" }}
+                  >
+                    {i === 0 ? "🏆" : `${i + 1}.`}
+                  </span>
+                  <span className="flex-1 text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
+                    {r.name}
+                  </span>
+                  <span className="stat-number text-sm" style={{ color: "var(--ink-soft)" }}>
+                    {r.events}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        <div className="flex justify-center gap-4 text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
           <span>
             Tränare?{" "}
             <Link href="/login" className="underline hover:text-[var(--ink)]" style={{ color: "var(--ink-soft)" }}>

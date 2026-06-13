@@ -191,6 +191,21 @@ export async function getMatchEvents(matchId: number): Promise<MatchEventRow[]> 
   );
 }
 
+export async function getMatchesByDate(date: string): Promise<Match[]> {
+  return all<Match>("SELECT * FROM matches WHERE date = ? ORDER BY start_time ASC, id ASC", [date]);
+}
+
+export async function getAllTimeReporterHighscore(): Promise<{ name: string; events: number }[]> {
+  return all<{ name: string; events: number }>(
+    `SELECT mr.name, COUNT(me.id) AS events
+     FROM match_reporters mr
+     JOIN match_events me ON me.match_id = mr.match_id
+       AND me.stat_id IN (SELECT value FROM json_each(mr.stats))
+     GROUP BY mr.name
+     ORDER BY events DESC`
+  );
+}
+
 export async function getMatchReporters(matchId: number): Promise<Record<string, string>> {
   const rows = await all<{ name: string; stats: string }>(
     "SELECT name, stats FROM match_reporters WHERE match_id = ?",
