@@ -1,4 +1,5 @@
-import { all, get } from "./db";
+import crypto from "crypto";
+import { all, get, run } from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
 import { STAT_IDS } from "./stats";
 
@@ -8,6 +9,8 @@ export interface Player {
   jersey_number: number | null;
   notes: string;
   active: number;
+  position: string;
+  share_token: string | null;
 }
 
 export interface Evaluation {
@@ -54,6 +57,20 @@ export async function getPlayers(): Promise<Player[]> {
 
 export async function getPlayer(id: number): Promise<Player | undefined> {
   return get<Player>("SELECT * FROM players WHERE id = ?", [id]);
+}
+
+export async function getPlayerByShareToken(token: string): Promise<Player | undefined> {
+  return get<Player>("SELECT * FROM players WHERE share_token = ? AND active = 1", [token]);
+}
+
+// Hämtar spelarens delningstoken – skapar en om den saknas. Token är hemlig
+// och oförutsägbar så att länken inte kan gissas.
+export async function getOrCreateShareToken(playerId: number): Promise<string> {
+  const player = await getPlayer(playerId);
+  if (player?.share_token) return player.share_token;
+  const token = crypto.randomBytes(9).toString("base64url");
+  await run("UPDATE players SET share_token = ? WHERE id = ?", [token, playerId]);
+  return token;
 }
 
 export async function getEvaluations(playerId: number): Promise<Evaluation[]> {

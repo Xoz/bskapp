@@ -101,11 +101,13 @@ export async function updatePlayer(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const jersey = formData.get("jersey_number");
   const notes = String(formData.get("notes") ?? "");
+  const position = String(formData.get("position") ?? "");
   if (!id || !name) return;
-  await run("UPDATE players SET name = ?, jersey_number = ?, notes = ? WHERE id = ?", [
+  await run("UPDATE players SET name = ?, jersey_number = ?, notes = ?, position = ? WHERE id = ?", [
     name,
     jersey ? Number(jersey) : null,
     notes,
+    position,
     id,
   ]);
   revalidatePath(`/spelare/${id}`);

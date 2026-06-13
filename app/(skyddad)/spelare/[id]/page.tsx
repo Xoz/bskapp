@@ -7,12 +7,15 @@ import {
   getScores,
   getPlayerDevelopment,
   getPlayerMatchStats,
+  getOrCreateShareToken,
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
+import { POSITIONS } from "@/lib/positions";
 import { updatePlayer, removePlayer, deleteEvaluation } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import { STAT_FIELDS } from "@/lib/stats";
 import { IconArrowLeft, IconPlus, IconSpark, IconTarget } from "@/components/Icons";
 
@@ -39,10 +42,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const [evaluations, development, matchStats] = await Promise.all([
+  const [evaluations, development, matchStats, shareToken] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
+    getOrCreateShareToken(player.id),
   ]);
   const latest = evaluations[0];
   const previous = evaluations[1];
@@ -89,6 +93,27 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         <Link href={`/spelare/${player.id}/utvardera`} className="btn-primary">
           <IconPlus width={15} height={15} /> Ny utvärdering
         </Link>
+      </div>
+
+      {/* Spelarens egen sida – delningslänk */}
+      <div className="card p-5 flex items-center justify-between gap-4 flex-wrap" style={{ background: "var(--primary-ghost)" }}>
+        <div className="min-w-48">
+          <p className="font-semibold text-sm">Spelarens egen sida</p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+            Personlig länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Dela bara med spelaren/familjen.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/spelarkort/${shareToken}`}
+            target="_blank"
+            className="text-xs underline"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            Förhandsgranska
+          </Link>
+          <CopyLinkButton code={shareToken} path="spelarkort" variant="light" label="Kopiera spelarlänk" />
+        </div>
       </div>
 
       {evaluations.length === 0 ? (
@@ -315,6 +340,18 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 className="input"
               />
             </div>
+          </div>
+          <div>
+            <label className="label" htmlFor="position">Position</label>
+            <select id="position" name="position" defaultValue={player.position ?? ""} className="input">
+              <option value="">Ej angiven</option>
+              {POSITIONS.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+              Hjälper AI:n tolka matchstatistiken rätt – t.ex. att en back inte bedöms på antal mål.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="notes">Anteckningar (syns bara för tränare)</label>

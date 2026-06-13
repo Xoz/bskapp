@@ -133,11 +133,16 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN finished INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE match_events ADD COLUMN created_at INTEGER`,
     `ALTER TABLE match_reporters ADD COLUMN last_seen INTEGER`,
+    `ALTER TABLE players ADD COLUMN position TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN share_token TEXT`,
   ];
   for (const sql of migrations) await tryExec(sql);
 
   await tryExec(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_code ON matches(code) WHERE code IS NOT NULL`
+  );
+  await tryExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_players_token ON players(share_token) WHERE share_token IS NOT NULL`
   );
   await tryExec(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(external_uid) WHERE external_uid IS NOT NULL`

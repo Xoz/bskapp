@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRole } from "@/lib/auth";
 import { getPlayer, getPlayerMatchStats, getEvaluations, getScores } from "@/lib/queries";
 import { CATEGORIES } from "@/lib/svff";
+import { positionLabel, positionFocus } from "@/lib/positions";
 
 export const dynamic = "force-dynamic";
 
@@ -76,19 +77,30 @@ export async function POST(req: NextRequest) {
     matchSection = `${totals.matcher} spelade matcher: ${totals.mål} mål, ${totals.assist} assist, ${totals.skott} skott (${totals.spm} på mål), ${totals.pass} lyckade passningar, ${totals.brytn} brytningar${totals.räddningar > 0 ? `, ${totals.räddningar} räddningar` : ""}`;
   }
 
+  const posLabel = positionLabel(player.position);
+  const posFocus = positionFocus(player.position);
+  const positionLine = posLabel ? `Position: ${posLabel} (relevant statistik: ${posFocus})` : "Position: ej angiven";
+
   const prompt = `Du är assistent till en fotbollstränare för BSK F2014 (flickor ca 12 år) i Bollstanäs SK.
 
 Spelare: ${player.name}
+${positionLine}
 
-Matchstatistik säsongen:
-${matchSection}
-
-Senaste utvärdering (SvFF-skala 1–4):
+PRIMÄR GRUND – tränarens utvärdering (SvFF-skala 1–4):
 ${skillLines}${trendSection}
 
-Skriv korta, konkreta texter för:
-1. Styrkor (2–3 meningar): Vad ${firstName} gör bra – koppla ihop utvärdering, matchstatistik och eventuell positiv trend
-2. Fokusområden (2–3 meningar): Konkreta saker att jobba med – lyft gärna fram areas som sjunkit eller är låga
+Matchstatistik (ENDAST som bakgrund, inte huvudgrund):
+${matchSection}
+
+Viktiga regler:
+- Utgå FRÄMST från tränarens utvärdering och trenden ovan. Matchstatistiken är bara stödjande färg, inte huvudunderlag.
+- Dra ALDRIG slutsatser om svagheter från låga siffror i positionsberoende statistik. En back ska t.ex. inte bedömas på antal mål, och en målvakt inte på passningar framåt. Få mål betyder inte att spelaren är dålig på avslut.
+- Nämn matchstatistik bara om den tydligt stödjer det utvärderingen redan visar.
+- Hitta inte på siffror eller färdigheter som inte finns med ovan.
+
+Skriv korta, konkreta texter:
+1. Styrkor (2–3 meningar): Vad ${firstName} gör bra enligt utvärderingen, gärna med positiv trend.
+2. Fokusområden (2–3 meningar): Konkreta saker att träna på utifrån utvärderingen – lyft områden som är låga eller sjunkit.
 
 Ton: positiv, direkt, riktat till tränaren. Inte till spelaren.
 Svara exakt i detta format utan rubriker eller förklaringar:
