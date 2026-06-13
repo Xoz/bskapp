@@ -83,6 +83,13 @@ export default async function Dashboard() {
               Registrera match
             </Link>
             <Link
+              href="/rapportera"
+              className="btn-secondary"
+              style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
+            >
+              Rapportera statistik
+            </Link>
+            <Link
               href="/spelare"
               className="btn-secondary"
               style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
