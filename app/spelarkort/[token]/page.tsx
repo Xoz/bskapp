@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPlayerByShareToken, getEvaluations, getScores, getPlayerDevelopment, getPlayerMatchStats } from "@/lib/queries";
+import { getPlayerByShareToken, shareLinkActive, getEvaluations, getScores, getPlayerDevelopment, getPlayerMatchStats } from "@/lib/queries";
 import { getAllSettings } from "@/lib/db";
 import { CATEGORIES } from "@/lib/svff";
 import { STAT_FIELDS } from "@/lib/stats";
@@ -24,6 +24,27 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
   const { token } = await params;
   const player = await getPlayerByShareToken(token);
   if (!player) notFound();
+
+  // Länken gäller bara i 48 timmar – visa en vänlig sida om den gått ut
+  if (!shareLinkActive(player)) {
+    const settings = await getAllSettings();
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "var(--bg)" }}>
+        <div className="card p-8 max-w-sm w-full text-center">
+          <p className="text-4xl mb-4">⏳</p>
+          <h1 className="font-semibold text-xl mb-2" style={{ fontFamily: "var(--font-display)" }}>
+            Länken har gått ut
+          </h1>
+          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            Den här spelarlänken gäller i 48 timmar och har slutat fungera. Be tränaren skapa en ny länk inför nästa spelarsamtal.
+          </p>
+          <p className="eyebrow mt-6" style={{ color: "var(--ink-faint)" }}>
+            {settings.team_name} · {settings.club_name}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const [settings, evaluations, development, matchStats] = await Promise.all([
     getAllSettings(),

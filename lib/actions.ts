@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, generateMatchCode } from "./db";
+import { renewShareToken, revokeShareToken } from "./queries";
 import { sessionToken, getRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS } from "./stats";
@@ -112,6 +113,24 @@ export async function updatePlayer(formData: FormData) {
   ]);
   revalidatePath(`/spelare/${id}`);
   revalidatePath("/spelare");
+}
+
+// Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal
+export async function generateShareLink(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await renewShareToken(id);
+  revalidatePath(`/spelare/${id}`);
+}
+
+// Återkalla länken direkt
+export async function revokeShareLink(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await revokeShareToken(id);
+  revalidatePath(`/spelare/${id}`);
 }
 
 export async function removePlayer(formData: FormData) {

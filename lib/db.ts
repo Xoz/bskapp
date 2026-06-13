@@ -135,6 +135,7 @@ async function init(): Promise<void> {
     `ALTER TABLE match_reporters ADD COLUMN last_seen INTEGER`,
     `ALTER TABLE players ADD COLUMN position TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN share_token TEXT`,
+    `ALTER TABLE players ADD COLUMN share_expires INTEGER`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

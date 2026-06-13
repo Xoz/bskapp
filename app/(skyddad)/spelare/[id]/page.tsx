@@ -7,11 +7,11 @@ import {
   getScores,
   getPlayerDevelopment,
   getPlayerMatchStats,
-  getOrCreateShareToken,
+  shareLinkActive,
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
-import { updatePlayer, removePlayer, deleteEvaluation } from "@/lib/actions";
+import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
@@ -42,12 +42,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const [evaluations, development, matchStats, shareToken] = await Promise.all([
+  const [evaluations, development, matchStats] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
-    getOrCreateShareToken(player.id),
   ]);
+  const linkActive = shareLinkActive(player);
+  const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
   const latest = evaluations[0];
   const previous = evaluations[1];
   const latestScores = latest ? await getScores(latest.id) : null;
@@ -95,25 +96,57 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </Link>
       </div>
 
-      {/* Spelarens egen sida – delningslänk */}
-      <div className="card p-5 flex items-center justify-between gap-4 flex-wrap" style={{ background: "var(--primary-ghost)" }}>
-        <div className="min-w-48">
-          <p className="font-semibold text-sm">Spelarens egen sida</p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-            Personlig länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Dela bara med spelaren/familjen.
-          </p>
+      {/* Spelarens egen sida – tidsbegränsad delningslänk för spelarsamtal */}
+      <div className="card p-5 space-y-3" style={{ background: "var(--primary-ghost)" }}>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-48">
+            <p className="font-semibold text-sm">Spelarsamtal – personlig länk</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Länken gäller i 48 timmar och måste sedan förnyas.
+            </p>
+          </div>
+          {linkActive ? (
+            <span className="badge shrink-0" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+              Aktiv · {hoursLeft} h kvar
+            </span>
+          ) : (
+            <span className="badge shrink-0" style={{ background: "var(--surface-2, rgba(0,0,0,0.06))", color: "var(--ink-faint)" }}>
+              Ingen aktiv länk
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/spelarkort/${shareToken}`}
-            target="_blank"
-            className="text-xs underline"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            Förhandsgranska
-          </Link>
-          <CopyLinkButton code={shareToken} path="spelarkort" variant="light" label="Kopiera spelarlänk" />
-        </div>
+        {linkActive ? (
+          <div className="flex items-center gap-3 flex-wrap">
+            <CopyLinkButton code={player.share_token!} path="spelarkort" variant="light" label="Kopiera spelarlänk" />
+            <Link
+              href={`/spelarkort/${player.share_token}`}
+              target="_blank"
+              className="text-xs underline"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Förhandsgranska
+            </Link>
+            <form action={generateShareLink}>
+              <input type="hidden" name="id" value={player.id} />
+              <button type="submit" className="text-xs underline cursor-pointer" style={{ color: "var(--ink-soft)" }}>
+                Förnya 48 h
+              </button>
+            </form>
+            <form action={revokeShareLink}>
+              <input type="hidden" name="id" value={player.id} />
+              <button type="submit" className="text-xs underline cursor-pointer" style={{ color: "var(--danger)" }}>
+                Återkalla
+              </button>
+            </form>
+          </div>
+        ) : (
+          <form action={generateShareLink}>
+            <input type="hidden" name="id" value={player.id} />
+            <button type="submit" className="btn-secondary py-2 px-4 text-sm">
+              🔗 Skapa länk (gäller 48 h)
+            </button>
+          </form>
+        )}
       </div>
 
       {evaluations.length === 0 ? (

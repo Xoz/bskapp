@@ -11,7 +11,11 @@ export interface Player {
   active: number;
   position: string;
   share_token: string | null;
+  share_expires: number | null;
 }
+
+// Spelarlänkar gäller i 48 timmar – tänkta att aktiveras inför ett spelarsamtal
+export const SHARE_TTL_MS = 48 * 60 * 60 * 1000;
 
 export interface Evaluation {
   id: number;
@@ -63,14 +67,26 @@ export async function getPlayerByShareToken(token: string): Promise<Player | und
   return get<Player>("SELECT * FROM players WHERE share_token = ? AND active = 1", [token]);
 }
 
-// Hämtar spelarens delningstoken – skapar en om den saknas. Token är hemlig
-// och oförutsägbar så att länken inte kan gissas.
-export async function getOrCreateShareToken(playerId: number): Promise<string> {
-  const player = await getPlayer(playerId);
-  if (player?.share_token) return player.share_token;
+// Skapar en ny, hemlig delningslänk som gäller i 48 timmar. Anropas av tränaren
+// inför ett spelarsamtal. En ny token gör samtidigt alla tidigare länkar ogiltiga.
+export async function renewShareToken(playerId: number): Promise<string> {
   const token = crypto.randomBytes(9).toString("base64url");
-  await run("UPDATE players SET share_token = ? WHERE id = ?", [token, playerId]);
+  const expires = Date.now() + SHARE_TTL_MS;
+  await run("UPDATE players SET share_token = ?, share_expires = ? WHERE id = ?", [
+    token,
+    expires,
+    playerId,
+  ]);
   return token;
+}
+
+// Återkallar länken direkt (t.ex. efter avslutat samtal)
+export async function revokeShareToken(playerId: number): Promise<void> {
+  await run("UPDATE players SET share_token = NULL, share_expires = NULL WHERE id = ?", [playerId]);
+}
+
+export function shareLinkActive(player: Pick<Player, "share_token" | "share_expires">): boolean {
+  return !!player.share_token && !!player.share_expires && player.share_expires > Date.now();
 }
 
 export async function getEvaluations(playerId: number): Promise<Evaluation[]> {
