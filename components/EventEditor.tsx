@@ -1,14 +1,14 @@
 // Coach-only: lista över alla rapporterade händelser med möjlighet att ta bort
 // felaktiga rader. Borttagning justerar både matchflödet och spelarens räknare.
 
-import { STAT_FIELDS } from "@/lib/stats";
+import { STAT_FIELDS, CARD_FIELDS } from "@/lib/stats";
 import { OPPONENT_GOAL, formatClock } from "@/lib/liveTypes";
 import { deleteMatchEvent } from "@/lib/actions";
 import ConfirmForm from "@/components/ConfirmForm";
 import type { MatchEventRow } from "@/lib/queries";
 
 const STAT_LABEL: Record<string, string> = {
-  ...Object.fromEntries(STAT_FIELDS.map((f) => [f.id, f.label])),
+  ...Object.fromEntries([...STAT_FIELDS, ...CARD_FIELDS].map((f) => [f.id, f.label])),
   [OPPONENT_GOAL]: "Motståndarmål",
 };
 

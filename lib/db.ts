@@ -121,6 +121,15 @@ async function init(): Promise<void> {
       y REAL NOT NULL,
       PRIMARY KEY (match_id, player_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS match_subs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      off_player INTEGER REFERENCES players(id) ON DELETE SET NULL,
+      on_player INTEGER REFERENCES players(id) ON DELETE SET NULL,
+      match_second INTEGER,
+      period INTEGER,
+      created_at INTEGER
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 
@@ -153,6 +162,8 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN level TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE matches ADD COLUMN cup_name TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE matches ADD COLUMN formation TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE match_players ADD COLUMN yellow_card INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE match_players ADD COLUMN red_card INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

@@ -3,7 +3,7 @@
 // och ställning efter varje mål. Ren komponent utan hooks – renderas både
 // på servern (matchsidan) och i live-rapporteringen.
 
-import { STAT_FIELDS } from "@/lib/stats";
+import { STAT_FIELDS, CARD_FIELDS } from "@/lib/stats";
 import { OPPONENT_GOAL, formatClock } from "@/lib/liveTypes";
 import {
   IconBall,
@@ -24,7 +24,13 @@ export interface FeedEvent {
 }
 
 const STAT_LABEL: Record<string, string> = Object.fromEntries(
-  STAT_FIELDS.map((f) => [f.id, f.label])
+  [...STAT_FIELDS, ...CARD_FIELDS].map((f) => [f.id, f.label])
+);
+
+const CardIcon = (color: string) => (p: SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" {...p}>
+    <rect x="7" y="3" width="10" height="18" rx="2" fill={color} />
+  </svg>
 );
 
 const STAT_ICON: Record<string, (p: SVGProps<SVGSVGElement>) => React.ReactNode> = {
@@ -36,6 +42,8 @@ const STAT_ICON: Record<string, (p: SVGProps<SVGSVGElement>) => React.ReactNode>
   passes_completed: IconArrowRight,
   interceptions: IconShield,
   saves: IconGlove,
+  yellow_card: CardIcon("#f0c020"),
+  red_card: CardIcon("#e2504a"),
 };
 
 function firstName(name: string) {

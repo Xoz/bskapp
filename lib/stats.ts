@@ -17,3 +17,14 @@ export const STAT_FIELDS: StatField[] = [
 ];
 
 export const STAT_IDS = STAT_FIELDS.map((f) => f.id);
+
+// Kort – loggas per spelare men räknas inte som vanlig statistik och påverkar
+// inte resultatet. Hålls utanför STAT_FIELDS så de inte syns i statistiktabeller.
+export const CARD_FIELDS: StatField[] = [
+  { id: "yellow_card", label: "Gult kort", short: "Gult" },
+  { id: "red_card", label: "Rött kort", short: "Rött" },
+];
+export const CARD_IDS = CARD_FIELDS.map((f) => f.id);
+
+// Alla fält som har en kolumn i match_players och kan loggas live
+export const LIVE_COUNT_IDS = [...STAT_IDS, ...CARD_IDS];

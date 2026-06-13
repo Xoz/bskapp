@@ -8,6 +8,8 @@ import {
   togglePlayed,
   claimStats,
   finishMatch,
+  recordSub,
+  undoLastSub,
 } from "@/lib/live";
 import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
@@ -63,6 +65,12 @@ export async function POST(
         break;
       case "claim_stats":
         await claimStats(match.id, action.name, action.stats);
+        break;
+      case "sub":
+        await recordSub(match.id, action.offId, action.onId);
+        break;
+      case "undo_sub":
+        await undoLastSub(match.id);
         break;
       case "finish_match":
         await finishMatch(match.id);

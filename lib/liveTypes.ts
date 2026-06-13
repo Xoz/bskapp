@@ -22,6 +22,16 @@ export interface Reporter {
   lastSeen: number | null; // unix sekunder
 }
 
+export interface SubEntry {
+  id: number;
+  offId: number | null;
+  offName: string | null;
+  onId: number | null;
+  onName: string | null;
+  second: number | null;
+  period: number | null;
+}
+
 export interface LiveState {
   matchId: number;
   opponent: string;
@@ -42,6 +52,11 @@ export interface LiveState {
   events: LiveEvent[];
   reporters: Reporter[];
   finished: boolean;
+  subs: SubEntry[];
+  // minutes[playerId] = spelade minuter (tomt om ingen startelva är satt)
+  minutes: Record<number, number>;
+  onField: number[]; // spelare som är på plan just nu
+  hasLineup: boolean; // finns en startelva i laguttagningen?
 }
 
 export type LiveAction =
@@ -51,6 +66,8 @@ export type LiveAction =
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "toggle_played"; playerId: number }
   | { type: "claim_stats"; name: string; stats: string[] }
+  | { type: "sub"; offId: number; onId: number }
+  | { type: "undo_sub" }
   | { type: "finish_match" };
 
 export const OPPONENT_GOAL = "opponent_goal";

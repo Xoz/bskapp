@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { STAT_FIELDS } from "@/lib/stats";
+import { STAT_FIELDS, CARD_FIELDS, CARD_IDS } from "@/lib/stats";
 import {
   LiveState,
   LiveAction,
@@ -14,11 +14,19 @@ import Avatar from "@/components/Avatar";
 import LiveFeed from "@/components/LiveFeed";
 
 const STAT_LABEL: Record<string, string> = Object.fromEntries(
-  STAT_FIELDS.map((f) => [f.id, f.label])
+  [...STAT_FIELDS, ...CARD_FIELDS].map((f) => [f.id, f.label])
 );
 STAT_LABEL[OPPONENT_GOAL] = "Mål motståndare";
 
 const PLAYED_TAB = "__played";
+
+function topByStat(counts: LiveState["counts"], players: LiveState["players"], stat: string) {
+  const ranked = players
+    .map((p) => ({ name: p.name.replace(/^Exempel:\s*/, "").split(" ")[0], n: counts[p.id]?.[stat] ?? 0 }))
+    .filter((r) => r.n > 0)
+    .sort((a, b) => b.n - a.n);
+  return ranked;
+}
 
 function firstName(name: string) {
   return name.replace(/^Exempel:\s*/, "").split(" ")[0];
@@ -34,6 +42,11 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const [setupOpen, setSetupOpen] = useState(false);
   const [activeStat, setActiveStat] = useState<string>("");
   const [flash, setFlash] = useState<number | null>(null);
+  const [subOpen, setSubOpen] = useState(false);
+  const [subOff, setSubOff] = useState<number | "">("");
+  const [subOn, setSubOn] = useState<number | "">("");
+  const [showHalftime, setShowHalftime] = useState(false);
+  const prevPeriodRef = useRef(initial.period);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const reclaimedRef = useRef(false);
   const autoFinishedRef = useRef(false);
@@ -132,6 +145,14 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     }
   }, [live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
 
+  // Automatisk halvtid/periodpaus-sammanfattning när perioden ökar
+  useEffect(() => {
+    if (live.period > prevPeriodRef.current && live.period > 1 && !live.finished) {
+      setShowHalftime(true);
+    }
+    prevPeriodRef.current = live.period;
+  }, [live.period, live.finished]);
+
   // Sortera om direkt när man byter kategori (man trycker inte just då)
   useEffect(() => {
     if (activeStat) setOrder(computeOrder(activeStat, liveRef.current));
@@ -206,6 +227,10 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
       acc[f.id] = Object.values(live.counts).reduce((s, c) => s + (c[f.id] ?? 0), 0);
       return acc;
     }, {} as Record<string, number>);
+    const finMinutes = Object.entries(live.minutes)
+      .map(([id, m]) => ({ id: Number(id), m, name: firstName(live.players.find((p) => p.id === Number(id))?.name ?? "") }))
+      .sort((a, b) => b.m - a.m);
+    const finMaxMin = finMinutes.reduce((mx, r) => Math.max(mx, r.m), 0) || 1;
 
     return (
       <div className="max-w-md mx-auto pb-10">
@@ -274,6 +299,27 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             </div>
           )}
 
+          {/* Spelade minuter */}
+          {live.hasLineup && finMinutes.length > 0 && (
+            <div className="card p-5">
+              <h2 className="font-semibold mb-1">Spelade minuter</h2>
+              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
+                {live.subs.length} {live.subs.length === 1 ? "byte" : "byten"} registrerade
+              </p>
+              <div className="space-y-2">
+                {finMinutes.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2.5">
+                    <span className="text-sm w-20 truncate" style={{ color: "var(--ink-soft)" }}>{r.name}</span>
+                    <span className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "var(--bg2)" }}>
+                      <span className="block h-full" style={{ width: `${Math.round((r.m / finMaxMin) * 100)}%`, background: "var(--primary)" }} />
+                    </span>
+                    <span className="stat-number text-sm w-14 text-right" style={{ color: "var(--ink-soft)" }}>{r.m} min</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Matchflöde */}
           <div className="card p-5">
             <h2 className="font-semibold mb-4">Matchhändelser</h2>
@@ -298,6 +344,25 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     ...order.map((id) => pById.get(id)).filter((p): p is LiveState["players"][number] => !!p),
     ...live.players.filter((p) => !order.includes(p.id)),
   ];
+
+  // Byten
+  const onIds = live.hasLineup ? live.onField : live.played;
+  const offCandidates = live.players.filter((p) => onIds.includes(p.id));
+  const onCandidates = live.players.filter((p) => !onIds.includes(p.id));
+  const lastSub = live.subs[live.subs.length - 1];
+  const logSub = () => {
+    if (subOff === "" || subOn === "") return;
+    post({ type: "sub", offId: Number(subOff), onId: Number(subOn) });
+    setSubOff("");
+    setSubOn("");
+  };
+  // Speltid
+  const minutesList = Object.entries(live.minutes)
+    .map(([id, m]) => ({ id: Number(id), m, name: firstName(live.players.find((p) => p.id === Number(id))?.name ?? "") }))
+    .sort((a, b) => b.m - a.m);
+  const maxMin = minutesList.reduce((mx, r) => Math.max(mx, r.m), 0) || 1;
+  const goalLeaders = topByStat(live.counts, live.players, "goals");
+  const assistLeaders = topByStat(live.counts, live.players, "assists");
 
   return (
     <div className="max-w-md mx-auto pb-32">
@@ -435,7 +500,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             </p>
           )}
           <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center">
-            {[...selected, ...(isCoach ? [PLAYED_TAB] : [])].map((statId) => (
+            {[...selected, ...(isCoach ? [...CARD_IDS, PLAYED_TAB] : [])].map((statId) => (
               <button
                 key={statId}
                 type="button"
@@ -514,6 +579,53 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             })}
           </div>
 
+          {isCoach && (
+            <div className="px-4 pt-6">
+              <button
+                type="button"
+                onClick={() => setSubOpen((o) => !o)}
+                className="w-full flex items-center justify-between card p-3.5"
+              >
+                <span className="font-semibold text-sm">Byte</span>
+                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  {live.subs.length > 0 ? `${live.subs.length} gjorda · ` : ""}{subOpen ? "dölj" : "logga byte"}
+                </span>
+              </button>
+              {subOpen && (
+                <div className="card p-4 mt-2 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select className="input" value={subOff} onChange={(e) => setSubOff(e.target.value ? Number(e.target.value) : "")}>
+                      <option value="">Spelare ut</option>
+                      {offCandidates.map((p) => (
+                        <option key={p.id} value={p.id}>{firstName(p.name)}{p.jersey_number != null ? ` #${p.jersey_number}` : ""}</option>
+                      ))}
+                    </select>
+                    <select className="input" value={subOn} onChange={(e) => setSubOn(e.target.value ? Number(e.target.value) : "")}>
+                      <option value="">Spelare in</option>
+                      {onCandidates.map((p) => (
+                        <option key={p.id} value={p.id}>{firstName(p.name)}{p.jersey_number != null ? ` #${p.jersey_number}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="button" onClick={logSub} disabled={subOff === "" || subOn === ""} className="btn-primary w-full disabled:opacity-50">
+                    Logga byte vid {formatClock(clockNow)}
+                  </button>
+                  {lastSub && (
+                    <div className="flex items-center justify-between text-xs" style={{ color: "var(--ink-soft)" }}>
+                      <span>Senaste: <strong>{lastSub.onName}</strong> in · {lastSub.offName} ut</span>
+                      <button type="button" onClick={() => post({ type: "undo_sub" })} className="underline" style={{ color: "var(--danger)" }}>Ångra</button>
+                    </div>
+                  )}
+                  {!live.hasLineup && (
+                    <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                      Tips: sätt startelvan i laguttagningen så blir speltiden exakt.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="px-4 pt-6">
             <p className="eyebrow mb-3 text-center">Matchhändelser</p>
             <LiveFeed
@@ -523,6 +635,54 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             />
           </div>
         </>
+      )}
+
+      {showHalftime && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="card w-full max-w-sm p-6 max-h-[85vh] overflow-y-auto">
+            <p className="eyebrow text-center" style={{ color: "var(--primary)" }}>
+              {live.period > 2 ? `Paus före period ${live.period}` : "Halvtid"}
+            </p>
+            <p className="stat-number text-4xl text-center my-1.5">{live.ourScore}–{live.oppScore}</p>
+            <p className="text-center text-sm mb-4" style={{ color: "var(--ink-soft)" }}>
+              {live.homeAway === "home" ? "Hemma mot" : "Borta mot"} {live.opponent}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="rounded-xl p-3" style={{ background: "var(--bg2)" }}>
+                <p className="text-[0.7rem] mb-1" style={{ color: "var(--ink-faint)" }}>Mål</p>
+                <p className="text-sm">{goalLeaders.length ? goalLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: "var(--bg2)" }}>
+                <p className="text-[0.7rem] mb-1" style={{ color: "var(--ink-faint)" }}>Assist</p>
+                <p className="text-sm">{assistLeaders.length ? assistLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
+              </div>
+            </div>
+
+            <p className="text-[0.7rem] mb-2" style={{ color: "var(--ink-faint)" }}>Spelade minuter</p>
+            {live.hasLineup && minutesList.length > 0 ? (
+              <div className="space-y-1.5 mb-4">
+                {minutesList.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2">
+                    <span className="text-xs w-16 truncate" style={{ color: "var(--ink-soft)" }}>{r.name}</span>
+                    <span className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg2)" }}>
+                      <span className="block h-full" style={{ width: `${Math.round((r.m / maxMin) * 100)}%`, background: "var(--primary)" }} />
+                    </span>
+                    <span className="stat-number text-xs w-12 text-right" style={{ color: "var(--ink-faint)" }}>{r.m} min</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
+                Sätt startelvan i laguttagningen så räknas spelade minuter per spelare.
+              </p>
+            )}
+
+            <button type="button" onClick={() => setShowHalftime(false)} className="btn-primary w-full">
+              Fortsätt
+            </button>
+          </div>
+        </div>
       )}
 
       {lastEvent && (

@@ -2,8 +2,8 @@
 // Skrivningar batchas i transaktioner så att flera föräldrar kan rapportera samtidigt.
 
 import { all, get, run, batch } from "./db";
-import { STAT_IDS } from "./stats";
-import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter } from "./liveTypes";
+import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
+import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter, SubEntry } from "./liveTypes";
 
 interface MatchRow {
   id: number;
@@ -63,7 +63,7 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
   const played: number[] = [];
   for (const row of mpRows) {
     played.push(row.player_id);
-    counts[row.player_id] = Object.fromEntries(STAT_IDS.map((s) => [s, row[s] ?? 0]));
+    counts[row.player_id] = Object.fromEntries(LIVE_COUNT_IDS.map((s) => [s, row[s] ?? 0]));
   }
 
   const events = await all<LiveEvent>(
@@ -82,6 +82,31 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     stats: JSON.parse(r.stats) as string[],
     lastSeen: r.last_seen ?? null,
   }));
+
+  // Byten, startelva och speltid
+  const nameById = new Map(players.map((p) => [p.id, p.name]));
+  const subRows = await all<{ id: number; off_player: number | null; on_player: number | null; match_second: number | null; period: number | null }>(
+    "SELECT id, off_player, on_player, match_second, period FROM match_subs WHERE match_id = ? ORDER BY id",
+    [matchId]
+  );
+  const subs: SubEntry[] = subRows.map((s) => ({
+    id: s.id,
+    offId: s.off_player,
+    offName: s.off_player != null ? nameById.get(s.off_player) ?? null : null,
+    onId: s.on_player,
+    onName: s.on_player != null ? nameById.get(s.on_player) ?? null : null,
+    second: s.match_second,
+    period: s.period,
+  }));
+
+  const starterRows = await all<{ player_id: number }>(
+    "SELECT player_id FROM match_lineup WHERE match_id = ?",
+    [matchId]
+  );
+  const starters = starterRows.map((r) => r.player_id);
+  const periodSec = (m.period_minutes ?? 20) * 60;
+  const nowAbs = ((m.clock_period ?? 1) - 1) * periodSec + clockSeconds(m);
+  const { minutes, onField } = computePlaytime(starters, subRows, nowAbs, periodSec);
 
   return {
     matchId: m.id,
@@ -102,7 +127,54 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     events,
     reporters,
     finished: !!m.finished,
+    subs,
+    minutes,
+    onField,
+    hasLineup: starters.length > 0,
   };
+}
+
+// Speltid per spelare utifrån startelva + byten + nuvarande matchtid.
+// Returnerar även vilka som är på plan just nu. Kräver att en startelva finns.
+function computePlaytime(
+  starters: number[],
+  subRows: { id: number; off_player: number | null; on_player: number | null; match_second: number | null; period: number | null }[],
+  nowAbs: number,
+  periodSec: number
+): { minutes: Record<number, number>; onField: number[] } {
+  if (starters.length === 0) return { minutes: {}, onField: [] };
+  const abs = (s: { period: number | null; match_second: number | null }) =>
+    ((s.period ?? 1) - 1) * periodSec + (s.match_second ?? 0);
+  const onSince = new Map<number, number | null>();
+  for (const id of starters) onSince.set(id, 0);
+  const totalSec = new Map<number, number>();
+  for (const id of starters) totalSec.set(id, 0);
+
+  const sorted = [...subRows].sort((a, b) => abs(a) - abs(b) || a.id - b.id);
+  for (const s of sorted) {
+    const t = Math.min(abs(s), nowAbs);
+    if (s.off_player != null) {
+      const since = onSince.get(s.off_player);
+      if (since != null) {
+        totalSec.set(s.off_player, (totalSec.get(s.off_player) ?? 0) + Math.max(0, t - since));
+        onSince.set(s.off_player, null);
+      }
+    }
+    if (s.on_player != null && (onSince.get(s.on_player) ?? null) == null) {
+      onSince.set(s.on_player, t);
+      if (!totalSec.has(s.on_player)) totalSec.set(s.on_player, 0);
+    }
+  }
+  const onField: number[] = [];
+  for (const [id, since] of onSince) {
+    if (since != null) {
+      totalSec.set(id, (totalSec.get(id) ?? 0) + Math.max(0, nowAbs - since));
+      onField.push(id);
+    }
+  }
+  const minutes: Record<number, number> = {};
+  for (const [id, sec] of totalSec) minutes[id] = Math.max(0, Math.round(sec / 60));
+  return { minutes, onField };
 }
 
 export async function finishMatch(matchId: number): Promise<void> {
@@ -135,7 +207,7 @@ const ENSURE_ROW =
   "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT(match_id, player_id) DO NOTHING";
 
 export async function recordEvent(matchId: number, playerId: number | null, statId: string) {
-  if (statId !== OPPONENT_GOAL && !STAT_IDS.includes(statId)) throw new Error("Okänd statistik");
+  if (statId !== OPPONENT_GOAL && !LIVE_COUNT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
   const now = Math.floor(Date.now() / 1000);
 
@@ -196,7 +268,7 @@ export async function undoLastEvent(matchId: number) {
       sql: "UPDATE matches SET opponent_score = MAX(COALESCE(opponent_score, 0) - 1, 0) WHERE id = ?",
       args: [matchId],
     });
-  } else if (last.player_id != null && STAT_IDS.includes(last.stat_id)) {
+  } else if (last.player_id != null && LIVE_COUNT_IDS.includes(last.stat_id)) {
     stmts.push({
       sql: `UPDATE match_players SET ${last.stat_id} = MAX(${last.stat_id} - 1, 0) WHERE match_id = ? AND player_id = ?`,
       args: [matchId, last.player_id],
@@ -209,6 +281,33 @@ export async function undoLastEvent(matchId: number) {
     }
   }
   await batch(stmts);
+}
+
+// Logga ett byte (ut → in) vid aktuell matchtid. Inkommande spelare markeras
+// som spelad så hen syns i statistiken.
+export async function recordSub(matchId: number, offId: number, onId: number) {
+  if (!offId || !onId || offId === onId) return;
+  const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
+  const now = Math.floor(Date.now() / 1000);
+  const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
+  const second = clockTouched ? clockSeconds(m) : null;
+  const period = clockTouched ? (m.clock_period ?? 1) : null;
+
+  await batch([
+    {
+      sql: "INSERT INTO match_subs (match_id, off_player, on_player, match_second, period, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [matchId, offId, onId, second, period, now],
+    },
+    { sql: ENSURE_ROW, args: [matchId, onId] },
+  ]);
+}
+
+export async function undoLastSub(matchId: number) {
+  const last = await get<{ id: number }>(
+    "SELECT id FROM match_subs WHERE match_id = ? ORDER BY id DESC LIMIT 1",
+    [matchId]
+  );
+  if (last) await run("DELETE FROM match_subs WHERE id = ?", [last.id]);
 }
 
 export async function setClock(matchId: number, op: "start" | "pause" | "reset" | "next_period") {

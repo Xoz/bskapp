@@ -8,7 +8,7 @@ import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
 import { sessionToken, getRole, getRealRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
-import { STAT_IDS } from "./stats";
+import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches } from "./ical";
 
@@ -425,6 +425,7 @@ export async function deleteMatch(formData: FormData) {
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
   ]);
   revalidatePath("/matcher");
@@ -439,6 +440,7 @@ export async function resetMatch(formData: FormData) {
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_reporters WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] },
     {
       sql: "UPDATE matches SET our_score = NULL, opponent_score = NULL, clock_running = 0, clock_offset = 0, clock_started_at = NULL, clock_period = 1 WHERE id = ?",
       args: [id],
@@ -512,7 +514,7 @@ export async function deleteMatchEvent(formData: FormData) {
       sql: "UPDATE matches SET opponent_score = MAX(COALESCE(opponent_score, 0) - 1, 0) WHERE id = ?",
       args: [matchId],
     });
-  } else if (ev.player_id != null && STAT_IDS.includes(ev.stat_id)) {
+  } else if (ev.player_id != null && LIVE_COUNT_IDS.includes(ev.stat_id)) {
     stmts.push({
       sql: `UPDATE match_players SET ${ev.stat_id} = MAX(${ev.stat_id} - 1, 0) WHERE match_id = ? AND player_id = ?`,
       args: [matchId, ev.player_id],
