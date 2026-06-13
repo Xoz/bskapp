@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, generateMatchCode } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
+import { generatePlayerCardText } from "./ai";
 import { sessionToken, getRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS } from "./stats";
@@ -116,12 +117,15 @@ export async function updatePlayer(formData: FormData) {
   revalidatePath("/spelare");
 }
 
-// Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal
+// Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal.
+// Genererar samtidigt en peppande AI-text riktad till spelaren.
 export async function generateShareLink(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
   await renewShareToken(id);
+  const summary = await generatePlayerCardText(id);
+  await run("UPDATE players SET share_summary = ? WHERE id = ?", [summary, id]);
   revalidatePath(`/spelare/${id}`);
 }
 

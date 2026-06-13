@@ -95,6 +95,16 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           </div>
         </div>
 
+        {/* AI-hälsning riktad till spelaren */}
+        {player.share_summary && (
+          <div className="card p-6" style={{ background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" }}>
+            <p className="eyebrow mb-2" style={{ color: "var(--primary)" }}>Hej {firstName}! 👋</p>
+            <p className="text-[0.95rem] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink)" }}>
+              {player.share_summary}
+            </p>
+          </div>
+        )}
+
         {/* Säsongssiffror */}
         {playedMatches.length > 0 && (
           <div className="card p-6">

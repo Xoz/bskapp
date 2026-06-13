@@ -12,6 +12,7 @@ export interface Player {
   position: string;
   share_token: string | null;
   share_expires: number | null;
+  share_summary: string | null;
 }
 
 // Spelarlänkar gäller i 48 timmar – tänkta att aktiveras inför ett spelarsamtal
@@ -82,7 +83,10 @@ export async function renewShareToken(playerId: number): Promise<string> {
 
 // Återkallar länken direkt (t.ex. efter avslutat samtal)
 export async function revokeShareToken(playerId: number): Promise<void> {
-  await run("UPDATE players SET share_token = NULL, share_expires = NULL WHERE id = ?", [playerId]);
+  await run(
+    "UPDATE players SET share_token = NULL, share_expires = NULL, share_summary = NULL WHERE id = ?",
+    [playerId]
+  );
 }
 
 export function shareLinkActive(player: Pick<Player, "share_token" | "share_expires">): boolean {

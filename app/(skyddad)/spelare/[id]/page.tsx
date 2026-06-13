@@ -102,7 +102,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="min-w-48">
             <p className="font-semibold text-sm">Spelarsamtal – personlig länk</p>
             <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Länken gäller i 48 timmar och måste sedan förnyas.
+              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling – med en peppande AI-hälsning skriven till henne. Länken gäller i 48 timmar och måste sedan förnyas.
             </p>
           </div>
           {linkActive ? (
