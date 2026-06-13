@@ -56,6 +56,23 @@ export async function getMatchesByCup(cupName: string): Promise<Match[]> {
   );
 }
 
+// Alla matcher i pågående cuper. En cup är pågående t.o.m. dagen efter dess
+// sista match (today <= sista dagen + 1  ⇔  sista dagen >= today − 1 = yesterday),
+// och först fr.o.m. dess första dag (första dagen <= today).
+export async function getActiveCupMatches(today: string, yesterday: string): Promise<Match[]> {
+  return all<Match>(
+    `SELECT * FROM matches
+     WHERE cup_name <> ''
+       AND cup_name IN (
+         SELECT cup_name FROM matches WHERE cup_name <> ''
+         GROUP BY cup_name
+         HAVING MIN(date) <= ? AND MAX(date) >= ?
+       )
+     ORDER BY cup_name, date, start_time, id`,
+    [today, yesterday]
+  );
+}
+
 export interface MatchPlayerRow {
   match_id: number;
   player_id: number;

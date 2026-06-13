@@ -1,19 +1,103 @@
 import { getAllSettings } from "@/lib/db";
-import { getMatchesByDate, getAllTimeReporterHighscore } from "@/lib/queries";
+import { getMatchesByDate, getActiveCupMatches, getAllTimeReporterHighscore, type Match } from "@/lib/queries";
 import PitchLines from "@/components/PitchLines";
 import ReportCodeForm from "./ReportCodeForm";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Ett matchkort i rapporteringslistan. Dagens öppna matcher lyfts fram (grön),
+// avslutade och matcher på andra dagar visas dämpat.
+function ReportMatchCard({ match, today }: { match: Match; today: string }) {
+  const finished = !!match.finished;
+  const isToday = match.date === today;
+
+  if (finished) {
+    const hasResult = match.our_score != null && match.opponent_score != null;
+    return (
+      <Link
+        href={`/rapportera/${match.code}`}
+        className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+        style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+      >
+        <div>
+          <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
+            {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+          </p>
+          <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+            {hasResult ? `Slutresultat ${match.our_score}–${match.opponent_score}` : "Avslutad"}
+          </p>
+        </div>
+        <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+          Avslutad →
+        </span>
+      </Link>
+    );
+  }
+
+  if (isToday) {
+    return (
+      <Link
+        href={`/rapportera/${match.code}`}
+        className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+        style={{ background: "var(--primary)", color: "var(--primary-deep)" }}
+      >
+        <div>
+          <p className="font-semibold text-sm">
+            {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+          </p>
+          <p className="text-[0.7rem] opacity-70 mt-0.5">{match.start_time ?? "Öppen"}</p>
+        </div>
+        <span className="text-lg">→</span>
+      </Link>
+    );
+  }
+
+  // Match på en annan dag i cupen
+  return (
+    <Link
+      href={`/rapportera/${match.code}`}
+      className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
+      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+    >
+      <div>
+        <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
+          {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
+        </p>
+        <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+          {match.date}{match.start_time ? ` · ${match.start_time}` : ""}
+        </p>
+      </div>
+      <span className="text-xs px-2.5 py-1 rounded-full shrink-0" style={{ background: "var(--bg3)", color: "var(--ink-faint)" }}>
+        {match.date > today ? "Kommande" : "Öppen →"}
+      </span>
+    </Link>
+  );
+}
+
 export default async function ReportPage() {
   const today = new Date().toISOString().slice(0, 10);
+  const yd = new Date(today);
+  yd.setUTCDate(yd.getUTCDate() - 1);
+  const yesterday = yd.toISOString().slice(0, 10);
 
-  const [settings, todayMatches, highscore] = await Promise.all([
+  const [settings, todayMatches, cupRows, highscore] = await Promise.all([
     getAllSettings(),
     getMatchesByDate(today),
+    getActiveCupMatches(today, yesterday),
     getAllTimeReporterHighscore(),
   ]);
+
+  // Gruppera pågående cuper (bevarar ordningen från queryn)
+  const cups = new Map<string, Match[]>();
+  for (const m of cupRows) {
+    if (!cups.has(m.cup_name)) cups.set(m.cup_name, []);
+    cups.get(m.cup_name)!.push(m);
+  }
+  const activeCupNames = new Set(cups.keys());
+  // Dagens matcher som inte redan visas i en cup-sektion
+  const soloToday = todayMatches.filter((m) => !m.cup_name || !activeCupNames.has(m.cup_name));
+  const hasAnything = cups.size > 0 || soloToday.length > 0;
 
   return (
     <main
@@ -50,58 +134,31 @@ export default async function ReportPage() {
           </p>
         </div>
 
-        {/* Dagens matcher */}
-        {todayMatches.length > 0 ? (
+        {/* Pågående cuper – alla cupens matcher tills dagen efter sista matchen */}
+        {[...cups.entries()].map(([name, cupMatches]) => (
+          <div key={name} className="space-y-2">
+            <p className="text-xs font-semibold px-1 flex items-center gap-1.5" style={{ color: "var(--ink-soft)" }}>
+              🏆 {name}
+            </p>
+            {cupMatches.map((match) => (
+              <ReportMatchCard key={match.id} match={match} today={today} />
+            ))}
+          </div>
+        ))}
+
+        {/* Dagens matcher (utanför cup) */}
+        {soloToday.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold px-1" style={{ color: "var(--ink-soft)" }}>
               Dagens matcher
             </p>
-            {todayMatches.map((match) => {
-              const finished = !!match.finished;
-
-              if (finished) {
-                const hasResult = match.our_score != null && match.opponent_score != null;
-                return (
-                  <Link
-                    key={match.id}
-                    href={`/rapportera/${match.code}`}
-                    className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
-                    style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
-                  >
-                    <div>
-                      <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>
-                        {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
-                      </p>
-                      <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                        {hasResult ? `Slutresultat ${match.our_score}–${match.opponent_score}` : "Avslutad"}
-                      </p>
-                    </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
-                      Avslutad →
-                    </span>
-                  </Link>
-                );
-              }
-
-              return (
-                <Link
-                  key={match.id}
-                  href={`/rapportera/${match.code}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-opacity hover:opacity-80"
-                  style={{ background: "var(--primary)", color: "var(--primary-deep)" }}
-                >
-                  <div>
-                    <p className="font-semibold text-sm">
-                      {match.home_away === "home" ? "Hemma" : "Borta"} mot {match.opponent}
-                    </p>
-                    <p className="text-[0.7rem] opacity-70 mt-0.5">{match.start_time ?? "Öppen"}</p>
-                  </div>
-                  <span className="text-lg">→</span>
-                </Link>
-              );
-            })}
+            {soloToday.map((match) => (
+              <ReportMatchCard key={match.id} match={match} today={today} />
+            ))}
           </div>
-        ) : (
+        )}
+
+        {!hasAnything && (
           <div
             className="rounded-2xl px-5 py-4 text-center text-sm"
             style={{ background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--ink-soft)" }}
