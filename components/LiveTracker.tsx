@@ -37,6 +37,29 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const reclaimedRef = useRef(false);
   const autoFinishedRef = useRef(false);
+  // Sortering "mest aktiva först" – frusen medan man trycker så knapparna inte hoppar
+  const lastTapRef = useRef(0);
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const [order, setOrder] = useState<number[]>([]);
+
+  const computeOrder = useCallback((stat: string, state: LiveState): number[] => {
+    const ps = [...state.players];
+    if (stat === PLAYED_TAB || !stat) {
+      return ps.sort((a, b) => a.name.localeCompare(b.name, "sv")).map((p) => p.id);
+    }
+    return ps
+      .sort((a, b) => {
+        const cb = state.counts[b.id]?.[stat] ?? 0;
+        const ca = state.counts[a.id]?.[stat] ?? 0;
+        if (cb !== ca) return cb - ca;
+        const pb = state.played.includes(b.id) ? 1 : 0;
+        const pa = state.played.includes(a.id) ? 1 : 0;
+        if (pb !== pa) return pb - pa;
+        return a.name.localeCompare(b.name, "sv");
+      })
+      .map((p) => p.id);
+  }, []);
 
   useEffect(() => {
     try {
@@ -109,8 +132,23 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     }
   }, [live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
 
+  // Sortera om direkt när man byter kategori (man trycker inte just då)
+  useEffect(() => {
+    if (activeStat) setOrder(computeOrder(activeStat, liveRef.current));
+  }, [activeStat, computeOrder]);
+
+  // Sortera om med jämna mellanrum – men aldrig precis efter ett tryck
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (!activeStat || Date.now() - lastTapRef.current < 3000) return;
+      setOrder(computeOrder(activeStat, liveRef.current));
+    }, 6000);
+    return () => clearInterval(t);
+  }, [activeStat, computeOrder]);
+
   const tap = (playerId: number) => {
     if (!activeStat) return;
+    lastTapRef.current = Date.now();
     if (activeStat === PLAYED_TAB) {
       setLive((prev) => ({
         ...prev,
@@ -253,6 +291,13 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
 
   // --- Pågående match ---
   const lastEvent = live.events[0];
+
+  // Spelarlista i "mest aktiva först"-ordning (med nya spelare sist)
+  const pById = new Map(live.players.map((p) => [p.id, p]));
+  const orderedPlayers = [
+    ...order.map((id) => pById.get(id)).filter((p): p is LiveState["players"][number] => !!p),
+    ...live.players.filter((p) => !order.includes(p.id)),
+  ];
 
   return (
     <div className="max-w-md mx-auto pb-32">
@@ -428,7 +473,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
           </p>
 
           <div className="px-4 pt-2 grid grid-cols-2 gap-2.5">
-            {live.players.map((p) => {
+            {orderedPlayers.map((p) => {
               const isPlayedTab = activeStat === PLAYED_TAB;
               const playedOn = live.played.includes(p.id);
               const count = live.counts[p.id]?.[activeStat] ?? 0;
