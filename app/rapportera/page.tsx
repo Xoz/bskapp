@@ -3,6 +3,7 @@ import { getMatchesByDate, getAllTimeReporterHighscore } from "@/lib/queries";
 import PitchLines from "@/components/PitchLines";
 import ReportCodeForm from "./ReportCodeForm";
 import Link from "next/link";
+import { parseSwedishTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,7 @@ function reportingStatus(date: string, startTime: string | null): {
   if (!startTime) return { open: true, label: "Öppen", minutesLeft: null };
 
   const now = new Date();
-  const [h, m] = startTime.split(":").map(Number);
-  const matchStart = new Date(`${date}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+  const matchStart = parseSwedishTime(date, startTime);
   const opensAt = new Date(matchStart.getTime() - 15 * 60 * 1000);
   const diff = Math.ceil((opensAt.getTime() - now.getTime()) / 60000);
 

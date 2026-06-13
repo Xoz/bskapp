@@ -6,13 +6,13 @@ import { getRole } from "@/lib/auth";
 import LiveTracker from "@/components/LiveTracker";
 import CupReportSwitcher from "@/components/CupReportSwitcher";
 import { IconArrowLeft } from "@/components/Icons";
+import { parseSwedishTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
 function minutesUntilOpen(date: string, startTime: string): number {
   // Returnerar antal minuter tills rapporteringen öppnar (negativt = redan öppen)
-  const [h, m] = startTime.split(":").map(Number);
-  const matchStart = new Date(`${date}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+  const matchStart = parseSwedishTime(date, startTime);
   const opensAt = new Date(matchStart.getTime() - 15 * 60 * 1000);
   return Math.ceil((opensAt.getTime() - Date.now()) / 60000);
 }
