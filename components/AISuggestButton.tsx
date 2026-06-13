@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export default function AISuggestButton({ playerId }: { playerId: number }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
-  async function suggest() {
+  const suggest = useCallback(async (silent = false) => {
     setLoading(true);
-    setError(null);
+    if (!silent) setError(null);
 
-    // Läs alla checkade skill-radioknappar från formuläret
     const checked = document.querySelectorAll<HTMLInputElement>("input[name^='skill_']:checked");
     const scores: Record<string, number> = {};
     checked.forEach((input) => {
@@ -19,7 +19,7 @@ export default function AISuggestButton({ playerId }: { playerId: number }) {
     });
 
     if (Object.keys(scores).length === 0) {
-      setError("Fyll i minst några nivåer innan du genererar förslag.");
+      if (!silent) setError("Fyll i minst några nivåer innan du genererar förslag.");
       setLoading(false);
       return;
     }
@@ -42,18 +42,24 @@ export default function AISuggestButton({ playerId }: { playerId: number }) {
       const goalsEl = document.getElementById("development_goals") as HTMLTextAreaElement | null;
       if (strengthsEl) strengthsEl.value = strengths;
       if (goalsEl) goalsEl.value = development_goals;
+      setDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Något gick fel");
+      if (!silent) setError(e instanceof Error ? e.message : "Något gick fel");
     } finally {
       setLoading(false);
     }
-  }
+  }, [playerId]);
+
+  // Auto-generate when the page loads
+  useEffect(() => {
+    suggest(true);
+  }, [suggest]);
 
   return (
     <div>
       <button
         type="button"
-        onClick={suggest}
+        onClick={() => suggest(false)}
         disabled={loading}
         className="btn-secondary py-2 px-4 text-sm disabled:opacity-50 flex items-center gap-2"
       >
@@ -63,7 +69,7 @@ export default function AISuggestButton({ playerId }: { playerId: number }) {
             Genererar…
           </>
         ) : (
-          <>✦ AI-förslag</>
+          <>{done ? "↻ Uppdatera AI-förslag" : "✦ AI-förslag"}</>
         )}
       </button>
       {error && (

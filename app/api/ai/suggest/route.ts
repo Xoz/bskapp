@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRole } from "@/lib/auth";
-import { getPlayer, getPlayerMatchStats } from "@/lib/queries";
+import { getPlayer, getPlayerMatchStats, getEvaluations, getScores } from "@/lib/queries";
 import { CATEGORIES } from "@/lib/svff";
 
 export const dynamic = "force-dynamic";
@@ -14,26 +14,52 @@ export async function POST(req: NextRequest) {
     scores: Record<string, number>;
   };
 
-  const [player, matchStats] = await Promise.all([
+  const [player, matchStats, evaluations] = await Promise.all([
     getPlayer(playerId),
     getPlayerMatchStats(playerId),
+    getEvaluations(playerId),
   ]);
   if (!player) return NextResponse.json({ error: "Spelare saknas" }, { status: 404 });
 
   const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
+  const levelLabel: Record<number, string> = { 1: "Nybörjare", 2: "På väg", 3: "Klarar det", 4: "Starka" };
 
   // Bygg skill-text från de skickade värdena
-  const levelLabel: Record<number, string> = { 1: "Nybörjare", 2: "På väg", 3: "Klarar det", 4: "Starka" };
   const skillLines = CATEGORIES.flatMap((cat) =>
     cat.skills
       .filter((s) => scores[s.id] != null)
       .map((s) => `- ${s.name} (${cat.name}): ${scores[s.id]}/4 – ${levelLabel[scores[s.id]] ?? ""}`)
   ).join("\n");
 
-  // Matchstatistik
+  // Trenddata – jämför med föregående utvärdering
+  let trendSection = "";
+  if (evaluations.length > 0) {
+    const prevScores = await getScores(evaluations[0].id);
+    const trends: string[] = [];
+    for (const cat of CATEGORIES) {
+      for (const skill of cat.skills) {
+        const prev = prevScores[skill.id];
+        const curr = scores[skill.id];
+        if (prev != null && curr != null && curr !== prev) {
+          const diff = curr - prev;
+          trends.push(`${skill.name}: ${diff > 0 ? "+" : ""}${diff} (${prev} → ${curr})`);
+        }
+      }
+    }
+    if (trends.length > 0) {
+      trendSection = `\nTrend sedan ${evaluations[0].date}:\n${trends.map((t) => `- ${t}`).join("\n")}`;
+    }
+  }
+
+  // Matchstatistik – räkna bara matcher med faktisk aktivitet
   let matchSection = "Ingen matchstatistik finns ännu.";
-  if (matchStats.length > 0) {
-    const totals = matchStats.reduce(
+  const playedMatches = matchStats.filter(
+    (m) =>
+      (m.goals ?? 0) + (m.assists ?? 0) + (m.shots ?? 0) +
+      (m.passes_completed ?? 0) + (m.interceptions ?? 0) + (m.saves ?? 0) > 0
+  );
+  if (playedMatches.length > 0) {
+    const totals = playedMatches.reduce(
       (acc, m) => {
         acc.matcher++;
         acc.mål += m.goals ?? 0;
@@ -47,7 +73,7 @@ export async function POST(req: NextRequest) {
       },
       { matcher: 0, mål: 0, assist: 0, skott: 0, spm: 0, pass: 0, brytn: 0, räddningar: 0 }
     );
-    matchSection = `${totals.matcher} matcher: ${totals.mål} mål, ${totals.assist} assist, ${totals.skott} skott (${totals.spm} på mål), ${totals.pass} lyckade passningar, ${totals.brytn} brytningar${totals.räddningar > 0 ? `, ${totals.räddningar} räddningar` : ""}`;
+    matchSection = `${totals.matcher} spelade matcher: ${totals.mål} mål, ${totals.assist} assist, ${totals.skott} skott (${totals.spm} på mål), ${totals.pass} lyckade passningar, ${totals.brytn} brytningar${totals.räddningar > 0 ? `, ${totals.räddningar} räddningar` : ""}`;
   }
 
   const prompt = `Du är assistent till en fotbollstränare för BSK F2014 (flickor ca 12 år) i Bollstanäs SK.
@@ -57,12 +83,12 @@ Spelare: ${player.name}
 Matchstatistik säsongen:
 ${matchSection}
 
-Utvärdering (SvFF-skala 1–4):
-${skillLines}
+Senaste utvärdering (SvFF-skala 1–4):
+${skillLines}${trendSection}
 
 Skriv korta, konkreta texter för:
-1. Styrkor (2–3 meningar): Vad ${firstName} gör bra – koppla ihop utvärdering och matchstatistik
-2. Fokusområden (2–3 meningar): Konkreta saker att jobba med framåt
+1. Styrkor (2–3 meningar): Vad ${firstName} gör bra – koppla ihop utvärdering, matchstatistik och eventuell positiv trend
+2. Fokusområden (2–3 meningar): Konkreta saker att jobba med – lyft gärna fram areas som sjunkit eller är låga
 
 Ton: positiv, direkt, riktat till tränaren. Inte till spelaren.
 Svara exakt i detta format utan rubriker eller förklaringar:
