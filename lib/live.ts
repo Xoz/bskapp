@@ -72,13 +72,14 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     [matchId]
   );
 
-  const reporterRows = await all<{ name: string; stats: string }>(
-    "SELECT name, stats FROM match_reporters WHERE match_id = ?",
+  const reporterRows = await all<{ name: string; stats: string; last_seen: number | null }>(
+    "SELECT name, stats, last_seen FROM match_reporters WHERE match_id = ?",
     [matchId]
   );
   const reporters: Reporter[] = reporterRows.map((r) => ({
     name: r.name,
     stats: JSON.parse(r.stats) as string[],
+    lastSeen: r.last_seen ?? null,
   }));
 
   return {
@@ -113,11 +114,12 @@ export async function finishMatch(matchId: number): Promise<void> {
 export async function claimStats(matchId: number, name: string, stats: string[]): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) return;
+  const now = Math.floor(Date.now() / 1000);
   await run(
-    `INSERT INTO match_reporters (match_id, name, stats)
-     VALUES (?, ?, ?)
-     ON CONFLICT(match_id, name) DO UPDATE SET stats = excluded.stats`,
-    [matchId, trimmed, JSON.stringify(stats)]
+    `INSERT INTO match_reporters (match_id, name, stats, last_seen)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(match_id, name) DO UPDATE SET stats = excluded.stats, last_seen = excluded.last_seen`,
+    [matchId, trimmed, JSON.stringify(stats), now]
   );
 }
 
@@ -127,14 +129,25 @@ const ENSURE_ROW =
 export async function recordEvent(matchId: number, playerId: number | null, statId: string) {
   if (statId !== OPPONENT_GOAL && !STAT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
+  const now = Math.floor(Date.now() / 1000);
+
+  // 15-sekunders dedup: ignorera om identisk händelse redan finns
+  const recent = await get<{ id: number }>(
+    `SELECT id FROM match_events
+     WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND created_at > ?
+     LIMIT 1`,
+    [matchId, playerId, statId, now - 15]
+  );
+  if (recent) return;
+
   const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
   const second = clockTouched ? clockSeconds(m) : null;
   const period = clockTouched ? (m.clock_period ?? 1) : null;
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [
     {
-      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period) VALUES (?, ?, ?, ?, ?)",
-      args: [matchId, playerId, statId, second, period],
+      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [matchId, playerId, statId, second, period, now],
     },
   ];
 

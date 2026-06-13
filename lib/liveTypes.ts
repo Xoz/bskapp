@@ -19,6 +19,7 @@ export interface LiveEvent {
 export interface Reporter {
   name: string;
   stats: string[];
+  lastSeen: number | null; // unix sekunder
 }
 
 export interface LiveState {

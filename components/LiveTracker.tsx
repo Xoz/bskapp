@@ -508,6 +508,14 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   );
 }
 
+function timeAgo(lastSeen: number | null): string | null {
+  if (!lastSeen) return null;
+  const mins = Math.floor((Date.now() / 1000 - lastSeen) / 60);
+  if (mins < 1) return "nyss aktiv";
+  if (mins < 60) return `aktiv ${mins} min sen`;
+  return null;
+}
+
 function SetupCard({
   initial,
   initialName,
@@ -524,11 +532,10 @@ function SetupCard({
   const [name, setName] = useState(initialName);
   const [picked, setPicked] = useState<string[]>(initial);
 
+  const myNameLower = name.trim().toLowerCase();
+  const otherReporters = reporters.filter((r) => r.name.toLowerCase() !== myNameLower);
+
   const toggle = (id: string) => {
-    const takenByOther = reporters.find(
-      (r) => r.name.toLowerCase() !== name.trim().toLowerCase() && r.stats.includes(id)
-    );
-    if (takenByOther) return;
     setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
@@ -543,6 +550,31 @@ function SetupCard({
         </p>
 
         <label className="eyebrow block mb-1.5">Ditt namn</label>
+
+        {/* Snabbval – klicka på en aktiv reporter för att återta ditt namn */}
+        {reporters.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {reporters.map((r) => {
+              const ago = timeAgo(r.lastSeen);
+              return (
+                <button
+                  key={r.name}
+                  type="button"
+                  onClick={() => setName(r.name)}
+                  className="rounded-full px-3 py-1 text-xs font-medium transition-all"
+                  style={{
+                    background: name === r.name ? "var(--primary)" : "var(--bg2)",
+                    color: name === r.name ? "var(--primary-deep)" : "var(--ink-soft)",
+                    border: "1px solid " + (name === r.name ? "var(--primary)" : "var(--line-strong)"),
+                  }}
+                >
+                  {r.name}{ago ? <span className="opacity-60"> · {ago}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <input
           type="text"
           value={name}
@@ -562,32 +594,36 @@ function SetupCard({
         <div className="flex flex-wrap gap-2">
           {STAT_FIELDS.map((f) => {
             const on = picked.includes(f.id);
-            const takenBy = reporters.find(
-              (r) => r.name.toLowerCase() !== name.trim().toLowerCase() && r.stats.includes(f.id)
-            );
+            const takenBy = otherReporters.filter((r) => r.stats.includes(f.id));
+            const hasConflict = takenBy.length > 0;
             return (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => toggle(f.id)}
-                disabled={!!takenBy}
-                title={takenBy ? `Bokad av ${takenBy.name}` : undefined}
                 className="rounded-full px-4 py-2.5 text-sm font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: takenBy ? "var(--bg2)" : on ? "var(--primary)" : "var(--bg2)",
-                  color: takenBy ? "var(--ink-faint)" : on ? "var(--primary-deep)" : "var(--ink-soft)",
-                  border: "1.5px solid " + (takenBy ? "var(--line)" : on ? "var(--primary)" : "var(--line-strong)"),
-                  opacity: takenBy ? 0.55 : 1,
-                  cursor: takenBy ? "not-allowed" : "pointer",
+                  background: on ? "var(--primary)" : "var(--bg2)",
+                  color: on ? "var(--primary-deep)" : hasConflict ? "var(--warn)" : "var(--ink-soft)",
+                  border: "1.5px solid " + (on ? "var(--primary)" : hasConflict ? "var(--warn)" : "var(--line-strong)"),
                 }}
               >
                 {f.label}{f.hint ? ` (${f.hint})` : ""}
-                {takenBy && <span className="ml-1 text-[0.7em]">· {takenBy.name}</span>}
+                {hasConflict && !on && (
+                  <span className="ml-1 text-[0.7em] opacity-80">· {takenBy.map(r => r.name.split(" ")[0]).join(", ")} räknar</span>
+                )}
               </button>
             );
           })}
         </div>
+
+        {picked.some((id) => otherReporters.some((r) => r.stats.includes(id))) && (
+          <p className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--warn-bg, rgba(234,179,8,0.1))", color: "var(--warn)" }}>
+            Du har valt samma statistik som någon annan. Händelser loggas ändå bara en gång tack vare duplikatskydd – men koordinera gärna med de andra.
+          </p>
+        )}
+
         <div className="mt-5 flex gap-2.5">
           <button
             type="button"
