@@ -38,9 +38,16 @@ export function clockSeconds(m: MatchRow): number {
 export async function getLiveState(matchId: number): Promise<LiveState> {
   let m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
 
-  // Auto-avslut baserat på verklig tid – bara om matchen är idag eller tidigare
-  // (framtida matcher ska aldrig auto-avslutas oavsett klocklag).
   const todayLocal = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD i svensk tidszon
+
+  // Nollställ felaktigt satt finished-flagga för framtida matcher (kan hända om
+  // tränaren råkade trycka "Avsluta match" på en kommande cup-match).
+  if (m.finished && m.date > todayLocal) {
+    await run("UPDATE matches SET finished = 0, clock_running = 0, clock_started_at = NULL WHERE id = ?", [matchId]);
+    m = { ...m, finished: 0, clock_running: 0, clock_started_at: null };
+  }
+
+  // Auto-avslut baserat på verklig tid – bara om matchen är idag eller tidigare.
   if (!m.finished && m.start_time && m.date <= todayLocal) {
     const [h, min] = m.start_time.split(":").map(Number);
     // Konstruera starttiden i svensk lokal tid (UTC+2 sommartid)

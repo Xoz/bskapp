@@ -4,12 +4,12 @@
 import Link from "next/link";
 import type { Match } from "@/lib/queries";
 
-function statusLabel(m: Match): { text: string; tone: "live" | "done" | "soon" } {
-  if (m.finished) {
+function statusLabel(m: Match, today: string): { text: string; tone: "live" | "done" | "soon" } {
+  // Framtida matcher visas aldrig som avslutade oavsett DB-flagga
+  if (m.finished && m.date <= today) {
     const hasResult = m.our_score != null && m.opponent_score != null;
     return { text: hasResult ? `${m.our_score}–${m.opponent_score}` : "Avslutad", tone: "done" };
   }
-  const today = new Date().toISOString().slice(0, 10);
   if (m.date > today) {
     return { text: m.start_time ?? "Senare", tone: "soon" };
   }
@@ -27,6 +27,8 @@ export default function CupReportSwitcher({
 }) {
   if (matches.length < 2) return null;
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="max-w-md mx-auto px-4 pt-2">
       <div className="rounded-2xl p-3" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
@@ -36,10 +38,9 @@ export default function CupReportSwitcher({
         <div className="space-y-1.5">
           {matches.map((m) => {
             const isCurrent = m.code === currentCode;
-            const st = statusLabel(m);
-            // Bara den match man faktiskt rapporterar just nu (och som inte är
-            // avslutad) markeras som pågående – annars visas matchens status.
-            const showLive = isCurrent && !m.finished;
+            const st = statusLabel(m, today);
+            const isFinishedPast = !!m.finished && m.date <= today;
+            const showLive = isCurrent && !isFinishedPast;
             const toneColor =
               st.tone === "done" ? "var(--ok)" : st.tone === "soon" ? "var(--ink-faint)" : "var(--primary)";
             return (
