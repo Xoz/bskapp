@@ -66,15 +66,6 @@ export default async function Navbar() {
         </div>
       </div>
 
-      {/* Mobilrad med navlänkar */}
-      <div
-        className="md:hidden overflow-x-auto"
-        style={{ borderTop: "1px solid var(--line)" }}
-      >
-        <div className="flex gap-1 px-2 py-1.5 min-w-max">
-          <NavLinks role={role} horizontal />
-        </div>
-      </div>
     </header>
   );
 }
