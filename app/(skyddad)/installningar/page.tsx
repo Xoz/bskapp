@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings, getSetting } from "@/lib/db";
 import { getPlayers } from "@/lib/queries";
-import { updateSettings, importCalendarMatches, generatePlayerPin, generateCoachInvite, addCoachEmail, removeCoachEmail } from "@/lib/actions";
-import { IconCheck, IconShield, IconAlert, IconPitch, IconPlayers, IconChat } from "@/components/Icons";
+import { updateSettings, importCalendarMatches, generatePlayerPin, generateCoachInvite, addCoachEmail, removeCoachEmail, addPlayer, addPlayersBulk, removeDemoPlayers } from "@/lib/actions";
+import { IconCheck, IconShield, IconAlert, IconPitch, IconPlayers, IconChat, IconPlus } from "@/components/Icons";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function SettingsPage({
   const inviteUrl = inviteValid ? `${proto}://${host}/invite?token=${inviteToken}` : null;
 
   const [settings, players] = await Promise.all([getAllSettings(), getPlayers()]);
+  const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
   const { sparad, kalender } = await searchParams;
 
   return (
@@ -135,11 +137,16 @@ export default async function SettingsPage({
           </div>
           <button type="submit" className="btn-secondary">Spara länk</button>
         </form>
-        <form action={importCalendarMatches}>
-          <button type="submit" className="btn-primary" disabled={!settings.calendar_url}>
-            Hämta matcher nu
-          </button>
-        </form>
+        <div className="flex gap-3 flex-wrap">
+          <form action={importCalendarMatches}>
+            <button type="submit" className="btn-primary" disabled={!settings.calendar_url}>
+              Hämta matcher nu
+            </button>
+          </form>
+          <Link href="/matcher/ny" className="btn-secondary">
+            <IconPlus width={15} height={15} /> Lägg till match manuellt
+          </Link>
+        </div>
       </div>
 
       <form action={updateSettings} className="space-y-6">
@@ -262,6 +269,76 @@ export default async function SettingsPage({
 
         <button type="submit" className="btn-primary px-6">Spara inställningar</button>
       </form>
+
+      {/* Trupp */}
+      {hasDemo && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm flex-wrap"
+          style={{ background: "var(--warn-bg)", color: "var(--warn)", border: "1px solid color-mix(in srgb, var(--warn), transparent 75%)" }}
+        >
+          <IconAlert width={17} height={17} />
+          <span className="flex-1 min-w-48">
+            Truppen innehåller exempelspelare – klistra in din riktiga trupp nedan och rensa sedan exemplen.
+          </span>
+          <form action={removeDemoPlayers}>
+            <button type="submit" className="font-semibold underline cursor-pointer">
+              Ta bort alla exempelspelare
+            </button>
+          </form>
+        </div>
+      )}
+      <div className="card p-6 md:p-7 space-y-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconPlayers width={17} height={17} />
+          </span>
+          <div>
+            <h2 className="font-semibold">Trupp</h2>
+            <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Lägg till spelare en och en, eller klistra in hela truppen från svenskalag.se.
+            </p>
+          </div>
+        </div>
+        <form action={addPlayer} className="flex gap-2 items-end flex-wrap">
+          <div>
+            <label className="label" htmlFor="player_name">Namn</label>
+            <input id="player_name" name="name" required className="input w-44" placeholder="Förnamn Efternamn" />
+          </div>
+          <div>
+            <label className="label" htmlFor="player_jersey_number">Nr</label>
+            <input id="player_jersey_number" name="jersey_number" type="number" min="1" max="99" className="input w-16" />
+          </div>
+          <button type="submit" className="btn-secondary">
+            <IconPlus width={15} height={15} /> Lägg till
+          </button>
+        </form>
+        <details>
+          <summary
+            className="cursor-pointer font-semibold text-sm select-none"
+            style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
+          >
+            Klistra in hela truppen från svenskalag.se
+          </summary>
+          <form action={addPlayersBulk} className="mt-4 space-y-3">
+            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+              Truppsidan på svenskalag.se kräver inloggning, så kopiera namnlistan därifrån när du är
+              inloggad och klistra in här – ett namn per rad. Tröjnummer före eller efter namnet
+              plockas upp automatiskt (t.ex. &quot;7 Alva Svensson&quot;). Dubbletter hoppas över.
+            </p>
+            <textarea
+              name="names"
+              rows={8}
+              required
+              className="input font-mono text-sm"
+              placeholder={"Alva Svensson\nEbba Karlsson 5\n7 Maja Lindqvist"}
+            />
+            <button type="submit" className="btn-primary">Lägg till spelarna</button>
+          </form>
+        </details>
+      </div>
 
       {/* Spelares PIN-koder */}
       <div className="card p-6 md:p-7 space-y-5">

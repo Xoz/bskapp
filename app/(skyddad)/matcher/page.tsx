@@ -4,7 +4,7 @@ import { getRole } from "@/lib/auth";
 import { getMatches, type Match as MatchType } from "@/lib/queries";
 import { level as levelInfo, LEVELS } from "@/lib/levels";
 import { setMatchLevel } from "@/lib/actions";
-import { IconPlus, IconPitch, IconArrowRight } from "@/components/Icons";
+import { IconPitch, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +32,7 @@ export default async function MatchesPage() {
               : `${matches.length} ${matches.length === 1 ? "match registrerad" : "matcher registrerade"}`}
           </p>
         </div>
-        {role === "coach" ? (
-          <div className="flex gap-2.5">
-            <Link href="/installningar" className="btn-secondary">
-              Hämta från kalender
-            </Link>
-            <Link href="/matcher/ny" className="btn-primary">
-              <IconPlus width={15} height={15} /> Lägg till match
-            </Link>
-          </div>
-        ) : (
+        {role !== "coach" && (
           <Link href="/rapportera" className="btn-primary">
             Rapportera med matchkod <IconArrowRight width={15} height={15} />
           </Link>
@@ -62,13 +53,9 @@ export default async function MatchesPage() {
           {role === "coach" ? (
             <>
               <p className="text-sm mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
-                Koppla lagets kalender från svenskalag.se under Inställningar, eller lägg till en
-                match manuellt.
+                Koppla lagets kalender eller lägg till matcher manuellt under Inställningar.
               </p>
-              <div className="flex gap-3 justify-center">
-                <Link href="/installningar" className="btn-secondary">Till Inställningar</Link>
-                <Link href="/matcher/ny" className="btn-primary">Lägg till match</Link>
-              </div>
+              <Link href="/installningar" className="btn-secondary">Till Inställningar</Link>
             </>
           ) : (
             <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
