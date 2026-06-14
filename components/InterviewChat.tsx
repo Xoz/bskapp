@@ -25,10 +25,21 @@ function nowTime() {
   return new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function InterviewChat({ teamName, clubName }: { teamName: string; clubName: string }) {
+export default function InterviewChat({
+  teamName,
+  clubName,
+  prefilledName,
+  prefilledPosition,
+}: {
+  teamName: string;
+  clubName: string;
+  prefilledName?: string;
+  prefilledPosition?: string;
+}) {
+  const isPrefilled = !!prefilledName;
   const [phase, setPhase] = useState<"onboarding" | "chat" | "done">("onboarding");
-  const [name, setName] = useState("");
-  const [position, setPosition] = useState("");
+  const [name, setName] = useState(prefilledName ?? "");
+  const [position, setPosition] = useState(prefilledPosition ?? "");
   const [interviewType, setInterviewType] = useState<InterviewType | "">("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [history, setHistory] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -158,48 +169,71 @@ export default function InterviewChat({ teamName, clubName }: { teamName: string
           </h1>
         </div>
 
-        {/* Namn */}
-        <div className="w-full space-y-2">
-          <label className="block text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
-            Vad heter du?
-          </label>
-          <input
-            className="input w-full"
-            type="text"
-            placeholder="Ditt förnamn…"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={30}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            style={{ fontSize: "16px" }}
-          />
-        </div>
-
-        {/* Position */}
-        <div className="w-full space-y-2">
-          <p className="text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
-            Din position
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {POSITIONS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setPosition(p.value)}
-                className="text-sm rounded-lg px-3 py-2 transition-all"
-                style={{
-                  background: position === p.value ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg2)",
-                  border: `1px solid ${position === p.value ? "var(--primary)" : "var(--line)"}`,
-                  color: position === p.value ? "var(--primary)" : "var(--ink-soft)",
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
+        {/* Namn — dolt om pre-ifyllt (inloggad spelare) */}
+        {!isPrefilled && (
+          <div className="w-full space-y-2">
+            <label className="block text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+              Vad heter du?
+            </label>
+            <input
+              className="input w-full"
+              type="text"
+              placeholder="Ditt förnamn…"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={30}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              style={{ fontSize: "16px" }}
+            />
           </div>
-        </div>
+        )}
+
+        {/* Position — dolt om pre-ifyllt */}
+        {!isPrefilled && (
+          <div className="w-full space-y-2">
+            <p className="text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+              Din position
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {POSITIONS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPosition(p.value)}
+                  className="text-sm rounded-lg px-3 py-2 transition-all"
+                  style={{
+                    background: position === p.value ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg2)",
+                    border: `1px solid ${position === p.value ? "var(--primary)" : "var(--line)"}`,
+                    color: position === p.value ? "var(--primary)" : "var(--ink-soft)",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Visa vem som är inloggad om pre-ifyllt */}
+        {isPrefilled && (
+          <div
+            className="w-full flex items-center gap-3 rounded-2xl px-4 py-3"
+            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold text-sm"
+              style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
+            >
+              {name[0]?.toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{name}</p>
+              {position && <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{position}</p>}
+            </div>
+          </div>
+        )}
 
         {/* Intervjutyp */}
         <div className="w-full space-y-2">

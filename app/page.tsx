@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getRole, getPlayerSession } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import PitchLines from "@/components/PitchLines";
 import { IconWhistle, IconBall, IconPlayers, IconArrowRight } from "@/components/Icons";
@@ -8,9 +8,10 @@ import { IconWhistle, IconBall, IconPlayers, IconArrowRight } from "@/components
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const role = await getRole();
+  const [role, playerId] = await Promise.all([getRole(), getPlayerSession()]);
   if (role === "coach") redirect("/oversikt");
   if (role === "parent") redirect("/matcher");
+  if (playerId) redirect("/min-profil");
 
   const settings = await getAllSettings();
 
@@ -111,7 +112,7 @@ export default async function LandingPage() {
 
           {/* Spelare */}
           <Link
-            href="/intervju"
+            href="/spelare/login"
             className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-opacity hover:opacity-85"
             style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
           >

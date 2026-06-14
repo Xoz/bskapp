@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, generateMatchCode } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
-import { sessionToken, getRole, getRealRole, Role } from "./auth";
+import { sessionToken, playerSessionToken, getRole, getRealRole, Role } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
@@ -43,6 +43,77 @@ export async function logout() {
   store.delete("bsk_session");
   store.delete("bsk_view");
   redirect("/login");
+}
+
+export async function playerLogin(
+  _prev: { error?: string } | null,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const pin = String(formData.get("pin") ?? "").trim();
+  if (!/^\d{6}$/.test(pin)) return { error: "PIN-koden består av 6 siffror." };
+  const player = await get<{ id: number }>(
+    "SELECT id FROM players WHERE pin = ? AND active = 1",
+    [pin]
+  );
+  if (!player) return { error: "Fel PIN-kod. Kontrollera med tränaren." };
+  const store = await cookies();
+  store.set("bsk_player_session", playerSessionToken(player.id), {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 30,
+    path: "/",
+  });
+  redirect("/min-profil");
+}
+
+export async function playerLogout() {
+  (await cookies()).delete("bsk_player_session");
+  redirect("/");
+}
+
+export async function generatePlayerPin(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("player_id"));
+  if (!id) return;
+  // Generera unik 6-siffrig PIN
+  let pin: string;
+  do {
+    pin = Math.floor(100000 + Math.random() * 900000).toString();
+  } while (await get("SELECT 1 FROM players WHERE pin = ? AND active = 1", [pin]));
+  await run("UPDATE players SET pin = ? WHERE id = ?", [pin, id]);
+  revalidatePath("/installningar");
+}
+
+export async function generateCoachInvite() {
+  await requireRole(["coach"]);
+  const token = crypto.randomUUID().replace(/-/g, "");
+  const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  await setSetting("coach_invite_token", token);
+  await setSetting("coach_invite_expires", expires);
+  revalidatePath("/installningar");
+}
+
+export async function acceptInvite(
+  _prev: { error?: string } | null,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const token = String(formData.get("token") ?? "").trim();
+  const stored = (await getSetting("coach_invite_token")).trim();
+  const expires = (await getSetting("coach_invite_expires")).trim();
+  if (!stored || token !== stored || !expires || new Date(expires) < new Date()) {
+    return { error: "Inbjudningslänken är ogiltig eller har gått ut." };
+  }
+  // Single-use: rensa direkt
+  await setSetting("coach_invite_token", "");
+  await setSetting("coach_invite_expires", "");
+  const store = await cookies();
+  store.set("bsk_session", sessionToken("coach"), {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 90,
+    path: "/",
+  });
+  redirect("/oversikt");
 }
 
 // Växla visningsroll. En tränare kan förhandsvisa som förälder/spelare (sätter

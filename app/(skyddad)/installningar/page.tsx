@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getAllSettings } from "@/lib/db";
-import { updateSettings, importCalendarMatches } from "@/lib/actions";
-import { IconCheck, IconShield, IconAlert, IconPitch } from "@/components/Icons";
+import { getAllSettings, getSetting } from "@/lib/db";
+import { getPlayers } from "@/lib/queries";
+import { updateSettings, importCalendarMatches, generatePlayerPin, generateCoachInvite } from "@/lib/actions";
+import { IconCheck, IconShield, IconAlert, IconPitch, IconPlayers, IconChat } from "@/components/Icons";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,18 @@ export default async function SettingsPage({
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const settings = await getAllSettings();
+  // Hämta inbjudningstoken för att bygga invite-URL
+  const [inviteToken, inviteExpires] = await Promise.all([
+    getSetting("coach_invite_token"),
+    getSetting("coach_invite_expires"),
+  ]);
+  const inviteValid = !!inviteToken && !!inviteExpires && new Date(inviteExpires) > new Date();
+  const hdrs = await headers();
+  const host = hdrs.get("host") ?? "";
+  const proto = host.startsWith("localhost") ? "http" : "https";
+  const inviteUrl = inviteValid ? `${proto}://${host}/invite?token=${inviteToken}` : null;
+
+  const [settings, players] = await Promise.all([getAllSettings(), getPlayers()]);
   const { sparad, kalender } = await searchParams;
 
   return (
@@ -244,6 +257,99 @@ export default async function SettingsPage({
 
         <button type="submit" className="btn-primary px-6">Spara inställningar</button>
       </form>
+
+      {/* Spelares PIN-koder */}
+      <div className="card p-6 md:p-7 space-y-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconPlayers width={17} height={17} />
+          </span>
+          <div>
+            <h2 className="font-semibold">Spelarprofiler</h2>
+            <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Generera en 6-siffrig PIN per spelare. Spelaren anger sin PIN på <strong>/spelare/login</strong> och får tillgång till sin profil och intervjun.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {players.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{p.name}</p>
+                {(p as unknown as { pin?: string }).pin ? (
+                  <p
+                    className="text-xs mt-0.5 font-mono tracking-widest"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    {(p as unknown as { pin?: string }).pin}
+                  </p>
+                ) : (
+                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>Ingen PIN</p>
+                )}
+              </div>
+              <form action={generatePlayerPin}>
+                <input type="hidden" name="player_id" value={p.id} />
+                <button
+                  type="submit"
+                  className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ border: "1px solid var(--line)", color: "var(--ink-faint)", background: "transparent" }}
+                >
+                  {(p as unknown as { pin?: string }).pin ? "Ny PIN" : "Generera PIN"}
+                </button>
+              </form>
+            </div>
+          ))}
+          {players.length === 0 && (
+            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga aktiva spelare.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Bjud in tränare */}
+      <div className="card p-6 md:p-7 space-y-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconChat width={17} height={17} />
+          </span>
+          <div>
+            <h2 className="font-semibold">Bjud in tränare</h2>
+            <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Generera en inbjudningslänk (giltig 48 timmar, engångslänk) som ger en ny tränare direkt åtkomst till appen.
+            </p>
+          </div>
+        </div>
+
+        {inviteUrl ? (
+          <div className="space-y-3">
+            <div
+              className="rounded-xl px-4 py-3 text-xs font-mono break-all"
+              style={{ background: "var(--bg3)", border: "1px solid var(--line)", color: "var(--ink-soft)" }}
+            >
+              {inviteUrl}
+            </div>
+            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              Giltig till {new Date(inviteExpires).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · Engångslänk
+            </p>
+          </div>
+        ) : null}
+
+        <form action={generateCoachInvite}>
+          <button type="submit" className="btn-secondary">
+            {inviteUrl ? "Ny inbjudningslänk" : "Skapa inbjudningslänk"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

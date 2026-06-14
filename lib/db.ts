@@ -188,6 +188,7 @@ async function init(): Promise<void> {
     `ALTER TABLE match_events ADD COLUMN reporter TEXT`,
     `ALTER TABLE player_interviews ADD COLUMN interview_type TEXT NOT NULL DEFAULT 'spelarsamtal'`,
     `ALTER TABLE player_interviews ADD COLUMN scores TEXT NOT NULL DEFAULT '{}'`,
+    `ALTER TABLE players ADD COLUMN pin TEXT`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

@@ -28,6 +28,23 @@ export function sessionToken(role: Role): string {
   return `${role}.${sign(role)}`;
 }
 
+export function playerSessionToken(playerId: number): string {
+  return `${playerId}.${sign(`player:${playerId}`)}`;
+}
+
+export async function getPlayerSession(): Promise<number | null> {
+  const store = await cookies();
+  const token = store.get("bsk_player_session")?.value;
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const id = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  if (sig !== sign(`player:${id}`)) return null;
+  const num = Number(id);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
 // Den verkligt inloggade rollen (från den signerade sessionscookien).
 export async function getRealRole(): Promise<Role | null> {
   const store = await cookies();
