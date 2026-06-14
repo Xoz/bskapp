@@ -178,6 +178,32 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </span>
           </Link>
 
+          {/* Liverapportering */}
+          <Link
+            href={`/matcher/${match.id}/live`}
+            className="card card-hover p-5 flex items-center gap-4"
+            style={
+              match.date === today && !match.finished
+                ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" }
+                : undefined
+            }
+          >
+            <span className="text-2xl">⏱️</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold">Liverapportering</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                {match.finished
+                  ? "Matchen är avslutad – öppna för att se eller rätta"
+                  : events.length > 0
+                    ? `${events.length} händelser rapporterade · fortsätt rapportera`
+                    : "Starta matchklockan och rapportera mål, skott och byten live"}
+              </p>
+            </div>
+            <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>
+              {match.finished ? "Visa" : events.length > 0 ? "Fortsätt" : "Starta"}
+            </span>
+          </Link>
+
           {events.length > 0 && (
             <details className="card overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
