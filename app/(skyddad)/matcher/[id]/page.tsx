@@ -219,18 +219,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
 
           {events.length > 0 && (
-            <details className="card p-6">
-              <summary className="font-semibold cursor-pointer">
-                Rätta statistik
-                <span className="font-normal text-xs ml-2" style={{ color: "var(--ink-faint)" }}>
-                  ta bort felaktiga händelser
-                </span>
-              </summary>
-              <p className="text-xs mt-1 mb-4" style={{ color: "var(--ink-faint)" }}>
-                Tar du bort en händelse justeras både matchflödet och spelarens siffror automatiskt.
+            <div className="card p-6">
+              <div className="flex items-baseline justify-between mb-1">
+                <h2 className="font-semibold">Rätta statistik</h2>
+                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{events.length} händelser</span>
+              </div>
+              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
+                Ta bort felaktiga rapporteringar – matchflöde och spelarpoäng justeras automatiskt.
               </p>
               <EventEditor events={events} matchId={match.id} reporters={reporters} />
-            </details>
+            </div>
           )}
 
           <div className="card p-6 md:p-7">
