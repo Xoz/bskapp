@@ -251,6 +251,42 @@ export async function getSeasonStats(): Promise<SeasonStatRow[]> {
   );
 }
 
+export interface TeamMatchStatRow {
+  id: number;
+  date: string;
+  opponent: string;
+  home_away: string;
+  our_score: number | null;
+  opponent_score: number | null;
+  finished: number;
+  level: string;
+  cup_name: string;
+  goals: number;
+  assists: number;
+  shots: number;
+  shots_on_target: number;
+  passes_completed: number;
+  interceptions: number;
+  saves: number;
+}
+
+// Lagets statistik per spelad match – resultat + summerade insatser. Används för
+// KPI-kort och match-för-match-vyn på statistiksidan. Bara spelade matcher.
+export async function getTeamMatchStats(): Promise<TeamMatchStatRow[]> {
+  const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n            ");
+  return all<TeamMatchStatRow>(
+    `SELECT m.id, m.date, m.opponent, m.home_away, m.our_score, m.opponent_score,
+            m.finished, m.level, m.cup_name,
+            ${sums}
+     FROM matches m
+     LEFT JOIN match_players mp ON mp.match_id = m.id
+     WHERE ${PLAYED_MATCH_SQL}
+     GROUP BY m.id
+     ORDER BY m.date DESC, m.id DESC`,
+    [todayStr()]
+  );
+}
+
 export interface MatchEventRow {
   id: number;
   player_id: number | null;
