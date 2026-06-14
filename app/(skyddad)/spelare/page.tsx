@@ -25,7 +25,7 @@ export default async function PlayersPage() {
         </p>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr>
@@ -33,6 +33,11 @@ export default async function PlayersPage() {
               <th>Senast utvärderad</th>
               <th>Matcher</th>
               <th>Mål</th>
+              <th>Assist</th>
+              <th className="hidden md:table-cell">Skott</th>
+              <th className="hidden md:table-cell">Skott på mål</th>
+              <th className="hidden lg:table-cell">Passningar</th>
+              <th className="hidden lg:table-cell">Brytningar</th>
               <th></th>
             </tr>
           </thead>
@@ -71,6 +76,11 @@ export default async function PlayersPage() {
                   </td>
                   <td>{s?.matches_played ?? 0}</td>
                   <td>{s?.goals ?? 0}</td>
+                  <td>{s?.assists ?? 0}</td>
+                  <td className="hidden md:table-cell">{s?.shots ?? 0}</td>
+                  <td className="hidden md:table-cell">{s?.shots_on_target ?? 0}</td>
+                  <td className="hidden lg:table-cell">{s?.passes_completed ?? 0}</td>
+                  <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
                   <td className="text-right">
                     <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">
                       Utvärdera
