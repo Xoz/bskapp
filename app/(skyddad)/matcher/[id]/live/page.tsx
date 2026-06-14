@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getRole, getCoachName } from "@/lib/auth";
 import { getMatch } from "@/lib/queries";
 import { getLiveState } from "@/lib/live";
 import LiveTracker from "@/components/LiveTracker";
@@ -16,7 +16,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const initial = await getLiveState(match.id);
+  const [initial, coachName] = await Promise.all([getLiveState(match.id), getCoachName()]);
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -35,7 +35,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         </p>
       </div>
 
-      <LiveTracker code={String(match.id)} initial={initial} isCoach />
+      <LiveTracker code={String(match.id)} initial={initial} isCoach coachName={coachName ?? ""} />
     </div>
   );
 }

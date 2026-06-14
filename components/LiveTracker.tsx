@@ -32,7 +32,7 @@ function firstName(name: string) {
   return name.replace(/^Exempel:\s*/, "").split(" ")[0];
 }
 
-export default function LiveTracker({ code, initial, isCoach = false }: { code: string; initial: LiveState; isCoach?: boolean }) {
+export default function LiveTracker({ code, initial, isCoach = false, coachName = "" }: { code: string; initial: LiveState; isCoach?: boolean; coachName?: string }) {
   const [live, setLive] = useState<LiveState>(initial);
   const [fetchedAt, setFetchedAt] = useState(() => Date.now());
   const [, setTick] = useState(0);
@@ -91,8 +91,17 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
         }
       }
     } catch {}
+    // Tränaren rapporterar oftast allt själv – förifyll namnet från inloggningen
+    // och alla kategorier, så hen kommer direkt till klockan utan "Vem rapporterar?".
+    if (isCoach) {
+      const allStats = STAT_FIELDS.map((f) => f.id);
+      setSelected(allStats);
+      setMyName(coachName || "Tränare");
+      setActiveStat(allStats[0]);
+      return;
+    }
     setSetupOpen(true);
-  }, [code]);
+  }, [code, isCoach, coachName]);
 
   useEffect(() => {
     if (!live.clockRunning) return;
