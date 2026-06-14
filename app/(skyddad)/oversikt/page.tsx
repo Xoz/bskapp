@@ -261,6 +261,42 @@ export default async function Dashboard() {
           )}
         </div>
 
+        {/* Aktivitetslogg */}
+        <div className="card p-6">
+          <p className="eyebrow mb-1">Tränarlaget</p>
+          <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
+          {activity.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+              Ingen aktivitet ännu. Loggen uppdateras när trupper tas ut, matcher sparas eller utvärderingar skapas.
+            </p>
+          ) : (
+            <ol className="space-y-4">
+              {activity.map((entry: ActivityEntry) => (
+                <li key={entry.id} className="flex items-start gap-3">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5"
+                    style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  >
+                    <IconClock width={13} height={13} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm" style={{ color: "var(--ink)" }}>
+                      <span className="font-semibold">{entry.coach_name}</span>{" "}
+                      <span style={{ color: "var(--ink-soft)" }}>{entry.action.toLowerCase()}</span>
+                      {entry.subject ? (
+                        <> &ndash; {entry.subject}</>
+                      ) : null}
+                    </p>
+                    <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                      {formatActivityTime(entry.created_at)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
         {/* Jämnt deltagande */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-5">
@@ -321,41 +357,6 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* Aktivitetslogg */}
-      <div className="card p-6">
-        <p className="eyebrow mb-1">Tränarlaget</p>
-        <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
-        {activity.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
-            Ingen aktivitet ännu. Loggen uppdateras när trupper tas ut, matcher sparas eller utvärderingar skapas.
-          </p>
-        ) : (
-          <ol className="space-y-4">
-            {activity.map((entry: ActivityEntry) => (
-              <li key={entry.id} className="flex items-start gap-3">
-                <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-                >
-                  <IconClock width={13} height={13} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm" style={{ color: "var(--ink)" }}>
-                    <span className="font-semibold">{entry.coach_name}</span>{" "}
-                    <span style={{ color: "var(--ink-soft)" }}>{entry.action.toLowerCase()}</span>
-                    {entry.subject ? (
-                      <> &ndash; {entry.subject}</>
-                    ) : null}
-                  </p>
-                  <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                    {formatActivityTime(entry.created_at)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
 
       {/* SvFF-principer */}
       <div className="card p-6 md:p-7">
