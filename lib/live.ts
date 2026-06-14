@@ -206,17 +206,25 @@ export async function claimStats(matchId: number, name: string, stats: string[])
 const ENSURE_ROW =
   "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT(match_id, player_id) DO NOTHING";
 
-export async function recordEvent(matchId: number, playerId: number | null, statId: string) {
+export async function recordEvent(
+  matchId: number,
+  playerId: number | null,
+  statId: string,
+  reporter: string | null = null
+) {
   if (statId !== OPPONENT_GOAL && !LIVE_COUNT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
   const now = Math.floor(Date.now() / 1000);
 
-  // 15-sekunders dedup: ignorera om identisk händelse redan finns
+  // Dubbeltrycksskydd per rapportör: slår bara ihop när SAMMA rapportör trycker
+  // samma sak på samma spelare inom 8 sekunder (fettfinger). Olika rapportörer
+  // blockerar aldrig varandra – två personer kan räkna mål samtidigt.
+  const rep = reporter && reporter.trim() ? reporter.trim() : null;
   const recent = await get<{ id: number }>(
     `SELECT id FROM match_events
-     WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND created_at > ?
+     WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter IS ? AND created_at > ?
      LIMIT 1`,
-    [matchId, playerId, statId, now - 15]
+    [matchId, playerId, statId, rep, now - 8]
   );
   if (recent) return;
 
@@ -226,8 +234,8 @@ export async function recordEvent(matchId: number, playerId: number | null, stat
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [
     {
-      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      args: [matchId, playerId, statId, second, period, now],
+      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at, reporter) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      args: [matchId, playerId, statId, second, period, now, rep],
     },
   ];
 

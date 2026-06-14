@@ -259,7 +259,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     }));
     setFlash(playerId);
     setTimeout(() => setFlash((f) => (f === playerId ? null : f)), 350);
-    post({ type: "event", playerId, statId: activeStat });
+    post({ type: "event", playerId, statId: activeStat, reporter: myName || undefined });
   };
 
   useEffect(() => {

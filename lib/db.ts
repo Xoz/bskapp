@@ -175,6 +175,9 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN formation TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE match_players ADD COLUMN yellow_card INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE match_players ADD COLUMN red_card INTEGER NOT NULL DEFAULT 0`,
+    // Vem som loggade händelsen – gör duplikatskyddet per rapportör så att två
+    // personer kan räkna samma statistik (t.ex. mål) utan att blockera varandra.
+    `ALTER TABLE match_events ADD COLUMN reporter TEXT`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

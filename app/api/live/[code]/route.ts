@@ -49,7 +49,7 @@ export async function POST(
   try {
     switch (action.type) {
       case "event":
-        await recordEvent(match.id, action.playerId, action.statId);
+        await recordEvent(match.id, action.playerId, action.statId, action.reporter ?? null);
         break;
       case "opponent_goal":
         await recordEvent(match.id, null, OPPONENT_GOAL);
