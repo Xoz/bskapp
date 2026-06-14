@@ -475,54 +475,55 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             </p>
           </div>
           <div className="flex-1" />
-          {isCoach && (
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
-                className="btn-accent px-5 py-2.5"
-              >
-                {live.clockRunning
-                  ? "Pausa"
-                  : clockNow > 0 || live.period > 1
-                    ? "Fortsätt"
-                    : "Starta period 1"}
-              </button>
-              {live.period < live.periods && (clockNow > 0 || live.clockRunning) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
-                      post({ type: "clock", op: "next_period" });
-                  }}
-                  className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    color: "var(--ink)",
-                  }}
-                >
-                  Starta period {live.period + 1} →
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        {isCoach && (
-          <div className="mt-3 flex items-center justify-between relative">
-            <div className="flex items-center gap-3">
+          {/* Klockan körs av den som rapporterar – ofta en förälder, inte tränaren */}
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
+              className="btn-accent px-5 py-2.5"
+            >
+              {live.clockRunning
+                ? "Pausa"
+                : clockNow > 0 || live.period > 1
+                  ? "Fortsätt"
+                  : "Starta period 1"}
+            </button>
+            {live.period < live.periods && (clockNow > 0 || live.clockRunning) && (
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm("Nollställa matchklockan till period 1, 00:00?"))
-                    post({ type: "clock", op: "reset" });
+                  if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
+                    post({ type: "clock", op: "next_period" });
                 }}
-                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
-                style={{ fontFamily: "var(--font-display)" }}
+                className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "var(--ink)",
+                }}
               >
-                Nollställ klocka
+                Starta period {live.period + 1} →
               </button>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between relative">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Nollställa matchklockan till period 1, 00:00?"))
+                  post({ type: "clock", op: "reset" });
+              }}
+              className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Nollställ klocka
+            </button>
+            {/* Avsluta stänger rapporteringen för alla – behålls tränar-låst.
+                Auto-avslut 5 min efter sista perioden är skyddsnät för förälder-körda matcher. */}
+            {isCoach && (
               <button
                 type="button"
                 onClick={() => {
@@ -534,22 +535,22 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
               >
                 Avsluta match
               </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => post({ type: "opponent_goal" })}
-              className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
-              style={{
-                fontFamily: "var(--font-display)",
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                color: "var(--ink)",
-              }}
-            >
-              +1 Mål motståndare
-            </button>
+            )}
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => post({ type: "opponent_goal", reporter: myName || undefined })}
+            className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
+            style={{
+              fontFamily: "var(--font-display)",
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              color: "var(--ink)",
+            }}
+          >
+            +1 Mål motståndare
+          </button>
+        </div>
 
         {!isOnline && (
           <div

@@ -61,7 +61,7 @@ export interface LiveState {
 
 export type LiveAction =
   | { type: "event"; playerId: number; statId: string; reporter?: string }
-  | { type: "opponent_goal" }
+  | { type: "opponent_goal"; reporter?: string }
   | { type: "undo" }
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "toggle_played"; playerId: number }

@@ -52,7 +52,7 @@ export async function POST(
         await recordEvent(match.id, action.playerId, action.statId, action.reporter ?? null);
         break;
       case "opponent_goal":
-        await recordEvent(match.id, null, OPPONENT_GOAL);
+        await recordEvent(match.id, null, OPPONENT_GOAL, action.reporter ?? null);
         break;
       case "undo":
         await undoLastEvent(match.id);
