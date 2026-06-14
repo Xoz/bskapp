@@ -2,8 +2,9 @@ import Link from "next/link";
 import { getRealRole, getCoachName } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { logout } from "@/lib/actions";
-import { IconLogout, IconSettings } from "@/components/Icons";
+import { IconLogout } from "@/components/Icons";
 import NavLinks from "@/components/NavLinks";
+import SettingsMenu from "@/components/SettingsMenu";
 
 export default async function Navbar() {
   const [realRole, settings, coachName] = await Promise.all([
@@ -50,16 +51,7 @@ export default async function Navbar() {
               {coachName.split(" ")[0]}
             </span>
           )}
-          {realRole === "coach" && (
-            <Link
-              href="/installningar"
-              title="Inställningar"
-              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg2)]"
-              style={{ color: "var(--ink-faint)" }}
-            >
-              <IconSettings width={17} height={17} />
-            </Link>
-          )}
+          {realRole === "coach" && <SettingsMenu />}
           {realRole && (
             <form action={logout}>
               <button
