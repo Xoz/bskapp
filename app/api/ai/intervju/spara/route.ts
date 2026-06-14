@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveIntervju } from "@/lib/queries";
+import { getCoachName } from "@/lib/auth";
+import { logActivity } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,8 @@ export async function POST(req: NextRequest) {
       typeof interviewType === "string" ? interviewType : "spelarsamtal",
       scores && typeof scores === "object" ? JSON.stringify(scores) : "{}"
     );
+    const coachName = (await getCoachName()) ?? "Tränare";
+    await logActivity(coachName, "Genomförde intervju", playerName.slice(0, 100));
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("spara intervju error:", err);

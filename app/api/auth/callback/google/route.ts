@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?google_error=1`);
   }
 
-  const { email } = await userRes.json();
+  const { email, name } = await userRes.json();
   if (!email) {
     return NextResponse.redirect(`${origin}/login?google_error=1`);
   }
@@ -88,6 +88,15 @@ export async function GET(req: NextRequest) {
     maxAge,
     path: "/",
   });
+
+  if (name && typeof name === "string") {
+    res.cookies.set("bsk_coach_name", name.slice(0, 60), {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+  }
 
   res.cookies.delete("bsk_oauth_state");
 

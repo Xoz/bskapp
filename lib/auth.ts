@@ -20,6 +20,11 @@ export async function getCoachEmail(): Promise<string | null> {
   if (sig !== sign(`coach_email:${email}`)) return null;
   return email;
 }
+
+export async function getCoachName(): Promise<string | null> {
+  const store = await cookies();
+  return store.get("bsk_coach_name")?.value || null;
+}
 // Visningsroll inkl. "player" (publik vy) – används för navigering och växeln.
 export type ViewRole = "coach" | "parent" | "player";
 

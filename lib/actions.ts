@@ -3,10 +3,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { all, get, run, batch, getSetting, setSetting, generateMatchCode } from "./db";
+import { all, get, run, batch, getSetting, setSetting, generateMatchCode, logActivity } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
-import { sessionToken, playerSessionToken, getRole, getRealRole, Role } from "./auth";
+import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachName } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
@@ -43,6 +43,7 @@ export async function logout() {
   store.delete("bsk_session");
   store.delete("bsk_view");
   store.delete("bsk_coach_email");
+  store.delete("bsk_coach_name");
   redirect("/login");
 }
 
@@ -302,6 +303,10 @@ export async function createEvaluation(formData: FormData) {
     }))
   );
 
+  const player = await get<{ name: string }>("SELECT name FROM players WHERE id = ?", [playerId]);
+  const logName = (await getCoachName()) ?? (coachName || "Tränare");
+  if (player) await logActivity(logName, "Utvärderade", player.name);
+
   revalidatePath(`/spelare/${playerId}`);
   redirect(`/spelare/${playerId}`);
 }
@@ -387,6 +392,9 @@ export async function saveMatch(formData: FormData) {
 
   await savePlayerStats(matchId, formData);
 
+  const logName = (await getCoachName()) ?? "Tränare";
+  await logActivity(logName, id ? "Uppdaterade match" : "Lade till match", opponent);
+
   revalidatePath("/matcher");
   revalidatePath("/statistik");
   redirect(`/matcher/${matchId}`);
@@ -448,6 +456,11 @@ export async function saveSquad(formData: FormData) {
     revalidatePath(`/matcher/${mid}`);
   }
   await batch(stmts);
+
+  const squadMatch = await get<{ opponent: string; date: string }>("SELECT opponent, date FROM matches WHERE id = ?", [matchId]);
+  const squadLogName = (await getCoachName()) ?? "Tränare";
+  if (squadMatch) await logActivity(squadLogName, "Tog ut trupp", `${squadMatch.opponent} · ${squadMatch.date}`);
+
   redirect(`/matcher/${matchId}`);
 }
 
@@ -505,6 +518,11 @@ export async function saveLineup(formData: FormData) {
   }
 
   await batch(stmts);
+
+  const lineupMatch = await get<{ opponent: string; date: string }>("SELECT opponent, date FROM matches WHERE id = ?", [matchId]);
+  const lineupLogName = (await getCoachName()) ?? "Tränare";
+  if (lineupMatch) await logActivity(lineupLogName, "Satte startelva", `${lineupMatch.opponent} · ${lineupMatch.date}`);
+
   redirect(`/matcher/${matchId}`);
 }
 

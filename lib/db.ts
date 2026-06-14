@@ -149,6 +149,13 @@ async function init(): Promise<void> {
       messages TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`,
+    `CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      coach_name TEXT NOT NULL,
+      action TEXT NOT NULL,
+      subject TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 
@@ -339,4 +346,28 @@ async function generateMatchCodeRaw(): Promise<string> {
 export async function generateMatchCode(): Promise<string> {
   await ready();
   return generateMatchCodeRaw();
+}
+
+// ---- Aktivitetslogg ----
+
+export type ActivityEntry = {
+  id: number;
+  coach_name: string;
+  action: string;
+  subject: string;
+  created_at: string;
+};
+
+export async function logActivity(coachName: string, action: string, subject: string): Promise<void> {
+  await run(
+    "INSERT INTO activity_log (coach_name, action, subject) VALUES (?, ?, ?)",
+    [coachName.slice(0, 60), action.slice(0, 80), subject.slice(0, 100)]
+  );
+}
+
+export async function getRecentActivity(limit = 10): Promise<ActivityEntry[]> {
+  return all<ActivityEntry>(
+    "SELECT id, coach_name, action, subject, created_at FROM activity_log ORDER BY id DESC LIMIT ?",
+    [limit]
+  );
 }

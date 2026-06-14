@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getAllSettings } from "@/lib/db";
+import { getAllSettings, getRecentActivity, type ActivityEntry } from "@/lib/db";
 import {
   getPlayers,
   getMatches,
@@ -23,6 +23,16 @@ import {
   IconArrowRight,
 } from "@/components/Icons";
 
+function formatActivityTime(ts: string): string {
+  const d = new Date(ts.replace(" ", "T") + "Z");
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const tsDateStr = d.toISOString().slice(0, 10);
+  const time = d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
+  if (tsDateStr === todayStr) return time;
+  return d.toLocaleDateString("sv-SE", { month: "short", day: "numeric", timeZone: "Europe/Stockholm" }) + " " + time;
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
@@ -35,6 +45,7 @@ export default async function Dashboard() {
   const stats = await getSeasonStats();
   const latestEvals = await getLatestEvaluationDates();
   const totalEvals = await countEvaluations();
+  const activity = await getRecentActivity(8);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const upcomingMatches = matches
@@ -316,6 +327,38 @@ export default async function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Aktivitetslogg */}
+      {activity.length > 0 && (
+        <div className="card p-6">
+          <p className="eyebrow mb-1">Tränarlaget</p>
+          <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
+          <ol className="space-y-4">
+            {activity.map((entry: ActivityEntry) => (
+              <li key={entry.id} className="flex items-start gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  <IconClock width={13} height={13} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm" style={{ color: "var(--ink)" }}>
+                    <span className="font-semibold">{entry.coach_name}</span>{" "}
+                    <span style={{ color: "var(--ink-soft)" }}>{entry.action.toLowerCase()}</span>
+                    {entry.subject ? (
+                      <> &ndash; {entry.subject}</>
+                    ) : null}
+                  </p>
+                  <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                    {formatActivityTime(entry.created_at)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* SvFF-principer */}
       <div className="card p-6 md:p-7">
