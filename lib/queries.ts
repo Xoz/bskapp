@@ -211,6 +211,14 @@ export interface PlayerMatchRow {
   saves: number;
 }
 
+// En match räknas som spelad när den avslutats eller när dess datum passerat.
+// Det filtrerar bort framtida matcher som råkat få en match_players-rad (t.ex.
+// om någon öppnat live-rapporteringen i förväg) så de inte syns i statistiken.
+const PLAYED_MATCH_SQL = "(m.finished = 1 OR m.date <= ?)";
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatchRow[]> {
   return all<PlayerMatchRow>(
     `SELECT m.id AS match_id, m.date, m.opponent, m.home_away,
@@ -219,13 +227,14 @@ export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatch
             mp.passes_completed, mp.interceptions, mp.saves
      FROM match_players mp
      JOIN matches m ON m.id = mp.match_id
-     WHERE mp.player_id = ?
+     WHERE mp.player_id = ? AND ${PLAYED_MATCH_SQL}
      ORDER BY m.date DESC, m.id DESC`,
-    [playerId]
+    [playerId, todayStr()]
   );
 }
 
-// Säsongsstatistik per spelare – deltagande (SvFF: alla ska spela) och insatser
+// Säsongsstatistik per spelare – deltagande (SvFF: alla ska spela) och insatser.
+// Bara spelade matcher räknas, så siffran stämmer med spelarprofilen.
 export async function getSeasonStats(): Promise<SeasonStatRow[]> {
   const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n              ");
   return all<SeasonStatRow>(
@@ -233,10 +242,12 @@ export async function getSeasonStats(): Promise<SeasonStatRow[]> {
             COUNT(mp.match_id) AS matches_played,
             ${sums}
      FROM players p
-     LEFT JOIN match_players mp ON mp.player_id = p.id
+     LEFT JOIN (match_players mp JOIN matches m ON m.id = mp.match_id AND ${PLAYED_MATCH_SQL})
+       ON mp.player_id = p.id
      WHERE p.active = 1
      GROUP BY p.id
-     ORDER BY p.name COLLATE NOCASE`
+     ORDER BY p.name COLLATE NOCASE`,
+    [todayStr()]
   );
 }
 
