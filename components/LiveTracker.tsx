@@ -200,6 +200,14 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const clockNow =
     live.clockSeconds + (live.clockRunning ? (Date.now() - fetchedAt) / 1000 : 0);
 
+  // Statistikkategorier som ingen rapportör (inkl. jag själv) ännu täcker.
+  const coveredStats = new Set<string>();
+  for (const r of live.reporters) for (const s of r.stats) coveredStats.add(s);
+  if (selected) for (const s of selected) coveredStats.add(s);
+  const uncoveredFields = STAT_FIELDS.filter((f) => !coveredStats.has(f.id));
+  // Matchen har inte startat ännu (period 1, klockan orörd och stillastående).
+  const isMatchStart = !live.clockRunning && live.clockSeconds === 0 && live.period === 1;
+
   // Auto-avslut: 5 min efter sista periodens sluttid
   useEffect(() => {
     if (live.finished || autoFinishedRef.current) return;
@@ -479,7 +487,19 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
           <div className="flex flex-col items-end gap-2">
             <button
               type="button"
-              onClick={() => post({ type: "clock", op: live.clockRunning ? "pause" : "start" })}
+              onClick={() => {
+                // Varna om någon statistikkategori saknar rapportör vid matchstart
+                if (isMatchStart && uncoveredFields.length > 0) {
+                  const list = uncoveredFields.map((f) => f.label).join(", ");
+                  if (
+                    !confirm(
+                      `Ingen för statistik på: ${list}.\n\nDe här kategorierna registreras inte under matchen. Starta ändå?`
+                    )
+                  )
+                    return;
+                }
+                post({ type: "clock", op: live.clockRunning ? "pause" : "start" });
+              }}
               className="btn-accent px-5 py-2.5"
             >
               {live.clockRunning
@@ -561,6 +581,17 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             {queuedCount > 0
               ? ` · ${queuedCount} händelse${queuedCount === 1 ? "" : "r"} i kö – skickas automatiskt`
               : " – händelser sparas och skickas när du är online igen"}
+          </div>
+        )}
+
+        {isMatchStart && uncoveredFields.length > 0 && (
+          <div
+            className="mt-3 rounded-lg px-3 py-2 text-xs"
+            style={{ background: "rgba(255,180,0,0.16)", color: "#ffd23f" }}
+          >
+            ⚠️ Ingen för statistik på{" "}
+            <span className="font-semibold">{uncoveredFields.map((f) => f.label).join(", ")}</span>.
+            Lägg till fler rapportörer eller utöka ditt eget urval innan matchen startar.
           </div>
         )}
       </div>
