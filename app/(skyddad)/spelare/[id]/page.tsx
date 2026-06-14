@@ -363,12 +363,16 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Matchstatistik – bara matcher med faktiskt rapporterad aktivitet */}
+      {/* Matchstatistik. Vi skiljer på deltagande (alla matcher spelaren var med i,
+          samma siffra som översikten) och matcher med faktiskt rapporterad statistik. */}
       {(() => {
         const playedMatches = matchStats.filter((m) =>
           STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0)
         );
-        if (playedMatches.length === 0) return null;
+        // matchStats = en rad per match spelaren deltog i (även nollmatcher)
+        const participated = matchStats.length;
+        if (participated === 0) return null;
+        const withStats = playedMatches.length;
         const totals = STAT_FIELDS.reduce((acc, f) => {
           acc[f.id] = playedMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
           return acc;
@@ -377,8 +381,17 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="card p-6 md:p-7">
             <h2 className="font-semibold mb-1">Matchstatistik</h2>
             <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
-              {playedMatches.length} {playedMatches.length === 1 ? "match" : "matcher"} rapporterade
+              {`Spelat ${participated} ${participated === 1 ? "match" : "matcher"}`}
+              {withStats < participated && (
+                <> · {withStats} med rapporterad statistik</>
+              )}
             </p>
+            {withStats === 0 ? (
+              <p className="text-sm rounded-xl px-4 py-3" style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}>
+                Spelaren har varit med i {participated} {participated === 1 ? "match" : "matcher"}, men ingen
+                enskild händelse (mål, assist, skott m.m.) har registrerats ännu.
+              </p>
+            ) : (
             <div className="overflow-x-auto -mx-2">
               <table className="data-table">
                 <thead>
@@ -424,6 +437,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 </tfoot>
               </table>
             </div>
+            )}
           </div>
         );
       })()}
