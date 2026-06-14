@@ -25,6 +25,53 @@ export default async function PlayersPage() {
         </p>
       </div>
 
+      {/* Highscore-kort */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {(
+          [
+            { label: "Flest mål", key: "goals" },
+            { label: "Flest assist", key: "assists" },
+            { label: "Flest passningar", key: "passes_completed" },
+          ] as { label: string; key: keyof typeof stats[0] }[]
+        ).map(({ label, key }) => {
+          const top = [...stats]
+            .filter((s) => (s[key] as number) > 0)
+            .sort((a, b) => (b[key] as number) - (a[key] as number))
+            .slice(0, 3);
+          return (
+            <div key={key as string} className="card p-5">
+              <p className="eyebrow mb-3">{label}</p>
+              {top.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Ingen statistik ännu</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {top.map((s, i) => (
+                    <Link key={s.id} href={`/spelare/${s.id}`} className="flex items-center gap-3 group">
+                      <span
+                        className="stat-number text-xs w-4 shrink-0 text-right"
+                        style={{ color: i === 0 ? "var(--accent)" : "var(--ink-faint)" }}
+                      >
+                        {i + 1}
+                      </span>
+                      <Avatar name={s.name} jersey={s.jersey_number} size={28} />
+                      <span className="flex-1 min-w-0 text-sm font-medium truncate group-hover:underline" style={{ color: "var(--ink)" }}>
+                        {s.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
+                      </span>
+                      <span
+                        className="stat-number text-lg shrink-0"
+                        style={{ color: i === 0 ? "var(--primary)" : "var(--ink)" }}
+                      >
+                        {s[key] as number}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
       <div className="card overflow-x-auto">
         <table className="data-table">
           <thead>
