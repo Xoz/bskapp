@@ -401,7 +401,13 @@ export async function updateCup(formData: FormData) {
   if (!cupName) return;
 
   const level = String(formData.get("level") ?? "");
-  await run("UPDATE matches SET level = ? WHERE cup_name = ?", [level, cupName]);
+  // Speltidsformat gäller hela cupen – håll inom rimliga gränser.
+  const periods = Math.min(9, Math.max(1, Number(formData.get("periods")) || 3));
+  const periodMinutes = Math.min(90, Math.max(1, Number(formData.get("period_minutes")) || 20));
+  await run(
+    "UPDATE matches SET level = ?, periods = ?, period_minutes = ? WHERE cup_name = ?",
+    [level, periods, periodMinutes, cupName]
+  );
 
   const ids = String(formData.get("match_ids") ?? "").split(",").map(Number).filter(Boolean);
   for (const id of ids) {
@@ -453,13 +459,21 @@ export async function addCupPlayoffMatch(formData: FormData) {
   await requireRole(["coach"]);
   const cupName = String(formData.get("cup_name") ?? "").trim();
   if (!cupName) return;
-  const existing = await get<{ date: string }>(
-    "SELECT date FROM matches WHERE cup_name = ? ORDER BY date DESC, start_time DESC LIMIT 1",
+  // Ärver datum och speltidsformat från cupens befintliga matcher.
+  const existing = await get<{ date: string; periods: number; period_minutes: number; level: string }>(
+    "SELECT date, periods, period_minutes, level FROM matches WHERE cup_name = ? ORDER BY date DESC, start_time DESC LIMIT 1",
     [cupName]
   );
   await run(
-    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_phase) VALUES (?, ?, 'home', 'cup', ?, 'playoff')",
-    [existing?.date ?? new Date().toISOString().slice(0, 10), "TBD", cupName]
+    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_phase, periods, period_minutes, level) VALUES (?, ?, 'home', 'cup', ?, 'playoff', ?, ?, ?)",
+    [
+      existing?.date ?? new Date().toISOString().slice(0, 10),
+      "TBD",
+      cupName,
+      existing?.periods ?? 3,
+      existing?.period_minutes ?? 20,
+      existing?.level ?? "",
+    ]
   );
   revalidatePath("/matcher");
   redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);

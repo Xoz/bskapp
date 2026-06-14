@@ -28,6 +28,9 @@ export default async function CupEditorPage({
   const groupMatches = matches.filter((m) => m.cup_phase !== "playoff");
   const playoffMatches = matches.filter((m) => m.cup_phase === "playoff");
   const cupLevel = matches.find((m) => m.level)?.level ?? "";
+  // Matcherna i en cup delar speltidsformat – ta första matchens värden som default.
+  const cupPeriods = matches[0].periods ?? 3;
+  const cupPeriodMinutes = matches[0].period_minutes ?? 20;
 
   const first = [...matches].sort((a, b) => a.date.localeCompare(b.date))[0].date;
   const last = [...matches].sort((a, b) => b.date.localeCompare(a.date))[0].date;
@@ -63,17 +66,48 @@ export default async function CupEditorPage({
         <input type="hidden" name="cup_name" value={cupName} />
         <input type="hidden" name="match_ids" value={matches.map((m) => m.id).join(",")} />
 
-        {/* Nivå */}
-        <div className="card p-5 md:p-6 space-y-3">
-          <h2 className="font-semibold">Cupinställningar</h2>
+        {/* Cupinställningar – gäller alla matcher i cupen */}
+        <div className="card p-5 md:p-6 space-y-4">
           <div>
-            <label className="label" htmlFor="cup_level">Svårighetsnivå</label>
-            <select id="cup_level" name="level" defaultValue={cupLevel} className="input">
-              <option value="">Ej satt</option>
-              {LEVELS.map((l) => (
-                <option key={l.id} value={l.id}>{l.label}</option>
-              ))}
-            </select>
+            <h2 className="font-semibold">Cupinställningar</h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+              Gäller alla matcher i cupen.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <label className="label" htmlFor="cup_level">Svårighetsnivå</label>
+              <select id="cup_level" name="level" defaultValue={cupLevel} className="input">
+                <option value="">Ej satt</option>
+                {LEVELS.map((l) => (
+                  <option key={l.id} value={l.id}>{l.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="cup_periods">Antal perioder</label>
+              <input
+                id="cup_periods"
+                name="periods"
+                type="number"
+                min="1"
+                max="9"
+                defaultValue={cupPeriods}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="cup_period_minutes">Matchtid per period (min)</label>
+              <input
+                id="cup_period_minutes"
+                name="period_minutes"
+                type="number"
+                min="1"
+                max="90"
+                defaultValue={cupPeriodMinutes}
+                className="input"
+              />
+            </div>
           </div>
         </div>
 
