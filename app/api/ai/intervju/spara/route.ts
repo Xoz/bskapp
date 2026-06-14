@@ -4,14 +4,21 @@ import { saveIntervju } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  let body: { playerName?: string; position?: string; summary?: string; messages?: unknown };
+  let body: {
+    playerName?: string;
+    position?: string;
+    summary?: string;
+    messages?: unknown;
+    interviewType?: string;
+    scores?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   }
 
-  const { playerName, position, summary, messages } = body;
+  const { playerName, position, summary, messages, interviewType, scores } = body;
   if (typeof playerName !== "string" || typeof position !== "string" || typeof summary !== "string") {
     return NextResponse.json({ error: "Felaktiga parametrar" }, { status: 400 });
   }
@@ -21,7 +28,9 @@ export async function POST(req: NextRequest) {
       playerName.slice(0, 100),
       position.slice(0, 100),
       summary.slice(0, 3000),
-      JSON.stringify(Array.isArray(messages) ? messages.slice(-40) : [])
+      JSON.stringify(Array.isArray(messages) ? messages.slice(-40) : []),
+      typeof interviewType === "string" ? interviewType : "spelarsamtal",
+      scores && typeof scores === "object" ? JSON.stringify(scores) : "{}"
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
