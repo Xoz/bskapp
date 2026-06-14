@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
@@ -9,7 +8,6 @@ import PitchLines from "@/components/PitchLines";
 export default async function LoginPage() {
   const role = await getRole();
   if (role === "coach") redirect("/oversikt");
-  if (role === "parent") redirect("/matcher");
 
   const settings = await getAllSettings();
 
@@ -55,16 +53,6 @@ export default async function LoginPage() {
           <Suspense>
             <LoginForm />
           </Suspense>
-          <p className="mt-5 text-center text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
-            Har du en matchkod?{" "}
-            <Link
-              href="/rapportera"
-              className="underline hover:text-[var(--ink)]"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              Rapportera statistik
-            </Link>
-          </p>
         </div>
 
         <div

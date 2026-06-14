@@ -1,4 +1,4 @@
-// Statistikfält per spelare och match – det föräldrar rapporterar med matchkoden
+// Statistikfält per spelare och match
 export interface StatField {
   id: string;
   label: string;

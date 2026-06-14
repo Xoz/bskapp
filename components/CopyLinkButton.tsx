@@ -3,12 +3,12 @@ import { useState } from "react";
 
 export default function CopyLinkButton({
   code,
-  path = "rapportera",
+  path,
   variant = "dark",
   label = "Kopiera länk",
 }: {
   code: string;
-  path?: string;
+  path: string;
   variant?: "dark" | "light";
   label?: string;
 }) {

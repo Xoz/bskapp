@@ -4,7 +4,7 @@ import { getRole } from "@/lib/auth";
 import { getMatches, type Match as MatchType } from "@/lib/queries";
 import { level as levelInfo, LEVELS } from "@/lib/levels";
 import { setMatchLevel } from "@/lib/actions";
-import { IconPitch, IconArrowRight } from "@/components/Icons";
+import { IconPitch } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -27,16 +27,9 @@ export default async function MatchesPage() {
           <p className="eyebrow">Säsongen</p>
           <h1 className="text-[1.7rem] font-bold mt-0.5">Matcher</h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-            {role === "parent"
-              ? "Har du fått en matchkod? Rapportera statistik utan inloggning."
-              : `${matches.length} ${matches.length === 1 ? "match registrerad" : "matcher registrerade"}`}
+            {matches.length} {matches.length === 1 ? "match registrerad" : "matcher registrerade"}
           </p>
         </div>
-        {role !== "coach" && (
-          <Link href="/rapportera" className="btn-primary">
-            Rapportera med matchkod <IconArrowRight width={15} height={15} />
-          </Link>
-        )}
       </div>
 
       {matches.length === 0 ? (
@@ -91,14 +84,6 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
         </p>
         <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
           {m.date}
-          {role === "coach" && (
-            <>
-              {" · kod "}
-              <span className="stat-number tracking-wider" style={{ color: "var(--ink-soft)" }}>
-                {m.code}
-              </span>
-            </>
-          )}
         </p>
       </div>
       {m.date === today && (
@@ -219,7 +204,6 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
                 <span className="font-medium">{m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}</span>
                 <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
-                  {role === "coach" ? ` · kod ${m.code}` : ""}
                 </span>
               </span>
               {m.date === today && (

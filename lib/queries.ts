@@ -173,9 +173,6 @@ export async function getMatch(id: number): Promise<Match | undefined> {
   return get<Match>("SELECT * FROM matches WHERE id = ?", [id]);
 }
 
-export async function getMatchByCode(code: string): Promise<Match | undefined> {
-  return get<Match>("SELECT * FROM matches WHERE code = ?", [code]);
-}
 
 export async function getMatchPlayers(matchId: number): Promise<MatchPlayerRow[]> {
   return all<MatchPlayerRow>("SELECT * FROM match_players WHERE match_id = ?", [matchId]);

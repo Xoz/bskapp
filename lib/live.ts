@@ -1,5 +1,5 @@
 // Serverlogik för live-rapporteringen: matchklocka, händelser och räknare.
-// Skrivningar batchas i transaktioner så att flera föräldrar kan rapportera samtidigt.
+// Skrivningar batchas i transaktioner för att undvika konflikter vid parallell rapportering.
 
 import { all, get, run, batch } from "./db";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
@@ -21,10 +21,6 @@ interface MatchRow {
   clock_period: number;
   finished: number;
   cup_name: string;
-}
-
-export async function getMatchRowByCode(code: string): Promise<MatchRow | undefined> {
-  return get<MatchRow>("SELECT * FROM matches WHERE code = ?", [code]);
 }
 
 export function clockSeconds(m: MatchRow): number {

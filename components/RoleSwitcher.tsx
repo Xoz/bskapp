@@ -3,7 +3,6 @@ import type { ViewRole } from "@/lib/auth";
 
 const ITEMS: { key: ViewRole; label: string }[] = [
   { key: "player", label: "Spelare" },
-  { key: "parent", label: "Förälder" },
   { key: "coach", label: "Tränare" },
 ];
 

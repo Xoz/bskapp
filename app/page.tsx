@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getRole, getPlayerSession } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import PitchLines from "@/components/PitchLines";
-import { IconWhistle, IconBall, IconPlayers, IconArrowRight } from "@/components/Icons";
+import { IconWhistle, IconPlayers, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -75,32 +75,6 @@ export default async function LandingPage() {
               <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>Tränare</p>
               <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
                 Trupp, utvärderingar och statistik
-              </p>
-            </div>
-            <IconArrowRight
-              width={14}
-              height={14}
-              className="shrink-0 transition-transform group-hover:translate-x-0.5"
-              style={{ color: "var(--ink-faint)" }}
-            />
-          </Link>
-
-          {/* Förälder / Rapportör */}
-          <Link
-            href="/rapportera"
-            className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-opacity hover:opacity-85"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
-          >
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              <IconBall width={20} height={20} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>Förälder &amp; Rapportör</p>
-              <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                Registrera händelser live under match
               </p>
             </div>
             <IconArrowRight

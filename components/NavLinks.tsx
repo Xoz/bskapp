@@ -9,7 +9,6 @@ import {
   IconPitch,
   IconChart,
   IconSettings,
-  IconBall,
   IconChat,
   IconBook,
 } from "@/components/Icons";
@@ -24,16 +23,9 @@ const COACH_LINKS = [
   { href: "/guide", label: "Guide", Icon: IconBook },
 ];
 
-const PARENT_LINKS = [
-  { href: "/matcher", label: "Matcher", Icon: IconPitch },
-  { href: "/rapportera", label: "Rapportera", Icon: IconBall },
-];
-
-const PLAYER_LINKS = [{ href: "/rapportera", label: "Rapportera", Icon: IconBall }];
-
 export default function NavLinks({ role, horizontal }: { role: Role | null; horizontal?: boolean }) {
   const pathname = usePathname();
-  const links = role === "coach" ? COACH_LINKS : role === "parent" ? PARENT_LINKS : PLAYER_LINKS;
+  const links = role === "coach" ? COACH_LINKS : [];
 
   return (
     <nav className={horizontal ? "flex gap-1" : "flex flex-col gap-1"}>

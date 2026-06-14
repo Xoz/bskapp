@@ -3,7 +3,7 @@ import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 
-export type Role = "coach" | "parent";
+export type Role = "coach";
 
 export function coachEmailToken(email: string): string {
   return `${email}.${sign(`coach_email:${email}`)}`;
@@ -26,7 +26,7 @@ export async function getCoachName(): Promise<string | null> {
   return store.get("bsk_coach_name")?.value || null;
 }
 // Visningsroll inkl. "player" (publik vy) – används för navigering och växeln.
-export type ViewRole = "coach" | "parent" | "player";
+export type ViewRole = "coach" | "player";
 
 // I produktion (Vercel) MÅSTE SESSION_SECRET sättas som miljövariabel –
 // filsystemet är flyktigt där. Lokalt genereras en hemlighet i data/.
@@ -72,7 +72,7 @@ export async function getRealRole(): Promise<Role | null> {
   const token = store.get("bsk_session")?.value;
   if (!token) return null;
   const [role, sig] = token.split(".");
-  if ((role === "coach" || role === "parent") && sig === sign(role)) return role;
+  if (role === "coach" && sig === sign(role)) return role;
   return null;
 }
 
@@ -82,10 +82,9 @@ export async function getViewRole(): Promise<ViewRole> {
   const real = await getRealRole();
   if (real === "coach") {
     const v = (await cookies()).get("bsk_view")?.value;
-    if (v === "parent" || v === "player") return v;
+    if (v === "player") return v;
     return "coach";
   }
-  if (real === "parent") return "parent";
   return "player";
 }
 

@@ -69,16 +69,16 @@ export default function LoginForm() {
       <div className="flex items-center gap-3">
         <span className="h-px flex-1" style={{ background: "var(--line)" }} />
         <span className="text-[0.6rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)" }}>
-          eller föräldrakod
+          eller tränarkod
         </span>
         <span className="h-px flex-1" style={{ background: "var(--line)" }} />
       </div>
 
-      {/* Kodinloggning (föräldrar + gammal tränarkod) */}
+      {/* Kodinloggning (reservmetod för tränare) */}
       <form action={formAction} className="space-y-4">
         <div>
           <label htmlFor="code" className="label">
-            Föräldrakod
+            Tränarkod
           </label>
           <input
             id="code"

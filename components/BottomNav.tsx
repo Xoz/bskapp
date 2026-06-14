@@ -7,9 +7,7 @@ import {
   IconOverview,
   IconPlayers,
   IconPitch,
-  IconChart,
   IconSettings,
-  IconBall,
   IconChat,
 } from "@/components/Icons";
 
@@ -21,16 +19,9 @@ const COACH_ITEMS = [
   { href: "/installningar", label: "Inställn.", Icon: IconSettings },
 ];
 
-const PARENT_ITEMS = [
-  { href: "/matcher", label: "Matcher", Icon: IconPitch },
-  { href: "/rapportera", label: "Rapportera", Icon: IconBall },
-  { href: "/statistik", label: "Statistik", Icon: IconChart },
-];
-
 export default function BottomNav({ role }: { role: Role | null }) {
   const pathname = usePathname();
-  const items =
-    role === "coach" ? COACH_ITEMS : role === "parent" ? PARENT_ITEMS : [];
+  const items = role === "coach" ? COACH_ITEMS : [];
 
   if (items.length === 0) return null;
 

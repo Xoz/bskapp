@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { all, get, run, batch, getSetting, setSetting, generateMatchCode, logActivity } from "./db";
+import { all, get, run, batch, getSetting, setSetting, logActivity } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
 import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachName } from "./auth";
@@ -23,7 +23,6 @@ export async function login(_prev: { error?: string } | null, formData: FormData
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   let role: Role | null = null;
   if (code === (await getSetting("coach_code")).toUpperCase()) role = "coach";
-  else if (code === (await getSetting("parent_code")).toUpperCase()) role = "parent";
 
   if (!role) return { error: "Fel kod. Kontrollera med tränaren och försök igen." };
 
@@ -146,21 +145,19 @@ export async function setViewAs(formData: FormData) {
   const store = await cookies();
 
   if (real === "coach") {
-    if (target === "parent" || target === "player") {
-      store.set("bsk_view", target, {
+    if (target === "player") {
+      store.set("bsk_view", "player", {
         httpOnly: true,
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7,
         path: "/",
       });
-      redirect(target === "player" ? "/rapportera" : "/matcher");
+      redirect("/matcher");
     }
     store.delete("bsk_view");
     redirect("/oversikt");
   }
 
-  if (target === "player") redirect("/rapportera");
-  if (real === "parent" && target === "parent") redirect("/matcher");
   redirect("/login");
 }
 
@@ -384,8 +381,8 @@ export async function saveMatch(formData: FormData) {
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, created_by_role, code, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'manual')",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, await generateMatchCode()]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual')",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName]
     );
     matchId = Number(res.lastInsertRowid);
   }
@@ -641,14 +638,6 @@ export async function deleteMatchEvent(formData: FormData) {
   revalidatePath(`/matcher/${matchId}`);
 }
 
-export async function regenerateMatchCode(formData: FormData) {
-  await requireRole(["coach"]);
-  const id = Number(formData.get("id"));
-  if (!id) return;
-  await run("UPDATE matches SET code = ? WHERE id = ?", [await generateMatchCode(), id]);
-  revalidatePath(`/matcher/${id}`);
-}
-
 // ---- Kalenderimport (svenskalag.se m.fl.) ----
 export async function importCalendarMatches() {
   await requireRole(["coach"]);
@@ -690,8 +679,8 @@ export async function importCalendarMatches() {
         .filter(Boolean)
         .join(" · ");
       await run(
-        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, cup_name, created_by_role, code, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', ?, 'calendar', ?)",
-        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, await generateMatchCode(), m.uid]
+        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, cup_name, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', 'calendar', ?)",
+        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, m.uid]
       );
       imported++;
     }
@@ -701,15 +690,6 @@ export async function importCalendarMatches() {
 
   revalidatePath("/matcher");
   redirect(`/installningar?kalender=${imported}`);
-}
-
-// ---- Rapportering med matchkod (publik, ingen inloggning) ----
-export async function openReport(_prev: { error?: string } | null, formData: FormData) {
-  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
-  if (code.length !== 6) return { error: "Koden består av 6 siffror." };
-  const match = await get<{ id: number }>("SELECT id FROM matches WHERE code = ?", [code]);
-  if (!match) return { error: "Ingen match hittades med den koden. Kontrollera med tränaren." };
-  redirect(`/rapportera/${code}`);
 }
 
 // ---- Inställningar ----
@@ -725,7 +705,6 @@ export async function updateSettings(formData: FormData) {
     "gk_jersey_color",
     "gk_jersey_text_color",
     "coach_code",
-    "parent_code",
     "season",
   ];
   for (const key of keys) {

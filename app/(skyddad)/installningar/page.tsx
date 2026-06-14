@@ -250,8 +250,7 @@ export default async function SettingsPage({
             <div>
               <h2 className="font-semibold">Inloggningskoder</h2>
               <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
-                Tränarkoden ger full åtkomst. Föräldrakoden ger bara åtkomst till matchstatistiken
-                – dela den i föräldragruppen.
+                Tränarkoden ger full åtkomst och fungerar som reservmetod för inloggning.
               </p>
             </div>
           </div>
@@ -259,10 +258,6 @@ export default async function SettingsPage({
             <div>
               <label className="label" htmlFor="coach_code">Tränarkod</label>
               <input id="coach_code" name="coach_code" defaultValue={settings.coach_code} className="input" />
-            </div>
-            <div>
-              <label className="label" htmlFor="parent_code">Föräldrakod</label>
-              <input id="parent_code" name="parent_code" defaultValue={settings.parent_code} className="input" />
             </div>
           </div>
         </div>

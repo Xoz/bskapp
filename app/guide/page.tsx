@@ -131,8 +131,7 @@ export default function GuidePage() {
         <section id="inloggning">
           <H2>1. Inloggning</H2>
           <P>
-            Det finns två sätt att logga in som tränare: med Google-konto eller med tränarkoden. Föräldrar
-            och rapportörer använder en separat föräldrakod.
+            Det finns två sätt att logga in som tränare: med Google-konto eller med tränarkoden.
           </P>
 
           <H3>Logga in med Google (rekommenderat)</H3>
@@ -151,7 +150,7 @@ export default function GuidePage() {
 
           <H3>Logga in med tränarkod</H3>
           <P>
-            Ange den delade tränarkoden i fältet <strong>Föräldrakod / Tränarkod</strong> på inloggningssidan. Koden hittar du (eller ändrar) under Inställningar.
+            Ange tränarkoden i fältet <strong>Tränarkod</strong> på inloggningssidan. Koden hittar du (eller ändrar) under Inställningar.
           </P>
 
           <H3>Logga ut</H3>
@@ -227,13 +226,9 @@ export default function GuidePage() {
         {/* 4. Liverapportering */}
         <section id="liverapportering">
           <H2>4. Liverapportering</H2>
-          <P>
-            Liverapporteringen är designad för att användas av föräldrar på sidan av planen – men du som tränare kan också öppna den.
-          </P>
-
           <H3>Starta matchen</H3>
           <P>
-            Öppna matchlänken eller gå till <strong>/rapportera</strong>. Tryck <strong>Starta period 1</strong> när matchen drar igång. Matchklockan tickar live och synkas för alla som är inloggade på matchen.
+            Öppna matchlänken och tryck <strong>Starta period 1</strong> när matchen drar igång. Matchklockan tickar live.
           </P>
 
           <H3>Statistik som kan rapporteras</H3>
@@ -241,7 +236,7 @@ export default function GuidePage() {
             <strong>Mål</strong> · Passningar · Skott · Skott på mål · Brytningar · Räddningar (målvakt) · Gula kort · Röda kort · Inbytningar
           </Note>
           <P>
-            Varje händelse sparas med klockslag och period. Flera föräldrar kan rapportera <em>olika</em> statistiktyper samtidigt utan att de krockar – appen fördelar automatiskt ansvar per rapportör.
+            Varje händelse sparas med klockslag och period.
           </P>
 
           <H3>Avsluta matchen</H3>
@@ -402,7 +397,7 @@ export default function GuidePage() {
 
           <H3>Inloggningskoder</H3>
           <P>
-            Tränarkod och föräldrakod kan ändras här. Tränarkoden ger full åtkomst. Föräldrakoden ger åtkomst till matchstatistik och rapporteringsverktyget.
+            Tränarkoden kan ändras här och ger full åtkomst som reservmetod för inloggning.
           </P>
 
           <H3>Tränarinloggning med Google</H3>
@@ -418,33 +413,6 @@ export default function GuidePage() {
           <H3>Spelarprofiler (PIN-koder)</H3>
           <P>
             Se och generera PIN-koder för alla aktiva spelare. Beskrivs utförligare under avsnitt 9 ovan.
-          </P>
-        </section>
-
-        {/* 11. Föräldrar */}
-        <section id="foraldrar">
-          <H2>11. För föräldrar och rapportörer</H2>
-          <P>
-            Föräldrar behöver inte logga in för att rapportera statistik – de använder direktlänken du delar eller föräldrakoden.
-          </P>
-
-          <H3>Rapportera statistik under match</H3>
-          <Step n={1} title="Öppna länken tränaren delar i gruppchatten">
-            Alternativt: gå till startsidan → Förälder och rapportör → ange matchkoden (6 siffror) som visas på matchsidan.
-          </Step>
-          <Step n={2} title="Ange ett namn och välj statistiktyp">
-            Om en annan förälder redan valt en typ visas den gråad med deras namn – välj en annan.
-          </Step>
-          <Step n={3} title="Tryck på spelarens namn när det händer">
-            Händelsen sparas direkt med klockslag. En Ångra-knapp visas för senaste händelsen.
-          </Step>
-          <Tip>
-            Dela gärna upp ansvaret – en förälder räknar mål och passningar, en annan brytningar och skott. Flera kan rapportera samtidigt utan att det krockar.
-          </Tip>
-
-          <H3>Bocka av spelarna efter matchen</H3>
-          <P>
-            Under fliken <strong>Spelade</strong> i rapporteringsverktyget bockar ni av vilka spelare som var med i matchen. Detta används för deltagandespårningen.
           </P>
         </section>
 

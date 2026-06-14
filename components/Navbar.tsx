@@ -12,7 +12,7 @@ export default async function Navbar() {
   ]);
   const role = realRole;
 
-  const homeHref = realRole === "coach" ? "/oversikt" : realRole === "parent" ? "/matcher" : "/";
+  const homeHref = realRole === "coach" ? "/oversikt" : "/";
 
   return (
     <header

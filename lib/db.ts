@@ -219,7 +219,6 @@ async function init(): Promise<void> {
       ["primary_color", "#13306e"],
       ["accent_color", "#ffd23f"],
       ["coach_code", "TRANARE2014"],
-      ["parent_code", "BSK2014"],
       ["season", "2026"],
     ];
     for (const [k, v] of defaults) {
@@ -262,14 +261,6 @@ async function init(): Promise<void> {
     }
   }
 
-  // Backfyll matchkoder
-  const withoutCode = await (await getClient()).execute("SELECT id FROM matches WHERE code IS NULL");
-  for (const row of withoutCode.rows) {
-    await (await getClient()).execute({
-      sql: "UPDATE matches SET code = ? WHERE id = ?",
-      args: [await generateMatchCodeRaw(), row.id as number],
-    });
-  }
 }
 
 let readyPromise: Promise<void> | null = null;
@@ -327,25 +318,6 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function getAllSettings(): Promise<Record<string, string>> {
   const rows = await all<{ key: string; value: string }>("SELECT key, value FROM settings");
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
-}
-
-// ---- Matchkoder ----
-
-async function generateMatchCodeRaw(): Promise<string> {
-  for (let i = 0; i < 50; i++) {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const exists = await (await getClient()).execute({
-      sql: "SELECT 1 FROM matches WHERE code = ?",
-      args: [code],
-    });
-    if (exists.rows.length === 0) return code;
-  }
-  throw new Error("Kunde inte generera en unik matchkod");
-}
-
-export async function generateMatchCode(): Promise<string> {
-  await ready();
-  return generateMatchCodeRaw();
 }
 
 // ---- Aktivitetslogg ----
