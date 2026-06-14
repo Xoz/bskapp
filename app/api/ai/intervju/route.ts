@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callAnthropicChat } from "@/lib/ai";
+import { getPlayers } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
-function buildSystem(playerName: string, playerPosition: string) {
-  return `Du är en fotbollsassistent för BSK F2014, ett tjejlag som spelar 7v7 med formation 1-4-1-1. Spelarna är 11–12 år gamla. Du intervjuar ${playerName} (spelar som ${playerPosition}) på uppdrag av tränaren.
+function buildSystem(
+  playerName: string,
+  playerPosition: string,
+  rosterLines: string
+) {
+  return `Du är en fotbollsassistent för BSK F2014, ett tjejlag som spelar 7v7 med formation 1-4-1-1. Spelarna är 11–12 år gamla. Du intervjuar ${playerName} (angav position: ${playerPosition}) på uppdrag av tränaren.
+
+SPELARREGISTER (aktiva spelare i truppen):
+${rosterLines}
 
 REGLER:
 - Svara ALLTID på svenska.
@@ -14,13 +22,17 @@ REGLER:
 - Ställ EN fråga i taget. Vänta på svar innan du ställer nästa.
 - Efter 5–7 frågor summerar du kort vad spelaren berättat och tackar för intervjun.
 - Använd gärna emojis men överdriva inte.
-- Tilltala alltid spelaren med ${playerName}.
+- Tilltala alltid spelaren med förnamnet.
 
-INTERVJUFLÖDE (följ ungefär denna ordning):
-0. ALLTID FÖRSTA SVARET – BEKRÄFTELSE: Hälsa spelaren välkommen med namn och bekräfta positionen tydligt innan du fortsätter. Exempel: "Hej ${playerName}! 👋 Kul att träffas – jag ser att du spelar som ${playerPosition} i BSK F2014. Toppen! Då kör vi igång. [Fråga 1 här]"
-   Ställ sedan fråga 1 i samma meddelande, så det inte blir onödiga extra rundor.
-1. Hur säsongen känts hittills
-2. Favoritposition och varför (hoppa om spelaren redan nämnde det i bekräftelsesvaret)
+INTERVJUFLÖDE:
+0. ALLTID FÖRSTA SVARET – REGISTERKOLL:
+   a) Sök i SPELARREGISTRET efter ett namn som liknar "${playerName}" (ta hänsyn till stavningsvariationer och att spelaren kanske angav förnamn).
+   b) Om du HITTAR spelaren: bekräfta med namn och registrerad position. T.ex. "Hej ${playerName}! 👋 Jag ser att du är registrerad i truppen som [registrerad position]. Stämmer det? Då kör vi!"
+      Använd den registrerade positionen från registret om den skiljer sig från det spelaren angav.
+   c) Om du INTE hittar spelaren: säg det tydligt. T.ex. "Hej ${playerName}! Jag hittade inte ditt namn i truppen för BSK F2014. Är du säker på att du tillhör det här laget? Stava gärna ditt fullständiga namn så ska jag titta igen."
+      Fortsätt INTE intervjun förrän spelaren har bekräftat sin identitet.
+1. Fråga hur säsongen känts hittills
+2. Favoritposition och varför
 3. Vad är spelaren starkast på tekniskt?
 4. Vad vill spelaren bli bättre på?
 5. Hur känns det i laget – trygg, roligt?
@@ -60,9 +72,14 @@ export async function POST(req: NextRequest) {
     .slice(-30);
 
   try {
+    const players = await getPlayers();
+    const rosterLines = players.length > 0
+      ? players.map((p) => `- ${p.name}${p.position ? ` (${p.position})` : ""}`).join("\n")
+      : "(Inga spelare registrerade ännu)";
+
     const raw = await callAnthropicChat(
       safeMessages,
-      buildSystem(playerName.slice(0, 50), playerPosition.slice(0, 50))
+      buildSystem(playerName.slice(0, 50), playerPosition.slice(0, 50), rosterLines)
     );
     const done = raw.includes("[KLAR]");
     const reply = raw.replace(/\[KLAR\]/g, "").trim();
