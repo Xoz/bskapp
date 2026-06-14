@@ -69,7 +69,7 @@ export async function getActiveCupMatches(today: string, yesterday: string): Pro
          GROUP BY cup_name
          HAVING MIN(date) <= ? AND MAX(date) >= ?
        )
-     ORDER BY cup_name, date, start_time, id`,
+     ORDER BY cup_name, date DESC, start_time DESC, id DESC`,
     [today, yesterday]
   );
 }
@@ -371,13 +371,25 @@ export async function getMatchesByDate(date: string): Promise<Match[]> {
 }
 
 export async function getAllTimeReporterHighscore(): Promise<{ name: string; events: number }[]> {
-  // Gruppera skiftlägesokänsligt så samma rapportör inte splittras på casing
+  // Kombinerar två källor för att täcka in hela historiken:
+  // 1. Händelser med reporter-kolonnen satt (sedan per-rapportör-loggning lades till)
+  // 2. Äldre händelser som saknar reporter – räknas via match_reporters-tabellen
   return all<{ name: string; events: number }>(
-    `SELECT MIN(mr.name) AS name, COUNT(me.id) AS events
-     FROM match_reporters mr
-     JOIN match_events me ON me.match_id = mr.match_id
-       AND me.stat_id IN (SELECT value FROM json_each(mr.stats))
-     GROUP BY LOWER(mr.name)
+    `SELECT MIN(name) AS name, SUM(events) AS events FROM (
+       SELECT MIN(reporter) AS name, COUNT(*) AS events
+       FROM match_events
+       WHERE reporter IS NOT NULL AND reporter != ''
+         AND stat_id != 'opponent_goal'
+       GROUP BY LOWER(reporter)
+       UNION ALL
+       SELECT MIN(mr.name) AS name, COUNT(me.id) AS events
+       FROM match_reporters mr
+       JOIN match_events me ON me.match_id = mr.match_id
+         AND me.reporter IS NULL
+         AND me.stat_id IN (SELECT value FROM json_each(mr.stats))
+       GROUP BY LOWER(mr.name)
+     )
+     GROUP BY LOWER(name)
      ORDER BY events DESC`
   );
 }

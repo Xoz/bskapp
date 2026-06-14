@@ -9,7 +9,9 @@ export const dynamic = "force-dynamic";
 // Ett matchkort i rapporteringslistan. Dagens öppna matcher lyfts fram (grön),
 // avslutade och matcher på andra dagar visas dämpat.
 function ReportMatchCard({ match, today }: { match: Match; today: string }) {
-  const finished = !!match.finished;
+  const isFuture = match.date > today;
+  // Framtida matcher visas aldrig som avslutade – oavsett vad DB säger.
+  const finished = !!match.finished && !isFuture;
   const isToday = match.date === today;
 
   if (finished) {
