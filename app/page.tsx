@@ -32,15 +32,16 @@ export default async function LandingPage() {
         {/* Logotyp + lagnamn */}
         <div className="text-center">
           <div
-            className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-3xl font-bold"
-            style={{
-              background: "var(--primary)",
-              color: "var(--primary-deep)",
-              fontFamily: "var(--font-display)",
-              borderRadius: "12px",
-            }}
+            className="mx-auto mb-5 flex h-16 w-16 items-center justify-center"
+            style={{ borderRadius: "16px", background: "#0a0b0d", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            {settings.club_name?.slice(0, 1) || "B"}
+            <span
+              className="text-2xl font-bold tracking-tight"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}
+            >
+              <span style={{ color: "var(--primary)" }}>+</span>
+              <span style={{ color: "#fff" }}>90</span>
+            </span>
           </div>
           <h1
             className="text-3xl font-semibold tracking-tight"
