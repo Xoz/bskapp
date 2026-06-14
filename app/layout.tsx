@@ -1,7 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+
+// Mobil först: viewport-fit=cover ger oss env(safe-area-inset-*) för notch och
+// home-indikator. Mörk theme-color så statusbaren smälter ihop med nav-baren.
+// Vi behåller användarens möjlighet att zooma (tillgänglighet).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0b0d",
+  colorScheme: "dark",
+};
 
 // Designsystem "Dark Mono Dashboard": Syne för display, DM Mono för allt annat
 const display = Syne({
@@ -21,6 +33,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${settings.team_name} – Spelarutveckling`,
     description: `Spelarutveckling och matchstatistik för ${settings.team_name}, ${settings.club_name}`,
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      title: settings.team_name || "BSK",
+      statusBarStyle: "black-translucent",
+    },
+    icons: { apple: "/icon.svg" },
   };
 }
 
@@ -47,6 +66,7 @@ export default async function RootLayout({
           } as React.CSSProperties
         }
       >
+        <ServiceWorkerRegistration />
         {children}
       </body>
     </html>

@@ -76,7 +76,13 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div
+        className="max-w-2xl mx-auto px-4 space-y-6"
+        style={{
+          paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.5rem))",
+          paddingBottom: "max(1.5rem, calc(env(safe-area-inset-bottom) + 0.5rem))",
+        }}
+      >
         {/* Klubbrad */}
         <p className="eyebrow text-center" style={{ color: "var(--ink-faint)" }}>
           {settings.team_name} · {settings.club_name}

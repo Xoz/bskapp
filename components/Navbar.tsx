@@ -20,7 +20,11 @@ export default async function Navbar() {
   return (
     <header
       className="sticky top-0 z-50"
-      style={{ background: "var(--bg-nav)", borderBottom: "1px solid var(--line)" }}
+      style={{
+        background: "var(--bg-nav)",
+        borderBottom: "1px solid var(--line)",
+        paddingTop: "env(safe-area-inset-top)",
+      }}
     >
       {/* Huvudrad */}
       <div className="flex items-center h-14 px-4 gap-3">

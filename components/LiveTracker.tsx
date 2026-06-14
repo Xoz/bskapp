@@ -48,6 +48,9 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   const [showHalftime, setShowHalftime] = useState(false);
   const prevPeriodRef = useRef(initial.period);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const offlineQueue = useRef<LiveAction[]>([]);
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
   const reclaimedRef = useRef(false);
   const autoFinishedRef = useRef(false);
   // Sortering "mest aktiva först" – frusen medan man trycker så knapparna inte hoppar
@@ -102,6 +105,21 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     setFetchedAt(Date.now());
   }, []);
 
+  const saveOfflineQueue = useCallback(
+    (actions: LiveAction[]) => {
+      offlineQueue.current = actions;
+      setQueuedCount(actions.length);
+      try {
+        if (actions.length > 0) {
+          localStorage.setItem(`live-offline-${code}`, JSON.stringify(actions));
+        } else {
+          localStorage.removeItem(`live-offline-${code}`);
+        }
+      } catch {}
+    },
+    [code]
+  );
+
   const post = useCallback(
     (action: LiveAction) => {
       setPending((p) => p + 1);
@@ -114,12 +132,59 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
           });
           if (res.ok) applyState((await res.json()) as LiveState);
         })
-        .catch(() => {})
+        .catch((err: unknown) => {
+          // Nätverksfel (TypeError: Failed to fetch) → lägg i offline-kö
+          if (err instanceof TypeError) {
+            saveOfflineQueue([...offlineQueue.current, action]);
+          }
+        })
         .finally(() => setPending((p) => p - 1));
       return queue.current;
     },
-    [code, applyState]
+    [code, applyState, saveOfflineQueue]
   );
+
+  const flushOfflineQueue = useCallback(() => {
+    const q = [...offlineQueue.current];
+    if (q.length === 0) return;
+    saveOfflineQueue([]);
+    q.forEach((action) => post(action));
+  }, [post, saveOfflineQueue]);
+
+  // Läs in offline-kö från föregående session
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`live-offline-${code}`);
+      if (raw) {
+        const q = JSON.parse(raw) as LiveAction[];
+        if (Array.isArray(q) && q.length > 0) {
+          offlineQueue.current = q;
+          setQueuedCount(q.length);
+        }
+      }
+    } catch {}
+    setIsOnline(navigator.onLine);
+  }, [code]);
+
+  // Flusha offline-kön vid uppstart om vi redan har signal
+  useEffect(() => {
+    if (navigator.onLine) flushOfflineQueue();
+  }, [flushOfflineQueue]);
+
+  // Lyssna på online/offline-händelser
+  useEffect(() => {
+    const onOnline = () => {
+      setIsOnline(true);
+      flushOfflineQueue();
+    };
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [flushOfflineQueue]);
 
   useEffect(() => {
     const t = setInterval(async () => {
@@ -235,7 +300,10 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
     return (
       <div className="max-w-md mx-auto pb-10">
         {/* Header */}
-        <div className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6">
+        <div
+          className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6"
+          style={{ paddingTop: "max(1.25rem, calc(env(safe-area-inset-top) + 0.6rem))" }}
+        >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="eyebrow text-white/45">
@@ -367,7 +435,10 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
   return (
     <div className="max-w-md mx-auto pb-32">
       {/* Klocka och ställning */}
-      <div className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6 sticky top-0 z-20" style={{ borderTop: "none" }}>
+      <div
+        className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6 sticky top-0 z-20"
+        style={{ borderTop: "none", paddingTop: "max(1.25rem, calc(env(safe-area-inset-top) + 0.6rem))" }}
+      >
         <div className="flex items-center justify-between gap-3 relative">
           <div className="min-w-0">
             <p className="eyebrow text-white/45">
@@ -424,7 +495,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
                     if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
                       post({ type: "clock", op: "next_period" });
                   }}
-                  className="text-xs font-semibold rounded-full px-3.5 py-1.5"
+                  className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
                   style={{
                     fontFamily: "var(--font-display)",
                     background: "rgba(255,255,255,0.1)",
@@ -467,7 +538,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             <button
               type="button"
               onClick={() => post({ type: "opponent_goal" })}
-              className="text-xs font-semibold rounded-full px-3.5 py-1.5"
+              className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
               style={{
                 fontFamily: "var(--font-display)",
                 background: "rgba(255,255,255,0.1)",
@@ -477,6 +548,18 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             >
               +1 Mål motståndare
             </button>
+          </div>
+        )}
+
+        {!isOnline && (
+          <div
+            className="mt-3 rounded-lg px-3 py-2 text-xs text-center"
+            style={{ background: "rgba(248,113,113,0.18)", color: "var(--danger)" }}
+          >
+            Ingen signal
+            {queuedCount > 0
+              ? ` · ${queuedCount} händelse${queuedCount === 1 ? "" : "r"} i kö – skickas automatiskt`
+              : " – händelser sparas och skickas när du är online igen"}
           </div>
         )}
       </div>
@@ -499,13 +582,13 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
               <span className="font-semibold" style={{ color: "var(--ink-soft)" }}>{myName}</span>
             </p>
           )}
-          <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center">
+          <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center no-scrollbar">
             {[...selected, ...(isCoach ? [...CARD_IDS, PLAYED_TAB] : [])].map((statId) => (
               <button
                 key={statId}
                 type="button"
                 onClick={() => setActiveStat(statId)}
-                className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all"
+                className="shrink-0 inline-flex items-center rounded-full px-4 py-2.5 min-h-[44px] text-[0.95rem] font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
                   background: activeStat === statId ? "var(--primary)" : "var(--bg2)",
@@ -519,7 +602,7 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             <button
               type="button"
               onClick={() => setSetupOpen(true)}
-              className="shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold"
+              className="shrink-0 inline-flex items-center rounded-full px-4 py-2.5 min-h-[44px] text-[0.95rem] font-semibold"
               style={{
                 fontFamily: "var(--font-display)",
                 background: "transparent",
@@ -547,24 +630,24 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
                   key={p.id}
                   type="button"
                   onClick={() => tap(p.id)}
-                  className="card card-hover relative flex items-center gap-2 p-2.5 text-left active:scale-[0.97] transition-transform"
+                  className="card card-hover relative flex items-center gap-2.5 p-3 min-h-[68px] text-left active:scale-[0.97] transition-transform"
                   style={
                     flash === p.id
                       ? { borderColor: "var(--primary)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--primary), transparent 75%)" }
                       : undefined
                   }
                 >
-                  <Avatar name={p.name} jersey={p.jersey_number} size={32} />
+                  <Avatar name={p.name} jersey={p.jersey_number} size={40} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-[0.85rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+                    <span className="block truncate font-semibold text-[0.95rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                       {firstName(p.name)}
                     </span>
-                    <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
+                    <span className="block text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
                       {p.jersey_number != null ? `#${p.jersey_number}` : " "}
                     </span>
                   </span>
                   <span
-                    className="stat-number text-base min-w-8 h-8 px-1 rounded-lg flex items-center justify-center"
+                    className="stat-number text-lg min-w-11 h-11 px-1 rounded-xl flex items-center justify-center"
                     style={{
                       background: (isPlayedTab ? playedOn : count > 0)
                         ? "var(--primary)"
@@ -686,9 +769,9 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
       )}
 
       {lastEvent && (
-        <div className="fixed bottom-0 inset-x-0 z-30">
+        <div className="fixed bottom-0 inset-x-0 z-30" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="max-w-md mx-auto m-3 card flex items-center gap-3 p-3 shadow-lg" style={{ boxShadow: "var(--shadow-lift)" }}>
-            <span className="text-xs flex-1 truncate" style={{ color: "var(--ink-soft)" }}>
+            <span className="text-[0.8rem] flex-1 truncate" style={{ color: "var(--ink-soft)" }}>
               Senast:{" "}
               <span className="font-semibold" style={{ color: "var(--ink)" }}>
                 {lastEvent.player_name ? firstName(lastEvent.player_name) : "Motståndaren"} ·{" "}
@@ -699,11 +782,20 @@ export default function LiveTracker({ code, initial, isCoach = false }: { code: 
             </span>
             <span
               className="text-[0.65rem] uppercase tracking-wider"
-              style={{ fontFamily: "var(--font-display)", color: pending > 0 ? "var(--warn)" : "var(--ok)" }}
+              style={{
+                fontFamily: "var(--font-display)",
+                color: !isOnline ? "var(--danger)" : pending > 0 ? "var(--warn)" : "var(--ok)",
+              }}
             >
-              {pending > 0 ? "Sparar…" : "Sparat"}
+              {!isOnline
+                ? queuedCount > 0
+                  ? `Offline · ${queuedCount} i kö`
+                  : "Offline"
+                : pending > 0
+                  ? "Sparar…"
+                  : "Sparat"}
             </span>
-            <button type="button" onClick={() => post({ type: "undo" })} className="btn-secondary py-1.5 px-3.5 text-sm">
+            <button type="button" onClick={() => post({ type: "undo" })} className="btn-secondary px-5 text-sm shrink-0">
               Ångra
             </button>
           </div>
@@ -785,13 +877,14 @@ function SetupCard({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="T.ex. Annas mamma"
-          className="w-full px-3 py-2.5 rounded-lg text-sm mb-5"
+          className="w-full px-3.5 py-3 rounded-lg mb-5"
           style={{
             background: "var(--bg2)",
             border: "1.5px solid var(--line-strong)",
             color: "var(--ink)",
             outline: "none",
             fontFamily: "inherit",
+            fontSize: "16px",
           }}
         />
 

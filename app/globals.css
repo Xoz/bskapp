@@ -95,6 +95,57 @@ h3,
   letter-spacing: -0.5px;
 }
 
+/* ---------- Mobil & touch (sidlinjen är vår viktigaste yta) ---------- */
+
+/* Inga råa grå/blå tap-flashar – vi har egna :active-states */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Snabbtryck utan 300 ms fördröjning och utan dubbeltryck-zoom på allt
+   som man trycker på. Avgörande när man räknar passningar i realtid. */
+button,
+a,
+[role="button"],
+label,
+summary,
+select {
+  touch-action: manipulation;
+}
+
+/* Förhindra att "dra-för-att-uppdatera" laddar om mitt i en live-rapportering */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Säkra ytor runt notch och home-indikator */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+.inset-safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Dölj scrollbar men behåll scroll (flikrader, tabeller) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* OBS: mobilöverstyrningar för .input/.btn/.nav-link ligger längst ned i filen
+   så att de vinner på källordning – media queries höjer inte specificiteten. */
+
 /* ---------- Ytor ---------- */
 
 .card {
@@ -433,4 +484,29 @@ table.data-table tbody tr:hover {
 }
 .rise {
   animation: rise 0.25s ease both;
+}
+
+/* ---------- Mobilöverstyrningar (sist i filen → vinner på källordning) ---------- */
+@media (max-width: 640px) {
+  /* iOS zoomar in när man fokuserar ett fält med < 16px text. På mobil höjer vi
+     därför formtext till 16px – designens täta 12px behålls på desktop. */
+  .input,
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  /* Bekväma tumytor: minst ~44px höjd på primära kontroller på mobil */
+  .btn-primary,
+  .btn-accent,
+  .btn-secondary {
+    min-height: 44px;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+  }
+  /* Mobilens navrad: större träffyta och något större text */
+  .nav-link {
+    padding: 0.7rem 0.85rem;
+    font-size: 0.75rem;
+  }
 }
