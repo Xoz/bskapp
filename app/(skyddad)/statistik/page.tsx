@@ -10,7 +10,6 @@ import { IconPitch } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
-// Resultat (V/O/F) för en match med känt resultat
 function outcome(our: number | null, opp: number | null) {
   if (our == null || opp == null) return null;
   if (our > opp) return { letter: "V", label: "Vinst", color: "var(--ok)", bg: "var(--ok-bg)" };
@@ -25,7 +24,6 @@ export default async function StatsPage() {
   const [stats, teamMatches] = await Promise.all([getSeasonStats(), getTeamMatchStats()]);
   const played = teamMatches.length;
 
-  // Lagtotaler över spelade matcher
   const totals = STAT_IDS.reduce((acc, id) => {
     acc[id] = teamMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[id] ?? 0), 0);
     return acc;
@@ -41,22 +39,115 @@ export default async function StatsPage() {
     else if (o?.letter === "F") losses++;
   }
 
-  // KPI-kort. Ackvärden över hela säsongen, små och avläsbara på en blick.
-  const kpis: { label: string; value: string | number; color?: string }[] = [
-    { label: "Matcher", value: played },
-    { label: "V – O – F", value: `${wins}–${draws}–${losses}` },
-    { label: "Mål gjorda", value: goalsFor, color: "var(--primary)" },
-    { label: "Insläppta", value: goalsAgainst, color: "var(--danger)" },
+  // Trendvindor: senaste 3 resp. 6 matcher (sorterade nyast först)
+  const last3 = teamMatches.slice(0, Math.min(3, played));
+  const last6 = teamMatches.slice(0, Math.min(6, played));
+  const n3 = last3.length;
+  const n6 = last6.length;
+  // Trend visas bara när 3m och 6m faktiskt skiljer sig (≥4 matcher)
+  const hasTrend = n6 > n3;
+
+  function wdlStr(ms: typeof teamMatches) {
+    let w = 0, d = 0, l = 0;
+    for (const m of ms) {
+      const o = outcome(m.our_score, m.opponent_score);
+      if (o?.letter === "V") w++; else if (o?.letter === "O") d++; else if (o?.letter === "F") l++;
+    }
+    return `${w}–${d}–${l}`;
+  }
+
+  function mAvg(ms: typeof teamMatches, get: (m: typeof teamMatches[0]) => number) {
+    return ms.length === 0 ? null : ms.reduce((s, m) => s + get(m), 0) / ms.length;
+  }
+
+  const f1 = (n: number | null) => (n == null ? "–" : n.toFixed(1));
+  const fsgn = (n: number | null) => n == null ? "–" : (n >= 0 ? "+" : "") + n.toFixed(1);
+  const pm = (n: number) => (played > 0 ? (n / played).toFixed(1) : "–");
+
+  type TrendInfo = { sym: "↑" | "↓" | "→"; good: boolean };
+  function calcTrend(a3: number | null, a6: number | null, lowerIsBetter = false): TrendInfo | null {
+    if (!hasTrend || a3 == null || a6 == null) return null;
+    const d = a3 - a6;
+    if (Math.abs(d) < 0.05) return { sym: "→", good: true };
+    const up = d > 0;
+    return { sym: up ? "↑" : "↓", good: lowerIsBetter ? !up : up };
+  }
+
+  function sid(id: string) {
+    return (m: typeof teamMatches[0]) => ((m as unknown as Record<string, number>)[id] ?? 0);
+  }
+
+  interface KpiCard {
+    label: string;
+    value: string;
+    unit?: string;
+    color?: string;
+    sub?: string;
+    trend?: TrendInfo | null;
+  }
+
+  const gfA3 = mAvg(last3, m => m.our_score ?? 0);
+  const gfA6 = mAvg(last6, m => m.our_score ?? 0);
+  const gaA3 = mAvg(last3, m => m.opponent_score ?? 0);
+  const gaA6 = mAvg(last6, m => m.opponent_score ?? 0);
+  const dfA3 = gfA3 != null && gaA3 != null ? gfA3 - gaA3 : null;
+  const dfA6 = gfA6 != null && gaA6 != null ? gfA6 - gaA6 : null;
+
+  function numKpi(label: string, id: string, color?: string, lowerIsBetter = false): KpiCard {
+    const a3 = mAvg(last3, sid(id));
+    const a6 = mAvg(last6, sid(id));
+    return {
+      label,
+      value: pm(totals[id]),
+      unit: "/ m",
+      color,
+      sub: n3 >= 1 ? (hasTrend ? `3m ${f1(a3)} · 6m ${f1(a6)}` : `3m ${f1(a3)}`) : undefined,
+      trend: calcTrend(a3, a6, lowerIsBetter),
+    };
+  }
+
+  const diffPm = played > 0 ? diff / played : 0;
+  const kpis: KpiCard[] = [
+    {
+      label: "Matcher",
+      value: String(played),
+    },
+    {
+      label: "V – O – F",
+      value: `${wins}–${draws}–${losses}`,
+      sub: hasTrend
+        ? `3m: ${wdlStr(last3)} · 6m: ${wdlStr(last6)}`
+        : n3 > 0 ? `3m: ${wdlStr(last3)}` : undefined,
+    },
+    {
+      label: "Mål gjorda",
+      value: pm(goalsFor),
+      unit: "/ m",
+      color: "var(--primary)",
+      sub: n3 >= 1 ? (hasTrend ? `3m ${f1(gfA3)} · 6m ${f1(gfA6)}` : `3m ${f1(gfA3)}`) : undefined,
+      trend: calcTrend(gfA3, gfA6),
+    },
+    {
+      label: "Insläppta",
+      value: pm(goalsAgainst),
+      unit: "/ m",
+      color: "var(--danger)",
+      sub: n3 >= 1 ? (hasTrend ? `3m ${f1(gaA3)} · 6m ${f1(gaA6)}` : `3m ${f1(gaA3)}`) : undefined,
+      trend: calcTrend(gaA3, gaA6, true),
+    },
     {
       label: "Målskillnad",
-      value: diff > 0 ? `+${diff}` : `${diff}`,
+      value: diffPm >= 0 ? `+${diffPm.toFixed(1)}` : diffPm.toFixed(1),
+      unit: "/ m",
       color: diff > 0 ? "var(--ok)" : diff < 0 ? "var(--danger)" : "var(--ink)",
+      sub: n3 >= 1 ? (hasTrend ? `3m ${fsgn(dfA3)} · 6m ${fsgn(dfA6)}` : `3m ${fsgn(dfA3)}`) : undefined,
+      trend: calcTrend(dfA3, dfA6),
     },
-    { label: "Assist", value: totals.assists },
-    { label: "Skott på mål", value: totals.shots_on_target },
-    { label: "Passningar", value: totals.passes_completed },
-    { label: "Brytningar", value: totals.interceptions },
-    { label: "Räddningar", value: totals.saves },
+    numKpi("Assist", "assists"),
+    numKpi("Skott på mål", "shots_on_target"),
+    numKpi("Passningar", "passes_completed"),
+    numKpi("Brytningar", "interceptions"),
+    numKpi("Räddningar", "saves"),
   ];
 
   const average =
@@ -96,29 +187,64 @@ export default async function StatsPage() {
         </div>
       ) : (
         <>
-          {/* KPI-kort */}
+          {/* KPI-kort: per match-snitt + trendrad */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {kpis.map((k) => (
               <div key={k.label} className="card p-4">
                 <p className="eyebrow truncate">{k.label}</p>
-                <p
-                  className="stat-number text-[1.7rem] leading-none mt-1.5 tabular-nums"
-                  style={{ color: k.color ?? "var(--ink)" }}
-                >
-                  {k.value}
-                </p>
+                <div className="flex items-baseline gap-1 mt-1.5">
+                  <p
+                    className="stat-number text-[1.65rem] leading-none tabular-nums"
+                    style={{ color: k.color ?? "var(--ink)" }}
+                  >
+                    {k.value}
+                  </p>
+                  {k.unit && (
+                    <span className="text-[0.58rem] font-medium" style={{ color: "var(--ink-faint)" }}>
+                      {k.unit}
+                    </span>
+                  )}
+                </div>
+                {(k.sub || k.trend) && (
+                  <p
+                    className="text-[0.62rem] mt-1.5 tabular-nums leading-snug"
+                    style={{ color: "var(--ink-faint)" }}
+                  >
+                    {k.sub}
+                    {k.trend && (
+                      <span style={{ color: k.trend.good ? "var(--ok)" : "var(--danger)" }}>
+                        {" "}{k.trend.sym}
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
             ))}
           </div>
 
-          {/* Deltagande */}
-          <div className="card p-6 md:p-7">
-            <h2 className="font-semibold mb-1">Spelade matcher per spelare</h2>
-            <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
-              Röda staplar ligger under 75 % av lagets snitt – prioritera dem i kommande matcher.
-            </p>
-            <ParticipationChart data={chartData} average={average} />
-          </div>
+          {/* Deltagande – kollapsbart för att spara utrymme */}
+          <details className="card overflow-hidden">
+            <summary
+              className="px-6 py-4 flex items-center justify-between cursor-pointer select-none"
+              style={{ listStyle: "none" }}
+            >
+              <div>
+                <h2 className="font-semibold">Spelade matcher per spelare</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                  Röda staplar under 75 % av lagets snitt – prioritera i kommande matcher.
+                </p>
+              </div>
+              <span className="ml-4 text-xs shrink-0" style={{ color: "var(--ink-soft)" }}>
+                Visa ▾
+              </span>
+            </summary>
+            <div
+              className="px-6 pb-6 pt-2"
+              style={{ borderTop: "1px solid var(--line)" }}
+            >
+              <ParticipationChart data={chartData} average={average} />
+            </div>
+          </details>
 
           {/* Match för match */}
           <div className="card overflow-hidden">

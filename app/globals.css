@@ -510,3 +510,11 @@ table.data-table tbody tr:hover {
     font-size: 0.75rem;
   }
 }
+
+/* Dölj WebKit-triangeln på kollapserbara kort */
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  content: "";
+}
