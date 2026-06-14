@@ -11,7 +11,7 @@ import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
 import ManualEventForm from "@/components/ManualEventForm";
 import EventEditor from "@/components/EventEditor";
-import { IconArrowLeft } from "@/components/Icons";
+import { IconArrowLeft, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -113,39 +113,44 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           .sort((a, b) => b[1] - a[1]);
 
         return (
-          <div className="card p-5 md:p-6">
-            <h2 className="font-semibold mb-4">Matchsammanställning</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
-              {totals.map((f) => (
-                <div key={f.id} className="text-center rounded-xl py-3 px-2" style={{ background: "var(--bg2)" }}>
-                  <p className="stat-number text-2xl">{f.total}</p>
-                  <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
-                </div>
-              ))}
-            </div>
-            {reporterRanking.length > 0 && (
-              <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>Bästa rapportör</p>
-                <div className="flex flex-wrap gap-2">
-                  {reporterRanking.map(([name, count], i) => (
-                    <span
-                      key={name}
-                      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
-                      style={{
-                        background: i === 0 ? "var(--primary-soft)" : "var(--bg2)",
-                        color: i === 0 ? "var(--primary)" : "var(--ink-soft)",
-                        fontWeight: i === 0 ? 600 : 400,
-                      }}
-                    >
-                      {i === 0 && <span>🏆</span>}
-                      {name}
-                      <span className="stat-number text-xs opacity-70">{count}</span>
-                    </span>
-                  ))}
-                </div>
+          <details className="card overflow-hidden">
+            <summary className="p-5 md:p-6 flex items-center justify-between cursor-pointer list-none select-none">
+              <h2 className="font-semibold">Matchsammanställning</h2>
+              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+            </summary>
+            <div className="px-5 md:px-6 pb-5 md:pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+              <div className="grid grid-cols-3 sm:grid-cols-7 gap-3 pt-5">
+                {totals.map((f) => (
+                  <div key={f.id} className="text-center rounded-xl py-3 px-2" style={{ background: "var(--bg2)" }}>
+                    <p className="stat-number text-2xl">{f.total}</p>
+                    <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+              {reporterRanking.length > 0 && (
+                <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>Bästa rapportör</p>
+                  <div className="flex flex-wrap gap-2">
+                    {reporterRanking.map(([name, count], i) => (
+                      <span
+                        key={name}
+                        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+                        style={{
+                          background: i === 0 ? "var(--primary-soft)" : "var(--bg2)",
+                          color: i === 0 ? "var(--primary)" : "var(--ink-soft)",
+                          fontWeight: i === 0 ? 600 : 400,
+                        }}
+                      >
+                        {i === 0 && <span>🏆</span>}
+                        {name}
+                        <span className="stat-number text-xs opacity-70">{count}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
         );
       })()}
 
@@ -174,37 +179,60 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </Link>
 
           {events.length > 0 && (
-            <div className="card p-6">
-              <h2 className="font-semibold">Matchflöde</h2>
-              <p className="text-xs mt-1 mb-5" style={{ color: "var(--ink-faint)" }}>
-                Live-rapporterade händelser – tiderna gör det lätt att hitta rätt i matchvideon.
-              </p>
-              <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
-            </div>
+            <details className="card overflow-hidden">
+              <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
+                <h2 className="font-semibold">Matchflöde</h2>
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+              </summary>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+                <p className="text-xs mt-4 mb-5" style={{ color: "var(--ink-faint)" }}>
+                  Live-rapporterade händelser – tiderna gör det lätt att hitta rätt i matchvideon.
+                </p>
+                <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
+              </div>
+            </details>
           )}
 
           {events.length > 0 && (
-            <div className="card p-6">
-              <div className="flex items-baseline justify-between mb-1">
-                <h2 className="font-semibold">Rätta statistik</h2>
-                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{events.length} händelser</span>
+            <details className="card overflow-hidden">
+              <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-semibold">Rätta statistik</h2>
+                  <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{events.length} händelser</span>
+                </div>
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+              </summary>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+                <p className="text-xs mt-4 mb-4" style={{ color: "var(--ink-faint)" }}>
+                  Ta bort felaktiga rapporteringar – matchflöde och spelarpoäng justeras automatiskt.
+                </p>
+                <EventEditor events={events} matchId={match.id} reporters={reporters} />
               </div>
-              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
-                Ta bort felaktiga rapporteringar – matchflöde och spelarpoäng justeras automatiskt.
-              </p>
-              <EventEditor events={events} matchId={match.id} reporters={reporters} />
-            </div>
+            </details>
           )}
 
-          <div className="card p-6 md:p-7">
-            <h2 className="font-semibold mb-1">Lägg till händelse</h2>
-            <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
-              Komplettera statistik vid videogenomgång – händelsen sparas i matchflödet.
-            </p>
-            <ManualEventForm matchId={match.id} players={players} periods={match.periods} />
-          </div>
+          <details className="card overflow-hidden">
+            <summary className="p-6 md:p-7 flex items-center justify-between cursor-pointer list-none select-none">
+              <h2 className="font-semibold">Lägg till händelse</h2>
+              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+            </summary>
+            <div className="px-6 md:px-7 pb-6 md:pb-7" style={{ borderTop: "1px solid var(--line)" }}>
+              <p className="text-xs mt-4 mb-5" style={{ color: "var(--ink-faint)" }}>
+                Komplettera statistik vid videogenomgång – händelsen sparas i matchflödet.
+              </p>
+              <ManualEventForm matchId={match.id} players={players} periods={match.periods} />
+            </div>
+          </details>
 
-          <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
+          <details>
+            <summary className="card p-5 md:p-6 flex items-center justify-between cursor-pointer list-none select-none">
+              <h2 className="font-semibold">Matchstatistik</h2>
+              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+            </summary>
+            <div className="space-y-4 mt-4">
+              <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
+            </div>
+          </details>
         </>
       )}
     </div>
