@@ -423,6 +423,28 @@ export async function updateCup(formData: FormData) {
   redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=1`);
 }
 
+export async function deleteCupMatch(id: number, cupName: string) {
+  await requireRole(["coach"]);
+  if (!id) return;
+  await batch([
+    { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] },
+    { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
+  ]);
+  revalidatePath("/matcher");
+
+  // Finns inga matcher kvar i cupen? Tillbaka till matchlistan.
+  const remaining = await get<{ c: number }>(
+    "SELECT COUNT(*) AS c FROM matches WHERE cup_name = ?",
+    [cupName]
+  );
+  if (!remaining || Number(remaining.c) === 0) redirect("/matcher");
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
+}
+
 export async function addCupPlayoffMatch(formData: FormData) {
   await requireRole(["coach"]);
   const cupName = String(formData.get("cup_name") ?? "").trim();

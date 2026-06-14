@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatchesByCup } from "@/lib/queries";
-import { updateCup, addCupPlayoffMatch } from "@/lib/actions";
+import { updateCup, addCupPlayoffMatch, deleteCupMatch } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft, IconCheck, IconPlus } from "@/components/Icons";
 
@@ -89,9 +89,20 @@ export default async function CupEditorPage({
             {groupMatches.map((m, i) => (
               <div key={m.id} className="px-5 md:px-6 py-4 space-y-3">
                 <input type="hidden" name={`phase_${m.id}`} value="group" />
-                <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
-                  Match {i + 1}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
+                    Match {i + 1}
+                  </p>
+                  <button
+                    type="submit"
+                    formAction={deleteCupMatch.bind(null, m.id, cupName)}
+                    formNoValidate
+                    className="text-xs px-2 py-0.5 rounded transition-colors hover:underline"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    Ta bort
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="label" htmlFor={`opponent_${m.id}`}>Motståndare</label>
@@ -154,6 +165,20 @@ export default async function CupEditorPage({
                   style={{ borderTop: i > 0 ? "1px solid var(--line)" : undefined }}
                 >
                   <input type="hidden" name={`phase_${m.id}`} value="playoff" />
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
+                      Slutspelsmatch {i + 1}
+                    </p>
+                    <button
+                      type="submit"
+                      formAction={deleteCupMatch.bind(null, m.id, cupName)}
+                      formNoValidate
+                      className="text-xs px-2 py-0.5 rounded transition-colors hover:underline"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      Ta bort
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="label" htmlFor={`po_opponent_${m.id}`}>Motståndare</label>
