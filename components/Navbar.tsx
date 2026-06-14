@@ -15,7 +15,7 @@ export default async function Navbar() {
   // Vad navlänkarna ska visa följer visningsrollen ("player" → utloggad meny)
   const role = view === "player" ? null : view;
 
-  const homeHref = view === "coach" ? "/" : view === "parent" ? "/matcher" : "/rapportera";
+  const homeHref = view === "coach" ? "/oversikt" : view === "parent" ? "/matcher" : "/";
 
   return (
     <header

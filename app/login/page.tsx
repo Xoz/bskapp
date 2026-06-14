@@ -7,7 +7,7 @@ import PitchLines from "@/components/PitchLines";
 
 export default async function LoginPage() {
   const role = await getRole();
-  if (role === "coach") redirect("/");
+  if (role === "coach") redirect("/oversikt");
   if (role === "parent") redirect("/matcher");
 
   const settings = await getAllSettings();

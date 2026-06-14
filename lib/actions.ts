@@ -35,7 +35,7 @@ export async function login(_prev: { error?: string } | null, formData: FormData
     path: "/",
   });
   store.delete("bsk_view");
-  redirect(role === "coach" ? "/" : "/matcher");
+  redirect(role === "coach" ? "/oversikt" : "/matcher");
 }
 
 export async function logout() {
@@ -63,7 +63,7 @@ export async function setViewAs(formData: FormData) {
       redirect(target === "player" ? "/rapportera" : "/matcher");
     }
     store.delete("bsk_view");
-    redirect("/");
+    redirect("/oversikt");
   }
 
   if (target === "player") redirect("/rapportera");

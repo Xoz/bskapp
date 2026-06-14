@@ -13,7 +13,7 @@ import {
 } from "@/components/Icons";
 
 const COACH_LINKS = [
-  { href: "/", label: "Översikt", Icon: IconOverview },
+  { href: "/oversikt", label: "Översikt", Icon: IconOverview },
   { href: "/spelare", label: "Spelare", Icon: IconPlayers },
   { href: "/matcher", label: "Matcher", Icon: IconPitch },
   { href: "/statistik", label: "Statistik", Icon: IconChart },
@@ -34,7 +34,7 @@ export default function NavLinks({ role, horizontal }: { role: Role | null; hori
   return (
     <nav className={horizontal ? "flex gap-1" : "flex flex-col gap-1"}>
       {links.map(({ href, label, Icon }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        const active = pathname === href || (href !== "/oversikt" && href !== "/" && pathname.startsWith(href));
         return (
           <Link
             key={href}

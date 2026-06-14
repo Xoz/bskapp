@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!role) {
     // Tränare som förhandsvisar som spelare ska till publika vyn, inte login
     const real = await getRealRole();
-    redirect(real === "coach" ? "/rapportera" : "/login");
+    redirect(real === "coach" ? "/oversikt" : "/");
   }
 
   return (
