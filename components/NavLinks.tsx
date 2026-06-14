@@ -8,7 +8,6 @@ import {
   IconPlayers,
   IconPitch,
   IconChart,
-  IconSettings,
   IconChat,
   IconBook,
 } from "@/components/Icons";
@@ -19,7 +18,6 @@ const COACH_LINKS = [
   { href: "/matcher", label: "Matcher", Icon: IconPitch },
   { href: "/statistik", label: "Statistik", Icon: IconChart },
   { href: "/intervjuer", label: "Intervjuer", Icon: IconChat },
-  { href: "/installningar", label: "Inställningar", Icon: IconSettings },
   { href: "/guide", label: "Guide", Icon: IconBook },
 ];
 

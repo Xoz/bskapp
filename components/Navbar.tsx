@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { getRealRole } from "@/lib/auth";
+import { getRealRole, getCoachName } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { logout } from "@/lib/actions";
-import { IconLogout } from "@/components/Icons";
+import { IconLogout, IconSettings } from "@/components/Icons";
 import NavLinks from "@/components/NavLinks";
 
 export default async function Navbar() {
-  const [realRole, settings] = await Promise.all([
+  const [realRole, settings, coachName] = await Promise.all([
     getRealRole(),
     getAllSettings(),
+    getCoachName(),
   ]);
   const role = realRole;
 
@@ -40,7 +41,25 @@ export default async function Navbar() {
           <NavLinks role={role} horizontal />
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1">
+          {realRole === "coach" && coachName && (
+            <span
+              className="hidden sm:block text-sm font-medium px-2"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              {coachName.split(" ")[0]}
+            </span>
+          )}
+          {realRole === "coach" && (
+            <Link
+              href="/installningar"
+              title="Inställningar"
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg2)]"
+              style={{ color: "var(--ink-faint)" }}
+            >
+              <IconSettings width={17} height={17} />
+            </Link>
+          )}
           {realRole && (
             <form action={logout}>
               <button
