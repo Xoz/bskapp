@@ -5,6 +5,7 @@ import { getAllSettings, getSetting } from "@/lib/db";
 import { getPlayers } from "@/lib/queries";
 import {
   updateSettings,
+  updateCoachProfile,
   importCalendarMatches,
   generatePlayerPin,
   generateCoachInvite,
@@ -16,15 +17,16 @@ import {
 } from "@/lib/actions";
 import {
   IconCheck,
-  IconShield,
   IconAlert,
   IconPitch,
   IconPlayers,
   IconChat,
   IconPlus,
+  IconWhistle,
 } from "@/components/Icons";
 import { headers } from "next/headers";
 import SettingsSidebar from "@/components/SettingsSidebar";
+import { getCoachName, getCoachEmail } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -62,10 +64,12 @@ export default async function SettingsPage({
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const [inviteToken, inviteExpires, allowedEmails] = await Promise.all([
+  const [inviteToken, inviteExpires, allowedEmails, coachName, coachEmail] = await Promise.all([
     getSetting("coach_invite_token"),
     getSetting("coach_invite_expires"),
     getSetting("allowed_coach_emails"),
+    getCoachName(),
+    getCoachEmail(),
   ]);
   const coachEmails = allowedEmails
     .split(",")
@@ -149,6 +153,46 @@ export default async function SettingsPage({
 
         {/* Innehåll */}
         <div className="flex-1 min-w-0 space-y-12 max-w-2xl">
+
+          {/* ── PROFIL ── */}
+          <section id="profil" className="space-y-5 scroll-mt-20">
+            <div>
+              <p className="eyebrow">Profil</p>
+            </div>
+
+            <div className="card p-6 md:p-7 space-y-5">
+              <div className="flex items-start gap-3">
+                <span
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  <IconWhistle width={17} height={17} />
+                </span>
+                <div>
+                  <h2 className="font-semibold">Din profil</h2>
+                  {coachEmail && (
+                    <p className="text-sm mt-0.5 font-mono" style={{ color: "var(--ink-faint)" }}>
+                      {coachEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <form action={updateCoachProfile} className="flex gap-2.5 items-end flex-wrap">
+                <div className="flex-1 min-w-48">
+                  <label className="label" htmlFor="profile_name">Ditt namn</label>
+                  <input
+                    id="profile_name"
+                    name="name"
+                    required
+                    defaultValue={coachName ?? ""}
+                    placeholder="Förnamn Efternamn"
+                    className="input"
+                  />
+                </div>
+                <button type="submit" className="btn-primary">Spara namn</button>
+              </form>
+            </div>
+          </section>
 
           {/* ── MATCHER ── */}
           <section id="matcher" className="space-y-5 scroll-mt-20">
@@ -436,32 +480,6 @@ export default async function SettingsPage({
             <div>
               <p className="eyebrow">Tränare</p>
             </div>
-
-            <form action={updateSettings} className="space-y-5">
-              <div className="card p-6 md:p-7 space-y-5">
-                <div className="flex items-start gap-3">
-                  <span
-                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-                  >
-                    <IconShield width={17} height={17} />
-                  </span>
-                  <div>
-                    <h2 className="font-semibold">Inloggningskoder</h2>
-                    <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
-                      Tränarkoden ger full åtkomst och fungerar som reservmetod för inloggning.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="label" htmlFor="coach_code">Tränarkod</label>
-                    <input id="coach_code" name="coach_code" defaultValue={settings.coach_code} className="input" />
-                  </div>
-                </div>
-              </div>
-              <button type="submit" className="btn-primary px-6">Spara kod</button>
-            </form>
 
             <div className="card p-6 md:p-7 space-y-5">
               <div className="flex items-start gap-3">

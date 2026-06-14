@@ -1,8 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
-import { login } from "@/lib/actions";
 
 function GoogleIcon() {
   return (
@@ -16,114 +14,50 @@ function GoogleIcon() {
 }
 
 export default function LoginForm() {
-  const [state, formAction, pending] = useActionState(login, null);
   const searchParams = useSearchParams();
   const googleError = searchParams.get("google_error");
 
   return (
-    <div className="space-y-5">
-      {/* Google-inloggning för tränare */}
-      <div>
-        <p className="label mb-2">Tränare</p>
-        <a
-          href="/api/auth/google"
-          className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-85"
+    <div className="space-y-4">
+      <p className="label mb-2">Tränare</p>
+      <a
+        href="/api/auth/google"
+        className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-85"
+        style={{
+          background: "var(--bg)",
+          border: "1px solid var(--line)",
+          color: "var(--ink)",
+        }}
+      >
+        <GoogleIcon />
+        Logga in med Google
+      </a>
+      {googleError === "not_allowed" && (
+        <p
+          className="text-[0.6875rem] text-center py-2 px-3"
           style={{
-            background: "var(--bg)",
-            border: "1px solid var(--line)",
-            color: "var(--ink)",
+            color: "var(--coral)",
+            background: "rgba(248,113,113,0.06)",
+            border: "1px solid rgba(248,113,113,0.2)",
+            borderRadius: "6px",
           }}
         >
-          <GoogleIcon />
-          Logga in med Google
-        </a>
-        {googleError === "not_allowed" && (
-          <p
-            className="mt-2 text-[0.6875rem] text-center py-2 px-3"
-            style={{
-              color: "var(--coral)",
-              background: "rgba(248,113,113,0.06)",
-              border: "1px solid rgba(248,113,113,0.2)",
-              borderRadius: "6px",
-            }}
-          >
-            Din e-postadress är inte godkänd. Kontakta admin.
-          </p>
-        )}
-        {googleError === "1" && (
-          <p
-            className="mt-2 text-[0.6875rem] text-center py-2 px-3"
-            style={{
-              color: "var(--coral)",
-              background: "rgba(248,113,113,0.06)",
-              border: "1px solid rgba(248,113,113,0.2)",
-              borderRadius: "6px",
-            }}
-          >
-            Inloggningen misslyckades. Försök igen.
-          </p>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1" style={{ background: "var(--line)" }} />
-        <span className="text-[0.6rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)" }}>
-          eller tränarkod
-        </span>
-        <span className="h-px flex-1" style={{ background: "var(--line)" }} />
-      </div>
-
-      {/* Kodinloggning (reservmetod för tränare) */}
-      <form action={formAction} className="space-y-4">
-        <div>
-          <label htmlFor="coach_name" className="label">
-            Ditt namn
-          </label>
-          <input
-            id="coach_name"
-            name="coach_name"
-            type="text"
-            required
-            autoComplete="name"
-            placeholder="Förnamn Efternamn"
-            className="input"
-            style={{ background: "var(--bg)" }}
-          />
-        </div>
-        <div>
-          <label htmlFor="code" className="label">
-            Tränarkod
-          </label>
-          <input
-            id="code"
-            name="code"
-            type="password"
-            required
-            autoComplete="current-password"
-            placeholder="••••••••"
-            className="input text-center text-base tracking-[0.3em]"
-            style={{ background: "var(--bg)", fontFamily: "var(--font-display)" }}
-          />
-        </div>
-        {state?.error && (
-          <p
-            className="text-[0.6875rem] text-center py-2.5 px-3"
-            style={{
-              color: "var(--coral)",
-              background: "rgba(248,113,113,0.06)",
-              border: "1px solid rgba(248,113,113,0.2)",
-              borderRadius: "6px",
-            }}
-            role="alert"
-          >
-            {state.error}
-          </p>
-        )}
-        <button type="submit" disabled={pending} className="btn-secondary w-full py-3 text-xs">
-          {pending ? "Loggar in…" : "Till laget"}
-        </button>
-      </form>
+          Din e-postadress är inte godkänd. Be en befintlig tränare lägga till dig under Inställningar.
+        </p>
+      )}
+      {googleError === "1" && (
+        <p
+          className="text-[0.6875rem] text-center py-2 px-3"
+          style={{
+            color: "var(--coral)",
+            background: "rgba(248,113,113,0.06)",
+            border: "1px solid rgba(248,113,113,0.2)",
+            borderRadius: "6px",
+          }}
+        >
+          Inloggningen misslyckades. Försök igen.
+        </p>
+      )}
     </div>
   );
 }

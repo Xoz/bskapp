@@ -8,9 +8,11 @@ import {
   IconOverview,
   IconPlayers,
   IconShield,
+  IconWhistle,
 } from "@/components/Icons";
 
 export const SETTINGS_SECTIONS = [
+  { id: "profil", label: "Profil", Icon: IconWhistle },
   { id: "matcher", label: "Matcher", Icon: IconPitch },
   { id: "laget", label: "Laget", Icon: IconOverview },
   { id: "trupp", label: "Trupp", Icon: IconPlayers },
