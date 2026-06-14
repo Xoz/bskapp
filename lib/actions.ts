@@ -21,18 +21,28 @@ async function requireRole(allowed: Role[]): Promise<Role> {
 // ---- Auth ----
 export async function login(_prev: { error?: string } | null, formData: FormData) {
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  const name = String(formData.get("coach_name") ?? "").trim().slice(0, 60);
   let role: Role | null = null;
   if (code === (await getSetting("coach_code")).toUpperCase()) role = "coach";
 
   if (!role) return { error: "Fel kod. Kontrollera med tränaren och försök igen." };
 
+  const maxAge = 60 * 60 * 24 * 90;
   const store = await cookies();
   store.set("bsk_session", sessionToken(role), {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 90,
+    maxAge,
     path: "/",
   });
+  if (name) {
+    store.set("bsk_coach_name", name, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+  }
   store.delete("bsk_view");
   redirect(role === "coach" ? "/oversikt" : "/matcher");
 }

@@ -77,6 +77,21 @@ export default function LoginForm() {
       {/* Kodinloggning (reservmetod för tränare) */}
       <form action={formAction} className="space-y-4">
         <div>
+          <label htmlFor="coach_name" className="label">
+            Ditt namn
+          </label>
+          <input
+            id="coach_name"
+            name="coach_name"
+            type="text"
+            required
+            autoComplete="name"
+            placeholder="Förnamn Efternamn"
+            className="input"
+            style={{ background: "var(--bg)" }}
+          />
+        </div>
+        <div>
           <label htmlFor="code" className="label">
             Tränarkod
           </label>
