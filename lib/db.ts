@@ -222,6 +222,9 @@ async function init(): Promise<void> {
   await (await getClient()).execute(
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('calendar_url', '')"
   );
+  await (await getClient()).execute(
+    "INSERT OR IGNORE INTO settings (key, value) VALUES ('allowed_coach_emails', '')"
+  );
   // Matchtröjefärger – seedas för redan installerade appar utan att skriva över
   const jerseyDefaults: [string, string][] = [
     ["jersey_color", "#ffd23f"],

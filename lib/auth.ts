@@ -4,6 +4,22 @@ import path from "path";
 import fs from "fs";
 
 export type Role = "coach" | "parent";
+
+export function coachEmailToken(email: string): string {
+  return `${email}.${sign(`coach_email:${email}`)}`;
+}
+
+export async function getCoachEmail(): Promise<string | null> {
+  const store = await cookies();
+  const token = store.get("bsk_coach_email")?.value;
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const email = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  if (sig !== sign(`coach_email:${email}`)) return null;
+  return email;
+}
 // Visningsroll inkl. "player" (publik vy) – används för navigering och växeln.
 export type ViewRole = "coach" | "parent" | "player";
 

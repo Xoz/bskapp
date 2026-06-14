@@ -42,7 +42,28 @@ export async function logout() {
   const store = await cookies();
   store.delete("bsk_session");
   store.delete("bsk_view");
+  store.delete("bsk_coach_email");
   redirect("/login");
+}
+
+export async function addCoachEmail(formData: FormData) {
+  await requireRole(["coach"]);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const current = await getSetting("allowed_coach_emails");
+  const list = current.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  if (!list.includes(email)) list.push(email);
+  await setSetting("allowed_coach_emails", list.join(","));
+  revalidatePath("/installningar");
+}
+
+export async function removeCoachEmail(formData: FormData) {
+  await requireRole(["coach"]);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const current = await getSetting("allowed_coach_emails");
+  const list = current.split(",").map((e) => e.trim().toLowerCase()).filter((e) => e && e !== email);
+  await setSetting("allowed_coach_emails", list.join(","));
+  revalidatePath("/installningar");
 }
 
 export async function playerLogin(

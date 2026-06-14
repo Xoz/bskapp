@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
@@ -51,7 +52,9 @@ export default async function LoginPage() {
           className="p-8"
           style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
         >
-          <LoginForm />
+          <Suspense>
+            <LoginForm />
+          </Suspense>
           <p className="mt-5 text-center text-[0.6875rem]" style={{ color: "var(--ink-faint)" }}>
             Har du en matchkod?{" "}
             <Link

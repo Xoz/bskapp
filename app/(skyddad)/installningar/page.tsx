@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings, getSetting } from "@/lib/db";
 import { getPlayers } from "@/lib/queries";
-import { updateSettings, importCalendarMatches, generatePlayerPin, generateCoachInvite } from "@/lib/actions";
+import { updateSettings, importCalendarMatches, generatePlayerPin, generateCoachInvite, addCoachEmail, removeCoachEmail } from "@/lib/actions";
 import { IconCheck, IconShield, IconAlert, IconPitch, IconPlayers, IconChat } from "@/components/Icons";
 import { headers } from "next/headers";
 
@@ -35,10 +35,15 @@ export default async function SettingsPage({
   if (role !== "coach") redirect("/matcher");
 
   // Hämta inbjudningstoken för att bygga invite-URL
-  const [inviteToken, inviteExpires] = await Promise.all([
+  const [inviteToken, inviteExpires, allowedEmails] = await Promise.all([
     getSetting("coach_invite_token"),
     getSetting("coach_invite_expires"),
+    getSetting("allowed_coach_emails"),
   ]);
+  const coachEmails = allowedEmails
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
   const inviteValid = !!inviteToken && !!inviteExpires && new Date(inviteExpires) > new Date();
   const hdrs = await headers();
   const host = hdrs.get("host") ?? "";
@@ -311,6 +316,66 @@ export default async function SettingsPage({
             <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga aktiva spelare.</p>
           )}
         </div>
+      </div>
+
+      {/* Tillåtna tränar-e-poster (Google OAuth) */}
+      <div className="card p-6 md:p-7 space-y-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          >
+            <IconChat width={17} height={17} />
+          </span>
+          <div>
+            <h2 className="font-semibold">Tränarinloggning med Google</h2>
+            <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              Lägg till de Gmail-adresser som ska kunna logga in som tränare via Google. Tränaren klickar &ldquo;Logga in med Google&rdquo; på inloggningssidan.
+            </p>
+          </div>
+        </div>
+
+        {/* Lista */}
+        {coachEmails.length > 0 ? (
+          <div className="space-y-2">
+            {coachEmails.map((email) => (
+              <div
+                key={email}
+                className="flex items-center gap-3 rounded-xl px-4 py-2.5"
+                style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+              >
+                <p className="text-sm flex-1 font-mono" style={{ color: "var(--ink)" }}>{email}</p>
+                <form action={removeCoachEmail}>
+                  <input type="hidden" name="email" value={email} />
+                  <button
+                    type="submit"
+                    className="text-xs px-2.5 py-1 rounded-lg transition-colors"
+                    style={{ border: "1px solid var(--line)", color: "var(--ink-faint)", background: "transparent" }}
+                  >
+                    Ta bort
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga e-postadresser tillagda.</p>
+        )}
+
+        {/* Lägg till */}
+        <form action={addCoachEmail} className="flex gap-2.5 items-end flex-wrap">
+          <div className="flex-1 min-w-48">
+            <label className="label" htmlFor="coach_email_input">E-postadress</label>
+            <input
+              id="coach_email_input"
+              name="email"
+              type="email"
+              placeholder="traner@gmail.com"
+              className="input"
+            />
+          </div>
+          <button type="submit" className="btn-secondary">Lägg till</button>
+        </form>
       </div>
 
       {/* Bjud in tränare */}
