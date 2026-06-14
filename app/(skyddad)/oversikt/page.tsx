@@ -41,6 +41,8 @@ export default async function Dashboard() {
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
 
+  const playedMatches = matches.filter((m) => m.finished || m.our_score !== null);
+
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
@@ -57,7 +59,7 @@ export default async function Dashboard() {
 
   const kpis = [
     { label: "Spelare i truppen", value: players.length, href: "/spelare", Icon: IconPlayers },
-    { label: "Matcher", value: matches.length, href: "/matcher", Icon: IconPitch },
+    { label: "Matcher", value: playedMatches.length, href: "/matcher", Icon: IconPitch },
     { label: "Utvärderingar", value: totalEvals, href: "/spelare", Icon: IconTrendUp },
     {
       label: "Att utvärdera",
