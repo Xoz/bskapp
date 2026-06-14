@@ -90,9 +90,9 @@ export default function InterviewChat({
 
   const startInterview = () => {
     setPhase("chat");
-    const firstMsg = `Hej! Jag heter ${name} och spelar som ${position}.`;
-    const firstHist = [{ role: "user" as const, content: firstMsg }];
-    setMessages([{ role: "player", text: firstMsg, time: nowTime() }]);
+    // Skickas som kontextdata till AI men visas inte som bubbla i UI
+    const firstHist = [{ role: "user" as const, content: `Jag heter ${name} och spelar som ${position}.` }];
+    setMessages([]);
     setHistory(firstHist);
     callAI(firstHist);
   };
