@@ -109,35 +109,31 @@ export default async function LandingPage() {
             />
           </Link>
 
-          {/* Spelare – kommer snart */}
-          <div
-            className="flex items-center gap-4 rounded-2xl px-5 py-4"
-            style={{
-              background: "var(--bg2)",
-              border: "1px solid var(--line)",
-              opacity: 0.5,
-              cursor: "default",
-            }}
+          {/* Spelare */}
+          <Link
+            href="/intervju"
+            className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-opacity hover:opacity-85"
+            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
           >
             <span
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "var(--bg3)", color: "var(--ink-faint)" }}
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
             >
               <IconPlayers width={20} height={20} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>Spelare</p>
               <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                Profil och egenutvärdering
+                Berätta om din säsong för tränaren
               </p>
             </div>
-            <span
-              className="shrink-0 text-[0.6rem] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: "var(--bg3)", color: "var(--ink-faint)" }}
-            >
-              Snart
-            </span>
-          </div>
+            <IconArrowRight
+              width={14}
+              height={14}
+              className="shrink-0 transition-transform group-hover:translate-x-0.5"
+              style={{ color: "var(--ink-faint)" }}
+            />
+          </Link>
         </div>
 
         <p

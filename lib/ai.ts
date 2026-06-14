@@ -11,6 +11,27 @@ const LEVEL_LABEL: Record<number, string> = {
   1: "Nybörjare", 2: "På väg", 3: "Klarar det", 4: "Starka",
 };
 
+export async function callAnthropicChat(
+  messages: { role: "user" | "assistant"; content: string }[],
+  system: string,
+  maxTokens = 800
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY saknas");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: maxTokens, system, messages }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return (data.content?.[0]?.text ?? "").trim();
+}
+
 export async function callAnthropic(prompt: string, maxTokens = 500): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY saknas");
