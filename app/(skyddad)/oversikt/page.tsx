@@ -35,6 +35,12 @@ export default async function Dashboard() {
   const latestEvals = await getLatestEvaluationDates();
   const totalEvals = await countEvaluations();
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const upcomingMatches = matches
+    .filter((m) => m.date >= todayStr && !m.finished)
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
+    .slice(0, 2);
+
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
@@ -67,35 +73,91 @@ export default async function Dashboard() {
       {/* Hero */}
       <div className="panel-dark p-7 md:p-9">
         <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 text-white/[0.06]" />
-        <div className="relative">
-          <p className="eyebrow text-white/45">Säsong {settings.season}</p>
-          <h1
-            className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {settings.team_name}
-          </h1>
-          <p className="mt-2 text-sm text-white/60 max-w-lg">
-            Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} · {GAME_FORMAT.ballSize}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/matcher/ny" className="btn-accent">
-              Registrera match
-            </Link>
-            <Link
-              href="/rapportera"
-              className="btn-secondary"
-              style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
+        <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+          {/* Vänster: laginfo + knappar */}
+          <div>
+            <p className="eyebrow text-white/45">Säsong {settings.season}</p>
+            <h1
+              className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
+              style={{ fontFamily: "var(--font-display)" }}
             >
-              Rapportera statistik
-            </Link>
-            <Link
-              href="/spelare"
-              className="btn-secondary"
-              style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
-            >
-              Till truppen
-            </Link>
+              {settings.team_name}
+            </h1>
+            <p className="mt-2 text-sm text-white/60 max-w-lg">
+              Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} · {GAME_FORMAT.ballSize}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/matcher/ny" className="btn-accent">
+                Registrera match
+              </Link>
+              <Link
+                href="/rapportera"
+                className="btn-secondary"
+                style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
+              >
+                Rapportera statistik
+              </Link>
+              <Link
+                href="/spelare"
+                className="btn-secondary"
+                style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
+              >
+                Till truppen
+              </Link>
+            </div>
+          </div>
+
+          {/* Höger: kommande matcher */}
+          <div className="lg:min-w-[240px] lg:max-w-[280px] shrink-0">
+            <p className="text-[0.65rem] uppercase tracking-[0.12em] text-white/40 mb-3">
+              Kommande matcher
+            </p>
+            {upcomingMatches.length === 0 ? (
+              <p className="text-sm text-white/40">Inga schemalagda matcher</p>
+            ) : (
+              <div className="space-y-2">
+                {upcomingMatches.map((m) => {
+                  const d = new Date(m.date);
+                  const weekday = d.toLocaleDateString("sv-SE", { weekday: "short" });
+                  const dayMonth = d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+                  return (
+                    <Link
+                      key={m.id}
+                      href={`/matcher/${m.id}`}
+                      className="flex items-center gap-3 rounded-xl px-3.5 py-3 transition-opacity hover:opacity-80"
+                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    >
+                      <div
+                        className="flex flex-col items-center justify-center rounded-lg shrink-0"
+                        style={{ width: 44, height: 44, background: "var(--accent)", color: "var(--accent-ink, #111)" }}
+                      >
+                        <span className="text-[0.55rem] uppercase font-semibold leading-none opacity-70">{weekday}</span>
+                        <span className="text-base font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+                          {d.getDate()}
+                        </span>
+                        <span className="text-[0.55rem] uppercase opacity-70 leading-none">{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{m.opponent}</p>
+                        <p className="text-[0.7rem] text-white/50 mt-0.5">
+                          {m.home_away === "home" ? "Hemma" : "Borta"}
+                          {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ""}
+                          {dayMonth ? ` · ${dayMonth}` : ""}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            {upcomingMatches.length > 0 && (
+              <Link
+                href="/matcher"
+                className="mt-3 flex items-center gap-1 text-[0.7rem] text-white/40 hover:text-white/60 transition-colors"
+              >
+                Alla matcher <IconArrowRight width={11} height={11} />
+              </Link>
+            )}
           </div>
         </div>
       </div>
