@@ -154,9 +154,6 @@ export default async function CupEditorPage({
                   style={{ borderTop: i > 0 ? "1px solid var(--line)" : undefined }}
                 >
                   <input type="hidden" name={`phase_${m.id}`} value="playoff" />
-                  <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
-                    Slutspelsmatch {i + 1}
-                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="label" htmlFor={`po_opponent_${m.id}`}>Motståndare</label>
@@ -167,6 +164,16 @@ export default async function CupEditorPage({
                         placeholder="Klart efter gruppspelet"
                         className="input"
                       />
+                    </div>
+                    <div>
+                      <label className="label" htmlFor={`po_round_${m.id}`}>Omgång</label>
+                      <select id={`po_round_${m.id}`} name={`round_${m.id}`} defaultValue={m.cup_round ?? ""} className="input">
+                        <option value="">Välj omgång</option>
+                        <option value="qf">Kvartsfinal</option>
+                        <option value="sf">Semifinal</option>
+                        <option value="bronze">Bronsmatch</option>
+                        <option value="f">Final</option>
+                      </select>
                     </div>
                     <div>
                       <label className="label" htmlFor={`po_home_away_${m.id}`}>Plats</label>

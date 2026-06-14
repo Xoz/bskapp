@@ -146,14 +146,31 @@ function buildEntries(matches: MatchType[]): Entry[] {
   return entries;
 }
 
+const ROUND_LABELS: Record<string, string> = {
+  qf: "Kvartsfinal",
+  sf: "Semifinal",
+  bronze: "Bronsmatch",
+  f: "Final",
+};
+
 function CupCard({ name, matches, today, role }: { name: string; matches: MatchType[]; today: string; role: string }) {
   const first = matches[0].date;
   const last = matches[matches.length - 1].date;
   const range = first === last ? first : `${first} – ${last}`;
   const ongoing = matches.some((m) => m.date === today);
-  const played = matches.filter((m) => m.our_score != null && m.opponent_score != null).length;
-  // Cupens nivå – matcherna delar nivå; ta den första som har en satt
   const cupLevel = levelInfo(matches.find((m) => m.level)?.level);
+
+  // Poängberäkning för gruppspelsmatcher med resultat
+  const groupWithResult = matches.filter(
+    (m) => m.cup_phase !== "playoff" && m.our_score != null && m.opponent_score != null
+  );
+  const wins = groupWithResult.filter((m) => m.our_score! > m.opponent_score!).length;
+  const draws = groupWithResult.filter((m) => m.our_score! === m.opponent_score!).length;
+  const losses = groupWithResult.filter((m) => m.our_score! < m.opponent_score!).length;
+  const points = wins * 3 + draws;
+  const goalsFor = groupWithResult.reduce((s, m) => s + m.our_score!, 0);
+  const goalsAgainst = groupWithResult.reduce((s, m) => s + m.opponent_score!, 0);
+  const hasGroupStats = groupWithResult.length > 0;
 
   const editHref = `/matcher/cup/${encodeURIComponent(name)}`;
 
@@ -169,7 +186,7 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
         <div className="flex-1 min-w-0">
           <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>{name}</p>
           <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-            {range} · {matches.length} matcher{played > 0 ? ` · ${played} spelade` : ""}
+            {range} · {matches.length} matcher{groupWithResult.length > 0 ? ` · ${groupWithResult.length} spelade` : ""}
           </p>
         </div>
         {ongoing && (
@@ -190,10 +207,26 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
           </Link>
         )}
       </summary>
-      <div style={{ borderTop: "1px solid var(--line)" }}>
+      {/* Poängsammanställning gruppspel */}
+      {hasGroupStats && (
+        <div
+          className="flex items-center gap-4 px-5 py-2.5"
+          style={{ borderTop: "1px solid var(--line)", background: "var(--bg2)" }}
+        >
+          <span className="text-xs font-semibold" style={{ color: "var(--ink-soft)" }}>Poäng</span>
+          <span className="stat-number text-base" style={{ color: "var(--primary)" }}>{points}</span>
+          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            {wins}V {draws}O {losses}F
+          </span>
+          <span className="text-xs ml-auto" style={{ color: "var(--ink-faint)" }}>
+            {goalsFor}–{goalsAgainst}
+          </span>
+        </div>
+      )}
+      <div>
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;
-          const isPlayoff = m.cup_phase === "playoff";
+          const roundLabel = m.cup_round ? ROUND_LABELS[m.cup_round] : m.cup_phase === "playoff" ? "Slutspel" : null;
           return (
             <Link
               key={m.id}
@@ -205,7 +238,7 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
                 <span className="font-medium">{m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}</span>
                 <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
-                  {isPlayoff && " · Slutspel"}
+                  {roundLabel && ` · ${roundLabel}`}
                 </span>
               </span>
               {m.date === today && (

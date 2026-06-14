@@ -410,10 +410,11 @@ export async function updateCup(formData: FormData) {
     const opponent = String(formData.get(`opponent_${id}`) ?? "").trim();
     const homeAway = String(formData.get(`home_away_${id}`) ?? "home");
     const phase = String(formData.get(`phase_${id}`) ?? "group");
+    const round = formData.get(`round_${id}`) as string | null;
     if (!date || !opponent) continue;
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ? WHERE id = ? AND cup_name = ?",
-      [date, time || null, opponent, homeAway, phase, id, cupName]
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ? WHERE id = ? AND cup_name = ?",
+      [date, time || null, opponent, homeAway, phase, round || null, id, cupName]
     );
   }
 

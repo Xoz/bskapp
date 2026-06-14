@@ -47,6 +47,7 @@ export interface Match {
   cup_name: string;
   formation: string;
   cup_phase: string; // 'group' | 'playoff'
+  cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
 }
 
 // Matcher som ingår i samma cup/turnering (samma cup_name)
