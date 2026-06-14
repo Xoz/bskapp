@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches, type Match as MatchType } from "@/lib/queries";
+import { getMatches, cupMatchCompare, type Match as MatchType } from "@/lib/queries";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
 
@@ -133,14 +133,15 @@ function buildEntries(matches: MatchType[]): Entry[] {
     }
   }
   for (const [name, ms] of cups) {
-    const sorted = [...ms].sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+    const sorted = [...ms].sort(cupMatchCompare);
+    const byDate = [...ms].map((m) => m.date).sort();
     entries.push({
       kind: "cup",
       key: `cup:${name}`,
       name,
       matches: sorted,
-      sortDate: sorted[0].date,
-      lastDate: sorted[sorted.length - 1].date,
+      sortDate: byDate[0],
+      lastDate: byDate[byDate.length - 1],
     });
   }
   return entries;
@@ -227,6 +228,14 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;
           const roundLabel = m.cup_round ? ROUND_LABELS[m.cup_round] : m.cup_phase === "playoff" ? "Slutspel" : null;
+          const noOpponent = !m.opponent || m.opponent === "TBD";
+          // Saknas motståndare i en slutspelsmatch? Visa rundans namn som titel.
+          const title =
+            noOpponent && roundLabel
+              ? roundLabel
+              : `${m.home_away === "home" ? "Hemma mot" : "Borta mot"} ${m.opponent}`;
+          // Undvik att upprepa rundan i undertexten om den redan är titel.
+          const showRoundInSub = roundLabel && !(noOpponent && roundLabel === title);
           return (
             <Link
               key={m.id}
@@ -235,10 +244,10 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
               style={{ borderTop: "1px solid var(--line)" }}
             >
               <span className="text-sm flex-1 min-w-0">
-                <span className="font-medium">{m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}</span>
+                <span className="font-medium">{title}</span>
                 <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
-                  {roundLabel && ` · ${roundLabel}`}
+                  {showRoundInSub && ` · ${roundLabel}`}
                 </span>
               </span>
               {m.date === today && (

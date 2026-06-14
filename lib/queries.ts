@@ -50,13 +50,37 @@ export interface Match {
   cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
 }
 
+// Ordning för slutspelsrundor – gruppspel först, sedan kvarts → semi → brons → final
+export const CUP_ROUND_RANK: Record<string, number> = {
+  qf: 1,
+  sf: 2,
+  bronze: 3,
+  f: 4,
+};
+
+// Sorterar cupmatcher: gruppspel (efter datum/tid) först, därefter slutspel i
+// rundordning så att finalen alltid hamnar sist – oavsett datum.
+export function cupMatchCompare(a: Match, b: Match): number {
+  const aPlayoff = a.cup_phase === "playoff" ? 1 : 0;
+  const bPlayoff = b.cup_phase === "playoff" ? 1 : 0;
+  if (aPlayoff !== bPlayoff) return aPlayoff - bPlayoff;
+  if (aPlayoff === 1) {
+    const ar = CUP_ROUND_RANK[a.cup_round ?? ""] ?? 9;
+    const br = CUP_ROUND_RANK[b.cup_round ?? ""] ?? 9;
+    if (ar !== br) return ar - br;
+  }
+  return (
+    a.date.localeCompare(b.date) ||
+    (a.start_time ?? "").localeCompare(b.start_time ?? "") ||
+    a.id - b.id
+  );
+}
+
 // Matcher som ingår i samma cup/turnering (samma cup_name)
 export async function getMatchesByCup(cupName: string): Promise<Match[]> {
   if (!cupName) return [];
-  return all<Match>(
-    "SELECT * FROM matches WHERE cup_name = ? ORDER BY date, start_time, id",
-    [cupName]
-  );
+  const rows = await all<Match>("SELECT * FROM matches WHERE cup_name = ?", [cupName]);
+  return rows.sort(cupMatchCompare);
 }
 
 // Alla matcher i pågående cuper. En cup är pågående t.o.m. dagen efter dess
