@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches, cupMatchCompare, type Match as MatchType } from "@/lib/queries";
+import { getMatches, cupMatchCompare, cupRoundLabel, matchTitle, type Match as MatchType } from "@/lib/queries";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
 
@@ -147,13 +147,6 @@ function buildEntries(matches: MatchType[]): Entry[] {
   return entries;
 }
 
-const ROUND_LABELS: Record<string, string> = {
-  qf: "Kvartsfinal",
-  sf: "Semifinal",
-  bronze: "Bronsmatch",
-  f: "Final",
-};
-
 function CupCard({ name, matches, today, role }: { name: string; matches: MatchType[]; today: string; role: string }) {
   const first = matches[0].date;
   const last = matches[matches.length - 1].date;
@@ -227,15 +220,10 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
       <div>
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;
-          const roundLabel = m.cup_round ? ROUND_LABELS[m.cup_round] : m.cup_phase === "playoff" ? "Slutspel" : null;
-          const noOpponent = !m.opponent || m.opponent === "TBD";
-          // Saknas motståndare i en slutspelsmatch? Visa rundans namn som titel.
-          const title =
-            noOpponent && roundLabel
-              ? roundLabel
-              : `${m.home_away === "home" ? "Hemma mot" : "Borta mot"} ${m.opponent}`;
-          // Undvik att upprepa rundan i undertexten om den redan är titel.
-          const showRoundInSub = roundLabel && !(noOpponent && roundLabel === title);
+          const roundLabel = cupRoundLabel(m);
+          const title = matchTitle(m);
+          // Visa rundan i undertexten om den inte redan är titeln.
+          const showRoundInSub = roundLabel && roundLabel !== title;
           return (
             <Link
               key={m.id}

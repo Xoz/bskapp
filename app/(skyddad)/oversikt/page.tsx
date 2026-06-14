@@ -9,6 +9,7 @@ import {
   getLatestEvaluationDates,
   countEvaluations,
   getMatchesWithSquad,
+  cupRoundLabel,
 } from "@/lib/queries";
 import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
 import Avatar from "@/components/Avatar";
@@ -148,7 +149,9 @@ export default async function Dashboard() {
                         <span className="text-[0.55rem] uppercase opacity-70 leading-none">{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-white truncate">{m.opponent}</p>
+                        <p className="text-sm font-semibold text-white truncate">
+                          {!m.opponent || m.opponent === "TBD" ? (cupRoundLabel(m) ?? "Motståndare ej klar") : m.opponent}
+                        </p>
                         <p className="text-[0.7rem] text-white/50 mt-0.5">
                           {m.home_away === "home" ? "Hemma" : "Borta"}
                           {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ""}

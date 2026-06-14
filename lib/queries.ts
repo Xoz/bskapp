@@ -58,6 +58,30 @@ export const CUP_ROUND_RANK: Record<string, number> = {
   f: 4,
 };
 
+export const CUP_ROUND_LABELS: Record<string, string> = {
+  qf: "Kvartsfinal",
+  sf: "Semifinal",
+  bronze: "Bronsmatch",
+  f: "Final",
+};
+
+// Etikett för en slutspelsrunda – faller tillbaka på "Slutspel" om ingen runda satts.
+export function cupRoundLabel(m: Match): string | null {
+  if (m.cup_round && CUP_ROUND_LABELS[m.cup_round]) return CUP_ROUND_LABELS[m.cup_round];
+  if (m.cup_phase === "playoff") return "Slutspel";
+  return null;
+}
+
+// Visningstitel för en match. Saknas motståndaren i en slutspelsmatch visas
+// rundans namn ("Final") i stället för "Hemma mot TBD".
+export function matchTitle(m: Match): string {
+  const noOpponent = !m.opponent || m.opponent === "TBD";
+  const round = cupRoundLabel(m);
+  if (noOpponent && round) return round;
+  const prefix = m.home_away === "home" ? "Hemma mot" : "Borta mot";
+  return `${prefix} ${m.opponent}`;
+}
+
 // Sorterar cupmatcher: gruppspel (efter datum/tid) först, därefter slutspel i
 // rundordning så att finalen alltid hamnar sist – oavsett datum.
 export function cupMatchCompare(a: Match, b: Match): number {
