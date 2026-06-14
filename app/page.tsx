@@ -32,12 +32,12 @@ export default async function LandingPage() {
         {/* Logotyp + lagnamn */}
         <div className="text-center">
           <div
-            className="mx-auto mb-5 flex h-16 w-16 items-center justify-center"
-            style={{ borderRadius: "16px", background: "#0a0b0d", border: "1px solid rgba(255,255,255,0.08)" }}
+            className="mx-auto mb-5 flex h-24 w-24 items-center justify-center"
+            style={{ borderRadius: "22px", background: "#0a0b0d", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <span
-              className="text-2xl font-bold tracking-tight"
-              style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}
+              className="text-4xl font-bold"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}
             >
               <span style={{ color: "var(--primary)" }}>+</span>
               <span style={{ color: "#fff" }}>90</span>
