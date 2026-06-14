@@ -130,6 +130,17 @@ async function init(): Promise<void> {
       period INTEGER,
       created_at INTEGER
     )`,
+    `CREATE TABLE IF NOT EXISTS player_self_evals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      fun_rating INTEGER NOT NULL DEFAULT 2,
+      progress_rating INTEGER NOT NULL DEFAULT 2,
+      team_rating INTEGER NOT NULL DEFAULT 2,
+      best_at TEXT NOT NULL DEFAULT '',
+      want_to_improve TEXT NOT NULL DEFAULT '',
+      note_to_coach TEXT NOT NULL DEFAULT ''
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 

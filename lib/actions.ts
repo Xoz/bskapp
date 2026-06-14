@@ -629,3 +629,32 @@ export async function updateSettings(formData: FormData) {
   revalidatePath("/", "layout");
   redirect("/installningar?sparad=1");
 }
+
+export async function submitSelfEval(
+  _prev: { done?: boolean; error?: string } | null,
+  formData: FormData
+): Promise<{ done?: boolean; error?: string }> {
+  const token = String(formData.get("token") ?? "");
+  if (!token) return { error: "Ogiltig länk." };
+
+  const player = await get<{ id: number; share_expires: number | null }>(
+    "SELECT id, share_expires FROM players WHERE share_token = ?",
+    [token]
+  );
+  if (!player || !player.share_expires || player.share_expires < Date.now())
+    return { error: "Länken har gått ut." };
+
+  const fun = Math.max(1, Math.min(3, Number(formData.get("fun_rating")) || 2));
+  const progress = Math.max(1, Math.min(3, Number(formData.get("progress_rating")) || 2));
+  const team = Math.max(1, Math.min(3, Number(formData.get("team_rating")) || 2));
+  const bestAt = String(formData.get("best_at") ?? "").slice(0, 500).trim();
+  const wantToImprove = String(formData.get("want_to_improve") ?? "").slice(0, 500).trim();
+  const noteToCoach = String(formData.get("note_to_coach") ?? "").slice(0, 500).trim();
+
+  await run(
+    `INSERT INTO player_self_evals (player_id, fun_rating, progress_rating, team_rating, best_at, want_to_improve, note_to_coach)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [player.id, fun, progress, team, bestAt, wantToImprove, noteToCoach]
+  );
+  return { done: true };
+}

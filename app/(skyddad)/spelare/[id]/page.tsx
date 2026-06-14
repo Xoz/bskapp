@@ -8,6 +8,8 @@ import {
   getPlayerDevelopment,
   getPlayerMatchStats,
   shareLinkActive,
+  getLatestSelfEval,
+  SHARE_TTL_MS,
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
@@ -43,10 +45,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const [evaluations, development, matchStats] = await Promise.all([
+  const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
+  const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
+
+  const [evaluations, development, matchStats, selfEval] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
+    getLatestSelfEval(player.id, shareSinceIso),
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
@@ -153,6 +159,67 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           </form>
         )}
       </div>
+
+      {/* Spelarens egenutvärdering (senaste för aktiv länk) */}
+      {selfEval && (
+        <div className="card p-6 space-y-5" style={{ border: "1px solid var(--primary-soft)" }}>
+          <div>
+            <p className="eyebrow mb-0.5" style={{ color: "var(--primary)" }}>Egenutvärdering</p>
+            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              Inlämnad {selfEval.created_at.slice(0, 10)} – läs inför spelarsamtalet
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Roligt med fotboll", value: selfEval.fun_rating, emojis: ["😐","😊","😄"] },
+              { label: "Hur det går", value: selfEval.progress_rating, emojis: ["😅","👍","🔥"] },
+              { label: "Trivs i laget", value: selfEval.team_rating, emojis: ["😐","😊","🤝"] },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl py-3 px-2 text-center"
+                style={{ background: "var(--primary-ghost)" }}
+              >
+                <p className="text-2xl">{item.emojis[item.value - 1]}</p>
+                <p className="text-[0.65rem] mt-1 leading-tight" style={{ color: "var(--ink-soft)" }}>
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+          {(selfEval.best_at || selfEval.want_to_improve || selfEval.note_to_coach) && (
+            <div className="grid md:grid-cols-2 gap-4">
+              {selfEval.best_at && (
+                <div>
+                  <p className="label mb-1">Bra på</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                    {selfEval.best_at}
+                  </p>
+                </div>
+              )}
+              {selfEval.want_to_improve && (
+                <div>
+                  <p className="label mb-1">Vill bli bättre på</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                    {selfEval.want_to_improve}
+                  </p>
+                </div>
+              )}
+              {selfEval.note_to_coach && (
+                <div className="md:col-span-2">
+                  <p className="label mb-1">Till tränaren</p>
+                  <p
+                    className="text-sm leading-relaxed rounded-lg px-4 py-3"
+                    style={{ background: "var(--bg2)", color: "var(--ink)" }}
+                  >
+                    {selfEval.note_to_coach}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {evaluations.length === 0 ? (
         <div className="card p-10 text-center">

@@ -361,3 +361,23 @@ export async function countEvaluations(): Promise<number> {
 }
 
 export { ALL_SKILLS, CATEGORIES };
+
+export interface PlayerSelfEval {
+  id: number;
+  player_id: number;
+  created_at: string;
+  fun_rating: number;
+  progress_rating: number;
+  team_rating: number;
+  best_at: string;
+  want_to_improve: string;
+  note_to_coach: string;
+}
+
+export async function getLatestSelfEval(playerId: number, sinceIso?: string): Promise<PlayerSelfEval | null> {
+  const sql = sinceIso
+    ? "SELECT * FROM player_self_evals WHERE player_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 1"
+    : "SELECT * FROM player_self_evals WHERE player_id = ? ORDER BY created_at DESC LIMIT 1";
+  const args = sinceIso ? [playerId, sinceIso] : [playerId];
+  return (await get<PlayerSelfEval>(sql, args)) ?? null;
+}

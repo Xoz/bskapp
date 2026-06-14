@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPlayerByShareToken, shareLinkActive, getEvaluations, getScores, getPlayerDevelopment, getPlayerMatchStats } from "@/lib/queries";
+import { getPlayerByShareToken, shareLinkActive, getEvaluations, getScores, getPlayerDevelopment, getPlayerMatchStats, getLatestSelfEval, SHARE_TTL_MS } from "@/lib/queries";
 import { getAllSettings } from "@/lib/db";
 import { CATEGORIES } from "@/lib/svff";
 import { STAT_FIELDS } from "@/lib/stats";
@@ -7,6 +7,7 @@ import { positionLabel } from "@/lib/positions";
 import SkillRadar from "@/components/SkillRadar";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import Avatar from "@/components/Avatar";
+import SelfEvalForm from "@/components/SelfEvalForm";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +47,16 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
     );
   }
 
-  const [settings, evaluations, development, matchStats] = await Promise.all([
+  // Beräkna när länken skapades för att kolla om self-eval redan skickats in
+  const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
+  const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
+
+  const [settings, evaluations, development, matchStats, existingSelfEval] = await Promise.all([
     getAllSettings(),
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
+    getLatestSelfEval(player.id, shareSinceIso),
   ]);
   const latest = evaluations[0];
   const previous = evaluations[1];
@@ -221,6 +227,24 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
               Här kommer {firstName} kunna se sin statistik och utveckling när matcher rapporterats och utvärderingar gjorts.
             </p>
           </div>
+        )}
+
+        {/* Egenutvärdering – visas om länken är aktiv */}
+        {existingSelfEval ? (
+          <div
+            className="card p-6 text-center"
+            style={{ background: "var(--ok-bg)", border: "1px solid var(--ok-soft, var(--ok))" }}
+          >
+            <p className="text-3xl mb-2">✅</p>
+            <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
+              Egenutvärdering inlämnad
+            </p>
+            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+              Tränaren ser dina svar inför spelarsamtalet.
+            </p>
+          </div>
+        ) : (
+          <SelfEvalForm token={token} firstName={firstName} />
         )}
 
         <p className="text-center text-[0.7rem] pt-2" style={{ color: "var(--ink-faint)" }}>

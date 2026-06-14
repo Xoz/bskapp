@@ -352,6 +352,18 @@ input:checked + .level-pill {
   color: var(--primary-deep);
 }
 
+/* Egenutvärdering – emoji-radioknapp */
+input:checked + .emoji-pill {
+  border-color: var(--primary) !important;
+  background: var(--primary-soft) !important;
+}
+input:focus-visible + .emoji-pill {
+  border-color: var(--primary) !important;
+}
+.emoji-pill:hover {
+  border-color: var(--line-strong) !important;
+}
+
 /* Nivåmätare (1–4) – tunna staplar enligt systemets bar-spec */
 .level-meter {
   display: inline-flex;
