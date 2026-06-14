@@ -84,8 +84,7 @@ export async function getViewRole(): Promise<ViewRole> {
   return "player";
 }
 
-// Effektiv roll för behörighet/sidoskydd. "player" motsvarar utloggad (publik).
+// Effektiv roll för behörighet/sidoskydd.
 export async function getRole(): Promise<Role | null> {
-  const view = await getViewRole();
-  return view === "player" ? null : view;
+  return getRealRole();
 }

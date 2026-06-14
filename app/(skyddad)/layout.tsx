@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { getRole, getRealRole } from "@/lib/auth";
+import { getRealRole } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const role = await getRole();
-  if (!role) {
-    const real = await getRealRole();
-    redirect(real === "coach" ? "/oversikt" : "/");
-  }
+  const role = await getRealRole();
+  if (!role) redirect("/");
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
