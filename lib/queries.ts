@@ -342,6 +342,16 @@ export async function getMatchSquad(matchId: number): Promise<number[]> {
   return rows.map((r) => r.player_id);
 }
 
+export async function getMatchesWithSquad(matchIds: number[]): Promise<Set<number>> {
+  if (matchIds.length === 0) return new Set();
+  const placeholders = matchIds.map(() => "?").join(",");
+  const rows = await all<{ match_id: number }>(
+    `SELECT DISTINCT match_id FROM match_squad WHERE match_id IN (${placeholders})`,
+    matchIds
+  );
+  return new Set(rows.map((r) => r.match_id));
+}
+
 // Utplacerade spelare på planen (startelvan) med normaliserade koordinater
 export interface LineupSpot {
   player_id: number;

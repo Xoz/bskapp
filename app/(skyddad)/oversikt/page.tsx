@@ -8,6 +8,7 @@ import {
   getSeasonStats,
   getLatestEvaluationDates,
   countEvaluations,
+  getMatchesWithSquad,
 } from "@/lib/queries";
 import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
 import Avatar from "@/components/Avatar";
@@ -40,6 +41,8 @@ export default async function Dashboard() {
     .filter((m) => m.date >= todayStr && !m.finished)
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
+
+  const matchesWithSquad = await getMatchesWithSquad(upcomingMatches.map((m) => m.id));
 
   const playedMatches = matches.filter((m) => m.finished || m.our_score !== null);
 
@@ -122,12 +125,13 @@ export default async function Dashboard() {
                   const d = new Date(m.date);
                   const weekday = d.toLocaleDateString("sv-SE", { weekday: "short" });
                   const dayMonth = d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+                  const hasSquad = matchesWithSquad.has(m.id);
                   return (
                     <Link
                       key={m.id}
-                      href={`/matcher/${m.id}`}
+                      href={`/matcher/${m.id}/laguttagning`}
                       className="flex items-center gap-3 rounded-xl px-3.5 py-3 transition-opacity hover:opacity-80"
-                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+                      style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${hasSquad ? "rgba(255,255,255,0.1)" : "rgba(255,180,0,0.35)"}` }}
                     >
                       <div
                         className="flex flex-col items-center justify-center rounded-lg shrink-0"
@@ -139,7 +143,7 @@ export default async function Dashboard() {
                         </span>
                         <span className="text-[0.55rem] uppercase opacity-70 leading-none">{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-white truncate">{m.opponent}</p>
                         <p className="text-[0.7rem] text-white/50 mt-0.5">
                           {m.home_away === "home" ? "Hemma" : "Borta"}
@@ -147,6 +151,14 @@ export default async function Dashboard() {
                           {dayMonth ? ` · ${dayMonth}` : ""}
                         </p>
                       </div>
+                      {!hasSquad && (
+                        <span
+                          className="shrink-0 text-[0.6rem] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
+                          style={{ background: "rgba(255,180,0,0.2)", color: "#ffd23f" }}
+                        >
+                          Trupp saknas
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
