@@ -175,19 +175,17 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
         <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>Cup</span>
       </summary>
       {role === "coach" && (
-        <form action={setMatchLevel} className="flex items-end gap-3 px-5 py-3 flex-wrap" style={{ borderTop: "1px solid var(--line)", background: "var(--primary-ghost)" }}>
+        <form action={setMatchLevel} className="flex items-center gap-2 px-5 py-2" style={{ borderTop: "1px solid var(--line)", background: "var(--primary-ghost)" }}>
           <input type="hidden" name="id" value={matches[0].id} />
           <input type="hidden" name="apply_cup" value="on" />
-          <div className="flex-1 min-w-44">
-            <label className="label" htmlFor={`cuplevel-${matches[0].id}`}>Cupens nivå</label>
-            <select id={`cuplevel-${matches[0].id}`} name="level" defaultValue={cupLevel?.id ?? ""} className="input">
-              <option value="">Ej satt</option>
-              {LEVELS.map((l) => (
-                <option key={l.id} value={l.id}>{l.label}</option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="btn-secondary">Spara nivå</button>
+          <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)" }}>Nivå</span>
+          <select name="level" defaultValue={cupLevel?.id ?? ""} className="input py-1 text-sm flex-1 min-w-0">
+            <option value="">Ej satt</option>
+            {LEVELS.map((l) => (
+              <option key={l.id} value={l.id}>{l.label}</option>
+            ))}
+          </select>
+          <button type="submit" className="btn-secondary py-1 text-xs shrink-0">Spara</button>
         </form>
       )}
       <div style={{ borderTop: "1px solid var(--line)" }}>
