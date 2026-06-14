@@ -329,10 +329,14 @@ export default async function Dashboard() {
       </div>
 
       {/* Aktivitetslogg */}
-      {activity.length > 0 && (
-        <div className="card p-6">
-          <p className="eyebrow mb-1">Tränarlaget</p>
-          <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
+      <div className="card p-6">
+        <p className="eyebrow mb-1">Tränarlaget</p>
+        <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
+        {activity.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+            Ingen aktivitet ännu. Loggen uppdateras när trupper tas ut, matcher sparas eller utvärderingar skapas.
+          </p>
+        ) : (
           <ol className="space-y-4">
             {activity.map((entry: ActivityEntry) => (
               <li key={entry.id} className="flex items-start gap-3">
@@ -357,8 +361,8 @@ export default async function Dashboard() {
               </li>
             ))}
           </ol>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* SvFF-principer */}
       <div className="card p-6 md:p-7">
