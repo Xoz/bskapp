@@ -12,6 +12,7 @@ import ConfirmForm from "@/components/ConfirmForm";
 import ManualEventForm from "@/components/ManualEventForm";
 import EventEditor from "@/components/EventEditor";
 import { IconArrowLeft, IconArrowRight } from "@/components/Icons";
+import { swedishToday } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   ]);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
   const mLevel = levelInfo(match.level);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = swedishToday();
   const isUpcoming = match.date >= today;
 
   return (

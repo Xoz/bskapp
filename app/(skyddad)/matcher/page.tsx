@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches, cupMatchCompare, cupRoundLabel, matchTitle, type Match as MatchType } from "@/lib/queries";
+import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
 
@@ -260,7 +261,7 @@ function EntryView({ entry, role, today }: { entry: Entry; role: string; today: 
 }
 
 function MatchSections({ matches, role }: { matches: MatchType[]; role: string }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = swedishToday();
   const entries = buildEntries(matches);
   // En cup räknas som kommande så länge dess sista dag inte passerat
   const upcoming = entries

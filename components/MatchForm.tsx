@@ -4,6 +4,7 @@ import { STAT_FIELDS } from "@/lib/stats";
 import { LEVELS } from "@/lib/levels";
 import StatsFields from "@/components/StatsFields";
 import Link from "next/link";
+import { swedishToday } from "@/lib/dates";
 
 export default function MatchForm({
   players,
@@ -14,7 +15,7 @@ export default function MatchForm({
   match?: Match;
   matchPlayers?: MatchPlayerRow[];
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = swedishToday();
 
   return (
     <form action={saveMatch} className="space-y-6">

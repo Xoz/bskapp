@@ -4,6 +4,7 @@
 import { all, get, run, batch } from "./db";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter, SubEntry } from "./liveTypes";
+import { swedishToday } from "./dates";
 
 interface MatchRow {
   id: number;
@@ -34,7 +35,7 @@ export function clockSeconds(m: MatchRow): number {
 export async function getLiveState(matchId: number): Promise<LiveState> {
   let m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
 
-  const todayLocal = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD i svensk tidszon
+  const todayLocal = swedishToday(); // YYYY-MM-DD i svensk tidszon (Europe/Stockholm)
 
   // Nollställ felaktigt satt finished-flagga för framtida matcher (kan hända om
   // tränaren råkade trycka "Avsluta match" på en kommande cup-match).

@@ -11,6 +11,7 @@ import {
   getMatchesWithSquad,
   cupRoundLabel,
 } from "@/lib/queries";
+import { swedishToday, swedishDate, swedishDateOffset } from "@/lib/dates";
 import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
 import Avatar from "@/components/Avatar";
 import PitchLines from "@/components/PitchLines";
@@ -26,11 +27,8 @@ import {
 
 function formatActivityTime(ts: string): string {
   const d = new Date(ts.replace(" ", "T") + "Z");
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const tsDateStr = d.toISOString().slice(0, 10);
   const time = d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
-  if (tsDateStr === todayStr) return time;
+  if (swedishDate(d) === swedishToday()) return time;
   return d.toLocaleDateString("sv-SE", { month: "short", day: "numeric", timeZone: "Europe/Stockholm" }) + " " + time;
 }
 
@@ -48,7 +46,7 @@ export default async function Dashboard() {
   const totalEvals = await countEvaluations();
   const activity = await getRecentActivity(8);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = swedishToday();
   const upcomingMatches = matches
     .filter((m) => m.date >= todayStr && !m.finished)
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
@@ -58,9 +56,7 @@ export default async function Dashboard() {
 
   const playedMatches = matches.filter((m) => m.finished || m.our_score !== null);
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 60);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const cutoffStr = swedishDateOffset(-60);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
 
   const playing = stats.filter((s) => s.matches_played > 0);

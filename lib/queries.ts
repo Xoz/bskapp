@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { all, get, run } from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
 import { STAT_IDS } from "./stats";
+import { swedishToday } from "./dates";
 
 export interface Player {
   id: number;
@@ -263,7 +264,7 @@ export interface PlayerMatchRow {
 // om någon öppnat live-rapporteringen i förväg) så de inte syns i statistiken.
 const PLAYED_MATCH_SQL = "(m.finished = 1 OR m.date <= ?)";
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return swedishToday();
 }
 
 export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatchRow[]> {

@@ -11,6 +11,7 @@ import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches } from "./ical";
+import { swedishToday } from "./dates";
 
 async function requireRole(allowed: Role[]): Promise<Role> {
   const role = await getRole();
@@ -467,7 +468,7 @@ export async function addCupPlayoffMatch(formData: FormData) {
   await run(
     "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_phase, periods, period_minutes, level) VALUES (?, ?, 'home', 'cup', ?, 'playoff', ?, ?, ?)",
     [
-      existing?.date ?? new Date().toISOString().slice(0, 10),
+      existing?.date ?? swedishToday(),
       "TBD",
       cupName,
       existing?.periods ?? 3,

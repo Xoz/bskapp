@@ -7,6 +7,7 @@ import { createEvaluation } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
 import AISuggestButton from "@/components/AISuggestButton";
 import { IconArrowLeft } from "@/components/Icons";
+import { swedishToday } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
 
   const latest = (await getEvaluations(player.id))[0];
   const latestScores = latest ? await getScores(latest.id) : {};
-  const today = new Date().toISOString().slice(0, 10);
+  const today = swedishToday();
   const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
 
   return (
