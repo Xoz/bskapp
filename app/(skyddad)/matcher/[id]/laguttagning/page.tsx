@@ -52,28 +52,17 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Matchnivå – styr färgkodningen i trupplistan */}
-      <form action={setMatchLevel} className="card p-5 space-y-3" style={{ background: "var(--primary-ghost)" }}>
+      <form action={setMatchLevel} className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: "var(--primary-ghost)" }}>
         <input type="hidden" name="id" value={match.id} />
-        <div className="flex items-end gap-4 flex-wrap">
-          <div className="flex-1 min-w-48">
-            <label className="label" htmlFor="level">
-              {cupSize > 1 ? "Cupens svårighetsnivå" : "Matchens svårighetsnivå"}
-            </label>
-            <select id="level" name="level" defaultValue={match.level ?? ""} className="input">
-              <option value="">Ej satt</option>
-              {LEVELS.map((l) => (
-                <option key={l.id} value={l.id}>{l.label}</option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="btn-secondary">Spara nivå</button>
-        </div>
-        {cupSize > 1 && (
-          <label className="flex items-center gap-2.5 text-sm cursor-pointer">
-            <input type="checkbox" name="apply_cup" defaultChecked className="h-4 w-4 rounded accent-[var(--primary)]" />
-            Gäller alla {cupSize} matcher i {match.cup_name}
-          </label>
-        )}
+        {cupSize > 1 && <input type="hidden" name="apply_cup" value="on" />}
+        <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)" }}>Nivå</span>
+        <select name="level" defaultValue={match.level ?? ""} className="input py-1 text-sm flex-1 min-w-0">
+          <option value="">Ej satt</option>
+          {LEVELS.map((l) => (
+            <option key={l.id} value={l.id}>{l.label}</option>
+          ))}
+        </select>
+        <button type="submit" className="btn-secondary py-1 text-xs shrink-0">Spara</button>
       </form>
 
       {playersInfo.length === 0 ? (
