@@ -141,6 +141,14 @@ async function init(): Promise<void> {
       want_to_improve TEXT NOT NULL DEFAULT '',
       note_to_coach TEXT NOT NULL DEFAULT ''
     )`,
+    `CREATE TABLE IF NOT EXISTS player_interviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_name TEXT NOT NULL,
+      position TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      messages TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 

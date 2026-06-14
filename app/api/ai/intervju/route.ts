@@ -24,7 +24,9 @@ INTERVJUFLÖDE (följ ungefär denna ordning):
 5. Hur känns det i laget – trygg, roligt?
 6. Finns ett speciellt mål för den här säsongen?
 7. Finns något tränaren bör veta?
-Avslutning: Kort summering av det spelaren berättat + uppmuntrande ord`;
+Avslutning: Kort summering av det spelaren berättat + uppmuntrande ord.
+Avsluta ALLTID ditt sista meddelande (avslutningsmeddelandet) med taggen [KLAR] på en helt egen rad sist i meddelandet.
+Inkludera INTE [KLAR] i något annat svar.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -56,11 +58,13 @@ export async function POST(req: NextRequest) {
     .slice(-30);
 
   try {
-    const reply = await callAnthropicChat(
+    const raw = await callAnthropicChat(
       safeMessages,
       buildSystem(playerName.slice(0, 50), playerPosition.slice(0, 50))
     );
-    return NextResponse.json({ reply });
+    const done = raw.includes("[KLAR]");
+    const reply = raw.replace(/\[KLAR\]/g, "").trim();
+    return NextResponse.json({ reply, done });
   } catch (err) {
     console.error("intervju API error:", err);
     return NextResponse.json({ error: "Kunde inte ansluta till AI-tjänsten" }, { status: 502 });

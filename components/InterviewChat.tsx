@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 const POSITIONS = [
   { label: "🧤 Målvakt", value: "Målvakt" },
@@ -29,7 +30,7 @@ export default function InterviewChat({
   teamName: string;
   clubName: string;
 }) {
-  const [phase, setPhase] = useState<"onboarding" | "chat">("onboarding");
+  const [phase, setPhase] = useState<"onboarding" | "chat" | "done">("onboarding");
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -57,11 +58,27 @@ export default function InterviewChat({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: hist, playerName: name, playerPosition: position }),
         });
-        const data = await res.json();
-        const reply: string = data.reply ?? "Hmm, något gick fel. Försök igen!";
+        const data: { reply?: string; done?: boolean; error?: string } = await res.json();
+        const reply = data.reply ?? "Hmm, något gick fel. Försök igen!";
         appendAI(reply);
-        setHistory((h) => [...h, { role: "assistant", content: reply }]);
+        const newHist = [...hist, { role: "assistant" as const, content: reply }];
+        setHistory(newHist);
         if (hist.length > 1) setShowChips(false);
+
+        if (data.done) {
+          await fetch("/api/ai/intervju/spara", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              playerName: name,
+              position,
+              summary: reply,
+              messages: newHist,
+            }),
+          });
+          // Kort paus så spelaren hinner läsa avslutningsmeddelandet
+          setTimeout(() => setPhase("done"), 2000);
+        }
       } catch {
         appendAI("⚠️ Kunde inte ansluta. Kontrollera nätverket och försök igen.");
       }
@@ -81,11 +98,9 @@ export default function InterviewChat({
   };
 
   const send = (text = input.trim()) => {
-    if (!text || busy) return;
+    if (!text || busy || phase === "done") return;
     setInput("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setMessages((m) => [...m, { role: "player", text, time: nowTime() }]);
     scroll();
     const newHist = [...history, { role: "user" as const, content: text }];
@@ -104,7 +119,6 @@ export default function InterviewChat({
     setShowChips(true);
   };
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -113,6 +127,47 @@ export default function InterviewChat({
     }
   }, [input]);
 
+  // ── AVSLUTSSKÄRM ─────────────────────────────────────────────────
+  if (phase === "done") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-8 text-center px-6 w-full max-w-sm mx-auto"
+        style={{ minHeight: "100svh" }}
+      >
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-full text-4xl"
+          style={{
+            background: "color-mix(in srgb, var(--primary) 15%, transparent)",
+            border: "2px solid var(--primary)",
+            color: "var(--primary)",
+          }}
+        >
+          ✓
+        </div>
+        <div>
+          <h1
+            className="text-2xl font-bold"
+            style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+          >
+            Toppen, {name}!
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+            Din intervju är sparad och skickas till tränaren.
+            <br />
+            Bra jobbat! ⚽
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="btn-primary w-full"
+          style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+        >
+          Tillbaka till start
+        </Link>
+      </div>
+    );
+  }
+
   // ── ONBOARDING ──────────────────────────────────────────────────
   if (phase === "onboarding") {
     return (
@@ -120,7 +175,6 @@ export default function InterviewChat({
         className="flex flex-col items-center gap-8 w-full max-w-sm mx-auto px-6 py-10"
         style={{ minHeight: "100svh", justifyContent: "center" }}
       >
-        {/* Hero */}
         <div className="text-center">
           <p
             className="text-[0.65rem] uppercase tracking-[0.14em] mb-3"
@@ -140,7 +194,6 @@ export default function InterviewChat({
           </p>
         </div>
 
-        {/* Planillustration */}
         <svg
           viewBox="0 0 300 160"
           xmlns="http://www.w3.org/2000/svg"
@@ -154,10 +207,8 @@ export default function InterviewChat({
           <circle cx="150" cy="80" r="2" fill="var(--primary)" fillOpacity="0.3" />
           <rect x="10" y="55" width="12" height="50" rx="2" fill="none" stroke="var(--primary)" strokeWidth="1" strokeOpacity="0.25" />
           <rect x="278" y="55" width="12" height="50" rx="2" fill="none" stroke="var(--primary)" strokeWidth="1" strokeOpacity="0.25" />
-          {/* GK */}
           <circle cx="24" cy="80" r="8" fill="var(--primary)" fillOpacity="0.2" stroke="var(--primary)" strokeWidth="1.2" />
           <text x="24" y="84" textAnchor="middle" fontFamily="var(--font-display)" fontSize="6" fill="var(--primary)">MV</text>
-          {/* Backs */}
           {[46, 63, 97, 114].map((y, i) => (
             <g key={i}>
               <circle cx="75" cy={y} r="7" fill="var(--primary)" fillOpacity="0.07" stroke="var(--primary)" strokeWidth="1" strokeOpacity="0.4" />
@@ -166,15 +217,12 @@ export default function InterviewChat({
               </text>
             </g>
           ))}
-          {/* CM */}
           <circle cx="140" cy="80" r="7" fill="var(--primary)" fillOpacity="0.07" stroke="var(--primary)" strokeWidth="1" strokeOpacity="0.4" />
           <text x="140" y="83" textAnchor="middle" fontFamily="var(--font-display)" fontSize="5.5" fill="var(--primary)" fillOpacity="0.7">CM</text>
-          {/* ST */}
           <circle cx="200" cy="80" r="7" fill="var(--primary)" fillOpacity="0.07" stroke="var(--primary)" strokeWidth="1" strokeOpacity="0.4" />
           <text x="200" y="83" textAnchor="middle" fontFamily="var(--font-display)" fontSize="5.5" fill="var(--primary)" fillOpacity="0.7">ST</text>
         </svg>
 
-        {/* Naminput */}
         <div className="w-full space-y-2">
           <label
             className="block text-[0.65rem] uppercase tracking-[0.1em]"
@@ -196,7 +244,6 @@ export default function InterviewChat({
           />
         </div>
 
-        {/* Position */}
         <div className="w-full space-y-2">
           <p
             className="text-[0.65rem] uppercase tracking-[0.1em]"
@@ -328,7 +375,6 @@ export default function InterviewChat({
           </div>
         ))}
 
-        {/* Skriver-indikator */}
         {busy && (
           <div className="self-start flex flex-col">
             <div
@@ -355,7 +401,7 @@ export default function InterviewChat({
         <div ref={bottomRef} />
       </div>
 
-      {/* Snabbsvar (visas bara i början) */}
+      {/* Snabbsvar */}
       {showChips && messages.length <= 2 && (
         <div className="flex flex-wrap gap-2 px-5 pb-2 shrink-0">
           {["💪 Mina styrkor", "🎯 Förbättringsområden", "⭐ Vad är roligast"].map((chip) => (
@@ -377,7 +423,7 @@ export default function InterviewChat({
         </div>
       )}
 
-      {/* Inputfält */}
+      {/* Input */}
       <div
         className="flex gap-3 px-4 pt-3 shrink-0"
         style={{

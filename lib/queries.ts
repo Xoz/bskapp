@@ -440,3 +440,30 @@ export async function getLatestSelfEval(playerId: number, sinceIso?: string): Pr
   const args = sinceIso ? [playerId, sinceIso] : [playerId];
   return (await get<PlayerSelfEval>(sql, args)) ?? null;
 }
+
+export interface PlayerInterview {
+  id: number;
+  player_name: string;
+  position: string;
+  summary: string;
+  messages: string;
+  created_at: string;
+}
+
+export async function saveIntervju(
+  playerName: string,
+  position: string,
+  summary: string,
+  messages: string
+): Promise<void> {
+  await run(
+    `INSERT INTO player_interviews (player_name, position, summary, messages) VALUES (?, ?, ?, ?)`,
+    [playerName, position, summary, messages]
+  );
+}
+
+export async function getIntervjuer(): Promise<PlayerInterview[]> {
+  return all<PlayerInterview>(
+    `SELECT id, player_name, position, summary, messages, created_at FROM player_interviews ORDER BY created_at DESC`
+  );
+}
