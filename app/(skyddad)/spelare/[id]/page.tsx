@@ -10,6 +10,7 @@ import {
   shareLinkActive,
   getLatestSelfEval,
   SHARE_TTL_MS,
+  type PlayerMatchRow,
 } from "@/lib/queries";
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
@@ -20,7 +21,7 @@ import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { STAT_FIELDS } from "@/lib/stats";
-import { IconArrowLeft, IconPlus, IconSpark, IconTarget } from "@/components/Icons";
+import { IconArrowLeft, IconPlus, IconSpark, IconTarget, IconAlert } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -363,36 +364,39 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Matchstatistik. Vi skiljer på deltagande (alla matcher spelaren var med i,
-          samma siffra som översikten) och matcher med faktiskt rapporterad statistik. */}
+      {/* Matchstatistik. matchStats = en rad per match spelaren deltog i (även
+          nollmatcher). Vi visar alla och flaggar matcher utan registrerad
+          statistik så tränaren kan öppna matchen och rätta en glömd rapportering. */}
       {(() => {
-        const playedMatches = matchStats.filter((m) =>
-          STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0)
-        );
-        // matchStats = en rad per match spelaren deltog i (även nollmatcher)
+        const hasStats = (m: PlayerMatchRow) =>
+          STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0);
         const participated = matchStats.length;
         if (participated === 0) return null;
-        const withStats = playedMatches.length;
+        const missing = matchStats.filter((m) => !hasStats(m)).length;
         const totals = STAT_FIELDS.reduce((acc, f) => {
-          acc[f.id] = playedMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
+          acc[f.id] = matchStats.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
           return acc;
         }, {} as Record<string, number>);
         return (
           <div className="card p-6 md:p-7">
             <h2 className="font-semibold mb-1">Matchstatistik</h2>
-            <p className="text-xs mb-5" style={{ color: "var(--ink-faint)" }}>
+            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
               {`Spelat ${participated} ${participated === 1 ? "match" : "matcher"}`}
-              {withStats < participated && (
-                <> · {withStats} med rapporterad statistik</>
-              )}
+              {missing > 0 && <> · {missing} utan registrerad statistik</>}
             </p>
-            {withStats === 0 ? (
-              <p className="text-sm rounded-xl px-4 py-3" style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}>
-                Spelaren har varit med i {participated} {participated === 1 ? "match" : "matcher"}, men ingen
-                enskild händelse (mål, assist, skott m.m.) har registrerats ännu.
+            {missing > 0 && (
+              <p
+                className="text-xs rounded-lg px-3.5 py-2.5 mt-3 mb-1 flex items-start gap-2"
+                style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+              >
+                <IconAlert width={14} height={14} className="shrink-0 mt-0.5" />
+                <span>
+                  {missing === 1 ? "En match är" : `${missing} matcher är`} markerade utan statistik.
+                  Det är oftast en glömd rapportering – öppna matchen för att fylla i.
+                </span>
               </p>
-            ) : (
-            <div className="overflow-x-auto -mx-2">
+            )}
+            <div className="overflow-x-auto -mx-2 mt-4">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -403,25 +407,27 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   </tr>
                 </thead>
                 <tbody>
-                  {playedMatches.map((m) => {
+                  {matchStats.map((m) => {
                     const row = m as unknown as Record<string, number>;
                     const hasResult = m.our_score != null && m.opponent_score != null;
+                    const empty = !hasStats(m);
                     return (
-                      <tr key={m.match_id}>
+                      <tr key={m.match_id} style={empty ? { background: "var(--warn-bg)" } : undefined}>
                         <td>
                           <Link
                             href={`/matcher/${m.match_id}`}
-                            className="hover:underline font-medium whitespace-nowrap"
-                            style={{ color: "var(--primary)" }}
+                            className="hover:underline font-medium whitespace-nowrap inline-flex items-center gap-1.5"
+                            style={{ color: empty ? "var(--warn)" : "var(--primary)" }}
                           >
                             {m.opponent}
+                            {empty && <span title="Ingen statistik registrerad"><IconAlert width={12} height={12} /></span>}
                           </Link>
                           <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
-                            {m.date}{hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}
+                            {empty ? "Saknar statistik – tryck för att rätta" : `${m.date}${hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}`}
                           </span>
                         </td>
                         {STAT_FIELDS.map((f) => (
-                          <td key={f.id}>{row[f.id] || 0}</td>
+                          <td key={f.id} style={empty ? { color: "var(--ink-faint)" } : undefined}>{row[f.id] || 0}</td>
                         ))}
                       </tr>
                     );
@@ -437,7 +443,6 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 </tfoot>
               </table>
             </div>
-            )}
           </div>
         );
       })()}
