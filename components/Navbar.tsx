@@ -25,23 +25,13 @@ export default async function Navbar() {
     >
       {/* Huvudrad */}
       <div className="flex items-center h-14 px-4 gap-3">
-        <Link href={homeHref} className="flex items-center gap-2.5 shrink-0 mr-1">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-sm font-bold"
-            style={{
-              background: "var(--primary)",
-              color: "var(--primary-deep)",
-              fontFamily: "var(--font-display)",
-              borderRadius: "6px",
-            }}
-          >
-            {settings.club_name?.slice(0, 1) || "B"}
-          </div>
+        <Link href={homeHref} className="flex items-center shrink-0 mr-1">
           <span
-            className="hidden sm:block font-semibold text-sm"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink)", letterSpacing: "-0.3px" }}
+            className="font-bold text-lg tracking-tight"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px" }}
           >
-            {settings.team_name}
+            <span style={{ color: "var(--primary)" }}>+</span>
+            <span style={{ color: "var(--ink)" }}>90</span>
           </span>
         </Link>
 
