@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatch, getPlayersLevelInfo, getMatchSquad, getMatchLineup, getMatchesByCup } from "@/lib/queries";
-import { LEVELS, level as levelInfo, fit } from "@/lib/levels";
-import { setMatchLevel } from "@/lib/actions";
+import { level as levelInfo, fit } from "@/lib/levels";
 import SquadBoard from "@/components/SquadBoard";
 import { IconArrowLeft } from "@/components/Icons";
 
@@ -24,7 +23,6 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
     getMatchesByCup(match.cup_name),
   ]);
   const mLevel = levelInfo(match.level);
-  const cupSize = cupMatches.length;
 
   // Sortera trupplistan så de som passar matchnivån bäst kommer först
   const sortedPlayers = [...playersInfo].sort(
@@ -51,19 +49,21 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
         </p>
       </div>
 
-      {/* Matchnivå – styr färgkodningen i trupplistan */}
-      <form action={setMatchLevel} className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: "var(--primary-ghost)" }}>
-        <input type="hidden" name="id" value={match.id} />
-        {cupSize > 1 && <input type="hidden" name="apply_cup" value="on" />}
-        <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)" }}>Nivå</span>
-        <select name="level" defaultValue={match.level ?? ""} className="input py-1 text-sm flex-1 min-w-0">
-          <option value="">Ej satt</option>
-          {LEVELS.map((l) => (
-            <option key={l.id} value={l.id}>{l.label}</option>
-          ))}
-        </select>
-        <button type="submit" className="btn-secondary py-1 text-xs shrink-0">Spara</button>
-      </form>
+      {!match.level && match.cup_name && (
+        <div
+          className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
+          style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+        >
+          Svårighetsnivå saknas –{" "}
+          <Link
+            href={`/matcher/cup/${encodeURIComponent(match.cup_name)}`}
+            className="font-semibold underline"
+          >
+            redigera cupen
+          </Link>{" "}
+          för att sätta nivå.
+        </div>
+      )}
 
       {playersInfo.length === 0 ? (
         <div className="card p-6 text-sm" style={{ color: "var(--ink-soft)" }}>
@@ -83,7 +83,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
           initialSquad={squadIds}
           initialFormation={match.formation}
           initialPositions={lineup}
-          cupSize={cupSize}
+          cupSize={cupMatches.length}
           cupName={match.cup_name}
         />
       )}

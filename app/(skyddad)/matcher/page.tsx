@@ -2,8 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches, type Match as MatchType } from "@/lib/queries";
-import { level as levelInfo, LEVELS } from "@/lib/levels";
-import { setMatchLevel } from "@/lib/actions";
+import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +29,11 @@ export default async function MatchesPage() {
             {matches.length} {matches.length === 1 ? "match registrerad" : "matcher registrerade"}
           </p>
         </div>
+        {role === "coach" && (
+          <Link href="/matcher/ny-cup" className="btn-secondary text-sm">
+            + Ny cup
+          </Link>
+        )}
       </div>
 
       {matches.length === 0 ? (
@@ -151,9 +155,11 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
   // Cupens nivå – matcherna delar nivå; ta den första som har en satt
   const cupLevel = levelInfo(matches.find((m) => m.level)?.level);
 
+  const editHref = `/matcher/cup/${encodeURIComponent(name)}`;
+
   return (
     <details className="card overflow-hidden" open={ongoing}>
-      <summary className="p-5 flex items-center gap-4 cursor-pointer list-none">
+      <summary className="p-5 flex items-center gap-3 cursor-pointer list-none">
         <div
           className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
           style={{ background: "var(--accent)", color: "var(--primary-deep)" }}
@@ -173,24 +179,21 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
           <span className="badge inline-flex" style={{ background: "var(--bg2)", color: cupLevel.color }}>{cupLevel.label}</span>
         )}
         <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>Cup</span>
+        {role === "coach" && (
+          <Link
+            href={editHref}
+            title="Redigera cup"
+            className="shrink-0 text-lg leading-none px-1 rounded-lg transition-colors hover:bg-[var(--bg2)]"
+            style={{ color: "var(--ink-faint)" }}
+          >
+            ···
+          </Link>
+        )}
       </summary>
-      {role === "coach" && (
-        <form action={setMatchLevel} className="flex items-center gap-2 px-5 py-2" style={{ borderTop: "1px solid var(--line)", background: "var(--primary-ghost)" }}>
-          <input type="hidden" name="id" value={matches[0].id} />
-          <input type="hidden" name="apply_cup" value="on" />
-          <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)" }}>Nivå</span>
-          <select name="level" defaultValue={cupLevel?.id ?? ""} className="input py-1 text-sm flex-1 min-w-0">
-            <option value="">Ej satt</option>
-            {LEVELS.map((l) => (
-              <option key={l.id} value={l.id}>{l.label}</option>
-            ))}
-          </select>
-          <button type="submit" className="btn-secondary py-1 text-xs shrink-0">Spara</button>
-        </form>
-      )}
       <div style={{ borderTop: "1px solid var(--line)" }}>
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;
+          const isPlayoff = m.cup_phase === "playoff";
           return (
             <Link
               key={m.id}
@@ -202,6 +205,7 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
                 <span className="font-medium">{m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}</span>
                 <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
+                  {isPlayoff && " · Slutspel"}
                 </span>
               </span>
               {m.date === today && (

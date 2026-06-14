@@ -393,6 +393,76 @@ export async function saveMatch(formData: FormData) {
   redirect(`/matcher/${matchId}`);
 }
 
+// ---- Cup-hantering ----
+
+export async function updateCup(formData: FormData) {
+  await requireRole(["coach"]);
+  const cupName = String(formData.get("cup_name") ?? "").trim();
+  if (!cupName) return;
+
+  const level = String(formData.get("level") ?? "");
+  await run("UPDATE matches SET level = ? WHERE cup_name = ?", [level, cupName]);
+
+  const ids = String(formData.get("match_ids") ?? "").split(",").map(Number).filter(Boolean);
+  for (const id of ids) {
+    const date = String(formData.get(`date_${id}`) ?? "").trim();
+    const time = String(formData.get(`time_${id}`) ?? "").trim();
+    const opponent = String(formData.get(`opponent_${id}`) ?? "").trim();
+    const homeAway = String(formData.get(`home_away_${id}`) ?? "home");
+    const phase = String(formData.get(`phase_${id}`) ?? "group");
+    if (!date || !opponent) continue;
+    await run(
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ? WHERE id = ? AND cup_name = ?",
+      [date, time || null, opponent, homeAway, phase, id, cupName]
+    );
+  }
+
+  revalidatePath("/matcher");
+  revalidatePath("/matcher", "layout");
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=1`);
+}
+
+export async function addCupPlayoffMatch(formData: FormData) {
+  await requireRole(["coach"]);
+  const cupName = String(formData.get("cup_name") ?? "").trim();
+  if (!cupName) return;
+  const existing = await get<{ date: string }>(
+    "SELECT date FROM matches WHERE cup_name = ? ORDER BY date DESC, start_time DESC LIMIT 1",
+    [cupName]
+  );
+  await run(
+    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_phase) VALUES (?, ?, 'home', 'cup', ?, 'playoff')",
+    [existing?.date ?? new Date().toISOString().slice(0, 10), "TBD", cupName]
+  );
+  revalidatePath("/matcher");
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
+}
+
+export async function addCup(formData: FormData) {
+  await requireRole(["coach"]);
+  const cupName = String(formData.get("cup_name") ?? "").trim();
+  const level = String(formData.get("level") ?? "");
+  if (!cupName) return;
+
+  const matchCount = Number(formData.get("match_count") ?? 0);
+  for (let i = 0; i < matchCount; i++) {
+    const opponent = String(formData.get(`opponent_${i}`) ?? "").trim();
+    const date = String(formData.get(`date_${i}`) ?? "").trim();
+    const time = String(formData.get(`time_${i}`) ?? "").trim();
+    const homeAway = String(formData.get(`home_away_${i}`) ?? "home");
+    if (!opponent || !date) continue;
+    await run(
+      "INSERT INTO matches (date, start_time, opponent, home_away, match_type, level, cup_name, cup_phase) VALUES (?, ?, ?, ?, 'cup', ?, ?, 'group')",
+      [date, time || null, opponent, homeAway, level, cupName]
+    );
+  }
+
+  const logName = (await getCoachName()) ?? "Tränare";
+  await logActivity(logName, "Skapade cup", cupName);
+  revalidatePath("/matcher");
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
+}
+
 // Sätt/ändra matchens svårighetsnivå. Med "apply_cup" sätts samma nivå på alla
 // matcher i cupen (matcherna i en cup spelas på samma nivå).
 export async function setMatchLevel(formData: FormData) {

@@ -46,6 +46,7 @@ export interface Match {
   level: string;
   cup_name: string;
   formation: string;
+  cup_phase: string; // 'group' | 'playoff'
 }
 
 // Matcher som ingår i samma cup/turnering (samma cup_name)
