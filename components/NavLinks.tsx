@@ -11,6 +11,7 @@ import {
   IconSettings,
   IconBall,
   IconChat,
+  IconBook,
 } from "@/components/Icons";
 
 const COACH_LINKS = [
@@ -20,6 +21,7 @@ const COACH_LINKS = [
   { href: "/statistik", label: "Statistik", Icon: IconChart },
   { href: "/intervjuer", label: "Intervjuer", Icon: IconChat },
   { href: "/installningar", label: "Inställningar", Icon: IconSettings },
+  { href: "/guide", label: "Guide", Icon: IconBook },
 ];
 
 const PARENT_LINKS = [
