@@ -43,7 +43,23 @@ async function tryExec(sql: string) {
   }
 }
 
+// Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
+// nedan hoppar över all DDL när databasen redan är på denna version – annars
+// körs ~40 sekventiella satser mot Turso vid varje kall serverless-start.
+const SCHEMA_VERSION = "2026-06-15";
+
 async function init(): Promise<void> {
+  // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
+  // OBS: rå-klienten används här – get/all/run anropar ready() → init() (rekursion).
+  try {
+    const res = await (await getClient()).execute(
+      "SELECT value FROM settings WHERE key = 'schema_version'"
+    );
+    if (res.rows[0]?.value === SCHEMA_VERSION) return;
+  } catch {
+    // settings-tabellen finns inte än (tom databas) – kör full init.
+  }
+
   const tables = [
     `CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -264,6 +280,11 @@ async function init(): Promise<void> {
     }
   }
 
+  // Stämpla schemat som aktuellt så nästa kalla start hoppar över allt ovan.
+  await (await getClient()).execute({
+    sql: "INSERT INTO settings (key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    args: [SCHEMA_VERSION],
+  });
 }
 
 let readyPromise: Promise<void> | null = null;
