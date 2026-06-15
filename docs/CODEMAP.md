@@ -35,7 +35,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 ## lib/ — exports per fil
 
-- **actions.ts** (server actions, ~37 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch, addCup/updateCup/deleteCupMatch/addCupPlayoffMatch, setMatchLevel, saveSquad/saveLineup, saveMatchRatings, deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches, previewCupImport/importCupMatches (cup-import via iCal), updateSettings, generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
+- **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch, addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, setMatchLevel, saveSquad/saveLineup, saveMatchRatings, deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches, previewCupImport/importCupMatches (cup-import via iCal), updateSettings, generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
 - **db.ts**: libSQL-klient + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`. **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
@@ -45,7 +45,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 - **stats.ts**: `STAT_FIELDS`/`CARD_FIELDS`/`LIVE_COUNT_IDS` (definition av vilka stats som finns).
 - **levels.ts**: `LEVELS`, level/levelByRank/suggestLevel, fit() (matchar spelarnivå mot matchnivå).
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
-- **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName, `CalendarMatch`.
+- **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **ai.ts**: callAnthropic/callAnthropicChat, generatePlayerCardText.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset.
 - **rating.ts**: matchbetyg/ELO-form — `EXPECTATION_STEPS`/`RATING_AREAS`, seedRating/kFactor/computeDelta, ratingBand, suggestOutcome (stats→förslag), outcomeFromAreas, stepByKey/stepByOutcome.

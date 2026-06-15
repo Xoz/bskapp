@@ -65,6 +65,30 @@ function unfold(ics: string): string[] {
   return out;
 }
 
+// Extraherar grupp/kategori-info från DESCRIPTION, t.ex. "competition Grupp A"
+// eller "friendly Grupp X". CupManager skriver "Match i Girls 2014 competition, Grupp A mellan…"
+// Används för att skilja flera lag/grupper i samma cup åt vid import.
+export function calendarGroup(ics: string): string | null {
+  const lines = unfold(ics);
+  let inEvent = false;
+  for (const line of lines) {
+    if (line === "BEGIN:VEVENT") { inEvent = true; continue; }
+    if (line === "END:VEVENT") { inEvent = false; continue; }
+    if (!inEvent) continue;
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    if (line.slice(0, idx).split(";")[0].toUpperCase() !== "DESCRIPTION") continue;
+    const desc = decodeText(line.slice(idx + 1));
+    // "Match i Girls 2014 competition, Grupp A mellan X och Y"
+    const m = desc.match(/\b(competition|friendly|träningsmatch|mix)\b[^.]*?\b(grupp\s+\w+)/i);
+    if (m) return `${m[1]} ${m[2]}`.replace(/\s+/g, " ").trim();
+    const g = desc.match(/\bgrupp\s+\w+/i);
+    if (g) return g[0];
+    break; // Titta bara på första eventet
+  }
+  return null;
+}
+
 // Cup-namnet ur kalenderhuvudet (X-WR-CALNAME / NAME).
 // Fallback för CupManager (Stockholm Football Cup 2026): läs ur DESCRIPTION-prefixet
 // som har formatet "Cup Name:\n\nMatch i ...".

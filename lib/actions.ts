@@ -10,7 +10,7 @@ import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachN
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
-import { fetchCalendar, extractMatches, calendarName } from "./ical";
+import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
 import { swedishToday } from "./dates";
 import {
   stepByKey,
@@ -505,6 +505,29 @@ export async function deleteCupMatch(id: number, cupName: string) {
   redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
 }
 
+export async function deleteCup(cupName: string) {
+  await requireRole(["coach"]);
+  if (!cupName) return;
+  // Hämta alla match-id:n i cupen för att rensa relaterade tabeller.
+  const ids = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [cupName]);
+  if (ids.length > 0) {
+    const idList = ids.map((r) => r.id);
+    await batch([
+      ...idList.map((id) => ({ sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] })),
+      ...idList.map((id) => ({ sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] })),
+      ...idList.map((id) => ({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] })),
+      ...idList.map((id) => ({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] })),
+      ...idList.map((id) => ({ sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] })),
+      ...idList.map((id) => ({ sql: "DELETE FROM match_ratings WHERE match_id = ?", args: [id] })),
+      { sql: "DELETE FROM matches WHERE cup_name = ?", args: [cupName] },
+    ]);
+  }
+  const logName = (await getCoachName()) ?? "Tränare";
+  await logActivity(logName, "Raderade cup", cupName);
+  revalidatePath("/matcher");
+  redirect("/matcher");
+}
+
 export async function addCupPlayoffMatch(formData: FormData) {
   await requireRole(["coach"]);
   const cupName = String(formData.get("cup_name") ?? "").trim();
@@ -995,7 +1018,11 @@ export async function previewCupImport(
     return { ok: false, error: "Inga matcher hittades i kalendern." };
 
   matches.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
-  return { ok: true, url, cupName: calendarName(ics) ?? "", matches };
+  const baseName = calendarName(ics) ?? "";
+  const group = calendarGroup(ics);
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const cupName = group ? `${baseName} - ${capitalize(group)}` : baseName;
+  return { ok: true, url, cupName, matches };
 }
 
 export async function importCupMatches(formData: FormData) {

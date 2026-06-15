@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatchesByCup } from "@/lib/queries";
-import { updateCup, addCupPlayoffMatch, deleteCupMatch } from "@/lib/actions";
+import { updateCup, addCupPlayoffMatch, deleteCupMatch, deleteCup } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft, IconCheck, IconPlus } from "@/components/Icons";
 import DeleteCupMatchButton from "@/components/DeleteCupMatchButton";
+import DeleteCupButton from "@/components/DeleteCupButton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,9 @@ export default async function CupEditorPage({
   const last = [...matches].sort((a, b) => b.date.localeCompare(a.date))[0].date;
   const dateRange = first === last ? first : `${first} – ${last}`;
 
+  // Summera gjorda mål (our_score) över de matcher som är spelade.
+  const goalsScored = matches.reduce((sum, m) => sum + (m.our_score ?? 0), 0);
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -49,7 +53,7 @@ export default async function CupEditorPage({
         </Link>
         <h1 className="text-[1.7rem] font-bold mt-2">{cupName}</h1>
         <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          {dateRange} · {matches.length} matcher
+          {dateRange} · {matches.length} matcher · {goalsScored} gjorda mål
         </p>
       </div>
 
@@ -254,9 +258,16 @@ export default async function CupEditorPage({
           </div>
         )}
 
-        <div className="flex gap-3 flex-wrap items-center">
-          <button type="submit" className="btn-primary px-6">Spara cup</button>
-          <Link href="/matcher" className="btn-secondary">Avbryt</Link>
+        <div className="flex gap-3 flex-wrap items-center justify-between">
+          <div className="flex gap-3 flex-wrap">
+            <button type="submit" className="btn-primary px-6">Spara cup</button>
+            <Link href="/matcher" className="btn-secondary">Avbryt</Link>
+          </div>
+          <DeleteCupButton
+            action={deleteCup.bind(null, cupName)}
+            cupName={cupName}
+            matchCount={matches.length}
+          />
         </div>
       </form>
 
