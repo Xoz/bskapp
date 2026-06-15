@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getMatches, mootMatchIds, cupRoundLabel, type Match } from "@/lib/queries";
 import { getAllSettings } from "@/lib/db";
 import { swedishToday } from "@/lib/dates";
@@ -40,8 +39,6 @@ export default async function LiveLandingPage() {
     )
     .slice(0, 5);
 
-  // Exakt en match idag → gå direkt dit
-  if (todayMatches.length === 1) redirect(`/live/${todayMatches[0].id}`);
 
   return (
     <main className="flex-1 p-6 max-w-md w-full mx-auto" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
