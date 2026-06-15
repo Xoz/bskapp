@@ -262,25 +262,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </details>
         </>
       )}
-
-      {role === "parent" && isUpcoming && (
-        <Link
-          href={`/matcher/${match.id}/live`}
-          className="card card-hover p-5 flex items-center gap-4"
-          style={{ background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" }}
-        >
-          <span className="text-2xl">📋</span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold">Rapportera matchen</p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-              Logga mål, assist och statistik live under matchen
-            </p>
-          </div>
-          <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
-            Öppna →
-          </span>
-        </Link>
-      )}
     </div>
   );
 }

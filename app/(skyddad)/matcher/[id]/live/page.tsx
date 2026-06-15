@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LivePage({ params }: { params: Promise<{ id: string }> }) {
   const role = await getRole();
-  if (!role) redirect("/login");
+  if (role !== "coach") redirect("/matcher");
 
   const { id } = await params;
   const match = await getMatch(Number(id));
@@ -35,7 +35,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         </p>
       </div>
 
-      <LiveTracker code={String(match.id)} initial={initial} isCoach={role === "coach"} coachName={coachName ?? ""} />
+      <LiveTracker code={String(match.id)} initial={initial} isCoach coachName={coachName ?? ""} />
     </div>
   );
 }
