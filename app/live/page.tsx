@@ -26,7 +26,7 @@ export default async function LiveLandingPage() {
   const moot = mootMatchIds(allMatches);
 
   const todayMatches = allMatches
-    .filter((m) => m.date === today)
+    .filter((m) => m.date === today && !moot.has(m.id))
     .sort((a, b) =>
       (a.start_time ?? "").localeCompare(b.start_time ?? "") || a.id - b.id
     );
