@@ -16,20 +16,24 @@ import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
 export const dynamic = "force-dynamic";
 
-// Live-rapportering är skyddad: endast inloggade tränare får läsa och skriva.
+// Läsning (Livescore) är publik. Skrivning kräver tränare, ELLER att tränaren
+// öppnat rapportering för matchen (report_open) – då får föräldrar/hjälpare logga.
 async function matchFromId(id: string) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return undefined;
-  return get<{ id: number }>("SELECT id FROM matches WHERE id = ?", [n]);
+  return get<{ id: number; report_open: number }>(
+    "SELECT id, report_open FROM matches WHERE id = ?",
+    [n]
+  );
 }
+
+// Att avsluta matchen stänger rapporteringen för alla – förbehålls tränaren.
+const COACH_ONLY_ACTIONS = new Set<LiveAction["type"]>(["finish_match"]);
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const role = await getRole();
-  if (role !== "coach") return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
-
   const { id } = await params;
   const match = await matchFromId(id);
   if (!match) return NextResponse.json({ error: "Matchen finns inte" }, { status: 404 });
@@ -40,9 +44,6 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const role = await getRole();
-  if (role !== "coach") return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
-
   const { id } = await params;
   const match = await matchFromId(id);
   if (!match) return NextResponse.json({ error: "Matchen finns inte" }, { status: 404 });
@@ -52,6 +53,12 @@ export async function POST(
     action = (await req.json()) as LiveAction;
   } catch {
     return NextResponse.json({ error: "Ogiltig förfrågan" }, { status: 400 });
+  }
+
+  const isCoach = (await getRole()) === "coach";
+  // finish_match: bara tränare. Övriga skrivningar: tränare eller öppen rapportering.
+  if (!isCoach && (COACH_ONLY_ACTIONS.has(action.type) || !match.report_open)) {
+    return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });
   }
 
   try {

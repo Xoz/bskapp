@@ -190,6 +190,7 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN formation TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE matches ADD COLUMN cup_phase TEXT NOT NULL DEFAULT 'group'`,
     `ALTER TABLE matches ADD COLUMN cup_round TEXT`,
+    `ALTER TABLE matches ADD COLUMN report_open INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE match_players ADD COLUMN yellow_card INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE match_players ADD COLUMN red_card INTEGER NOT NULL DEFAULT 0`,
     // Vem som loggade händelsen – gör duplikatskyddet per rapportör så att två

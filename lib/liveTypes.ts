@@ -57,6 +57,7 @@ export interface LiveState {
   minutes: Record<number, number>;
   onField: number[]; // spelare som är på plan just nu
   hasLineup: boolean; // finns en startelva i laguttagningen?
+  reportOpen: boolean; // tränaren har öppnat rapportering för föräldrar/hjälpare
 }
 
 export type LiveAction =

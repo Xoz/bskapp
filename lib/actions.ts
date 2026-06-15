@@ -647,6 +647,16 @@ export async function deleteMatch(formData: FormData) {
   redirect("/matcher");
 }
 
+// Öppnar/stänger föräldrarapportering för en match (tränar-toggle).
+export async function toggleMatchReporting(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const open = formData.get("open") === "1";
+  await run("UPDATE matches SET report_open = ? WHERE id = ?", [open ? 1 : 0, id]);
+  revalidatePath(`/matcher/${id}`);
+}
+
 export async function resetMatch(formData: FormData) {
   await requireRole(["coach"]);
   const id = Number(formData.get("id"));

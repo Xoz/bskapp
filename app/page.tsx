@@ -57,6 +57,16 @@ export default async function LandingPage() {
           </p>
         </div>
 
+        {/* Livescore – publik, ingen inloggning */}
+        <Link
+          href="/live"
+          className="flex items-center justify-center gap-2.5 rounded-2xl px-5 py-4 font-semibold transition-opacity hover:opacity-90"
+          style={{ background: "var(--accent)", color: "var(--primary-deep, #0a0b0d)", fontFamily: "var(--font-display)" }}
+        >
+          <span className="text-lg">📡</span>
+          Livescore – följ matchen live
+        </Link>
+
         {/* Rollkort */}
         <div className="space-y-3">
           {/* Tränare */}

@@ -22,6 +22,7 @@ interface MatchRow {
   clock_period: number;
   finished: number;
   cup_name: string;
+  report_open: number;
 }
 
 export function clockSeconds(m: MatchRow): number {
@@ -138,6 +139,7 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     minutes,
     onField,
     hasLineup: starters.length > 0,
+    reportOpen: !!m.report_open,
   };
 }
 
@@ -185,8 +187,9 @@ function computePlaytime(
 }
 
 export async function finishMatch(matchId: number): Promise<void> {
+  // Avslutar matchen och stänger rapporteringen för föräldrar/hjälpare.
   await run(
-    "UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL WHERE id = ?",
+    "UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL, report_open = 0 WHERE id = ?",
     [matchId]
   );
 }

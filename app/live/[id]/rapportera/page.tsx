@@ -1,0 +1,64 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getMatch } from "@/lib/queries";
+import { getLiveState } from "@/lib/live";
+import { getAllSettings } from "@/lib/db";
+import LiveTracker from "@/components/LiveTracker";
+import { IconArrowLeft } from "@/components/Icons";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Rapportera" };
+
+export default async function PublicReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const matchId = Number(id);
+  if (!Number.isInteger(matchId) || matchId <= 0) notFound();
+
+  const match = await getMatch(matchId);
+  if (!match) notFound();
+
+  // Rapportering måste vara öppnad av tränaren och matchen får inte vara avslutad.
+  if (!match.report_open || match.finished) {
+    const settings = await getAllSettings();
+    return (
+      <main className="flex-1 p-6 max-w-md w-full mx-auto" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
+        <div className="card p-8 text-center">
+          <p className="text-3xl mb-3">🔒</p>
+          <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
+            Rapportering är inte öppen
+          </p>
+          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            {match.finished
+              ? "Matchen är avslutad."
+              : `Tränaren har inte öppnat rapportering för den här matchen ännu. Du kan fortfarande följa ${settings.team_name} live.`}
+          </p>
+          <Link href={`/live/${matchId}`} className="btn-secondary mt-5 inline-flex">
+            Till Livescore
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const initial = await getLiveState(matchId);
+
+  return (
+    <main className="flex-1 p-4 sm:p-6 max-w-lg w-full mx-auto" style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}>
+      <div className="mb-4">
+        <Link
+          href={`/live/${matchId}`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
+          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+        >
+          <IconArrowLeft width={15} height={15} /> Livescore
+        </Link>
+        <h1 className="text-[1.5rem] font-bold mt-2">Rapportera</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+          {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent} · {match.date}
+        </p>
+      </div>
+
+      <LiveTracker code={String(matchId)} initial={initial} isCoach={false} />
+    </main>
+  );
+}

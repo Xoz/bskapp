@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
-import { deleteMatch, resetMatch } from "@/lib/actions";
+import { deleteMatch, resetMatch, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
 import MatchForm from "@/components/MatchForm";
@@ -11,6 +11,7 @@ import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
 import ManualEventForm from "@/components/ManualEventForm";
 import EventEditor from "@/components/EventEditor";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft, IconArrowRight } from "@/components/Icons";
 import { swedishToday } from "@/lib/dates";
 
@@ -204,6 +205,38 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               {match.finished ? "Visa" : events.length > 0 ? "Fortsätt" : "Starta"}
             </span>
           </Link>
+
+          {/* Föräldrarapportering – publik Livescore + tränar-toggle för hjälpare */}
+          {!match.finished && (
+            <div
+              className="card p-5 flex items-center gap-4 flex-wrap"
+              style={match.report_open ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
+            >
+              <span className="text-2xl">📡</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">Föräldrarapportering</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  {match.report_open
+                    ? "Öppen – föräldrar kan hjälpa till att rapportera. Alla kan följa Livescore."
+                    : "Stängd – bara du rapporterar. Livescore är alltid öppen att följa."}
+                </p>
+                <div className="mt-2">
+                  <CopyLinkButton code={String(match.id)} path="live" variant="light" label="Kopiera Livescore-länk" />
+                </div>
+              </div>
+              <form action={toggleMatchReporting}>
+                <input type="hidden" name="id" value={match.id} />
+                <input type="hidden" name="open" value={match.report_open ? "0" : "1"} />
+                <button
+                  type="submit"
+                  className="btn-secondary"
+                  style={match.report_open ? { color: "var(--danger)" } : undefined}
+                >
+                  {match.report_open ? "Stäng rapportering" : "Öppna rapportering"}
+                </button>
+              </form>
+            </div>
+          )}
 
           {events.length > 0 && (
             <details className="card overflow-hidden">

@@ -49,6 +49,7 @@ export interface Match {
   formation: string;
   cup_phase: string; // 'group' | 'playoff'
   cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
+  report_open: number; // 1 = föräldrar/hjälpare får liverapportera
 }
 
 // Ordning för slutspelsrundor – gruppspel först, sedan kvarts → semi → brons → final
