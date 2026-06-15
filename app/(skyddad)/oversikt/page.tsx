@@ -38,13 +38,17 @@ export default async function Dashboard() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const settings = await getAllSettings();
-  const players = await getPlayers();
-  const matches = await getMatches();
-  const stats = await getSeasonStats();
-  const latestEvals = await getLatestEvaluationDates();
-  const totalEvals = await countEvaluations();
-  const activity = await getRecentActivity(8);
+  // Oberoende queries körs parallellt – annars staplas latensen mot Turso.
+  const [settings, players, matches, stats, latestEvals, totalEvals, activity] =
+    await Promise.all([
+      getAllSettings(),
+      getPlayers(),
+      getMatches(),
+      getSeasonStats(),
+      getLatestEvaluationDates(),
+      countEvaluations(),
+      getRecentActivity(8),
+    ]);
 
   const todayStr = swedishToday();
   const upcomingMatches = matches

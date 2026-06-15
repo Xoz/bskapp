@@ -11,9 +11,11 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const players = await getPlayers();
-  const latestEvals = await getLatestEvaluationDates();
-  const stats = await getSeasonStats();
+  const [players, latestEvals, stats] = await Promise.all([
+    getPlayers(),
+    getLatestEvaluationDates(),
+    getSeasonStats(),
+  ]);
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   return (
     <div className="space-y-6">
