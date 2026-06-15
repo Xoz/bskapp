@@ -31,9 +31,14 @@ export default async function MatchesPage() {
           </p>
         </div>
         {role === "coach" && (
-          <Link href="/matcher/ny-cup" className="btn-secondary text-sm">
-            + Ny cup
-          </Link>
+          <div className="flex gap-2.5 flex-wrap">
+            <Link href="/matcher/importera-cup" className="btn-secondary text-sm">
+              Importera cup
+            </Link>
+            <Link href="/matcher/ny-cup" className="btn-secondary text-sm">
+              + Ny cup
+            </Link>
+          </div>
         )}
       </div>
 

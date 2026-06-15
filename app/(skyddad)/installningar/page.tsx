@@ -237,6 +237,9 @@ export default async function SettingsPage({
                     Hämta matcher nu
                   </button>
                 </form>
+                <Link href="/matcher/importera-cup" className="btn-secondary">
+                  Importera cup från länk
+                </Link>
                 <Link href="/matcher/ny" className="btn-secondary">
                   <IconPlus width={15} height={15} /> Lägg till match manuellt
                 </Link>

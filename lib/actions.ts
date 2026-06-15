@@ -10,7 +10,7 @@ import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachN
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
-import { fetchCalendar, extractMatches } from "./ical";
+import { fetchCalendar, extractMatches, calendarName } from "./ical";
 import { swedishToday } from "./dates";
 import {
   stepByKey,
@@ -944,6 +944,96 @@ export async function importCalendarMatches() {
 
   revalidatePath("/matcher");
   redirect(`/installningar?kalender=${imported}`);
+}
+
+// ---- Cup-import via iCal-länk ----
+// Två steg: previewCupImport (returnerar data, redirectar ej) → importCupMatches (skriver).
+// Cup-feeds (Profixio/CupManager m.fl.) levererar standard-iCal men utan svenskalags
+// "// Lag"-suffix; vi läser motståndare via extractMatches generiska gren och tvingar cup.
+
+export interface CupPreviewMatch {
+  uid: string;
+  date: string;
+  time: string | null;
+  opponent: string;
+  homeAway: "home" | "away";
+  location: string;
+}
+export type CupPreviewState =
+  | { ok: true; url: string; cupName: string; matches: CupPreviewMatch[] }
+  | { ok: false; error: string }
+  | null;
+
+export async function previewCupImport(
+  _prev: CupPreviewState,
+  formData: FormData
+): Promise<CupPreviewState> {
+  await requireRole(["coach"]);
+  const url = String(formData.get("url") ?? "").trim();
+  if (!url) return { ok: false, error: "Klistra in en iCal-länk." };
+
+  let ics: string;
+  try {
+    ics = await fetchCalendar(url);
+  } catch {
+    return { ok: false, error: "Kunde inte hämta kalendern. Kontrollera länken." };
+  }
+
+  const ownNames = [await getSetting("team_name"), await getSetting("club_name")].filter(Boolean);
+  const matches = extractMatches(ics, ownNames)
+    .filter((m) => m.date)
+    .map((m) => ({
+      uid: m.uid,
+      date: m.date,
+      time: m.time,
+      opponent: m.opponent,
+      homeAway: m.homeAway,
+      location: m.location,
+    }));
+
+  if (matches.length === 0)
+    return { ok: false, error: "Inga matcher hittades i kalendern." };
+
+  matches.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
+  return { ok: true, url, cupName: calendarName(ics) ?? "", matches };
+}
+
+export async function importCupMatches(formData: FormData) {
+  await requireRole(["coach"]);
+  const url = String(formData.get("url") ?? "").trim();
+  const cupName = String(formData.get("cup_name") ?? "").trim();
+  const level = String(formData.get("level") ?? "");
+  if (!url || !cupName) redirect("/matcher/importera-cup?fel=saknas");
+
+  let imported = 0;
+  try {
+    const ics = await fetchCalendar(url);
+    const ownNames = [await getSetting("team_name"), await getSetting("club_name")].filter(Boolean);
+    const matches = extractMatches(ics, ownNames);
+
+    for (const m of matches) {
+      if (!m.date) continue;
+      const exists = await get<{ 1: number }>("SELECT 1 FROM matches WHERE external_uid = ?", [
+        m.uid,
+      ]);
+      if (exists) continue;
+      const notes = [m.time && `Avspark ${m.time}`, m.location && `Plats: ${m.location}`]
+        .filter(Boolean)
+        .join(" · ");
+      await run(
+        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, cup_phase, notes, level, cup_name, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, 'cup', 'group', ?, ?, ?, 'coach', 'calendar', ?)",
+        [m.date, m.time, m.opponent, m.homeAway, notes, level, cupName, m.uid]
+      );
+      imported++;
+    }
+  } catch {
+    redirect("/matcher/importera-cup?fel=hamta");
+  }
+
+  const logName = (await getCoachName()) ?? "Tränare";
+  await logActivity(logName, "Importerade cup", cupName);
+  revalidatePath("/matcher");
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
 }
 
 // ---- Inställningar ----

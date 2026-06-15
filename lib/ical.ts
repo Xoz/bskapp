@@ -61,6 +61,21 @@ function unfold(ics: string): string[] {
   return out;
 }
 
+// Cup-namnet ligger i kalenderhuvudet (X-WR-CALNAME), inte i varje event.
+// Profixio/CupManager sätter t.ex. "X-WR-CALNAME:Sollentunacupen F2014".
+export function calendarName(ics: string): string | null {
+  for (const line of unfold(ics)) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).split(";")[0].toUpperCase();
+    if (key === "X-WR-CALNAME" || key === "NAME") {
+      const name = decodeText(line.slice(idx + 1));
+      if (name) return name;
+    }
+  }
+  return null;
+}
+
 function parseDate(value: string): string | null {
   // 20260815T100000Z, 20260815T100000 eller 20260815
   const m = value.match(/^(\d{4})(\d{2})(\d{2})/);
