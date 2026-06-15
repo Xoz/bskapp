@@ -5,6 +5,7 @@ import { getMatchesByCup } from "@/lib/queries";
 import { updateCup, addCupPlayoffMatch, deleteCupMatch } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft, IconCheck, IconPlus } from "@/components/Icons";
+import DeleteCupMatchButton from "@/components/DeleteCupMatchButton";
 
 export const dynamic = "force-dynamic";
 
@@ -127,15 +128,7 @@ export default async function CupEditorPage({
                   <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
                     Match {i + 1}
                   </p>
-                  <button
-                    type="submit"
-                    formAction={deleteCupMatch.bind(null, m.id, cupName)}
-                    formNoValidate
-                    className="text-xs px-2 py-0.5 rounded transition-colors hover:underline"
-                    style={{ color: "var(--danger)" }}
-                  >
-                    Ta bort
-                  </button>
+                  <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 sm:col-span-1">
@@ -203,15 +196,7 @@ export default async function CupEditorPage({
                     <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
                       Slutspelsmatch {i + 1}
                     </p>
-                    <button
-                      type="submit"
-                      formAction={deleteCupMatch.bind(null, m.id, cupName)}
-                      formNoValidate
-                      className="text-xs px-2 py-0.5 rounded transition-colors hover:underline"
-                      style={{ color: "var(--danger)" }}
-                    >
-                      Ta bort
-                    </button>
+                    <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 sm:col-span-1">
