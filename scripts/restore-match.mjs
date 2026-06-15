@@ -22,7 +22,7 @@
 
 import { createClient } from "@libsql/client";
 
-const { FORK_URL, FORK_TOKEN, LIVE_URL, LIVE_TOKEN, CUP_NAME, MATCH_DATE } = process.env;
+const { FORK_URL, FORK_TOKEN, LIVE_URL, LIVE_TOKEN, CUP_NAME, MATCH_DATE, MATCH_ID } = process.env;
 const APPLY = process.env.APPLY === "1";
 
 if (!FORK_URL || !LIVE_URL) {
@@ -50,12 +50,24 @@ async function copyRows(table, whereSql, whereArgs, apply) {
   return res.rows.length;
 }
 
-// 1. Hitta kandidatmatcher i backupen (samma cup + datum)
-const where = MATCH_DATE ? "cup_name = ? AND date = ?" : "cup_name = ?";
-const args = MATCH_DATE ? [CUP_NAME, MATCH_DATE] : [CUP_NAME];
+// 1. Hitta kandidatmatcher i backupen. MATCH_ID är mest precist; annars cup+datum.
+let where, args, label;
+if (MATCH_ID) {
+  where = "id = ?";
+  args = [Number(MATCH_ID)];
+  label = `id=${MATCH_ID}`;
+} else if (MATCH_DATE) {
+  where = "cup_name = ? AND date = ?";
+  args = [CUP_NAME, MATCH_DATE];
+  label = `"${CUP_NAME}" ${MATCH_DATE}`;
+} else {
+  where = "cup_name = ?";
+  args = [CUP_NAME];
+  label = `"${CUP_NAME}"`;
+}
 const candidates = await fork.execute({ sql: `SELECT * FROM matches WHERE ${where}`, args });
 
-console.log(`\nHittade ${candidates.rows.length} match(er) i backupen för "${CUP_NAME}"${MATCH_DATE ? ` ${MATCH_DATE}` : ""}:`);
+console.log(`\nHittade ${candidates.rows.length} match(er) i backupen för ${label}:`);
 
 let restored = 0;
 for (const m of candidates.rows) {
