@@ -71,3 +71,36 @@ API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callb
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
 - **Git**: `git push` direkt efter commit.
 - Större detaljspec finns i `docs/SPEC-matchbetyg.md` (planerad matchbetyg-funktion, ej byggd) och `docs/STAGING.md`.
+
+---
+
+## Underhåll av denna fil
+
+Uppdatera CODEMAP i **samma ändring** som du rör strukturen — inte efteråt. Annars ruttnar kartan
+och nästa session läser fel filer. Vad som triggar en uppdatering och vart det ska in:
+
+| Du gör detta | Uppdatera i CODEMAP |
+| --- | --- |
+| Ny **exportfunktion** i en `lib/`-fil | Lägg till i "lib/ — exports per fil" under rätt fil |
+| Ny **lib-fil** | Ny rad i "lib/ — exports per fil" + ev. rad i "Feature → filer" |
+| Ny **komponent** kopplad till en feature | Lägg till filen i rätt rad i "Feature → filer" |
+| Ny **route** (page.tsx / route.ts) | Lägg till under "Routes (app/)" |
+| Ny/ändrad **DB-tabell** (`CREATE TABLE` i db.ts) | Lägg till i "DB-tabeller" |
+| Nytt **feature-område** | Ny rad i "Feature → filer"-tabellen |
+| Ny **konvention** (mönster som ska följas överallt) | Lägg till under "Konventioner" |
+
+Regler för att hålla filen billig att läsa:
+- **En rad per fil/funktion** — beskriv *vad den gör*, inte *hur*. Ingen kod, ingen logik. Detaljerna bor i koden.
+- **Lista bara det som hjälper navigering.** Interna hjälpfunktioner som ingen söker efter behöver inte vara med.
+- **Ta bort rader** när du raderar/flyttar filer — en felaktig karta är värre än ingen.
+- Sikta på att filen håller sig under ~200 rader. Växer ett område mycket: överväg en egen `docs/<område>.md` och länka från tabellen.
+
+Snabb sanity-check (kör vid behov) att kartan inte tappat något:
+```bash
+# Nya lib-exports som ev. saknas i kartan:
+grep -rhoE "^export (async )?(function|const) [a-zA-Z0-9_]+" lib/*.ts | sort
+# Alla routes:
+find app -name "page.tsx" -o -name "route.ts" | sort
+# Alla tabeller:
+grep -E "CREATE TABLE" lib/db.ts
+```
