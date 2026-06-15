@@ -50,38 +50,8 @@ export default async function LiveLandingPage() {
         </p>
       </div>
 
-      {todayMatches.length > 0 ? (
-        <div className="space-y-3">
-          {todayMatches.map((m) => {
-            const hasResult = m.our_score != null && m.opponent_score != null;
-            return (
-              <Link
-                key={m.id}
-                href={`/live/${m.id}`}
-                className="card card-hover p-5 flex items-center gap-4"
-              >
-                <span className="text-2xl">📡</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
-                    {matchLabel(m)}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                    {m.start_time ? `Avspark ${m.start_time}` : "Idag"}
-                    {m.report_open ? " · rapportering öppen" : ""}
-                  </p>
-                </div>
-                <span
-                  className="stat-number text-lg"
-                  style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
-                >
-                  {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-6">
+      <div className="space-y-6">
+        {todayMatches.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-3xl mb-3">⚽</p>
             <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
@@ -91,39 +61,71 @@ export default async function LiveLandingPage() {
               Livescore visas här när det är matchdag.
             </p>
           </div>
+        ) : (
+          <div className="space-y-3">
+            {todayMatches.map((m) => {
+              const hasResult = m.our_score != null && m.opponent_score != null;
+              return (
+                <Link
+                  key={m.id}
+                  href={`/live/${m.id}`}
+                  className="card card-hover p-5 flex items-center gap-4"
+                >
+                  <span className="text-2xl">📡</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
+                      {matchLabel(m)}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                      {m.start_time ? `Avspark ${m.start_time}` : "Idag"}
+                      {m.report_open ? " · rapportering öppen" : ""}
+                    </p>
+                  </div>
+                  <span
+                    className="stat-number text-lg"
+                    style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
+                  >
+                    {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-          {upcomingMatches.length > 0 && (
-            <div>
-              <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
-                Kommande matcher
-              </h2>
-              <div className="space-y-2">
-                {upcomingMatches.map((m) => {
-                  const round = cupRoundLabel(m);
-                  const sub = [
-                    formatDate(m.date),
-                    m.start_time ? `kl. ${m.start_time}` : null,
-                    m.cup_name || null,
-                    round && round !== matchLabel(m) ? round : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ");
-                  return (
-                    <div key={m.id} className="card p-4 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{matchLabel(m)}</p>
-                        <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>{sub}</p>
-                      </div>
+        {upcomingMatches.length > 0 && (
+          <div>
+            <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
+              Kommande matcher
+            </h2>
+            <div className="space-y-2">
+              {upcomingMatches.map((m) => {
+                const round = cupRoundLabel(m);
+                const sub = [
+                  formatDate(m.date),
+                  m.start_time ? `kl. ${m.start_time}` : null,
+                  m.cup_name || null,
+                  round && round !== matchLabel(m) ? round : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <div key={m.id} className="card p-4 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{matchLabel(m)}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>{sub}</p>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
 
-          <Link href="/" className="btn-secondary mt-2 inline-flex">Till startsidan</Link>
-        </div>
-      )}
+        {todayMatches.length === 0 && upcomingMatches.length === 0 && (
+          <Link href="/" className="btn-secondary inline-flex">Till startsidan</Link>
+        )}
+      </div>
     </main>
   );
 }
