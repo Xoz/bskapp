@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad, getMatchRatings } from "@/lib/queries";
 import { deleteMatch, resetMatch, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
+import { suggestOutcome, stepByOutcome } from "@/lib/rating";
 import MatchForm from "@/components/MatchForm";
+import MatchRatings, { type RatingPlayer } from "@/components/MatchRatings";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
@@ -25,17 +27,55 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [players, matchPlayers, events, reporters, squadIds] = await Promise.all([
+  const [players, matchPlayers, events, reporters, squadIds, matchRatings] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
     getMatchReporters(match.id),
     getMatchSquad(match.id),
+    getMatchRatings(match.id),
   ]);
   const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
   const mLevel = levelInfo(match.level);
   const today = swedishToday();
   const isUpcoming = match.date >= today;
+
+  // Betygsättning: en rad per spelare med speltid. Förslag räknas fram ur
+  // matchstatistik vägt mot position och nivåskillnad (tränaren justerar).
+  const ratingsByPlayer = new Map(matchRatings.map((r) => [r.player_id, r]));
+  const ratingPlayers: RatingPlayer[] = matchPlayers
+    .map((mp): RatingPlayer | null => {
+      const p = playersById[mp.player_id];
+      if (!p) return null;
+      const pLevel = levelInfo(p.level);
+      const levelDiff = pLevel && mLevel ? pLevel.rank - mLevel.rank : 0;
+      const outcome = suggestOutcome({
+        position: p.position,
+        goals: mp.goals,
+        assists: mp.assists,
+        saves: mp.saves,
+        interceptions: mp.interceptions,
+        conceded: match.opponent_score,
+        levelDiff,
+      });
+      const existing = ratingsByPlayer.get(mp.player_id);
+      return {
+        id: p.id,
+        name: p.name,
+        jersey_number: p.jersey_number,
+        position: p.position,
+        level: p.level,
+        goals: mp.goals,
+        assists: mp.assists,
+        saves: mp.saves,
+        interceptions: mp.interceptions,
+        suggested: stepByOutcome(outcome).key,
+        overall: existing?.overall ?? null,
+        scores: existing?.scores ?? {},
+      };
+    })
+    .filter((p): p is RatingPlayer => p !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -236,6 +276,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 </button>
               </form>
             </div>
+          )}
+
+          {/* Betygsätt spelare – syns när matchen har spelare med speltid */}
+          {ratingPlayers.length > 0 && (
+            <details className="card overflow-hidden" open={!isUpcoming && matchRatings.length === 0}>
+              <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-semibold">Betygsätt spelare</h2>
+                  {matchRatings.length > 0 && (
+                    <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                      {matchRatings.length} betygsatta
+                    </span>
+                  )}
+                </div>
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+              </summary>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+                <div className="pt-4">
+                  <MatchRatings matchId={match.id} players={ratingPlayers} />
+                </div>
+              </div>
+            </details>
           )}
 
           {events.length > 0 && (

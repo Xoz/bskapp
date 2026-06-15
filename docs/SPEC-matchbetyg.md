@@ -1,6 +1,8 @@
 # Kravspec: Matchbetyg med ELO-form
 
-Status: **planerad** (ej påbörjad). Beslutad via intervju 2026-06-15.
+Status: **Fas 1 byggd** (2026-06-15). Fas 2-integrationer kvar – se "Faser" nedan.
+Implementation: `lib/rating.ts`, tabell `match_ratings` + `players.form_rating`,
+`saveMatchRatings`, betygssektion på matchsidan, form-band + trend på spelarprofilen.
 
 ## Mål
 Låta tränaren betygsätta spelare **per match**, där betyget tolkas i kontext av

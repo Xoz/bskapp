@@ -3,6 +3,7 @@ import { all, get, run } from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
 import { STAT_IDS } from "./stats";
 import { swedishToday } from "./dates";
+import { seedRating } from "./rating";
 
 export interface Player {
   id: number;
@@ -15,6 +16,7 @@ export interface Player {
   share_expires: number | null;
   share_summary: string | null;
   level: string;
+  form_rating: number | null;
 }
 
 // Spelarlänkar gäller i 48 timmar – tänkta att aktiveras inför ett spelarsamtal
@@ -300,6 +302,59 @@ export async function getMatch(id: number): Promise<Match | undefined> {
 
 export async function getMatchPlayers(matchId: number): Promise<MatchPlayerRow[]> {
   return all<MatchPlayerRow>("SELECT * FROM match_players WHERE match_id = ?", [matchId]);
+}
+
+// ---- Matchbetyg (ELO-form) ----
+export interface MatchRatingRow {
+  player_id: number;
+  overall: string; // "mot förväntan"-stegets nyckel
+  scores: Record<string, number>; // ev. områdesutfall (avancerat läge)
+  suggested: string;
+  delta: number;
+}
+
+export async function getMatchRatings(matchId: number): Promise<MatchRatingRow[]> {
+  const rows = await all<{ player_id: number; overall: string; scores: string; suggested: string; delta: number }>(
+    "SELECT player_id, overall, scores, suggested, delta FROM match_ratings WHERE match_id = ?",
+    [matchId]
+  );
+  return rows.map((r) => {
+    let scores: Record<string, number> = {};
+    try {
+      scores = r.scores ? (JSON.parse(r.scores) as Record<string, number>) : {};
+    } catch {
+      scores = {};
+    }
+    return { player_id: r.player_id, overall: r.overall, scores, suggested: r.suggested, delta: r.delta };
+  });
+}
+
+// Form-trend för en spelare: löpande form-tal efter varje betygsatt match,
+// rekonstruerat från seed (spelarens nivå) + ackumulerade deltan i datumordning.
+export interface FormTrendPoint {
+  match_id: number;
+  date: string;
+  opponent: string;
+  outcome: string;
+  delta: number;
+  rating: number;
+}
+
+export async function getPlayerFormTrend(playerId: number): Promise<FormTrendPoint[]> {
+  const rows = await all<{ match_id: number; date: string; opponent: string; overall: string; delta: number }>(
+    `SELECT r.match_id, m.date, m.opponent, r.overall, r.delta
+     FROM match_ratings r JOIN matches m ON m.id = r.match_id
+     WHERE r.player_id = ?
+     ORDER BY m.date ASC, m.id ASC`,
+    [playerId]
+  );
+  if (rows.length === 0) return [];
+  const p = await get<{ level: string }>("SELECT level FROM players WHERE id = ?", [playerId]);
+  let rating = seedRating(p?.level);
+  return rows.map((r) => {
+    rating += r.delta;
+    return { match_id: r.match_id, date: r.date, opponent: r.opponent, outcome: r.overall, delta: r.delta, rating };
+  });
 }
 
 export interface SeasonStatRow {

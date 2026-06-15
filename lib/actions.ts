@@ -12,6 +12,14 @@ import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches } from "./ical";
 import { swedishToday } from "./dates";
+import {
+  stepByKey,
+  stepByOutcome,
+  outcomeFromAreas,
+  computeDelta,
+  seedRating,
+  RATING_AREAS,
+} from "./rating";
 
 async function requireRole(allowed: Role[]): Promise<Role> {
   const role = await getRole();
@@ -569,6 +577,93 @@ export async function setMatchLevel(formData: FormData) {
   revalidatePath(`/matcher/${id}/laguttagning`);
   revalidatePath(`/matcher/${id}`);
   revalidatePath("/matcher");
+}
+
+// ---- Matchbetyg (ELO-form) ----
+// Sparar tränarens betyg per spelare för en match och uppdaterar varje spelares
+// löpande form-tal. Idempotent: betygsätter man om matchen ångras det förra
+// betygets delta först, så form-talet inte dubbelräknas. Se lib/rating.ts.
+export async function saveMatchRatings(formData: FormData) {
+  await requireRole(["coach"]);
+  const matchId = Number(formData.get("match_id"));
+  if (!matchId) return;
+
+  const match = await get<{ level: string; opponent: string }>(
+    "SELECT level, opponent FROM matches WHERE id = ?",
+    [matchId]
+  );
+  if (!match) return;
+
+  const players = await all<{ id: number; level: string; form_rating: number | null }>(
+    "SELECT id, level, form_rating FROM players WHERE active = 1"
+  );
+  const prevRatings = await all<{ player_id: number; delta: number }>(
+    "SELECT player_id, delta FROM match_ratings WHERE match_id = ?",
+    [matchId]
+  );
+  const prevDelta = new Map(prevRatings.map((r) => [r.player_id, r.delta]));
+
+  const stmts: { sql: string; args: (string | number | null)[] }[] = [];
+  let rated = 0;
+  for (const p of players) {
+    const advUsed = formData.get(`adv_${p.id}`) === "1";
+    let overallKey: string;
+    let outcome: number;
+    const scores: Record<string, number> = {};
+
+    if (advUsed) {
+      const areaOutcomes: number[] = [];
+      for (const area of RATING_AREAS) {
+        const step = stepByKey(formData.get(`area_${p.id}_${area.id}`)?.toString());
+        if (step) {
+          scores[area.id] = step.outcome;
+          areaOutcomes.push(step.outcome);
+        }
+      }
+      if (areaOutcomes.length === 0) continue;
+      outcome = outcomeFromAreas(areaOutcomes);
+      overallKey = stepByOutcome(outcome).key;
+    } else {
+      const step = stepByKey(formData.get(`overall_${p.id}`)?.toString());
+      if (!step) continue;
+      overallKey = step.key;
+      outcome = step.outcome;
+    }
+
+    const suggested = String(formData.get(`suggested_${p.id}`) ?? "");
+    const delta = computeDelta(match.level, outcome);
+
+    // Bas = nuvarande form-tal (seedat från nivå om spelaren aldrig betygsatts),
+    // minus ett ev. tidigare betyg för just denna match.
+    let base = p.form_rating ?? seedRating(p.level);
+    const prev = prevDelta.get(p.id);
+    if (prev != null) base -= prev;
+    const newRating = base + delta;
+
+    stmts.push({
+      sql: `INSERT INTO match_ratings (match_id, player_id, overall, scores, suggested, delta)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(match_id, player_id) DO UPDATE SET
+              overall = excluded.overall, scores = excluded.scores,
+              suggested = excluded.suggested, delta = excluded.delta`,
+      args: [matchId, p.id, overallKey, JSON.stringify(scores), suggested, delta],
+    });
+    stmts.push({
+      sql: "UPDATE players SET form_rating = ? WHERE id = ?",
+      args: [newRating, p.id],
+    });
+    rated++;
+  }
+
+  if (stmts.length === 0) return;
+  await batch(stmts);
+
+  const logName = (await getCoachName()) ?? "Tränare";
+  await logActivity(logName, "Betygsatte spelare", `${rated} st mot ${match.opponent}`);
+
+  revalidatePath(`/matcher/${matchId}`);
+  revalidatePath("/spelare");
+  revalidatePath("/oversikt");
 }
 
 // Spara uttagen trupp för en match (ersätter tidigare urval). Om "apply_cup"

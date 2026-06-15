@@ -46,7 +46,7 @@ async function tryExec(sql: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Turso vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-06-15b";
+const SCHEMA_VERSION = "2026-06-15c";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -178,6 +178,19 @@ async function init(): Promise<void> {
       window_start INTEGER NOT NULL DEFAULT 0,
       blocked_until INTEGER NOT NULL DEFAULT 0
     )`,
+    // Matchbetyg (ELO-form): ett betyg per spelare/match. overall = "mot
+    // förväntan"-stegets nyckel, scores = JSON med ev. områdesbetyg (avancerat),
+    // suggested = appens förslag, delta = form-förändringen. Se lib/rating.ts.
+    `CREATE TABLE IF NOT EXISTS match_ratings (
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      overall TEXT NOT NULL,
+      scores TEXT NOT NULL DEFAULT '{}',
+      suggested TEXT NOT NULL DEFAULT '',
+      delta INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (match_id, player_id)
+    )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
 
@@ -221,6 +234,9 @@ async function init(): Promise<void> {
     `ALTER TABLE player_interviews ADD COLUMN interview_type TEXT NOT NULL DEFAULT 'spelarsamtal'`,
     `ALTER TABLE player_interviews ADD COLUMN scores TEXT NOT NULL DEFAULT '{}'`,
     `ALTER TABLE players ADD COLUMN pin TEXT`,
+    // Löpande form-tal (ELO) – NULL tills spelaren betygsatts första gången, då
+    // det seedas från spelarens nivå. Se lib/rating.ts.
+    `ALTER TABLE players ADD COLUMN form_rating INTEGER`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

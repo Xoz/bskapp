@@ -7,6 +7,7 @@ import {
   getScores,
   getPlayerDevelopment,
   getPlayerMatchStats,
+  getPlayerFormTrend,
   shareLinkActive,
   getLatestSelfEval,
   SHARE_TTL_MS,
@@ -15,8 +16,10 @@ import {
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
 import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
+import { ratingBand, EXPECTATION_STEPS } from "@/lib/rating";
 import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
+import FormTrendChart from "@/components/FormTrendChart";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
@@ -49,11 +52,12 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
   const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
 
-  const [evaluations, development, matchStats, selfEval] = await Promise.all([
+  const [evaluations, development, matchStats, selfEval, formTrend] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
     getLatestSelfEval(player.id, shareSinceIso),
+    getPlayerFormTrend(player.id),
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
@@ -61,6 +65,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const lastDev = development[development.length - 1];
   const evalAvg = lastDev && typeof lastDev.total === "number" ? lastDev.total : null;
   const suggestedLevel = suggestLevel(evalAvg);
+  // Matchform (ELO) – vänligt band + trend, ej naket tal
+  const formBand = player.form_rating != null ? ratingBand(player.form_rating) : null;
+  const formLastTwo = formTrend.slice(-2);
+  const formDir = formLastTwo.length === 2 ? Math.sign(formLastTwo[1].rating - formLastTwo[0].rating) : 0;
+  const lastOutcome = formTrend.length
+    ? EXPECTATION_STEPS.find((s) => s.key === formTrend[formTrend.length - 1].outcome) ?? null
+    : null;
+
   const latest = evaluations[0];
   const previous = evaluations[1];
   const latestScores = latest ? await getScores(latest.id) : null;
@@ -257,6 +269,52 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             </p>
             <DevelopmentChart data={development} />
           </div>
+        </div>
+      )}
+
+      {/* Matchform – ELO-baserat form-tal från matchbetygen */}
+      {formBand && (
+        <div className="card p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+            <div>
+              <p className="eyebrow mb-0.5">Form</p>
+              <h2 className="font-semibold mb-1">Matchform</h2>
+              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                Bygger på betygen "mot förväntan" – nivåjusterat över matcher
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="badge"
+                style={{ background: "var(--bg2)", color: formBand.color, fontSize: "0.78rem", fontWeight: 700 }}
+              >
+                {formBand.label}
+              </span>
+              {formDir !== 0 && (
+                <span
+                  className="text-lg"
+                  title={formDir > 0 ? "Stigande form" : "Sjunkande form"}
+                  style={{ color: formDir > 0 ? "#4ade80" : "var(--danger)" }}
+                >
+                  {formDir > 0 ? "▲" : "▼"}
+                </span>
+              )}
+              {lastOutcome && (
+                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  senast: {lastOutcome.label.toLowerCase()}
+                </span>
+              )}
+            </div>
+          </div>
+          {formTrend.length >= 2 ? (
+            <FormTrendChart
+              data={formTrend.map((p) => ({ date: p.date, opponent: p.opponent, rating: p.rating, outcome: p.outcome }))}
+            />
+          ) : (
+            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+              Betygsätt fler matcher för att se en trend.
+            </p>
+          )}
         </div>
       )}
 
