@@ -1,17 +1,21 @@
 // Hämtar och tolkar iCal-kalendern från svenskalag.se (eller annan iCal-källa)
 // och plockar ut matchhändelser.
 //
-// Svenskalag-format på matchrubriker:
-//   "Match: Sollentuna FK 2 - Bollstanäs SK 3 (F2014- 3) // F2014-Gul - Bollstanäs SK FB"
-//   "Stockholm Football Cup // F2014-Gul - Bollstanäs SK FB"
-//   "Träning // ..." (ska INTE importeras)
+// Stödda format:
+//   Svenskalag: "Match: LagA - LagB (F2014- 3) // F2014-Gul - Bollstanäs SK FB"
+//   CupManager: "G2014 competition: match mot LagB"
+//              + DESCRIPTION "... mellan LagA och LagB." för hemma/borta
+//              + UTC-timestamps (DTSTART:...Z) → omvandlas till svensk tid
+//   Profixio:   "LagA - LagB" eller "Cup Name // ..."
 
 import { levelFromSvenskalag } from "./levels";
+
+const TZ = "Europe/Stockholm";
 
 export interface CalendarMatch {
   uid: string;
   date: string; // YYYY-MM-DD
-  time: string | null; // HH:MM avspark
+  time: string | null; // HH:MM avspark (svensk tid)
   summary: string;
   opponent: string;
   homeAway: "home" | "away";
@@ -61,19 +65,43 @@ function unfold(ics: string): string[] {
   return out;
 }
 
-// Cup-namnet ligger i kalenderhuvudet (X-WR-CALNAME), inte i varje event.
-// Profixio/CupManager sätter t.ex. "X-WR-CALNAME:Sollentunacupen F2014".
+// Cup-namnet ur kalenderhuvudet (X-WR-CALNAME / NAME).
+// Fallback för CupManager (Stockholm Football Cup 2026): läs ur DESCRIPTION-prefixet
+// som har formatet "Cup Name:\n\nMatch i ...".
 export function calendarName(ics: string): string | null {
-  for (const line of unfold(ics)) {
+  const lines = unfold(ics);
+  let inEvent = false;
+  for (const line of lines) {
+    if (line === "BEGIN:VEVENT") { inEvent = true; continue; }
+    if (line === "END:VEVENT") { inEvent = false; continue; }
     const idx = line.indexOf(":");
     if (idx === -1) continue;
     const key = line.slice(0, idx).split(";")[0].toUpperCase();
-    if (key === "X-WR-CALNAME" || key === "NAME") {
+    if (!inEvent && (key === "X-WR-CALNAME" || key === "NAME")) {
       const name = decodeText(line.slice(idx + 1));
       if (name) return name;
     }
+    // CupManager: DESCRIPTION börjar med "Cup Name:\n\n..."
+    if (inEvent && key === "DESCRIPTION") {
+      const raw = line.slice(idx + 1);
+      const nlIdx = raw.indexOf("\\n");
+      if (nlIdx > 0) {
+        const candidate = decodeText(raw.slice(0, nlIdx).replace(/:$/, ""));
+        if (candidate.length > 3) return candidate;
+      }
+    }
   }
   return null;
+}
+
+// UTC-timestamp (med Z-suffix) → datum + tid i svensk tid.
+function parseDateTimeUTC(value: string): { date: string; time: string } {
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+  if (!m) return { date: "", time: "" };
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
+  const date = d.toLocaleDateString("sv-SE", { timeZone: TZ });
+  const time = d.toLocaleTimeString("sv-SE", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+  return { date, time };
 }
 
 function parseDate(value: string): string | null {
@@ -101,6 +129,7 @@ function decodeText(value: string): string {
 interface RawEvent {
   uid: string;
   summary: string;
+  description: string;
   date: string;
   time: string | null;
   location: string;
@@ -121,6 +150,7 @@ export function parseEvents(ics: string): RawEvent[] {
         events.push({
           uid: current.uid,
           summary: current.summary,
+          description: current.description ?? "",
           date: current.date,
           time: current.time ?? null,
           location: current.location ?? "",
@@ -139,9 +169,18 @@ export function parseEvents(ics: string): RawEvent[] {
 
     if (key === "UID") current.uid = value.trim();
     else if (key === "SUMMARY") current.summary = decodeText(value);
+    else if (key === "DESCRIPTION") current.description = decodeText(value);
     else if (key === "DTSTART") {
-      current.date = parseDate(value.trim()) ?? "";
-      current.time = parseTime(value.trim());
+      const v = value.trim();
+      if (v.endsWith("Z") && v.includes("T")) {
+        // UTC-timestamp → omvandla till svensk tid
+        const { date, time } = parseDateTimeUTC(v);
+        current.date = date;
+        current.time = time || null;
+      } else {
+        current.date = parseDate(v) ?? "";
+        current.time = parseTime(v);
+      }
     } else if (key === "LOCATION") current.location = decodeText(value);
   }
   return events;
@@ -151,12 +190,29 @@ function cleanTeamName(s: string): string {
   return s.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s{2,}/g, " ").trim();
 }
 
-// Plockar ut motståndare ur en matchrubrik
+// Plockar ut motståndare ur en matchrubrik (och DESCRIPTION för CupManager-format).
 function extractOpponent(
   summary: string,
+  description: string,
   ownNames: string[]
 ): { opponent: string; homeAway: "home" | "away"; series: string | null } {
-  // Klipp bort svenskalags lagsuffix: "... // F2014-Gul - Bollstanäs SK FB"
+  const isOwn = (part: string) =>
+    ownNames.some((n) => n && part.toLowerCase().includes(n.toLowerCase()));
+
+  // CupManager-format: "G2014 competition: match mot Motståndare"
+  // Hemma/borta finns i DESCRIPTION: "... mellan LagA och LagB."
+  const matchMotM = summary.match(/\bmatch mot (.+)$/i);
+  if (matchMotM) {
+    const opponent = cleanTeamName(matchMotM[1]);
+    let homeAway: "home" | "away" = "home";
+    const mellanM = description.match(/mellan (.+?) och (.+?)(?:[.,]|$)/i);
+    if (mellanM) {
+      homeAway = isOwn(mellanM[1].trim()) ? "home" : "away";
+    }
+    return { opponent, homeAway, series: null };
+  }
+
+  // Standardformat: "LagA - LagB" (ev. med "Match: " prefix och "// suffix" från Svenskalag)
   let s = summary.split("//")[0].trim();
   s = s.replace(/^(match|sammandrag|seriespel|cup|träningsmatch)[:\s]+/i, "").trim();
 
@@ -166,9 +222,6 @@ function extractOpponent(
     .split(/\s+-\s+|\s+–\s+|\s+vs\.?\s+/i)
     .map((p) => cleanTeamName(p))
     .filter(Boolean);
-
-  const isOwn = (part: string) =>
-    ownNames.some((n) => n && part.toLowerCase().includes(n.toLowerCase()));
 
   if (parts.length >= 2) {
     if (isOwn(parts[0])) return { opponent: parts[1], homeAway: "home", series };
@@ -192,7 +245,7 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
   return parseEvents(ics)
     .filter((e) => {
       const head = e.summary.split("//")[0];
-      // "match" täcker även "Träningsmatch" – men inte "Träning"/"Träningspass"
+      // "match" täcker även "Träningsmatch" och "match mot X" – men inte "Träning"/"Träningspass"
       if (/match|seriespel|sammandrag|cup/i.test(head)) return true;
       // "LagA - LagB" där vårt lag ingår är också en match, även utan nyckelord
       // (t.ex. cupmatcher som "Mariebergs IK Vit - Bollstanäs SK")
@@ -200,7 +253,7 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
       return parts.length >= 2 && parts.some(isOwn);
     })
     .map((e) => {
-      const { opponent, homeAway, series } = extractOpponent(e.summary, ownNames);
+      const { opponent, homeAway, series } = extractOpponent(e.summary, e.description, ownNames);
       const head = e.summary.split("//")[0];
       const matchType: CalendarMatch["matchType"] = /träningsmatch/i.test(head)
         ? "traningsmatch"
