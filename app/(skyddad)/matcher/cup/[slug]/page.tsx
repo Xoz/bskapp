@@ -30,6 +30,7 @@ export default async function CupEditorPage({
   const groupMatches = matches.filter((m) => m.cup_phase !== "playoff");
   const playoffMatches = matches.filter((m) => m.cup_phase === "playoff");
   const cupLevel = matches.find((m) => m.level)?.level ?? "";
+  const cupGroup = matches.find((m) => m.cup_group)?.cup_group ?? "";
   // Matcherna i en cup delar speltidsformat – ta första matchens värden som default.
   const cupPeriods = matches[0].periods ?? 3;
   const cupPeriodMinutes = matches[0].period_minutes ?? 20;
@@ -68,7 +69,7 @@ export default async function CupEditorPage({
       )}
 
       <form action={updateCup} className="space-y-6">
-        <input type="hidden" name="cup_name" value={cupName} />
+        <input type="hidden" name="original_cup_name" value={cupName} />
         <input type="hidden" name="match_ids" value={matches.map((m) => m.id).join(",")} />
 
         {/* Cupinställningar – gäller alla matcher i cupen */}
@@ -79,7 +80,27 @@ export default async function CupEditorPage({
               Gäller alla matcher i cupen.
             </p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="new_cup_name">Cup-namn</label>
+              <input
+                id="new_cup_name"
+                name="new_cup_name"
+                defaultValue={cupName}
+                required
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="cup_group">Grupp <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(valfri)</span></label>
+              <input
+                id="cup_group"
+                name="cup_group"
+                defaultValue={cupGroup}
+                placeholder="t.ex. Grupp A"
+                className="input"
+              />
+            </div>
             <div>
               <label className="label" htmlFor="cup_level">Svårighetsnivå</label>
               <select id="cup_level" name="level" defaultValue={cupLevel} className="input">
@@ -151,16 +172,6 @@ export default async function CupEditorPage({
                       <option value="home">Hemma</option>
                       <option value="away">Borta</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="label" htmlFor={`cup_group_${m.id}`}>Grupp <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(valfri)</span></label>
-                    <input
-                      id={`cup_group_${m.id}`}
-                      name={`cup_group_${m.id}`}
-                      defaultValue={m.cup_group ?? ""}
-                      placeholder="t.ex. Grupp A"
-                      className="input"
-                    />
                   </div>
                   <div>
                     <label className="label" htmlFor={`date_${m.id}`}>Datum</label>

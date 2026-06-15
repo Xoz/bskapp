@@ -447,16 +447,24 @@ export async function saveMatch(formData: FormData) {
 
 export async function updateCup(formData: FormData) {
   await requireRole(["coach"]);
-  const cupName = String(formData.get("cup_name") ?? "").trim();
-  if (!cupName) return;
+  const originalName = String(formData.get("original_cup_name") ?? "").trim();
+  const newName = String(formData.get("new_cup_name") ?? "").trim();
+  if (!originalName || !newName) return;
 
+  // Byt cup-namn om det ändrats (uppdaterar alla matcher i cupen).
+  if (newName !== originalName) {
+    await run("UPDATE matches SET cup_name = ? WHERE cup_name = ?", [newName, originalName]);
+    revalidatePath(`/matcher/cup/${encodeURIComponent(originalName)}`);
+  }
+
+  const cupName = newName;
   const level = String(formData.get("level") ?? "");
-  // Speltidsformat gäller hela cupen – håll inom rimliga gränser.
+  const cupGroup = String(formData.get("cup_group") ?? "").trim();
   const periods = Math.min(9, Math.max(1, Number(formData.get("periods")) || 3));
   const periodMinutes = Math.min(90, Math.max(1, Number(formData.get("period_minutes")) || 20));
   await run(
-    "UPDATE matches SET level = ?, periods = ?, period_minutes = ? WHERE cup_name = ?",
-    [level, periods, periodMinutes, cupName]
+    "UPDATE matches SET level = ?, periods = ?, period_minutes = ?, cup_group = ? WHERE cup_name = ?",
+    [level, periods, periodMinutes, cupGroup, cupName]
   );
 
   const ids = String(formData.get("match_ids") ?? "").split(",").map(Number).filter(Boolean);
@@ -467,15 +475,13 @@ export async function updateCup(formData: FormData) {
     const homeAway = String(formData.get(`home_away_${id}`) ?? "home");
     const phase = String(formData.get(`phase_${id}`) ?? "group");
     const round = formData.get(`round_${id}`) as string | null;
-    const cupGroup = String(formData.get(`cup_group_${id}`) ?? "").trim();
     const isPlayoff = phase === "playoff";
     if (!date) continue;
-    // Gruppspelsmatcher kräver motståndare; slutspelsmatcher får sakna den (TBD).
     if (!isPlayoff && !opponent) continue;
     const finalOpponent = opponent || (isPlayoff ? "TBD" : opponent);
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ?, cup_group = ? WHERE id = ? AND cup_name = ?",
-      [date, time || null, finalOpponent, homeAway, phase, round || null, cupGroup, id, cupName]
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ? WHERE id = ? AND cup_name = ?",
+      [date, time || null, finalOpponent, homeAway, phase, round || null, id, cupName]
     );
   }
 
