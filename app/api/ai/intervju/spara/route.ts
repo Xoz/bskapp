@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveIntervju } from "@/lib/queries";
-import { getCoachName } from "@/lib/auth";
+import { getCoachName, getPlayerSession, getRole } from "@/lib/auth";
 import { logActivity } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // Skyddad: bara inloggad spelare (PIN) eller tränare får spara intervjuer.
+  const [playerId, role] = await Promise.all([getPlayerSession(), getRole()]);
+  if (!playerId && role !== "coach") {
+    return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
+  }
+
   let body: {
     playerName?: string;
     position?: string;
