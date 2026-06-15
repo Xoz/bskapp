@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRole } from "@/lib/auth";
+import { get } from "@/lib/db";
 import {
-  getMatchRowByCode,
   getLiveState,
   recordEvent,
   undoLastEvent,
@@ -13,10 +14,18 @@ import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
 export const dynamic = "force-dynamic";
 
-async function matchFromCode(code: string) {
-  const clean = code.replace(/\D/g, "");
-  if (clean.length !== 6) return undefined;
-  return getMatchRowByCode(clean);
+// 6-siffrig kod → publik åtkomst. Kortare nummer → internt match-id, kräver tränare.
+async function matchFromParam(code: string): Promise<{ id: number; byCode: boolean } | undefined> {
+  if (/^\d{6}$/.test(code)) {
+    const row = await get<{ id: number }>("SELECT id FROM matches WHERE code = ?", [code]);
+    return row ? { ...row, byCode: true } : undefined;
+  }
+  const n = Number(code);
+  if (Number.isInteger(n) && n > 0) {
+    const row = await get<{ id: number }>("SELECT id FROM matches WHERE id = ?", [n]);
+    return row ? { ...row, byCode: false } : undefined;
+  }
+  return undefined;
 }
 
 export async function GET(
@@ -24,8 +33,14 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
-  const match = await matchFromCode(code);
-  if (!match) return NextResponse.json({ error: "Ogiltig kod" }, { status: 404 });
+  const match = await matchFromParam(code);
+  if (!match) return NextResponse.json({ error: "Matchen finns inte" }, { status: 404 });
+
+  if (!match.byCode) {
+    const role = await getRole();
+    if (role !== "coach") return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
+  }
+
   return NextResponse.json(await getLiveState(match.id));
 }
 
@@ -34,8 +49,13 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
-  const match = await matchFromCode(code);
-  if (!match) return NextResponse.json({ error: "Ogiltig kod" }, { status: 404 });
+  const match = await matchFromParam(code);
+  if (!match) return NextResponse.json({ error: "Matchen finns inte" }, { status: 404 });
+
+  if (!match.byCode) {
+    const role = await getRole();
+    if (role !== "coach") return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
+  }
 
   let action: LiveAction;
   try {
