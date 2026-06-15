@@ -46,7 +46,7 @@ async function tryExec(sql: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Turso vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-06-15c";
+const SCHEMA_VERSION = "2026-06-15d";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
