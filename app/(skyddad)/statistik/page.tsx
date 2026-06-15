@@ -22,14 +22,19 @@ export default async function StatsPage() {
   if (role !== "coach") redirect("/matcher");
 
   const [stats, teamMatches] = await Promise.all([getSeasonStats(), getTeamMatchStats()]);
+  // Alla spelade matcher (för match-för-match-tabellen och resultat/W-D-L)
   const played = teamMatches.length;
+  // Bara statistikförda matcher (players_logged > 0) – används i per-match snitt
+  const statsMatches = teamMatches.filter((m) => m.players_logged > 0);
+  const statsPlayed = statsMatches.length;
 
   const totals = STAT_IDS.reduce((acc, id) => {
-    acc[id] = teamMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[id] ?? 0), 0);
+    acc[id] = statsMatches.reduce((s, m) => s + ((m as unknown as Record<string, number>)[id] ?? 0), 0);
     return acc;
   }, {} as Record<string, number>);
-  const goalsFor = teamMatches.reduce((s, m) => s + (m.our_score ?? 0), 0);
-  const goalsAgainst = teamMatches.reduce((s, m) => s + (m.opponent_score ?? 0), 0);
+  // Mål/insläppta räknas bara för statistikförda matcher (samma nämnare som övriga stats)
+  const goalsFor = statsMatches.reduce((s, m) => s + (m.our_score ?? 0), 0);
+  const goalsAgainst = statsMatches.reduce((s, m) => s + (m.opponent_score ?? 0), 0);
   const diff = goalsFor - goalsAgainst;
   let wins = 0, draws = 0, losses = 0;
   for (const m of teamMatches) {
@@ -39,9 +44,9 @@ export default async function StatsPage() {
     else if (o?.letter === "F") losses++;
   }
 
-  // Trendvindor: senaste 3 resp. 6 matcher (sorterade nyast först)
-  const last3 = teamMatches.slice(0, Math.min(3, played));
-  const last6 = teamMatches.slice(0, Math.min(6, played));
+  // Trendvindor: senaste 3 resp. 6 statistikförda matcher (sorterade nyast först)
+  const last3 = statsMatches.slice(0, Math.min(3, statsPlayed));
+  const last6 = statsMatches.slice(0, Math.min(6, statsPlayed));
   const n3 = last3.length;
   const n6 = last6.length;
   // Trend visas bara när 3m och 6m faktiskt skiljer sig (≥4 matcher)
@@ -62,7 +67,7 @@ export default async function StatsPage() {
 
   const f1 = (n: number | null) => (n == null ? "–" : n.toFixed(1));
   const fsgn = (n: number | null) => n == null ? "–" : (n >= 0 ? "+" : "") + n.toFixed(1);
-  const pm = (n: number) => (played > 0 ? (n / played).toFixed(1) : "–");
+  const pm = (n: number) => (statsPlayed > 0 ? (n / statsPlayed).toFixed(1) : "–");
 
   type TrendInfo = { sym: "↑" | "↓" | "→"; good: boolean };
   function calcTrend(a3: number | null, a6: number | null, lowerIsBetter = false): TrendInfo | null {
@@ -106,7 +111,7 @@ export default async function StatsPage() {
     };
   }
 
-  const diffPm = played > 0 ? diff / played : 0;
+  const diffPm = statsPlayed > 0 ? diff / statsPlayed : 0;
   const kpis: KpiCard[] = [
     {
       label: "Matcher",
@@ -165,8 +170,9 @@ export default async function StatsPage() {
         <p className="eyebrow">Säsongen</p>
         <h1 className="text-[1.7rem] font-bold mt-0.5">Statistik</h1>
         <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          {played} {played === 1 ? "spelad match" : "spelade matcher"} · jämnt deltagande enligt
-          SvFF:s riktlinjer
+          {played} {played === 1 ? "spelad match" : "spelade matcher"}
+          {statsPlayed < played ? ` · ${statsPlayed} statistikförda` : ""}
+          {" "}· jämnt deltagande enligt SvFF:s riktlinjer
         </p>
       </div>
 
@@ -302,7 +308,11 @@ export default async function StatsPage() {
                             <span style={{ color: "var(--ink-faint)" }}>–</span>
                           )}
                         </td>
-                        {STAT_FIELDS.map((f) => (
+                        {m.players_logged === 0 ? (
+                          <td colSpan={STAT_FIELDS.length} style={{ color: "var(--ink-faint)", fontStyle: "italic", fontSize: "0.75rem" }}>
+                            ej statistikförd
+                          </td>
+                        ) : STAT_FIELDS.map((f) => (
                           <td key={f.id}>{row[f.id] || 0}</td>
                         ))}
                       </tr>

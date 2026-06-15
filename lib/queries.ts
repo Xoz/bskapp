@@ -480,6 +480,7 @@ export interface TeamMatchStatRow {
   finished: number;
   level: string;
   cup_name: string;
+  players_logged: number;
   goals: number;
   assists: number;
   shots: number;
@@ -496,6 +497,7 @@ export async function getTeamMatchStats(): Promise<TeamMatchStatRow[]> {
   return all<TeamMatchStatRow>(
     `SELECT m.id, m.date, m.opponent, m.home_away, m.our_score, m.opponent_score,
             m.finished, m.level, m.cup_name,
+            COUNT(mp.player_id) AS players_logged,
             ${sums}
      FROM matches m
      LEFT JOIN match_players mp ON mp.match_id = m.id
