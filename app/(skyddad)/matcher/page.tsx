@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches, cupMatchCompare, cupRoundLabel, matchTitle, type Match as MatchType } from "@/lib/queries";
+import { getMatches, getCupScorers, cupMatchCompare, cupRoundLabel, matchTitle, type Match as MatchType, type CupScorerRow } from "@/lib/queries";
 import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
@@ -18,7 +18,7 @@ export default async function MatchesPage() {
   const role = await getRole();
   if (!role) redirect("/login");
 
-  const matches = await getMatches();
+  const [matches, cupScorers] = await Promise.all([getMatches(), getCupScorers()]);
 
   return (
     <div className="space-y-6">
@@ -62,7 +62,7 @@ export default async function MatchesPage() {
           )}
         </div>
       ) : (
-        <MatchSections matches={matches} role={role} />
+        <MatchSections matches={matches} role={role} cupScorers={cupScorers} />
       )}
 
       <p className="text-xs max-w-xl" style={{ color: "var(--ink-faint)" }}>
@@ -148,7 +148,36 @@ function buildEntries(matches: MatchType[]): Entry[] {
   return entries;
 }
 
-function CupCard({ name, matches, today, role }: { name: string; matches: MatchType[]; today: string; role: string }) {
+// Lagets slutplacering i cupen utifrån slutspelsresultaten. Returnerar null så
+// länge inget är avgjort (gruppspel pågår / slutspel ej spelat).
+function cupPlacement(matches: MatchType[]): { emoji: string; label: string } | null {
+  const done = (m: MatchType) => m.our_score != null && m.opponent_score != null;
+  const won = (m: MatchType) => done(m) && m.our_score! > m.opponent_score!;
+  const final = matches.find((m) => m.cup_round === "f" && done(m));
+  if (final) return won(final) ? { emoji: "🥇", label: "Vinnare" } : { emoji: "🥈", label: "Tvåa" };
+  const bronze = matches.find((m) => m.cup_round === "bronze" && done(m));
+  if (bronze) return won(bronze) ? { emoji: "🥉", label: "Trea" } : { emoji: "", label: "Fyra" };
+  const hasBronzeMatch = matches.some((m) => m.cup_round === "bronze");
+  const lostSemi = matches.find((m) => m.cup_round === "sf" && done(m) && !won(m));
+  if (lostSemi && !hasBronzeMatch) return { emoji: "", label: "Utslagen i semifinal" };
+  const lostQf = matches.find((m) => m.cup_round === "qf" && done(m) && !won(m));
+  if (lostQf) return { emoji: "", label: "Utslagen i kvartsfinal" };
+  return null;
+}
+
+function CupCard({
+  name,
+  matches,
+  today,
+  role,
+  scorers,
+}: {
+  name: string;
+  matches: MatchType[];
+  today: string;
+  role: string;
+  scorers: CupScorerRow[];
+}) {
   const first = matches[0].date;
   const last = matches[matches.length - 1].date;
   const range = first === last ? first : `${first} – ${last}`;
@@ -166,6 +195,7 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
   const goalsFor = groupWithResult.reduce((s, m) => s + m.our_score!, 0);
   const goalsAgainst = groupWithResult.reduce((s, m) => s + m.opponent_score!, 0);
   const hasGroupStats = groupWithResult.length > 0;
+  const placement = cupPlacement(matches);
 
   const editHref = `/matcher/cup/${encodeURIComponent(name)}`;
 
@@ -184,6 +214,15 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
             {range} · {matches.length} matcher{groupWithResult.length > 0 ? ` · ${groupWithResult.length} spelade` : ""}
           </p>
         </div>
+        {placement && (
+          <span
+            className="badge inline-flex items-center gap-1"
+            style={{ background: "var(--accent)", color: "var(--primary-deep)", fontWeight: 600 }}
+          >
+            {placement.emoji && <span>{placement.emoji}</span>}
+            {placement.label}
+          </span>
+        )}
         {ongoing && (
           <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
         )}
@@ -216,6 +255,33 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
           <span className="text-xs ml-auto" style={{ color: "var(--ink-faint)" }}>
             {goalsFor}–{goalsAgainst}
           </span>
+        </div>
+      )}
+      {/* Skyttar i cupen – spelarbidrag summerat över alla matcher */}
+      {scorers.length > 0 && (
+        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--line)" }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>
+            Skyttar i cupen
+          </p>
+          <div className="space-y-1.5">
+            {scorers.slice(0, 5).map((s) => (
+              <div key={s.id} className="flex items-center gap-2 text-sm">
+                <span className="flex-1 min-w-0 truncate" style={{ color: "var(--ink)" }}>
+                  {s.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
+                </span>
+                {s.goals > 0 && (
+                  <span className="shrink-0" style={{ color: "var(--ink-soft)" }}>
+                    <span className="stat-number" style={{ color: "var(--primary)" }}>{s.goals}</span> mål
+                  </span>
+                )}
+                {s.assists > 0 && (
+                  <span className="shrink-0 text-xs" style={{ color: "var(--ink-faint)" }}>
+                    {s.goals > 0 ? "· " : ""}<span className="stat-number">{s.assists}</span> assist
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
       <div>
@@ -253,14 +319,40 @@ function CupCard({ name, matches, today, role }: { name: string; matches: MatchT
   );
 }
 
-function EntryView({ entry, role, today }: { entry: Entry; role: string; today: string }) {
+function EntryView({
+  entry,
+  role,
+  today,
+  cupScorers,
+}: {
+  entry: Entry;
+  role: string;
+  today: string;
+  cupScorers: Map<string, CupScorerRow[]>;
+}) {
   if (entry.kind === "cup") {
-    return <CupCard name={entry.name} matches={entry.matches} today={today} role={role} />;
+    return (
+      <CupCard
+        name={entry.name}
+        matches={entry.matches}
+        today={today}
+        role={role}
+        scorers={cupScorers.get(entry.name) ?? []}
+      />
+    );
   }
   return <MatchCard m={entry.m} role={role} today={today} />;
 }
 
-function MatchSections({ matches, role }: { matches: MatchType[]; role: string }) {
+function MatchSections({
+  matches,
+  role,
+  cupScorers,
+}: {
+  matches: MatchType[];
+  role: string;
+  cupScorers: Map<string, CupScorerRow[]>;
+}) {
   const today = swedishToday();
   const entries = buildEntries(matches);
   // En cup räknas som kommande så länge dess sista dag inte passerat
@@ -291,7 +383,7 @@ function MatchSections({ matches, role }: { matches: MatchType[]; role: string }
         ) : (
           <div className="grid gap-3">
             {upcoming.map((e) => (
-              <EntryView key={e.key} entry={e} role={role} today={today} />
+              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} />
             ))}
           </div>
         )}
@@ -307,7 +399,7 @@ function MatchSections({ matches, role }: { matches: MatchType[]; role: string }
           </div>
           <div className="grid gap-3">
             {past.map((e) => (
-              <EntryView key={e.key} entry={e} role={role} today={today} />
+              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} />
             ))}
           </div>
         </section>

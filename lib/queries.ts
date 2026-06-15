@@ -109,6 +109,40 @@ export async function getMatchesByCup(cupName: string): Promise<Match[]> {
   return rows.sort(cupMatchCompare);
 }
 
+export interface CupScorerRow {
+  cup_name: string;
+  id: number;
+  name: string;
+  jersey_number: number | null;
+  goals: number;
+  assists: number;
+  matches_played: number;
+}
+
+// Spelarbidrag (mål/assist) summerat per cup. Returnerar en map cup_name →
+// spelare sorterade på flest mål, för "skyttar i cupen"-listan. Bara spelare
+// med minst ett mål eller en assist tas med. En query för alla cuper.
+export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
+  const rows = await all<CupScorerRow>(
+    `SELECT m.cup_name, p.id, p.name, p.jersey_number,
+            COALESCE(SUM(mp.goals), 0) AS goals,
+            COALESCE(SUM(mp.assists), 0) AS assists,
+            COUNT(mp.match_id) AS matches_played
+     FROM match_players mp
+     JOIN matches m ON m.id = mp.match_id AND m.cup_name <> ''
+     JOIN players p ON p.id = mp.player_id
+     GROUP BY m.cup_name, p.id
+     HAVING goals > 0 OR assists > 0
+     ORDER BY m.cup_name, goals DESC, assists DESC, p.name COLLATE NOCASE`
+  );
+  const byCup = new Map<string, CupScorerRow[]>();
+  for (const r of rows) {
+    if (!byCup.has(r.cup_name)) byCup.set(r.cup_name, []);
+    byCup.get(r.cup_name)!.push(r);
+  }
+  return byCup;
+}
+
 // Alla matcher i pågående cuper. En cup är pågående t.o.m. dagen efter dess
 // sista match (today <= sista dagen + 1  ⇔  sista dagen >= today − 1 = yesterday),
 // och först fr.o.m. dess första dag (första dagen <= today).
