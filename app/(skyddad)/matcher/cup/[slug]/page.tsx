@@ -153,6 +153,16 @@ export default async function CupEditorPage({
                     </select>
                   </div>
                   <div>
+                    <label className="label" htmlFor={`cup_group_${m.id}`}>Grupp <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(valfri)</span></label>
+                    <input
+                      id={`cup_group_${m.id}`}
+                      name={`cup_group_${m.id}`}
+                      defaultValue={m.cup_group ?? ""}
+                      placeholder="t.ex. Grupp A"
+                      className="input"
+                    />
+                  </div>
+                  <div>
                     <label className="label" htmlFor={`date_${m.id}`}>Datum</label>
                     <input
                       id={`date_${m.id}`}

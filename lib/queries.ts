@@ -51,6 +51,7 @@ export interface Match {
   formation: string;
   cup_phase: string; // 'group' | 'playoff'
   cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
+  cup_group: string; // t.ex. "Grupp A", fritext, tom = ej satt
   report_open: number; // 1 = föräldrar/hjälpare får liverapportera
 }
 

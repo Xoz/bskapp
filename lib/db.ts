@@ -237,6 +237,7 @@ async function init(): Promise<void> {
     // Löpande form-tal (ELO) – NULL tills spelaren betygsatts första gången, då
     // det seedas från spelarens nivå. Se lib/rating.ts.
     `ALTER TABLE players ADD COLUMN form_rating INTEGER`,
+    `ALTER TABLE matches ADD COLUMN cup_group TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

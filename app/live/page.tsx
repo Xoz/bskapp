@@ -15,8 +15,7 @@ function formatDate(dateStr: string): string {
 function matchLabel(m: Match): string {
   const round = cupRoundLabel(m);
   if (round && (!m.opponent || m.opponent === "TBD")) return round;
-  const prefix = m.home_away === "home" ? "Hemma mot" : "Borta mot";
-  return `${prefix} ${m.opponent}`;
+  return `mot ${m.opponent}`;
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
@@ -167,6 +166,7 @@ export default async function LiveLandingPage() {
                   formatDate(m.date),
                   m.start_time ? `kl. ${m.start_time}` : null,
                   m.cup_name || null,
+                  m.cup_group || null,
                   round && round !== matchLabel(m) ? round : null,
                 ]
                   .filter(Boolean)

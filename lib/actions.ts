@@ -467,14 +467,15 @@ export async function updateCup(formData: FormData) {
     const homeAway = String(formData.get(`home_away_${id}`) ?? "home");
     const phase = String(formData.get(`phase_${id}`) ?? "group");
     const round = formData.get(`round_${id}`) as string | null;
+    const cupGroup = String(formData.get(`cup_group_${id}`) ?? "").trim();
     const isPlayoff = phase === "playoff";
     if (!date) continue;
     // Gruppspelsmatcher kräver motståndare; slutspelsmatcher får sakna den (TBD).
     if (!isPlayoff && !opponent) continue;
     const finalOpponent = opponent || (isPlayoff ? "TBD" : opponent);
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ? WHERE id = ? AND cup_name = ?",
-      [date, time || null, finalOpponent, homeAway, phase, round || null, id, cupName]
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ?, cup_group = ? WHERE id = ? AND cup_name = ?",
+      [date, time || null, finalOpponent, homeAway, phase, round || null, cupGroup, id, cupName]
     );
   }
 
