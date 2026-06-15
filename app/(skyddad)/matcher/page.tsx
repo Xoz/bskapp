@@ -122,29 +122,34 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
   );
 }
 
-// En post i listan: antingen en enskild match eller en grupp av cupmatcher
+// En post i listan: antingen en enskild match eller en grupp av cupmatcher.
+// cup_name + cup_group är sammansatt nyckel – samma cup-namn i olika grupper är separata poster.
 type Entry =
   | { kind: "match"; key: string; m: MatchType; sortDate: string; lastDate: string }
-  | { kind: "cup"; key: string; name: string; matches: MatchType[]; sortDate: string; lastDate: string };
+  | { kind: "cup"; key: string; name: string; cupGroup: string; matches: MatchType[]; sortDate: string; lastDate: string };
 
 function buildEntries(matches: MatchType[]): Entry[] {
   const cups = new Map<string, MatchType[]>();
   const entries: Entry[] = [];
   for (const m of matches) {
     if (m.cup_name) {
-      if (!cups.has(m.cup_name)) cups.set(m.cup_name, []);
-      cups.get(m.cup_name)!.push(m);
+      const compositeKey = m.cup_name + "\x01" + (m.cup_group ?? "");
+      if (!cups.has(compositeKey)) cups.set(compositeKey, []);
+      cups.get(compositeKey)!.push(m);
     } else {
       entries.push({ kind: "match", key: `m${m.id}`, m, sortDate: m.date, lastDate: m.date });
     }
   }
-  for (const [name, ms] of cups) {
+  for (const [compositeKey, ms] of cups) {
     const sorted = [...ms].sort(cupMatchCompare);
     const byDate = [...ms].map((m) => m.date).sort();
+    const cupName = ms[0].cup_name;
+    const cupGroup = ms[0].cup_group ?? "";
     entries.push({
       kind: "cup",
-      key: `cup:${name}`,
-      name,
+      key: `cup:${compositeKey}`,
+      name: cupName,
+      cupGroup,
       matches: sorted,
       sortDate: byDate[0],
       lastDate: byDate[byDate.length - 1],
@@ -172,12 +177,14 @@ function cupPlacement(matches: MatchType[]): { emoji: string; label: string } | 
 
 function CupCard({
   name,
+  cupGroup,
   matches,
   today,
   role,
   scorers,
 }: {
   name: string;
+  cupGroup: string;
   matches: MatchType[];
   today: string;
   role: string;
@@ -203,7 +210,8 @@ function CupCard({
   const placement = cupPlacement(matches);
   const mootRounds = cupMootRounds(matches);
 
-  const editHref = `/matcher/cup/${encodeURIComponent(name)}`;
+  const grupp = cupGroup ? `?grupp=${encodeURIComponent(cupGroup)}` : "";
+  const editHref = `/matcher/cup/${encodeURIComponent(name)}${grupp}`;
 
   return (
     <details className="card overflow-hidden" open={ongoing}>
@@ -215,7 +223,9 @@ function CupCard({
           🏆
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>{name}</p>
+          <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
+            {name}{cupGroup ? ` · ${cupGroup}` : ""}
+          </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
             {range} · {matches.length} matcher{groupWithResult.length > 0 ? ` · ${groupWithResult.length} spelade` : ""}
           </p>
@@ -348,6 +358,7 @@ function EntryView({
     return (
       <CupCard
         name={entry.name}
+        cupGroup={entry.cupGroup}
         matches={entry.matches}
         today={today}
         role={role}

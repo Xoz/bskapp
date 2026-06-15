@@ -143,10 +143,13 @@ export function mootMatchIds(allMatches: Match[]): Set<number> {
   return ids;
 }
 
-// Matcher som ingår i samma cup/turnering (samma cup_name)
-export async function getMatchesByCup(cupName: string): Promise<Match[]> {
+// Matcher som ingår i samma cup/turnering (cup_name + cup_group är sammansatt nyckel)
+export async function getMatchesByCup(cupName: string, cupGroup = ""): Promise<Match[]> {
   if (!cupName) return [];
-  const rows = await all<Match>("SELECT * FROM matches WHERE cup_name = ?", [cupName]);
+  const rows = await all<Match>(
+    "SELECT * FROM matches WHERE cup_name = ? AND cup_group = ?",
+    [cupName, cupGroup]
+  );
   return rows.sort(cupMatchCompare);
 }
 

@@ -448,12 +448,16 @@ export async function saveMatch(formData: FormData) {
 export async function updateCup(formData: FormData) {
   await requireRole(["coach"]);
   const originalName = String(formData.get("original_cup_name") ?? "").trim();
+  const originalGroup = String(formData.get("original_cup_group") ?? "").trim();
   const newName = String(formData.get("new_cup_name") ?? "").trim();
   if (!originalName || !newName) return;
 
-  // Byt cup-namn om det ändrats (uppdaterar alla matcher i cupen).
+  // Byt cup-namn om det ändrats – bara matcher i denna grupp påverkas.
   if (newName !== originalName) {
-    await run("UPDATE matches SET cup_name = ? WHERE cup_name = ?", [newName, originalName]);
+    await run(
+      "UPDATE matches SET cup_name = ? WHERE cup_name = ? AND cup_group = ?",
+      [newName, originalName, originalGroup]
+    );
     revalidatePath(`/matcher/cup/${encodeURIComponent(originalName)}`);
   }
 
@@ -463,8 +467,8 @@ export async function updateCup(formData: FormData) {
   const periods = Math.min(9, Math.max(1, Number(formData.get("periods")) || 3));
   const periodMinutes = Math.min(90, Math.max(1, Number(formData.get("period_minutes")) || 20));
   await run(
-    "UPDATE matches SET level = ?, periods = ?, period_minutes = ?, cup_group = ? WHERE cup_name = ?",
-    [level, periods, periodMinutes, cupGroup, cupName]
+    "UPDATE matches SET level = ?, periods = ?, period_minutes = ?, cup_group = ? WHERE cup_name = ? AND cup_group = ?",
+    [level, periods, periodMinutes, cupGroup, cupName, originalGroup]
   );
 
   const ids = String(formData.get("match_ids") ?? "").split(",").map(Number).filter(Boolean);
@@ -487,10 +491,11 @@ export async function updateCup(formData: FormData) {
 
   revalidatePath("/matcher");
   revalidatePath("/matcher", "layout");
-  redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=1`);
+  const grp = cupGroup ? `&grupp=${encodeURIComponent(cupGroup)}` : "";
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=1${grp}`);
 }
 
-export async function deleteCupMatch(id: number, cupName: string) {
+export async function deleteCupMatch(id: number, cupName: string, cupGroup: string) {
   await requireRole(["coach"]);
   if (!id) return;
   await batch([
@@ -503,20 +508,24 @@ export async function deleteCupMatch(id: number, cupName: string) {
   ]);
   revalidatePath("/matcher");
 
-  // Finns inga matcher kvar i cupen? Tillbaka till matchlistan.
+  // Finns inga matcher kvar i denna cup+grupp? Tillbaka till matchlistan.
   const remaining = await get<{ c: number }>(
-    "SELECT COUNT(*) AS c FROM matches WHERE cup_name = ?",
-    [cupName]
+    "SELECT COUNT(*) AS c FROM matches WHERE cup_name = ? AND cup_group = ?",
+    [cupName, cupGroup]
   );
   if (!remaining || Number(remaining.c) === 0) redirect("/matcher");
-  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
+  const grp = cupGroup ? `?grupp=${encodeURIComponent(cupGroup)}` : "";
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}${grp}`);
 }
 
-export async function deleteCup(cupName: string) {
+export async function deleteCup(cupName: string, cupGroup: string) {
   await requireRole(["coach"]);
   if (!cupName) return;
-  // Hämta alla match-id:n i cupen för att rensa relaterade tabeller.
-  const ids = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [cupName]);
+  // Hämta alla match-id:n i denna cup+grupp för att rensa relaterade tabeller.
+  const ids = await all<{ id: number }>(
+    "SELECT id FROM matches WHERE cup_name = ? AND cup_group = ?",
+    [cupName, cupGroup]
+  );
   if (ids.length > 0) {
     const idList = ids.map((r) => r.id);
     await batch([
@@ -526,11 +535,11 @@ export async function deleteCup(cupName: string) {
       ...idList.map((id) => ({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_ratings WHERE match_id = ?", args: [id] })),
-      { sql: "DELETE FROM matches WHERE cup_name = ?", args: [cupName] },
+      { sql: "DELETE FROM matches WHERE cup_name = ? AND cup_group = ?", args: [cupName, cupGroup] },
     ]);
   }
   const logName = (await getCoachName()) ?? "Tränare";
-  await logActivity(logName, "Raderade cup", cupName);
+  await logActivity(logName, "Raderade cup", cupGroup ? `${cupName} · ${cupGroup}` : cupName);
   revalidatePath("/matcher");
   redirect("/matcher");
 }
@@ -538,25 +547,28 @@ export async function deleteCup(cupName: string) {
 export async function addCupPlayoffMatch(formData: FormData) {
   await requireRole(["coach"]);
   const cupName = String(formData.get("cup_name") ?? "").trim();
+  const cupGroup = String(formData.get("cup_group") ?? "").trim();
   if (!cupName) return;
   // Ärver datum och speltidsformat från cupens befintliga matcher.
   const existing = await get<{ date: string; periods: number; period_minutes: number; level: string }>(
-    "SELECT date, periods, period_minutes, level FROM matches WHERE cup_name = ? ORDER BY date DESC, start_time DESC LIMIT 1",
-    [cupName]
+    "SELECT date, periods, period_minutes, level FROM matches WHERE cup_name = ? AND cup_group = ? ORDER BY date DESC, start_time DESC LIMIT 1",
+    [cupName, cupGroup]
   );
   await run(
-    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_phase, periods, period_minutes, level) VALUES (?, ?, 'home', 'cup', ?, 'playoff', ?, ?, ?)",
+    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_group, cup_phase, periods, period_minutes, level) VALUES (?, ?, 'home', 'cup', ?, ?, 'playoff', ?, ?, ?)",
     [
       existing?.date ?? swedishToday(),
       "TBD",
       cupName,
+      cupGroup,
       existing?.periods ?? 3,
       existing?.period_minutes ?? 20,
       existing?.level ?? "",
     ]
   );
   revalidatePath("/matcher");
-  redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
+  const grp = cupGroup ? `?grupp=${encodeURIComponent(cupGroup)}` : "";
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}${grp}`);
 }
 
 export async function addCup(formData: FormData) {

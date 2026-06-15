@@ -15,22 +15,23 @@ export default async function CupEditorPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sparad?: string }>;
+  searchParams: Promise<{ sparad?: string; grupp?: string }>;
 }) {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
   const { slug } = await params;
   const cupName = decodeURIComponent(slug);
-  const { sparad } = await searchParams;
+  const { sparad, grupp } = await searchParams;
+  const cupGroup = grupp ? decodeURIComponent(grupp) : "";
 
-  const matches = await getMatchesByCup(cupName);
+  const matches = await getMatchesByCup(cupName, cupGroup);
   if (matches.length === 0) notFound();
 
   const groupMatches = matches.filter((m) => m.cup_phase !== "playoff");
   const playoffMatches = matches.filter((m) => m.cup_phase === "playoff");
   const cupLevel = matches.find((m) => m.level)?.level ?? "";
-  const cupGroup = matches.find((m) => m.cup_group)?.cup_group ?? "";
+  // cupGroup is already known from URL param — no need to re-read from matches
   // Matcherna i en cup delar speltidsformat – ta första matchens värden som default.
   const cupPeriods = matches[0].periods ?? 3;
   const cupPeriodMinutes = matches[0].period_minutes ?? 20;
@@ -70,6 +71,7 @@ export default async function CupEditorPage({
 
       <form action={updateCup} className="space-y-6">
         <input type="hidden" name="original_cup_name" value={cupName} />
+        <input type="hidden" name="original_cup_group" value={cupGroup} />
         <input type="hidden" name="match_ids" value={matches.map((m) => m.id).join(",")} />
 
         {/* Cupinställningar – gäller alla matcher i cupen */}
@@ -153,7 +155,7 @@ export default async function CupEditorPage({
                   <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
                     Match {i + 1}
                   </p>
-                  <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName)} />
+                  <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName, cupGroup)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 sm:col-span-1">
@@ -221,7 +223,7 @@ export default async function CupEditorPage({
                     <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
                       Slutspelsmatch {i + 1}
                     </p>
-                    <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName)} />
+                    <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName, cupGroup)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 sm:col-span-1">
@@ -285,7 +287,7 @@ export default async function CupEditorPage({
             <Link href="/matcher" className="btn-secondary">Avbryt</Link>
           </div>
           <DeleteCupButton
-            action={deleteCup.bind(null, cupName)}
+            action={deleteCup.bind(null, cupName, cupGroup)}
             cupName={cupName}
             matchCount={matches.length}
           />
@@ -302,6 +304,7 @@ export default async function CupEditorPage({
         </p>
         <form action={addCupPlayoffMatch}>
           <input type="hidden" name="cup_name" value={cupName} />
+          <input type="hidden" name="cup_group" value={cupGroup} />
           <button type="submit" className="btn-secondary">
             <IconPlus width={15} height={15} /> Lägg till slutspelsmatch
           </button>
