@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getRole, getPlayerSession } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import PitchLines from "@/components/PitchLines";
-import { IconWhistle, IconPlayers, IconArrowRight } from "@/components/Icons";
+import { IconWhistle, IconPlayers, IconArrowRight, IconLive } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,7 @@ export default async function LandingPage() {
           className="flex items-center justify-center gap-2.5 rounded-2xl px-5 py-4 font-semibold transition-opacity hover:opacity-90"
           style={{ background: "var(--accent)", color: "var(--primary-deep, #0a0b0d)", fontFamily: "var(--font-display)" }}
         >
-          <span className="text-lg">📡</span>
+          <IconLive width={20} height={20} />
           Livescore – följ matchen live
         </Link>
 

@@ -174,3 +174,13 @@ export const IconBook = (p: SVGProps<SVGSVGElement>) => (
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
   </Base>
 );
+
+export const IconLive = (p: SVGProps<SVGSVGElement>) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+    <path d="M9 9.5Q5.5 12 9 14.5" />
+    <path d="M15 9.5Q18.5 12 15 14.5" />
+    <path d="M6 6.5Q1 12 6 17.5" />
+    <path d="M18 6.5Q23 12 18 17.5" />
+  </Base>
+);

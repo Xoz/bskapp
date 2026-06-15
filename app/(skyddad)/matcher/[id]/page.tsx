@@ -14,7 +14,7 @@ import ConfirmForm from "@/components/ConfirmForm";
 import ManualEventForm from "@/components/ManualEventForm";
 import EventEditor from "@/components/EventEditor";
 import CopyLinkButton from "@/components/CopyLinkButton";
-import { IconArrowLeft, IconArrowRight } from "@/components/Icons";
+import { IconArrowLeft, IconArrowRight, IconLive } from "@/components/Icons";
 import { swedishToday } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -252,7 +252,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               className="card p-5 flex items-center gap-4 flex-wrap"
               style={match.report_open ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
             >
-              <span className="text-2xl">📡</span>
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+              >
+                <IconLive width={20} height={20} />
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold">Föräldrarapportering</p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMatches, mootMatchIds, cupRoundLabel, type Match } from "@/lib/queries";
+import { IconLive } from "@/components/Icons";
 import { getAllSettings } from "@/lib/db";
 import { swedishToday } from "@/lib/dates";
 
@@ -71,7 +72,12 @@ export default async function LiveLandingPage() {
                   href={`/live/${m.id}`}
                   className="card card-hover p-5 flex items-center gap-4"
                 >
-                  <span className="text-2xl">📡</span>
+                  <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  <IconLive width={20} height={20} />
+                </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
                       {matchLabel(m)}
