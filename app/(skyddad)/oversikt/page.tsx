@@ -10,6 +10,7 @@ import {
   countEvaluations,
   getMatchesWithSquad,
   cupRoundLabel,
+  mootMatchIds,
 } from "@/lib/queries";
 import { swedishToday, swedishDate, swedishDateOffset } from "@/lib/dates";
 import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
@@ -51,8 +52,11 @@ export default async function Dashboard() {
     ]);
 
   const todayStr = swedishToday();
+  // Dölj slutspelsmatcher laget inte längre spelar efter utslagning (t.ex. final
+  // efter semifinalförlust).
+  const moot = mootMatchIds(matches);
   const upcomingMatches = matches
-    .filter((m) => m.date >= todayStr && !m.finished)
+    .filter((m) => m.date >= todayStr && !m.finished && !moot.has(m.id))
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
 

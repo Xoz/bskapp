@@ -102,6 +102,44 @@ export function cupMatchCompare(a: Match, b: Match): number {
   );
 }
 
+// Slutspelsronder som inte längre spelas efter en utslagning (för EN cups
+// matcher). Semifinalförlust gör finalen överflödig (bronsmatch spelas ändå);
+// kvartsfinalförlust slår ut laget helt.
+export function cupMootRounds(cupMatches: Match[]): Set<string> {
+  const lost = (round: string) =>
+    cupMatches.some(
+      (m) =>
+        m.cup_round === round &&
+        m.our_score != null &&
+        m.opponent_score != null &&
+        m.our_score < m.opponent_score
+    );
+  const moot = new Set<string>();
+  if (lost("qf")) ["sf", "bronze", "f"].forEach((r) => moot.add(r));
+  if (lost("sf")) moot.add("f");
+  return moot;
+}
+
+// Match-id för oslagna slutspelsmatcher som laget inte längre spelar (utslaget),
+// över alla cuper. Används för att dölja dem i kommande-listor.
+export function mootMatchIds(allMatches: Match[]): Set<number> {
+  const byCup = new Map<string, Match[]>();
+  for (const m of allMatches) {
+    if (!m.cup_name) continue;
+    if (!byCup.has(m.cup_name)) byCup.set(m.cup_name, []);
+    byCup.get(m.cup_name)!.push(m);
+  }
+  const ids = new Set<number>();
+  for (const ms of byCup.values()) {
+    const moot = cupMootRounds(ms);
+    for (const m of ms) {
+      const played = m.our_score != null && m.opponent_score != null;
+      if (!played && m.cup_phase === "playoff" && m.cup_round && moot.has(m.cup_round)) ids.add(m.id);
+    }
+  }
+  return ids;
+}
+
 // Matcher som ingår i samma cup/turnering (samma cup_name)
 export async function getMatchesByCup(cupName: string): Promise<Match[]> {
   if (!cupName) return [];

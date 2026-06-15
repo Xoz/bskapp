@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches, getCupScorers, cupMatchCompare, cupRoundLabel, matchTitle, type Match as MatchType, type CupScorerRow } from "@/lib/queries";
+import { getMatches, getCupScorers, cupMatchCompare, cupRoundLabel, cupMootRounds, matchTitle, type Match as MatchType, type CupScorerRow } from "@/lib/queries";
 import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
@@ -163,24 +163,6 @@ function cupPlacement(matches: MatchType[]): { emoji: string; label: string } | 
   const lostQf = matches.find((m) => m.cup_round === "qf" && done(m) && !won(m));
   if (lostQf) return { emoji: "", label: "Utslagen i kvartsfinal" };
   return null;
-}
-
-// Slutspelsronder som inte längre spelas av laget efter en utslagning. En
-// semifinalförlust gör finalen överflödig (men ev. bronsmatch spelas ändå);
-// en kvartsfinalförlust slår ut laget helt.
-function cupMootRounds(matches: MatchType[]): Set<string> {
-  const lost = (round: string) =>
-    matches.some(
-      (m) =>
-        m.cup_round === round &&
-        m.our_score != null &&
-        m.opponent_score != null &&
-        m.our_score < m.opponent_score
-    );
-  const moot = new Set<string>();
-  if (lost("qf")) ["sf", "bronze", "f"].forEach((r) => moot.add(r));
-  if (lost("sf")) moot.add("f");
-  return moot;
 }
 
 function CupCard({
