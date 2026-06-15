@@ -75,8 +75,10 @@ export default async function MatchesPage() {
 
 function MatchCard({ m, role, today }: { m: MatchType; role: string; today: string }) {
   const hasResult = m.our_score != null && m.opponent_score != null;
+  const isToday = m.date === today;
   return (
-    <Link href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
+    <div className="flex flex-col sm:flex-row gap-2">
+      <Link href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4 flex-1">
       <div
         className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
         style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
@@ -114,6 +116,15 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
         {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
       </span>
     </Link>
+    {role === "parent" && isToday && (
+      <Link
+        href={`/matcher/${m.id}/live`}
+        className="btn-primary sm:self-stretch flex items-center justify-center gap-2 sm:px-4"
+      >
+        📋 Rapportera
+      </Link>
+    )}
+    </div>
   );
 }
 
