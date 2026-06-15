@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, logActivity } from "./db";
@@ -63,17 +63,58 @@ export async function removeCoachEmail(formData: FormData) {
   revalidatePath("/installningar");
 }
 
+// Brute-force-spärr per IP: 6-siffrig PIN (1M kombinationer) får inte gissas
+// fritt. Max felförsök inom ett fönster → tillfällig låsning. Generöst nog för
+// legitima användare bakom samma WiFi, men gör massgissning ogenomförbar.
+const PIN_MAX_FAILS = 10;
+const PIN_WINDOW_SEC = 10 * 60;
+const PIN_LOCKOUT_SEC = 10 * 60;
+
 export async function playerLogin(
   _prev: { error?: string } | null,
   formData: FormData
 ): Promise<{ error?: string }> {
+  const ip = ((await headers()).get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const now = Math.floor(Date.now() / 1000);
+  const throttle = await get<{ fails: number; window_start: number; blocked_until: number }>(
+    "SELECT fails, window_start, blocked_until FROM login_throttle WHERE ip = ?",
+    [ip]
+  );
+
+  if (throttle && throttle.blocked_until > now) {
+    const mins = Math.ceil((throttle.blocked_until - now) / 60);
+    return { error: `För många försök. Försök igen om ${mins} ${mins === 1 ? "minut" : "minuter"}.` };
+  }
+
   const pin = String(formData.get("pin") ?? "").trim();
   if (!/^\d{6}$/.test(pin)) return { error: "PIN-koden består av 6 siffror." };
   const player = await get<{ id: number }>(
     "SELECT id FROM players WHERE pin = ? AND active = 1",
     [pin]
   );
-  if (!player) return { error: "Fel PIN-kod. Kontrollera med tränaren." };
+
+  if (!player) {
+    // Registrera felförsök inom rullande fönster; lås vid taket.
+    const inWindow = throttle && now - throttle.window_start < PIN_WINDOW_SEC;
+    let fails = inWindow ? throttle!.fails + 1 : 1;
+    let windowStart = inWindow ? throttle!.window_start : now;
+    let blockedUntil = 0;
+    if (fails >= PIN_MAX_FAILS) {
+      blockedUntil = now + PIN_LOCKOUT_SEC;
+      fails = 0;
+      windowStart = now;
+    }
+    await run(
+      `INSERT INTO login_throttle (ip, fails, window_start, blocked_until) VALUES (?, ?, ?, ?)
+       ON CONFLICT(ip) DO UPDATE SET fails = excluded.fails, window_start = excluded.window_start, blocked_until = excluded.blocked_until`,
+      [ip, fails, windowStart, blockedUntil]
+    );
+    return { error: "Fel PIN-kod. Kontrollera med tränaren." };
+  }
+
+  // Lyckad inloggning – nollställ spärren för IP:n.
+  if (throttle) await run("DELETE FROM login_throttle WHERE ip = ?", [ip]);
+
   const store = await cookies();
   store.set("bsk_player_session", playerSessionToken(player.id), {
     httpOnly: true,

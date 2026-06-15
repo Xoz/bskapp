@@ -46,7 +46,7 @@ async function tryExec(sql: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Turso vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-06-15";
+const SCHEMA_VERSION = "2026-06-15b";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -171,6 +171,12 @@ async function init(): Promise<void> {
       action TEXT NOT NULL,
       subject TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS login_throttle (
+      ip TEXT PRIMARY KEY,
+      fails INTEGER NOT NULL DEFAULT 0,
+      window_start INTEGER NOT NULL DEFAULT 0,
+      blocked_until INTEGER NOT NULL DEFAULT 0
     )`,
   ];
   for (const sql of tables) await (await getClient()).execute(sql);
