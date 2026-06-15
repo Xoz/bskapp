@@ -165,6 +165,24 @@ function cupPlacement(matches: MatchType[]): { emoji: string; label: string } | 
   return null;
 }
 
+// Slutspelsronder som inte längre spelas av laget efter en utslagning. En
+// semifinalförlust gör finalen överflödig (men ev. bronsmatch spelas ändå);
+// en kvartsfinalförlust slår ut laget helt.
+function cupMootRounds(matches: MatchType[]): Set<string> {
+  const lost = (round: string) =>
+    matches.some(
+      (m) =>
+        m.cup_round === round &&
+        m.our_score != null &&
+        m.opponent_score != null &&
+        m.our_score < m.opponent_score
+    );
+  const moot = new Set<string>();
+  if (lost("qf")) ["sf", "bronze", "f"].forEach((r) => moot.add(r));
+  if (lost("sf")) moot.add("f");
+  return moot;
+}
+
 function CupCard({
   name,
   matches,
@@ -196,6 +214,7 @@ function CupCard({
   const goalsAgainst = groupWithResult.reduce((s, m) => s + m.opponent_score!, 0);
   const hasGroupStats = groupWithResult.length > 0;
   const placement = cupPlacement(matches);
+  const mootRounds = cupMootRounds(matches);
 
   const editHref = `/matcher/cup/${encodeURIComponent(name)}`;
 
@@ -291,26 +310,34 @@ function CupCard({
           const title = matchTitle(m);
           // Visa rundan i undertexten om den inte redan är titeln.
           const showRoundInSub = roundLabel && roundLabel !== title;
+          // Oslagen slutspelsmatch som laget inte längre spelar (utslaget).
+          const isMoot = !hasResult && m.cup_phase === "playoff" && !!m.cup_round && mootRounds.has(m.cup_round);
           return (
             <Link
               key={m.id}
               href={`/matcher/${m.id}`}
               className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--primary-ghost)]"
-              style={{ borderTop: "1px solid var(--line)" }}
+              style={{ borderTop: "1px solid var(--line)", opacity: isMoot ? 0.55 : 1 }}
             >
               <span className="text-sm flex-1 min-w-0">
-                <span className="font-medium">{title}</span>
+                <span className="font-medium" style={isMoot ? { textDecoration: "line-through" } : undefined}>{title}</span>
                 <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
                   {showRoundInSub && ` · ${roundLabel}`}
                 </span>
               </span>
-              {m.date === today && (
-                <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
+              {isMoot ? (
+                <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>Spelas ej</span>
+              ) : (
+                <>
+                  {m.date === today && (
+                    <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
+                  )}
+                  <span className="stat-number text-base w-14 text-right" style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}>
+                    {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
+                  </span>
+                </>
               )}
-              <span className="stat-number text-base w-14 text-right" style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}>
-                {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
-              </span>
             </Link>
           );
         })}
