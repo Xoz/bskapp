@@ -68,7 +68,9 @@ kan dela och testa mot. Varje annan feature-branch får också en egen preview
 - **Dataisolering:** Preview använder `bsk-staging`, Production använder `bsk`.
   De delar inga rader. Testa fritt — radera, lägg in testmatcher, öppna
   rapportering osv. utan att påverka riktiga laget.
-- **Schema:** staging-DB:n migreras automatiskt. Lägg bara till nya `ALTER`-rader
-  i `lib/db.ts` som vanligt; de körs på både prod och staging.
+- **Schema:** staging-DB:n migreras automatiskt vid första anropet. När du lägger
+  till en ny tabell/kolumn/`ALTER` i `lib/db.ts` måste du **bumpa `SCHEMA_VERSION`**
+  i samma fil – annars hoppar cold-start-grinden över migrationerna och kolumnen
+  skapas aldrig.
 - **Nollställa staging:** `turso db shell bsk-staging` och rensa tabeller, eller
   skapa om databasen och uppdatera env-varen.
