@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getMatches, mootMatchIds, cupRoundLabel, type Match } from "@/lib/queries";
 import { IconLive } from "@/components/Icons";
 import { getAllSettings } from "@/lib/db";
-import { swedishToday } from "@/lib/dates";
+import { swedishToday, swedishMinutesSinceMidnight } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Livescore" };
@@ -32,15 +32,22 @@ export default async function LiveLandingPage() {
   const [allMatches, settings] = await Promise.all([getMatches(), getAllSettings()]);
 
   const moot = mootMatchIds(allMatches);
+  const nowMinutes = swedishMinutesSinceMidnight();
+
+  // En match räknas som avslutad om: poäng är inlagt ELLER 2h har passerat sedan avspark
+  function isDone(m: Match): boolean {
+    if (m.our_score != null && m.opponent_score != null) return true;
+    if (!m.start_time) return false;
+    const [h, min] = m.start_time.split(":").map(Number);
+    return nowMinutes >= h * 60 + min + 120;
+  }
 
   const todayBase = allMatches
     .filter((m) => m.date === today && !moot.has(m.id))
     .sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? "") || a.id - b.id);
 
-  // Ingen poäng ännu = pågår/inte avsparkat
-  const activeToday = todayBase.filter((m) => m.our_score == null || m.opponent_score == null);
-  // Resultat inlagt = avslutad
-  const doneToday = todayBase.filter((m) => m.our_score != null && m.opponent_score != null);
+  const activeToday = todayBase.filter((m) => !isDone(m));
+  const doneToday = todayBase.filter((m) => isDone(m));
 
   const upcomingMatches = allMatches
     .filter((m) => m.date > today && !moot.has(m.id))

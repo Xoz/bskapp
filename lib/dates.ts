@@ -21,3 +21,18 @@ export function swedishDateOffset(days: number): string {
   d.setDate(d.getDate() + days);
   return swedishDate(d);
 }
+
+// Minuter sedan midnatt i svensk tid (0–1439). Används för att jämföra
+// avsparktider utan att blanda in UTC-offset.
+export function swedishMinutesSinceMidnight(): number {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return h * 60 + m;
+}
