@@ -357,6 +357,49 @@ export async function getPlayerFormTrend(playerId: number): Promise<FormTrendPoi
   });
 }
 
+// Målgörare/assist i en enskild match – för "senaste matchen"-kortet på översikten.
+export interface MatchScorerRow {
+  player_id: number;
+  name: string;
+  jersey_number: number | null;
+  goals: number;
+  assists: number;
+}
+
+export async function getMatchScorers(matchId: number): Promise<MatchScorerRow[]> {
+  return all<MatchScorerRow>(
+    `SELECT p.id AS player_id, p.name, p.jersey_number, mp.goals, mp.assists
+     FROM match_players mp JOIN players p ON p.id = mp.player_id
+     WHERE mp.match_id = ? AND (mp.goals > 0 OR mp.assists > 0)
+     ORDER BY mp.goals DESC, mp.assists DESC, p.name COLLATE NOCASE`,
+    [matchId]
+  );
+}
+
+// Form-översikt: aktiva spelare som har ett form-tal, med senaste matchens delta
+// (= riktningen formen rörde sig sist) och antal betygsatta matcher. Sorterad på
+// form fallande så översikten kan visa de hetaste högst upp.
+export interface FormOverviewRow {
+  id: number;
+  name: string;
+  jersey_number: number | null;
+  form_rating: number;
+  last_delta: number | null;
+  rated_count: number;
+}
+
+export async function getFormOverview(): Promise<FormOverviewRow[]> {
+  return all<FormOverviewRow>(
+    `SELECT p.id, p.name, p.jersey_number, p.form_rating,
+            (SELECT r.delta FROM match_ratings r JOIN matches m ON m.id = r.match_id
+             WHERE r.player_id = p.id ORDER BY m.date DESC, m.id DESC LIMIT 1) AS last_delta,
+            (SELECT COUNT(*) FROM match_ratings r WHERE r.player_id = p.id) AS rated_count
+     FROM players p
+     WHERE p.active = 1 AND p.form_rating IS NOT NULL
+     ORDER BY p.form_rating DESC, p.name COLLATE NOCASE`
+  );
+}
+
 export interface SeasonStatRow {
   id: number;
   name: string;

@@ -7,23 +7,23 @@ import {
   getMatches,
   getSeasonStats,
   getLatestEvaluationDates,
-  countEvaluations,
   getMatchesWithSquad,
+  getMatchScorers,
+  getFormOverview,
   cupRoundLabel,
+  matchTitle,
   mootMatchIds,
 } from "@/lib/queries";
 import { swedishToday, swedishDate, swedishDateOffset } from "@/lib/dates";
-import { SVFF_PRINCIPLES, GAME_FORMAT } from "@/lib/svff";
+import { GAME_FORMAT } from "@/lib/svff";
+import { ratingBand } from "@/lib/rating";
 import Avatar from "@/components/Avatar";
 import PitchLines from "@/components/PitchLines";
 import {
-  IconPlayers,
-  IconPitch,
-  IconTrendUp,
-  IconAlert,
   IconClock,
   IconCheck,
   IconArrowRight,
+  IconBall,
 } from "@/components/Icons";
 
 function formatActivityTime(ts: string): string {
@@ -40,15 +40,15 @@ export default async function Dashboard() {
   if (role !== "coach") redirect("/matcher");
 
   // Oberoende queries körs parallellt – annars staplas latensen mot Turso.
-  const [settings, players, matches, stats, latestEvals, totalEvals, activity] =
+  const [settings, players, matches, stats, latestEvals, activity, formRows] =
     await Promise.all([
       getAllSettings(),
       getPlayers(),
       getMatches(),
       getSeasonStats(),
       getLatestEvaluationDates(),
-      countEvaluations(),
-      getRecentActivity(8),
+      getRecentActivity(6),
+      getFormOverview(),
     ]);
 
   const todayStr = swedishToday();
@@ -60,9 +60,15 @@ export default async function Dashboard() {
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
 
-  const matchesWithSquad = await getMatchesWithSquad(upcomingMatches.map((m) => m.id));
+  // matches är sorterad datum fallande – senaste spelade ligger först.
+  const latestMatch = matches.find(
+    (m) => (m.finished || m.our_score !== null) && m.date <= todayStr
+  );
 
-  const playedMatches = matches.filter((m) => m.finished || m.our_score !== null);
+  const [matchesWithSquad, scorers] = await Promise.all([
+    getMatchesWithSquad(upcomingMatches.map((m) => m.id)),
+    latestMatch ? getMatchScorers(latestMatch.id) : Promise.resolve([]),
+  ]);
 
   const cutoffStr = swedishDateOffset(-60);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
@@ -76,18 +82,32 @@ export default async function Dashboard() {
     (s) => avgMatches > 0 && s.matches_played < avgMatches * 0.75
   );
 
-  const kpis = [
-    { label: "Spelare i truppen", value: players.length, href: "/spelare", Icon: IconPlayers },
-    { label: "Matcher", value: playedMatches.length, href: "/matcher", Icon: IconPitch },
-    { label: "Utvärderingar", value: totalEvals, href: "/spelare", Icon: IconTrendUp },
-    {
-      label: "Att utvärdera",
-      value: needsEval.length,
-      href: "/spelare",
-      Icon: IconAlert,
-      warn: needsEval.length > 0,
-    },
-  ];
+  // Form just nu: hetaste (störst uppgång senast) och de som tappat.
+  const rising = formRows
+    .filter((f) => (f.last_delta ?? 0) > 0)
+    .sort((a, b) => (b.last_delta ?? 0) - (a.last_delta ?? 0))
+    .slice(0, 3);
+  const falling = formRows
+    .filter((f) => (f.last_delta ?? 0) < 0)
+    .sort((a, b) => (a.last_delta ?? 0) - (b.last_delta ?? 0))
+    .slice(0, 3);
+
+  // Resultatfärg för senaste matchen (vinst/oavgjort/förlust).
+  const lm = latestMatch;
+  const lmOutcome =
+    lm == null || lm.our_score == null || lm.opponent_score == null
+      ? null
+      : lm.our_score > lm.opponent_score
+        ? "win"
+        : lm.our_score < lm.opponent_score
+          ? "loss"
+          : "draw";
+  const lmTone =
+    lmOutcome === "win"
+      ? { bg: "var(--ok-bg)", fg: "var(--ok)" }
+      : lmOutcome === "loss"
+        ? { bg: "var(--danger-bg)", fg: "var(--danger)" }
+        : { bg: "var(--warn-bg)", fg: "var(--warn)" };
 
   return (
     <div className="space-y-6">
@@ -187,32 +207,114 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* KPI:er */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map(({ label, value, href, Icon, warn }) => (
-          <Link key={label} href={href} className="card card-hover p-5">
-            <div className="flex items-start justify-between">
-              <span
-                className="flex h-9 w-9 items-center justify-center rounded-xl"
-                style={{
-                  background: warn ? "var(--warn-bg)" : "var(--primary-soft)",
-                  color: warn ? "var(--warn)" : "var(--primary)",
-                }}
-              >
-                <Icon />
-              </span>
+      {/* Senaste matchen + Form just nu */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Senaste matchen */}
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-semibold text-[1.05rem]">Senaste matchen</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                Så gick det sist
+              </p>
             </div>
-            <p
-              className="stat-number mt-4 text-[2rem] leading-none"
-              style={{ color: warn ? "var(--warn)" : "var(--ink)" }}
+            {lm && (
+              <Link
+                href={`/matcher/${lm.id}`}
+                className="text-xs font-semibold flex items-center gap-1"
+                style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
+              >
+                Till matchen <IconArrowRight width={13} height={13} />
+              </Link>
+            )}
+          </div>
+          {!lm ? (
+            <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+                <IconBall />
+              </span>
+              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                Ingen spelad match ännu. När en match rapporterats ser du resultatet här.
+              </p>
+            </div>
+          ) : (
+            <Link href={`/matcher/${lm.id}`} className="block group">
+              <div
+                className="flex items-center gap-4 rounded-2xl px-4 py-4 transition-opacity group-hover:opacity-90"
+                style={{ background: lmTone.bg }}
+              >
+                <div className="flex flex-col items-center justify-center shrink-0" style={{ minWidth: 78 }}>
+                  <span className="stat-number text-[1.9rem] leading-none" style={{ color: lmTone.fg }}>
+                    {lm.our_score ?? "–"}–{lm.opponent_score ?? "–"}
+                  </span>
+                  <span className="text-[0.6rem] uppercase tracking-wide font-semibold mt-1.5" style={{ color: lmTone.fg }}>
+                    {lmOutcome === "win" ? "Vinst" : lmOutcome === "loss" ? "Förlust" : "Oavgjort"}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{matchTitle(lm)}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                    {lm.home_away === "home" ? "Hemma" : "Borta"} · {swedishDate(new Date(lm.date))}
+                  </p>
+                </div>
+              </div>
+              {scorers.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {scorers.map((s) => (
+                    <li key={s.player_id} className="flex items-center gap-1.5 text-sm">
+                      <IconBall width={13} height={13} style={{ color: "var(--ink-faint)" }} />
+                      <span className="font-medium">{s.name.replace(/^Exempel:\s*/, "")}</span>
+                      {s.goals > 1 && <span style={{ color: "var(--ink-soft)" }}>×{s.goals}</span>}
+                      {s.assists > 0 && (
+                        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                          ({s.assists} assist)
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Link>
+          )}
+        </div>
+
+        {/* Form just nu */}
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-semibold text-[1.05rem]">Form just nu</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                Hur spelarna rört sig senast (matchbetyg)
+              </p>
+            </div>
+            <Link
+              href="/statistik"
+              className="text-xs font-semibold flex items-center gap-1"
+              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
             >
-              {value}
-            </p>
-            <p className="mt-1.5 text-[0.8rem]" style={{ color: "var(--ink-soft)" }}>
-              {label}
-            </p>
-          </Link>
-        ))}
+              Visa allt <IconArrowRight width={13} height={13} />
+            </Link>
+          </div>
+          {rising.length === 0 && falling.length === 0 ? (
+            <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+                <IconClock />
+              </span>
+              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                Sätt matchbetyg efter en match så ser du vilka som är på väg upp här.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {rising.length > 0 && (
+                <FormList title="På uppgång" tone="up" rows={rising} />
+              )}
+              {falling.length > 0 && (
+                <FormList title="Tappat senast" tone="down" rows={falling} />
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -365,24 +467,66 @@ export default async function Dashboard() {
       </div>
 
 
-      {/* SvFF-principer */}
-      <div className="card p-6 md:p-7">
-        <p className="eyebrow mb-1">Vår grund</p>
-        <h2 className="font-semibold text-[1.05rem] mb-4">SvFF:s riktlinjer som appen bygger på</h2>
-        <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3">
-          {SVFF_PRINCIPLES.map((p) => (
-            <li key={p} className="flex gap-3 text-sm items-start" style={{ color: "var(--ink-soft)" }}>
-              <span
-                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-              >
-                <IconCheck width={11} height={11} strokeWidth={2.6} />
+      {/* Länk till grunden – principerna bor i guiden, inte på startsidan */}
+      <Link
+        href="/guide"
+        className="card card-hover flex items-center justify-between gap-3 px-6 py-4"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+            <IconCheck width={16} height={16} strokeWidth={2.4} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">SvFF:s riktlinjer som appen bygger på</p>
+            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              Vår grund – så tänker vi kring speltid, utveckling och glädje
+            </p>
+          </div>
+        </div>
+        <IconArrowRight width={16} height={16} style={{ color: "var(--ink-faint)" }} />
+      </Link>
+    </div>
+  );
+}
+
+// Liten lista för form-blocket: spelare + hur mycket formen rörde sig senast.
+function FormList({
+  title,
+  tone,
+  rows,
+}: {
+  title: string;
+  tone: "up" | "down";
+  rows: { id: number; name: string; jersey_number: number | null; form_rating: number; last_delta: number | null }[];
+}) {
+  const up = tone === "up";
+  const color = up ? "var(--ok)" : "var(--danger)";
+  return (
+    <div>
+      <p className="eyebrow mb-2" style={{ color: "var(--ink-faint)" }}>
+        {title}
+      </p>
+      <ul className="-mx-2">
+        {rows.map((f) => (
+          <li key={f.id}>
+            <Link
+              href={`/spelare/${f.id}`}
+              className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--primary-ghost)]"
+            >
+              <Avatar name={f.name} jersey={f.jersey_number} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{f.name.replace(/^Exempel:\s*/, "")}</p>
+                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  Form {ratingBand(f.form_rating).label}
+                </p>
+              </div>
+              <span className="stat-number text-sm flex items-center gap-0.5" style={{ color }}>
+                {up ? "▲" : "▼"} {Math.abs(f.last_delta ?? 0)}
               </span>
-              {p}
-            </li>
-          ))}
-        </ul>
-      </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
