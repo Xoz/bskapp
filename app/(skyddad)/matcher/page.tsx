@@ -9,7 +9,7 @@ import { IconPitch } from "@/components/Icons";
 export const dynamic = "force-dynamic";
 
 const TYPE_LABELS: Record<string, string> = {
-  seriespel: "Sammandrag",
+  seriespel: "Sanktan",
   cup: "Cup",
   traningsmatch: "Träningsmatch",
 };

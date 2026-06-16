@@ -56,7 +56,7 @@ export default function MatchForm({
         <div>
           <label className="label" htmlFor="match_type">Matchtyp</label>
           <select id="match_type" name="match_type" defaultValue={match?.match_type ?? "seriespel"} className="input">
-            <option value="seriespel">Sammandrag/serie</option>
+            <option value="seriespel">Sanktan</option>
             <option value="cup">Cup</option>
             <option value="traningsmatch">Träningsmatch</option>
           </select>

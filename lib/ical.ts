@@ -262,6 +262,30 @@ function extractOpponent(
 
 const VERSUS_SPLIT = /\s+-\s+|\s+–\s+|\s+vs\.?\s+/i;
 
+// Försöker extrahera ett cup-namn ur kalender-summary.
+// Profixio-stil: "Cup-namn // LagA - LagB" → "Cup-namn"
+// CupManager-stil: "Cup-namn: match mot ..." → "Cup-namn"
+// Fallback: "Cup"
+function extractCupName(summary: string): string {
+  // Profixio: delen innan "//" är cup-namnet om den inte ser ut som "LagA - LagB"
+  const slashIdx = summary.indexOf("//");
+  if (slashIdx > 0) {
+    const prefix = summary.slice(0, slashIdx).trim();
+    const cleaned = prefix.replace(/^(match|sammandrag|seriespel|cup|träningsmatch)[:\s]+/i, "")
+      .replace(/\([^)]*\)/g, "").trim();
+    if (!VERSUS_SPLIT.test(cleaned) && cleaned.length > 2) return cleaned;
+  }
+  // CupManager: "Cup-namn: match mot ..." → ta allt innan ":"
+  const colonIdx = summary.indexOf(":");
+  if (colonIdx > 0) {
+    const prefix = summary.slice(0, colonIdx).trim();
+    if (!/^(match|sammandrag|seriespel|cup|träningsmatch)$/i.test(prefix) && prefix.length > 2) {
+      return prefix;
+    }
+  }
+  return "Cup";
+}
+
 export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[] {
   const isOwn = (part: string) =>
     ownNames.some((n) => n && part.toLowerCase().includes(n.toLowerCase()));
@@ -297,7 +321,7 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
         location: e.location,
         series,
         level: matchType === "seriespel" ? deriveLevel(e.summary, series) : "",
-        cupName: matchType === "cup" ? opponent : "",
+        cupName: matchType === "cup" ? extractCupName(e.summary) : "",
         matchType,
       };
     });
