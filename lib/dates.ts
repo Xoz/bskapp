@@ -22,6 +22,23 @@ export function swedishDateOffset(days: number): string {
   return swedishDate(d);
 }
 
+// Antal hela kalenderdagar mellan ett "YYYY-MM-DD"-datum och svensk idag.
+// 0 = idag, 1 = igår osv. Båda tolkas som kalenderdagar (UTC-midnatt) så att
+// sommartid inte påverkar diffen.
+export function daysSince(date: string): number {
+  const then = Date.parse(`${date}T00:00:00Z`);
+  const today = Date.parse(`${swedishToday()}T00:00:00Z`);
+  return Math.round((today - then) / 86_400_000);
+}
+
+// "Idag" / "Igår" / "N dagar sedan" för ett "YYYY-MM-DD"-datum.
+export function daysSinceLabel(date: string): string {
+  const d = daysSince(date);
+  if (d <= 0) return "Idag";
+  if (d === 1) return "Igår";
+  return `${d} dagar sedan`;
+}
+
 // Minuter sedan midnatt i svensk tid (0–1439). Används för att jämföra
 // avsparktider utan att blanda in UTC-offset.
 export function swedishMinutesSinceMidnight(): number {

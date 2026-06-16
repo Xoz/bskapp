@@ -4,6 +4,7 @@ import { getRole } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
 import Avatar from "@/components/Avatar";
 import { level as levelInfo } from "@/lib/levels";
+import { daysSinceLabel } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,9 @@ export default async function PlayersPage() {
                     </Link>
                   </td>
                   <td style={{ color: "var(--ink-soft)" }}>
-                    {latestEvals[p.id] ?? (
+                    {latestEvals[p.id] ? (
+                      daysSinceLabel(latestEvals[p.id])
+                    ) : (
                       <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
                         Aldrig
                       </span>
