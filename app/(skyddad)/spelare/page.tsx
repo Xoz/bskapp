@@ -104,7 +104,7 @@ export default async function PlayersPage() {
                           {(() => {
                             const pl = levelInfo(p.level);
                             return pl ? (
-                              <span className="badge" style={{ background: "var(--bg2)", color: pl.color, fontSize: "0.62rem" }}>
+                              <span className="badge level-tag" data-level={pl.id} style={{ background: "var(--bg2)", fontSize: "0.62rem" }}>
                                 {pl.short}
                               </span>
                             ) : null;

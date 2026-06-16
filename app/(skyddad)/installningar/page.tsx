@@ -164,7 +164,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconWhistle width={17} height={17} />
                 </span>
@@ -204,7 +204,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconPitch width={17} height={17} />
                 </span>
@@ -378,7 +378,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconPlayers width={17} height={17} />
                 </span>
@@ -405,7 +405,7 @@ export default async function SettingsPage({
               <details>
                 <summary
                   className="cursor-pointer font-semibold text-sm select-none"
-                  style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
+                  style={{ fontFamily: "var(--font-display)", color: "var(--primary-fg)" }}
                 >
                   Klistra in hela truppen från svenskalag.se
                 </summary>
@@ -431,7 +431,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconPlayers width={17} height={17} />
                 </span>
@@ -452,7 +452,7 @@ export default async function SettingsPage({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{p.name}</p>
                       {(p as unknown as { pin?: string }).pin ? (
-                        <p className="text-xs mt-0.5 font-mono tracking-widest" style={{ color: "var(--primary)" }}>
+                        <p className="text-xs mt-0.5 font-mono tracking-widest" style={{ color: "var(--primary-fg)" }}>
                           {(p as unknown as { pin?: string }).pin}
                         </p>
                       ) : (
@@ -488,7 +488,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconChat width={17} height={17} />
                 </span>
@@ -543,7 +543,7 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                 >
                   <IconChat width={17} height={17} />
                 </span>

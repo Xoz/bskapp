@@ -53,7 +53,7 @@ function Tip({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="flex gap-2.5 text-sm rounded-xl px-4 py-3 my-3"
-      style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+      style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
     >
       <span className="shrink-0 mt-0.5">
         <IconCheck width={14} height={14} strokeWidth={2.5} />

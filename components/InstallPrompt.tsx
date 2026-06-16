@@ -73,7 +73,7 @@ export default function InstallPrompt() {
         {isIOS ? (
           <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>
             Tryck på <strong>Dela</strong>{" "}
-            <span style={{ color: "var(--primary)" }}>⎙</span> och sedan{" "}
+            <span style={{ color: "var(--primary-fg)" }}>⎙</span> och sedan{" "}
             <strong>Lägg till på hemskärmen</strong>.
           </p>
         ) : (

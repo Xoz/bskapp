@@ -137,7 +137,7 @@ export default function InterviewChat({
       <div className="flex flex-col items-center justify-center gap-8 text-center px-6 w-full max-w-sm mx-auto" style={{ minHeight: "100svh" }}>
         <div
           className="flex h-20 w-20 items-center justify-center rounded-full text-4xl"
-          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "2px solid var(--primary)", color: "var(--primary)" }}
+          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "2px solid var(--primary)", color: "var(--primary-fg)" }}
         >✓</div>
         <div>
           <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
@@ -161,11 +161,11 @@ export default function InterviewChat({
       <div className="flex flex-col items-center gap-7 w-full max-w-sm mx-auto px-6 py-10" style={{ minHeight: "100svh", justifyContent: "center" }}>
         {/* Header */}
         <div className="text-center">
-          <p className="text-[0.65rem] uppercase tracking-[0.14em] mb-3" style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>
+          <p className="text-[0.65rem] uppercase tracking-[0.14em] mb-3" style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}>
             {clubName} · {teamName}
           </p>
           <h1 className="text-[1.9rem] font-bold leading-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px", color: "var(--ink)" }}>
-            Berätta för<br /><span style={{ color: "var(--primary)" }}>tränaren</span>
+            Berätta för<br /><span style={{ color: "var(--primary-fg)" }}>tränaren</span>
           </h1>
         </div>
 
@@ -224,7 +224,7 @@ export default function InterviewChat({
           >
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold text-sm"
-              style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
+              style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
             >
               {name[0]?.toUpperCase()}
             </div>
@@ -288,7 +288,7 @@ export default function InterviewChat({
       >
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{ background: "color-mix(in srgb, var(--primary) 20%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
+          style={{ background: "color-mix(in srgb, var(--primary) 20%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
         >
           {name[0]?.toUpperCase()}
         </div>

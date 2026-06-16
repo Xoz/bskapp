@@ -45,7 +45,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
         <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
           {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent} · {match.date}
           {match.start_time ? ` · ${match.start_time}` : ""}
-          {mLevel && <> · <strong style={{ color: mLevel.color }}>{mLevel.label}</strong></>}
+          {mLevel && <> · <strong className="level-text" data-level={mLevel.id}>{mLevel.label}</strong></>}
         </p>
       </div>
 

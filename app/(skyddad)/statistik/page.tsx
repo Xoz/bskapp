@@ -128,7 +128,7 @@ export default async function StatsPage() {
       label: "Mål gjorda",
       value: pm(goalsFor),
       unit: "/ m",
-      color: "var(--primary)",
+      color: "var(--primary-fg)",
       sub: n3 >= 1 ? (hasTrend ? `3m ${f1(gfA3)} · 6m ${f1(gfA6)}` : `3m ${f1(gfA3)}`) : undefined,
       trend: calcTrend(gfA3, gfA6),
     },
@@ -180,7 +180,7 @@ export default async function StatsPage() {
         <div className="card p-8 text-center">
           <span
             className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full"
-            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
           >
             <IconPitch />
           </span>
@@ -282,7 +282,7 @@ export default async function StatsPage() {
                           <Link
                             href={`/matcher/${m.id}`}
                             className="font-medium whitespace-nowrap hover:underline"
-                            style={{ color: "var(--primary)" }}
+                            style={{ color: "var(--primary-fg)" }}
                           >
                             {m.home_away === "home" ? "" : "@ "}{m.opponent}
                           </Link>

@@ -121,7 +121,7 @@ async function IntervjuCard({ intervju }: { intervju: PlayerInterview }) {
       <summary className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none" style={{ listStyle: "none" }}>
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
+          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
         >
           {intervju.player_name[0]?.toUpperCase()}
         </div>
@@ -159,7 +159,7 @@ async function IntervjuCard({ intervju }: { intervju: PlayerInterview }) {
 
         {/* Transkript */}
         <details className="mt-4">
-          <summary className="text-[0.7rem] cursor-pointer" style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>
+          <summary className="text-[0.7rem] cursor-pointer" style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}>
             Visa hela intervjun ▾
           </summary>
           <Transcript messages={intervju.messages} />
@@ -190,7 +190,7 @@ export default async function IntervjuerPage() {
           <span className="text-4xl">💬</span>
           <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
             Spelarna når intervjun via landningssidan eller direkt på{" "}
-            <span style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>/intervju</span>
+            <span style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}>/intervju</span>
           </p>
         </div>
       ) : (

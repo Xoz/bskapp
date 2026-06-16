@@ -48,7 +48,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
 
       {/* Nivålegend */}
       <div className="card p-5" style={{ background: "var(--primary-ghost)" }}>
-        <p className="eyebrow mb-3" style={{ color: "var(--primary)" }}>
+        <p className="eyebrow mb-3" style={{ color: "var(--primary-fg)" }}>
           Utvecklingsnivåer – inte betyg
         </p>
         <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5">

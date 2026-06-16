@@ -113,18 +113,18 @@ export default async function Dashboard() {
     <div className="space-y-6">
       {/* Hero */}
       <div className="panel-dark p-7 md:p-9">
-        <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 text-white/[0.06]" />
+        <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 pitch-watermark" />
         <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
           {/* Vänster: laginfo + knappar */}
           <div>
-            <p className="eyebrow text-white/45">Säsong {settings.season}</p>
+            <p className="eyebrow">Säsong {settings.season}</p>
             <h1
               className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {settings.team_name}
             </h1>
-            <p className="mt-2 text-sm text-white/60 max-w-lg">
+            <p className="mt-2 text-sm max-w-lg" style={{ color: "var(--ink-soft)" }}>
               Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} · {GAME_FORMAT.ballSize}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -143,11 +143,11 @@ export default async function Dashboard() {
 
           {/* Höger: kommande matcher */}
           <div className="lg:min-w-[240px] lg:max-w-[280px] shrink-0">
-            <p className="text-[0.65rem] uppercase tracking-[0.12em] text-white/40 mb-3">
+            <p className="text-[0.65rem] uppercase tracking-[0.12em] mb-3" style={{ color: "var(--ink-faint)" }}>
               Kommande matcher
             </p>
             {upcomingMatches.length === 0 ? (
-              <p className="text-sm text-white/40">Inga schemalagda matcher</p>
+              <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga schemalagda matcher</p>
             ) : (
               <div className="space-y-2">
                 {upcomingMatches.map((m) => {
@@ -160,7 +160,7 @@ export default async function Dashboard() {
                       key={m.id}
                       href={`/matcher/${m.id}/laguttagning`}
                       className="flex items-center gap-3 rounded-xl px-3.5 py-3 transition-opacity hover:opacity-80"
-                      style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${hasSquad ? "rgba(255,255,255,0.1)" : "rgba(255,180,0,0.35)"}` }}
+                      style={{ background: "var(--bg2)", border: `1px solid ${hasSquad ? "var(--line)" : "color-mix(in srgb, var(--primary), transparent 55%)"}` }}
                     >
                       <div
                         className="flex flex-col items-center justify-center rounded-lg shrink-0"
@@ -173,10 +173,10 @@ export default async function Dashboard() {
                         <span className="text-[0.55rem] uppercase opacity-70 leading-none">{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
                           {!m.opponent || m.opponent === "TBD" ? (cupRoundLabel(m) ?? "Motståndare ej klar") : m.opponent}
                         </p>
-                        <p className="text-[0.7rem] text-white/50 mt-0.5">
+                        <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-soft)" }}>
                           {m.home_away === "home" ? "Hemma" : "Borta"}
                           {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ""}
                           {dayMonth ? ` · ${dayMonth}` : ""}
@@ -185,7 +185,7 @@ export default async function Dashboard() {
                       {!hasSquad && (
                         <span
                           className="shrink-0 text-[0.6rem] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
-                          style={{ background: "rgba(255,180,0,0.2)", color: "#ffd23f" }}
+                          style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                         >
                           Trupp saknas
                         </span>
@@ -198,7 +198,8 @@ export default async function Dashboard() {
             {upcomingMatches.length > 0 && (
               <Link
                 href="/matcher"
-                className="mt-3 flex items-center gap-1 text-[0.7rem] text-white/40 hover:text-white/60 transition-colors"
+                className="mt-3 flex items-center gap-1 text-[0.7rem] transition-colors"
+                style={{ color: "var(--ink-faint)" }}
               >
                 Alla matcher <IconArrowRight width={11} height={11} />
               </Link>
@@ -222,7 +223,7 @@ export default async function Dashboard() {
               <Link
                 href={`/matcher/${lm.id}`}
                 className="text-xs font-semibold flex items-center gap-1"
-                style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
+                style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
               >
                 Till matchen <IconArrowRight width={13} height={13} />
               </Link>
@@ -230,7 +231,7 @@ export default async function Dashboard() {
           </div>
           {!lm ? (
             <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
                 <IconBall />
               </span>
               <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
@@ -290,14 +291,14 @@ export default async function Dashboard() {
             <Link
               href="/statistik"
               className="text-xs font-semibold flex items-center gap-1"
-              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
+              style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
             >
               Visa allt <IconArrowRight width={13} height={13} />
             </Link>
           </div>
           {rising.length === 0 && falling.length === 0 ? (
             <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
                 <IconClock />
               </span>
               <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
@@ -359,7 +360,7 @@ export default async function Dashboard() {
                     </div>
                     <span
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: "var(--primary)" }}
+                      style={{ color: "var(--primary-fg)" }}
                     >
                       <IconArrowRight width={16} height={16} />
                     </span>
@@ -384,7 +385,7 @@ export default async function Dashboard() {
                 <li key={entry.id} className="flex items-start gap-3">
                   <span
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5"
-                    style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                    style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
                   >
                     <IconClock width={13} height={13} />
                   </span>
@@ -418,14 +419,14 @@ export default async function Dashboard() {
             <Link
               href="/statistik"
               className="text-xs font-semibold flex items-center gap-1"
-              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
+              style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
             >
               Visa allt <IconArrowRight width={13} height={13} />
             </Link>
           </div>
           {avgMatches === 0 ? (
             <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
                 <IconClock />
               </span>
               <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
@@ -473,7 +474,7 @@ export default async function Dashboard() {
         className="card card-hover flex items-center justify-between gap-3 px-6 py-4"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
             <IconCheck width={16} height={16} strokeWidth={2.4} />
           </span>
           <div>

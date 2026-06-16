@@ -90,7 +90,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <h1 className="text-[1.7rem] font-bold mt-2 flex items-center gap-3 flex-wrap">
             {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
             {mLevel && (
-              <span className="badge" style={{ background: "var(--bg2)", color: mLevel.color, fontSize: "0.7rem" }}>
+              <span className="badge level-tag" data-level={mLevel.id} style={{ background: "var(--bg2)", fontSize: "0.7rem" }}>
                 {mLevel.label}
               </span>
             )}
@@ -215,7 +215,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                     : "Sätt matchnivå och ta ut truppen"}
               </p>
             </div>
-            <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+            <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
               {squadIds.length > 0 ? "Ändra" : "Öppna"}
             </span>
           </Link>
@@ -254,7 +254,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
               >
                 <IconLive width={20} height={20} />
               </span>

@@ -33,7 +33,7 @@ export default async function Navbar() {
             className="font-bold text-lg tracking-tight"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px" }}
           >
-            <span style={{ color: "var(--primary)" }}>+</span>
+            <span style={{ color: "var(--primary-fg)" }}>+</span>
             <span style={{ color: "var(--ink)" }}>90</span>
           </span>
         </Link>

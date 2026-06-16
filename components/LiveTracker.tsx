@@ -318,7 +318,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       <div className="max-w-md mx-auto pb-10">
         {/* Header */}
         <div
-          className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6"
+          className="surface-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6"
           style={{ paddingTop: "max(1.25rem, calc(env(safe-area-inset-top) + 0.6rem))" }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -453,7 +453,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
     <div className="max-w-md mx-auto pb-32">
       {/* Klocka och ställning */}
       <div
-        className="panel-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6 sticky top-0 z-20"
+        className="surface-dark rounded-none sm:rounded-b-3xl px-5 pt-5 pb-6 sticky top-0 z-20"
         style={{ borderTop: "none", paddingTop: "max(1.25rem, calc(env(safe-area-inset-top) + 0.6rem))" }}
       >
         <div className="flex items-center justify-between gap-3 relative">
@@ -764,7 +764,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       {showHalftime && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
           <div className="card w-full max-w-sm p-6 max-h-[85vh] overflow-y-auto">
-            <p className="eyebrow text-center" style={{ color: "var(--primary)" }}>
+            <p className="eyebrow text-center" style={{ color: "var(--primary-fg)" }}>
               {live.period > 2 ? `Paus före period ${live.period}` : "Halvtid"}
             </p>
             <p className="stat-number text-4xl text-center my-1.5">{live.ourScore}–{live.oppScore}</p>
@@ -880,7 +880,7 @@ function SetupCard({
   return (
     <div className="px-4 pt-5">
       <div className="card p-5">
-        <p className="eyebrow mb-1" style={{ color: "var(--primary)" }}>Innan du börjar</p>
+        <p className="eyebrow mb-1" style={{ color: "var(--primary-fg)" }}>Innan du börjar</p>
         <h2 className="font-semibold text-lg">Vem rapporterar?</h2>
         <p className="text-sm mt-1 mb-4" style={{ color: "var(--ink-soft)" }}>
           Ange ditt namn och välj vad du räknar. Dela upp er – en räknar passningar, en annan

@@ -46,7 +46,7 @@ export default async function MatchesPage() {
         <div className="card p-10 text-center">
           <span
             className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
           >
             <IconPitch width={22} height={22} />
           </span>
@@ -84,7 +84,7 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
     <Link href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
       <div
         className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+        style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
       >
         <IconPitch width={20} height={20} />
       </div>
@@ -104,12 +104,12 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
       {(() => {
         const ml = levelInfo(m.level);
         return ml ? (
-          <span className="badge inline-flex" style={{ background: "var(--bg2)", color: ml.color }}>
+          <span className="badge level-tag inline-flex" data-level={ml.id} style={{ background: "var(--bg2)" }}>
             {ml.label}
           </span>
         ) : null;
       })()}
-      <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+      <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
         {TYPE_LABELS[m.match_type] ?? m.match_type}
       </span>
       <span
@@ -243,9 +243,9 @@ function CupCard({
           <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
         )}
         {cupLevel && (
-          <span className="badge inline-flex" style={{ background: "var(--bg2)", color: cupLevel.color }}>{cupLevel.label}</span>
+          <span className="badge level-tag inline-flex" data-level={cupLevel.id} style={{ background: "var(--bg2)" }}>{cupLevel.label}</span>
         )}
-        <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>Cup</span>
+        <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>Cup</span>
         {role === "coach" && (
           <Link
             href={editHref}
@@ -264,7 +264,7 @@ function CupCard({
           style={{ borderTop: "1px solid var(--line)", background: "var(--bg2)" }}
         >
           <span className="text-xs font-semibold" style={{ color: "var(--ink-soft)" }}>Poäng</span>
-          <span className="stat-number text-base" style={{ color: "var(--primary)" }}>{points}</span>
+          <span className="stat-number text-base" style={{ color: "var(--primary-fg)" }}>{points}</span>
           <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
             {wins}V {draws}O {losses}F
           </span>
@@ -287,7 +287,7 @@ function CupCard({
                 </span>
                 {s.goals > 0 && (
                   <span className="shrink-0" style={{ color: "var(--ink-soft)" }}>
-                    <span className="stat-number" style={{ color: "var(--primary)" }}>{s.goals}</span> mål
+                    <span className="stat-number" style={{ color: "var(--primary-fg)" }}>{s.goals}</span> mål
                   </span>
                 )}
                 {s.assists > 0 && (

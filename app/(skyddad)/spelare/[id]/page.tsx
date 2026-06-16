@@ -103,7 +103,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             {player.jersey_number != null && (
               <span
                 className="badge"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
               >
                 #{player.jersey_number}
               </span>
@@ -177,7 +177,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       {selfEval && (
         <div className="card p-6 space-y-5" style={{ border: "1px solid var(--primary-soft)" }}>
           <div>
-            <p className="eyebrow mb-0.5" style={{ color: "var(--primary)" }}>Egenutvärdering</p>
+            <p className="eyebrow mb-0.5" style={{ color: "var(--primary-fg)" }}>Egenutvärdering</p>
             <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
               Inlämnad {selfEval.created_at.slice(0, 10)} – läs inför spelarsamtalet
             </p>
@@ -338,7 +338,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2.5 mb-3">
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
               >
                 <IconTarget width={16} height={16} />
               </span>

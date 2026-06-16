@@ -15,6 +15,7 @@
   --primary-deep: #0a0b0d; /* text på accentbakgrund */
   --primary-soft: color-mix(in srgb, var(--primary), transparent 87%); /* dim-variant */
   --primary-ghost: color-mix(in srgb, var(--primary), transparent 93%);
+  --primary-fg: var(--primary); /* accent som text – mörkare i ljust läge */
   --accent-soft: color-mix(in srgb, var(--accent), transparent 87%);
 
   /* Bakgrunder – tre nivåer av djup */
@@ -553,12 +554,61 @@ details[open] .details-chevron {
   --danger-bg: rgba(248, 113, 113, 0.13);
 }
 
-/* panel-dark är ett medvetet mörkt element – behåller mörk bakgrund även i ljust läge */
-[data-theme="light"] .panel-dark {
-  background: #1c1d22;
-  border-color: rgba(255, 255, 255, 0.07);
-  color: #e8e6de;
+[data-theme="light"] {
+  /* Accent som FÖRGRUND/text behöver vara mörkare på ljus yta (amber #f59e0b
+     ger bara ~2:1 mot ljus bakgrund). Fyllningar (knappar) använder --primary
+     som fortsatt är klar amber med mörk text – den kombon är högkontrast. */
+  --primary-fg: #b45309;
+  --primary-soft: color-mix(in srgb, var(--primary), transparent 82%);
+  --primary-ghost: color-mix(in srgb, var(--primary), transparent 90%);
 }
+
+/* surface-dark = medvetet mörk yta (live-rapportering) – alltid mörk, oavsett tema.
+   Live-vyn vill ha en fokuserad "broadcast"-känsla och har egen vit text. */
+.surface-dark {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  color: #e8e6de;
+  background: #1c1d22;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Plan-vattenstämpel: vita linjer i mörkt läge, svaga svarta i ljust */
+.pitch-watermark {
+  color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="light"] .pitch-watermark {
+  color: rgba(0, 0, 0, 0.05);
+}
+
+/* Nivå-badge: ljusa pastellfärger funkar på mörk yta men inte på ljus –
+   därför mörkare, mättade varianter i ljust läge. data-level styr färgen. */
+.level-tag,
+.level-text {
+  --lvl: var(--ink-soft);
+  color: var(--lvl);
+}
+.level-tag[data-level="extra_latt"] { --lvl: #86efac; }
+.level-tag[data-level="latt"]       { --lvl: #4ade80; }
+.level-tag[data-level="medel"]      { --lvl: #fbbf24; }
+.level-tag[data-level="svar"]       { --lvl: #fb923c; }
+.level-tag[data-level="extra_svar"] { --lvl: #f87171; }
+.level-text[data-level="extra_latt"] { --lvl: #86efac; }
+.level-text[data-level="latt"]       { --lvl: #4ade80; }
+.level-text[data-level="medel"]      { --lvl: #fbbf24; }
+.level-text[data-level="svar"]       { --lvl: #fb923c; }
+.level-text[data-level="extra_svar"] { --lvl: #f87171; }
+[data-theme="light"] .level-tag[data-level="extra_latt"],
+[data-theme="light"] .level-text[data-level="extra_latt"] { --lvl: #15803d; }
+[data-theme="light"] .level-tag[data-level="latt"],
+[data-theme="light"] .level-text[data-level="latt"]       { --lvl: #166534; }
+[data-theme="light"] .level-tag[data-level="medel"],
+[data-theme="light"] .level-text[data-level="medel"]      { --lvl: #a16207; }
+[data-theme="light"] .level-tag[data-level="svar"],
+[data-theme="light"] .level-text[data-level="svar"]       { --lvl: #c2410c; }
+[data-theme="light"] .level-tag[data-level="extra_svar"],
+[data-theme="light"] .level-text[data-level="extra_svar"] { --lvl: #b91c1c; }
 
 /* Nav-hover fungerar inte med rgba(255,255,255,…) i light mode */
 [data-theme="light"] .nav-link:hover {
