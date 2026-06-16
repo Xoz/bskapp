@@ -272,7 +272,9 @@ export default async function StatsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {teamMatches.map((m) => {
+                  {teamMatches
+                    .filter((m) => m.our_score != null && m.opponent_score != null)
+                    .map((m) => {
                     const row = m as unknown as Record<string, number>;
                     const o = outcome(m.our_score, m.opponent_score);
                     const lvl = LEVELS.find((l) => l.id === m.level);
