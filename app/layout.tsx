@@ -62,9 +62,11 @@ export default async function RootLayout({
         className="min-h-full flex flex-col"
         style={
           {
-            // Klubbens accentfärg driver hela accentskalan på det mörka temat
-            "--primary": settings.accent_color || "#f59e0b",
-            "--accent": settings.accent_color || "#f59e0b",
+            // Klubbens accentfärg vinner över temats default-accent (sätts bara om
+            // den finns – annars styr CSS: amber i mörkt, djupare amber i ljust läge).
+            ...(settings.accent_color
+              ? { "--primary": settings.accent_color, "--accent": settings.accent_color }
+              : {}),
             // Matchtröjefärger för spelaravatarerna
             "--jersey": settings.jersey_color || "#ffd23f",
             "--jersey-ink": settings.jersey_text_color || "#111111",

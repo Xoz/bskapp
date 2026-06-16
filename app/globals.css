@@ -579,6 +579,11 @@ details[open] .details-chevron {
   --ink-dim: var(--ink-soft);
   --ink-faint: #9A9A90;
 
+  /* Default-accent djupare i ljust läge för kontrast. Gäller bara när ingen
+     klubbfärg är satt – sätter klubben accent_color vinner den (inline på body). */
+  --primary: #E08A00;
+  --accent: #E08A00;
+
   /* Live-signal djupare i ljust läge för kontrast */
   --live: #E03A2F;
 
