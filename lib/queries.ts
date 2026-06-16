@@ -53,6 +53,7 @@ export interface Match {
   cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
   cup_group: string; // t.ex. "Grupp A", fritext, tom = ej satt
   report_open: number; // 1 = föräldrar/hjälpare får liverapportera
+  location: string;
 }
 
 // Ordning för slutspelsrundor – gruppspel först, sedan kvarts → semi → brons → final

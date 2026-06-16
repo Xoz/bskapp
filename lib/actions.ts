@@ -413,6 +413,7 @@ export async function saveMatch(formData: FormData) {
   const periodMinutes = periodMinutesRaw > 0 && periodMinutesRaw <= 60 ? periodMinutesRaw : 20;
   const level = String(formData.get("level") ?? "");
   const cupName = String(formData.get("cup_name") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim();
   if (!date || !opponent) return;
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -421,14 +422,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ?, cup_name = ? WHERE id = ?",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, id]
+      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ?, cup_name = ?, location = ? WHERE id = ?",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual')",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, location, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual')",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location]
     );
     matchId = Number(res.lastInsertRowid);
   }
@@ -952,7 +953,7 @@ export async function importCalendarMatches() {
         m.uid,
       ]);
       if (exists) {
-        // Fyll i nivå/cup på redan importerade matcher som saknar det
+        // Fyll i nivå/cup/tid/plats på redan importerade matcher som saknar det
         if (m.level) {
           await run(
             "UPDATE matches SET level = ? WHERE external_uid = ? AND (level IS NULL OR level = '')",
@@ -965,18 +966,24 @@ export async function importCalendarMatches() {
             [m.cupName, m.uid]
           );
         }
+        if (m.time) {
+          await run(
+            "UPDATE matches SET start_time = ? WHERE external_uid = ? AND (start_time IS NULL OR start_time = '')",
+            [m.time, m.uid]
+          );
+        }
+        if (m.location) {
+          await run(
+            "UPDATE matches SET location = ? WHERE external_uid = ? AND (location IS NULL OR location = '')",
+            [m.location, m.uid]
+          );
+        }
         continue;
       }
-      const notes = [
-        m.series && `Serie: ${m.series}`,
-        m.time && `Avspark ${m.time}`,
-        m.location && `Plats: ${m.location}`,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+      const notes = m.series ? `Serie: ${m.series}` : "";
       await run(
-        "INSERT INTO matches (date, opponent, home_away, match_type, notes, level, cup_name, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, 'coach', 'calendar', ?)",
-        [m.date, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, m.uid]
+        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, notes, level, cup_name, location, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'calendar', ?)",
+        [m.date, m.time, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, m.location, m.uid]
       );
       imported++;
     }

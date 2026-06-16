@@ -238,6 +238,7 @@ async function init(): Promise<void> {
     // det seedas från spelarens nivå. Se lib/rating.ts.
     `ALTER TABLE players ADD COLUMN form_rating INTEGER`,
     `ALTER TABLE matches ADD COLUMN cup_group TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE matches ADD COLUMN location TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) await tryExec(sql);
 

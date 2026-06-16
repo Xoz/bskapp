@@ -35,7 +35,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 ## lib/ — exports per fil
 
-- **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch, addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, setMatchLevel, saveSquad/saveLineup, saveMatchRatings, deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches, previewCupImport/importCupMatches (cup-import via iCal), updateSettings, generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
+- **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch (inkl. location), addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, setMatchLevel, saveSquad/saveLineup, saveMatchRatings, deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches (fyller start_time + location från kalender), previewCupImport/importCupMatches (cup-import via iCal), updateSettings, generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
 - **db.ts**: libSQL-klient + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`. **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
@@ -54,7 +54,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 ## DB-tabeller (definieras i lib/db.ts)
 
-`settings`, `players`, `evaluations`, `evaluation_scores`, `matches`, `match_players`,
+`settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
 `match_events`, `match_reporters`, `match_squad`, `match_lineup`, `match_subs`, `match_ratings`,
 `player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)

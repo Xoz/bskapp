@@ -6,7 +6,6 @@ import { deleteMatch, resetMatch, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
 import { suggestOutcome, stepByOutcome } from "@/lib/rating";
-import MatchForm from "@/components/MatchForm";
 import MatchRatings, { type RatingPlayer } from "@/components/MatchRatings";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
@@ -98,6 +97,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
             {match.date}{match.start_time ? ` · ${match.start_time}` : ""}
+            {match.location ? ` · ${match.location}` : ""}
             {match.source === "calendar" && " · hämtad från kalendern"}
             {match.our_score != null && match.opponent_score != null && (
               <>
@@ -351,15 +351,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
           </details>
 
-          <details>
-            <summary className="card p-5 md:p-6 flex items-center justify-between cursor-pointer list-none select-none">
-              <h2 className="font-semibold">Matchstatistik</h2>
-              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
-            </summary>
-            <div className="space-y-4 mt-4">
-              <MatchForm players={players} match={match} matchPlayers={matchPlayers} />
-            </div>
-          </details>
         </>
       )}
     </div>
