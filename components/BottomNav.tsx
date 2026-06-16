@@ -7,7 +7,7 @@ import {
   IconOverview,
   IconPlayers,
   IconPitch,
-  IconSettings,
+  IconChart,
   IconChat,
 } from "@/components/Icons";
 
@@ -15,8 +15,8 @@ const COACH_ITEMS = [
   { href: "/oversikt", label: "Hem", Icon: IconOverview },
   { href: "/spelare", label: "Spelare", Icon: IconPlayers },
   { href: "/matcher", label: "Matcher", Icon: IconPitch },
+  { href: "/statistik", label: "Statistik", Icon: IconChart },
   { href: "/intervjuer", label: "Intervjuer", Icon: IconChat },
-  { href: "/installningar", label: "Inställn.", Icon: IconSettings },
 ];
 
 export default function BottomNav({ role }: { role: Role | null }) {
@@ -47,7 +47,7 @@ export default function BottomNav({ role }: { role: Role | null }) {
           >
             <Icon width={22} height={22} />
             <span
-              className="text-[0.58rem] font-medium"
+              className="text-[0.625rem] font-medium"
               style={{ fontFamily: "var(--font-display)", letterSpacing: "0.02em" }}
             >
               {label}

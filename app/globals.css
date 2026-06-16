@@ -479,6 +479,24 @@ table.data-table tbody tr {
 table.data-table tbody tr:hover {
   background: var(--bg3);
 }
+/* Mobil: lås första kolumnen vid horisontell scroll så man inte tappar bort
+   vilken rad man läser. Den frusna kanten signalerar samtidigt att tabellen
+   går att scrolla i sidled. Desktop rör vi inte (tabellerna får plats där). */
+@media (max-width: 640px) {
+  table.data-table th:first-child,
+  table.data-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 1px 0 0 var(--line);
+  }
+  table.data-table th:first-child {
+    background: var(--bg-nav);
+  }
+  table.data-table td:first-child {
+    background: var(--bg2);
+  }
+}
 
 /* ---------- Diverse ---------- */
 

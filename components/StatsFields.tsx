@@ -18,8 +18,8 @@ export default function StatsFields({
       <table className="data-table">
         <thead>
           <tr>
-            <th>Spelade</th>
             <th>Spelare</th>
+            <th>Spelade</th>
             {STAT_FIELDS.map((f) => (
               <th key={f.id} title={f.label}>
                 {f.short}
@@ -33,19 +33,19 @@ export default function StatsFields({
             return (
               <tr key={p.id}>
                 <td>
-                  <input
-                    type="checkbox"
-                    name={`played_${p.id}`}
-                    defaultChecked={!!mp}
-                    className="h-5 w-5 rounded accent-[var(--primary)]"
-                    aria-label={`${p.name} spelade`}
-                  />
-                </td>
-                <td>
                   <span className="flex items-center gap-2.5 font-medium whitespace-nowrap">
                     <Avatar name={p.name} jersey={p.jersey_number} size={30} />
                     {p.name}
                   </span>
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    name={`played_${p.id}`}
+                    defaultChecked={!!mp}
+                    className="h-6 w-6 rounded accent-[var(--primary)]"
+                    aria-label={`${p.name} spelade`}
+                  />
                 </td>
                 {STAT_FIELDS.map((f) => (
                   <td key={f.id}>

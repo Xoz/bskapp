@@ -85,7 +85,7 @@ export default async function LandingPage() {
         <div className="mt-4">
           <h1
             className="font-extrabold leading-none"
-            style={{ fontFamily: "var(--font-display)", fontSize: "42px", letterSpacing: "-0.02em", color: "var(--ink)" }}
+            style={{ fontFamily: "var(--font-display)", fontSize: "clamp(30px, 11vw, 42px)", letterSpacing: "-0.02em", color: "var(--ink)" }}
           >
             {settings.team_name}
           </h1>
@@ -135,7 +135,7 @@ export default async function LandingPage() {
             </div>
             <div
               className="font-extrabold"
-              style={{ fontFamily: "var(--font-display)", fontSize: "46px", lineHeight: 0.95, letterSpacing: "-0.03em", marginTop: "8px" }}
+              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(34px, 12vw, 46px)", lineHeight: 0.95, letterSpacing: "-0.03em", marginTop: "8px" }}
             >
               Livescore
             </div>
