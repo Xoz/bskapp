@@ -72,6 +72,42 @@ export default async function Dashboard() {
     latestMatch ? getMatchScorers(latestMatch.id) : Promise.resolve([]),
   ]);
 
+  // Säsongssiffror – aggregat över alla spelade matcher (serie + cuper).
+  const played = matches.filter(
+    (m) => m.our_score != null && m.opponent_score != null
+  );
+  const record = played.reduce(
+    (acc, m) => {
+      if (m.our_score! > m.opponent_score!) acc.w++;
+      else if (m.our_score! < m.opponent_score!) acc.l++;
+      else acc.d++;
+      acc.gf += m.our_score!;
+      acc.ga += m.opponent_score!;
+      return acc;
+    },
+    { w: 0, d: 0, l: 0, gf: 0, ga: 0 }
+  );
+
+  // Smart primär-CTA: visar mest akuta åtgärden just nu i prioritetsordning
+  // live → match idag → trupp saknas till nästa → registrera ny match.
+  const liveMatch = matches.find((m) => m.clock_running === 1 && !m.finished);
+  const todayMatch = matches.find(
+    (m) => m.date === todayStr && !m.finished && !moot.has(m.id) && m.our_score == null
+  );
+  const nextNoSquad = upcomingMatches.find((m) => !matchesWithSquad.has(m.id));
+  const nextOpp = nextNoSquad
+    ? nextNoSquad.opponent && nextNoSquad.opponent !== "TBD"
+      ? nextNoSquad.opponent
+      : cupRoundLabel(nextNoSquad) ?? "match"
+    : "";
+  const heroCta = liveMatch
+    ? { href: `/matcher/${liveMatch.id}/live`, label: "Fortsätt rapportera", live: true, note: "Matchen pågår" }
+    : todayMatch
+      ? { href: `/matcher/${todayMatch.id}/live`, label: "Rapportera dagens match", live: false, note: null }
+      : nextNoSquad
+        ? { href: `/matcher/${nextNoSquad.id}/laguttagning`, label: `Ta ut trupp · ${nextOpp}`, live: false, note: "Trupp saknas till nästa match" }
+        : { href: "/matcher/ny", label: "Registrera match", live: false, note: null };
+
   const cutoffStr = swedishDateOffset(-60);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
 
@@ -117,29 +153,47 @@ export default async function Dashboard() {
       <div className="panel-dark p-7 md:p-9">
         <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 pitch-watermark" />
         <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
-          {/* Vänster: laginfo + knappar */}
+          {/* Vänster: laginfo + säsongssiffror + smart åtgärd */}
           <div>
-            <p className="eyebrow">Säsong {settings.season}</p>
+            <p className="eyebrow">Säsong {settings.season} · {GAME_FORMAT.format}</p>
             <h1
               className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {settings.team_name}
             </h1>
-            <p className="mt-2 text-sm max-w-lg" style={{ color: "var(--ink-soft)" }}>
-              Spelform {GAME_FORMAT.format} · {GAME_FORMAT.periods} · {GAME_FORMAT.ballSize}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/matcher/ny" className="btn-accent">
-                Registrera match
-              </Link>
+
+            {/* Säsongssiffror i korthet */}
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <KpiChip label="Spelade" value={played.length} />
+              <KpiChip label="V–O–F">
+                <span style={{ color: "var(--ok)" }}>{record.w}</span>
+                <span style={{ color: "var(--ink-faint)" }}>–</span>
+                <span style={{ color: "var(--warn)" }}>{record.d}</span>
+                <span style={{ color: "var(--ink-faint)" }}>–</span>
+                <span style={{ color: "var(--danger)" }}>{record.l}</span>
+              </KpiChip>
+              <KpiChip label="Mål">
+                {record.gf}
+                <span style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}> / {record.ga}</span>
+              </KpiChip>
+              <KpiChip label="Trupp" value={players.length} />
+            </div>
+
+            {/* Kontextuell primär-åtgärd */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
               <Link
-                href="/spelare"
-                className="btn-secondary"
-                style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--ink)" }}
+                href={heroCta.href}
+                className="btn-accent"
+                style={heroCta.live ? { background: "var(--live)", color: "#fff" } : undefined}
               >
-                Till truppen
+                {heroCta.label}
               </Link>
+              {heroCta.note && (
+                <span className="text-[0.8rem]" style={{ color: "var(--ink-soft)" }}>
+                  {heroCta.note}
+                </span>
+              )}
             </div>
           </div>
 
@@ -488,6 +542,29 @@ export default async function Dashboard() {
         </div>
         <IconArrowRight width={16} height={16} style={{ color: "var(--ink-faint)" }} />
       </Link>
+    </div>
+  );
+}
+
+// Liten siffer-chip i heron: etikett + värde (tal eller färgad nod).
+function KpiChip({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: number | string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl px-3.5 py-2.5" style={{ background: "var(--bg3)" }}>
+      <p
+        className="text-[0.6rem] uppercase tracking-[0.08em]"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        {label}
+      </p>
+      <p className="stat-number text-[1.4rem] leading-tight mt-0.5">{children ?? value}</p>
     </div>
   );
 }

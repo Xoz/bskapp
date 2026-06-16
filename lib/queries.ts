@@ -46,6 +46,7 @@ export interface Match {
   code: string;
   source: string;
   finished: number;
+  clock_running: number; // 1 = matchklockan rullar just nu (live)
   level: string;
   cup_name: string;
   formation: string;
