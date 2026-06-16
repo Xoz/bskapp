@@ -14,6 +14,7 @@ import {
   addPlayer,
   addPlayersBulk,
   removeDemoPlayers,
+  resetColors,
 } from "@/lib/actions";
 import {
   IconCheck,
@@ -343,7 +344,18 @@ export default async function SettingsPage({
                 </div>
               </div>
 
-              <button type="submit" className="btn-primary px-6">Spara laginställningar</button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button type="submit" className="btn-primary px-6">Spara laginställningar</button>
+                <button
+                  type="submit"
+                  formAction={resetColors}
+                  formNoValidate
+                  className="text-sm font-semibold underline cursor-pointer"
+                  style={{ color: "var(--ink-faint)" }}
+                >
+                  Återställ färger till standard
+                </button>
+              </div>
             </form>
           </section>
 

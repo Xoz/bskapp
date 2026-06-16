@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { all, get, run, batch, getSetting, setSetting, logActivity } from "./db";
+import { all, get, run, batch, getSetting, setSetting, logActivity, DEFAULT_COLORS } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
 import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachName } from "./auth";
@@ -1113,6 +1113,15 @@ export async function updateSettings(formData: FormData) {
 
   revalidatePath("/", "layout");
   redirect("/installningar?sparad=1");
+}
+
+export async function resetColors() {
+  await requireRole(["coach"]);
+  for (const [key, value] of Object.entries(DEFAULT_COLORS)) {
+    await setSetting(key, value);
+  }
+  revalidatePath("/", "layout");
+  redirect("/installningar?sparad=1#laget");
 }
 
 export async function submitSelfEval(

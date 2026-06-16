@@ -8,6 +8,16 @@
 
 import type { Client, InArgs, ResultSet } from "@libsql/client";
 
+// Standardfärger – enda källan för seed och återställning i inställningarna.
+export const DEFAULT_COLORS: Record<string, string> = {
+  primary_color: "#13306e",
+  accent_color: "#ffd23f",
+  jersey_color: "#ffd23f",
+  jersey_text_color: "#111111",
+  gk_jersey_color: "#1f9d57",
+  gk_jersey_text_color: "#ffffff",
+};
+
 let clientPromise: Promise<Client> | null = null;
 
 async function makeClient(): Promise<Client> {
@@ -259,8 +269,8 @@ async function init(): Promise<void> {
       ["club_name", "Bollstanäs SK"],
       ["team_name", "BSK F2014"],
       ["birth_year", "2014"],
-      ["primary_color", "#13306e"],
-      ["accent_color", "#ffd23f"],
+      ["primary_color", DEFAULT_COLORS.primary_color],
+      ["accent_color", DEFAULT_COLORS.accent_color],
       ["coach_code", "TRANARE2014"],
       ["season", "2026"],
     ];
@@ -276,10 +286,10 @@ async function init(): Promise<void> {
   );
   // Matchtröjefärger – seedas för redan installerade appar utan att skriva över
   const jerseyDefaults: [string, string][] = [
-    ["jersey_color", "#ffd23f"],
-    ["jersey_text_color", "#111111"],
-    ["gk_jersey_color", "#1f9d57"],
-    ["gk_jersey_text_color", "#ffffff"],
+    ["jersey_color", DEFAULT_COLORS.jersey_color],
+    ["jersey_text_color", DEFAULT_COLORS.jersey_text_color],
+    ["gk_jersey_color", DEFAULT_COLORS.gk_jersey_color],
+    ["gk_jersey_text_color", DEFAULT_COLORS.gk_jersey_text_color],
   ];
   for (const [k, v] of jerseyDefaults) {
     await (await getClient()).execute({
