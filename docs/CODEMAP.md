@@ -76,7 +76,7 @@ API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callb
 - **Svensk tid**: använd `lib/dates.ts`. Vercel kör UTC — aldrig råa `toISOString`-datum.
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
 - **Git**: `git push` direkt efter commit.
-- Större detaljspec finns i `docs/SPEC-matchbetyg.md` (Fas 1 byggd – Fas 2-integrationer kvar) och `docs/STAGING.md`.
+- Större detaljspec finns i `docs/SPEC-matchbetyg.md` (Fas 1 byggd – Fas 2-integrationer kvar), `docs/SPEC-matchgrupper.md` (flera lag/grupper med delad pool – ej byggd) och `docs/STAGING.md`.
 
 ---
 
