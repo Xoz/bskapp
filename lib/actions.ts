@@ -283,6 +283,18 @@ export async function updatePlayer(formData: FormData) {
   revalidatePath("/spelare");
 }
 
+// Sätter spelarens nivå direkt (t.ex. när tränaren bekräftar ett nivåförslag
+// från matchformen). Kopplar till samma `players.level` som laguttagningen läser.
+export async function setPlayerLevel(formData: FormData) {
+  await requireRole(["coach"]);
+  const id = Number(formData.get("id"));
+  const level = String(formData.get("level") ?? "");
+  if (!id || !level) return;
+  await run("UPDATE players SET level = ? WHERE id = ?", [level, id]);
+  revalidatePath(`/spelare/${id}`);
+  revalidatePath("/spelare");
+}
+
 // Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal.
 // Genererar samtidigt en peppande AI-text riktad till spelaren.
 export async function generateShareLink(formData: FormData) {

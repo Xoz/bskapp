@@ -66,6 +66,44 @@ export function ratingBand(rating: number | null | undefined): Level {
   return LEVELS[4];
 }
 
+// ---- Nivåförslag ----
+// När spelarens form-tal konsekvent ligger i ett annat nivåband än den satta
+// nivån föreslås en flytt. Tränaren beslutar alltid (ingen auto). Vi kräver att
+// de N senaste betygsatta matcherna *alla* landat i samma avvikande band, så att
+// en enstaka topp- eller bottenmatch inte triggar ett förslag.
+export const LEVEL_SUGGEST_MIN = 3;
+
+export interface LevelSuggestion {
+  direction: "up" | "down";
+  from: Level; // spelarens satta nivå
+  to: Level; // föreslagen nivå (formens band)
+  matches: number; // antal matcher i rad som stött förslaget
+}
+
+export function levelSuggestion(
+  playerLevelId: string | null | undefined,
+  trend: { rating: number }[]
+): LevelSuggestion | null {
+  const from = level(playerLevelId);
+  if (!from) return null; // utan satt nivå finns inget att jämföra mot
+  if (trend.length < LEVEL_SUGGEST_MIN) return null;
+
+  const recent = trend.slice(-LEVEL_SUGGEST_MIN);
+  const bands = recent.map((p) => ratingBand(p.rating));
+  const target = bands[0];
+  // Alla de senaste matcherna måste ligga i samma band …
+  if (!bands.every((b) => b.rank === target.rank)) return null;
+  // … och det bandet måste skilja sig från spelarens satta nivå.
+  if (target.rank === from.rank) return null;
+
+  return {
+    direction: target.rank > from.rank ? "up" : "down",
+    from,
+    to: target,
+    matches: LEVEL_SUGGEST_MIN,
+  };
+}
+
 // ---- Statistik → förslag på "mot förväntan"-steg ----
 // Heuristik (AI kan ersätta senare). Väger spelarens matchstatistik mot position
 // och hur väl matchnivån passar spelaren: en svår match sänker förväntan, en lätt

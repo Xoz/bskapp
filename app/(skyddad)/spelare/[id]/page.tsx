@@ -16,8 +16,8 @@ import {
 import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
 import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
-import { ratingBand, EXPECTATION_STEPS } from "@/lib/rating";
-import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink } from "@/lib/actions";
+import { ratingBand, EXPECTATION_STEPS, levelSuggestion } from "@/lib/rating";
+import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import FormTrendChart from "@/components/FormTrendChart";
 import SkillRadar from "@/components/SkillRadar";
@@ -72,6 +72,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const lastOutcome = formTrend.length
     ? EXPECTATION_STEPS.find((s) => s.key === formTrend[formTrend.length - 1].outcome) ?? null
     : null;
+  // Nivåförslag: formen ligger konsekvent i ett annat band än den satta nivån
+  const levelSugg = levelSuggestion(player.level, formTrend);
 
   const latest = evaluations[0];
   const previous = evaluations[1];
@@ -314,6 +316,32 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
               Betygsätt fler matcher för att se en trend.
             </p>
+          )}
+
+          {levelSugg && (
+            <div
+              className="mt-4 flex items-start justify-between gap-4 flex-wrap rounded-lg p-3"
+              style={{ background: "var(--bg2)", border: "1px solid var(--line-2)" }}
+            >
+              <div className="text-sm">
+                <p className="font-semibold mb-0.5">
+                  Presterar {levelSugg.direction === "up" ? "över" : "under"} sin nivå
+                </p>
+                <p style={{ color: "var(--ink-soft)" }}>
+                  Formen har legat i bandet{" "}
+                  <strong style={{ color: levelSugg.to.color }}>{levelSugg.to.label}</strong> de
+                  senaste {levelSugg.matches} matcherna – satt nivå är {levelSugg.from.label}.
+                  Flytta {levelSugg.direction === "up" ? "upp" : "ned"} till {levelSugg.to.label}?
+                </p>
+              </div>
+              <form action={setPlayerLevel} className="shrink-0">
+                <input type="hidden" name="id" value={player.id} />
+                <input type="hidden" name="level" value={levelSugg.to.id} />
+                <button type="submit" className="btn-secondary text-sm py-1.5 px-3.5">
+                  Flytta till {levelSugg.to.label}
+                </button>
+              </form>
+            </div>
           )}
         </div>
       )}
