@@ -553,6 +553,13 @@ details[open] .details-chevron {
   --danger-bg: rgba(248, 113, 113, 0.13);
 }
 
+/* panel-dark är ett medvetet mörkt element – behåller mörk bakgrund även i ljust läge */
+[data-theme="light"] .panel-dark {
+  background: #1c1d22;
+  border-color: rgba(255, 255, 255, 0.07);
+  color: #e8e6de;
+}
+
 /* Nav-hover fungerar inte med rgba(255,255,255,…) i light mode */
 [data-theme="light"] .nav-link:hover {
   background: rgba(0, 0, 0, 0.05);
@@ -569,4 +576,27 @@ details[open] .details-chevron {
 /* Korn-texturen är för stark på ljus bakgrund */
 [data-theme="light"] body::after {
   opacity: 0.2;
+}
+
+/* Recharts: grid- och axellinjer (vita i mörkt läge) */
+[data-theme="light"] .recharts-cartesian-grid line,
+[data-theme="light"] .recharts-cartesian-axis line {
+  stroke: rgba(0, 0, 0, 0.09) !important;
+}
+[data-theme="light"] .recharts-polar-grid-concentric-circle,
+[data-theme="light"] .recharts-polar-grid-angle line,
+[data-theme="light"] .recharts-polar-radius-axis line {
+  stroke: rgba(0, 0, 0, 0.09) !important;
+}
+
+/* Recharts: axeltexter */
+[data-theme="light"] .recharts-cartesian-axis-tick text,
+[data-theme="light"] .recharts-polar-angle-axis-tick text,
+[data-theme="light"] .recharts-polar-radius-axis-tick text {
+  fill: var(--ink-soft) !important;
+}
+
+/* Recharts: stapeldiagram hover-markering */
+[data-theme="light"] .recharts-tooltip-cursor {
+  fill: rgba(0, 0, 0, 0.04) !important;
 }
