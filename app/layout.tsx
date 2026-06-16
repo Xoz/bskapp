@@ -39,7 +39,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title: settings.team_name || "BSK",
       statusBarStyle: "black-translucent",
     },
-    icons: { apple: "/icon.svg" },
+    icons: {
+      icon: [
+        { url: "/icon.svg", media: "(prefers-color-scheme: dark)" },
+        { url: "/icon-light.svg", media: "(prefers-color-scheme: light)" },
+      ],
+      apple: "/icon.svg",
+    },
   };
 }
 

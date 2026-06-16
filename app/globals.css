@@ -44,6 +44,10 @@
   /* Fast live-signal – oberoende av klubbaccenten */
   --live: #FF5147;
 
+  /* Grain – temaberoende (overlay/mörkt, multiply/ljust) */
+  --grain-blend: overlay;
+  --grain-opacity: 0.05;
+
   /* Accentfärger med dim-varianter */
   --teal: #1fba8a;
   --teal-dim: #1fba8a22;
@@ -92,10 +96,11 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 999;
-  opacity: 0.6;
+  opacity: var(--grain-opacity, 0.05);
+  mix-blend-mode: var(--grain-blend, overlay);
 }
 
 h1,
@@ -558,20 +563,28 @@ details[open] .details-chevron {
 /* ---------- Light mode ---------- */
 
 [data-theme="light"] {
-  --bg: #f4f2ee;
-  --bg2: #eceae5;
-  --bg3: #e3e0da;
-  --bg-nav: #ece9e3;
+  /* Dark Mono v2 – light: bg är basytan, bg2/bg3 är ljusare upphöjda ytor */
+  --bg: #E7E6E0;
+  --bg2: #F4F3EE;
+  --bg3: #FBFAF6;
+  --bg-nav: #EFEEE9;
   --card: var(--bg2);
 
-  --line: rgba(0, 0, 0, 0.09);
-  --line-2: rgba(0, 0, 0, 0.14);
-  --line-strong: rgba(0, 0, 0, 0.20);
+  --line: rgba(26, 27, 23, 0.08);
+  --line-2: rgba(26, 27, 23, 0.13);
+  --line-strong: rgba(26, 27, 23, 0.20);
 
-  --ink: #1a1916;
-  --ink-soft: #5c5852;
+  --ink: #1A1B17;
+  --ink-soft: #5C5D55;
   --ink-dim: var(--ink-soft);
-  --ink-faint: #8a8479;
+  --ink-faint: #9A9A90;
+
+  /* Live-signal djupare i ljust läge för kontrast */
+  --live: #E03A2F;
+
+  /* Grain mjukare och multiplicerad mot ljus bakgrund */
+  --grain-blend: multiply;
+  --grain-opacity: 0.04;
 
   --ok-bg: rgba(31, 186, 138, 0.13);
   --warn-bg: rgba(245, 158, 11, 0.13);
@@ -645,11 +658,6 @@ details[open] .details-chevron {
 /* Tomma staplar i nivåmätaren syns inte med vit-transparent i light mode */
 [data-theme="light"] .level-meter i {
   background: rgba(0, 0, 0, 0.10);
-}
-
-/* Korn-texturen är för stark på ljus bakgrund */
-[data-theme="light"] body::after {
-  opacity: 0.2;
 }
 
 /* Recharts: grid- och axellinjer (vita i mörkt läge) */

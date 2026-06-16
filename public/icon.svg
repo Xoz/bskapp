@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="+90">
   <defs>
-    <radialGradient id="glow" cx="78%" cy="12%" r="70%">
-      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.18"/>
-      <stop offset="58%" stop-color="#f59e0b" stop-opacity="0"/>
+    <radialGradient id="glow" cx="80%" cy="12%" r="82%">
+      <stop offset="0" stop-color="#F59E0B" stop-opacity="0.22"></stop>
+      <stop offset="0.62" stop-color="#F59E0B" stop-opacity="0"></stop>
     </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="108" fill="#0a0b0d"/>
-  <rect width="512" height="512" rx="108" fill="url(#glow)"/>
-  <g transform="translate(116 116) scale(2.8)">
-    <path d="M61.6 18 A34 34 0 1 1 38.4 18" fill="none" stroke="#ECEAE1" stroke-width="7" stroke-linecap="round"/>
-    <line x1="50" y1="50" x2="62.6" y2="32" stroke="#ECEAE1" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="50" cy="50" r="4.5" fill="#f59e0b"/>
-    <rect x="41" y="15" width="18" height="6" rx="3" fill="#f59e0b"/>
-    <rect x="47" y="9" width="6" height="18" rx="3" fill="#f59e0b"/>
+  <rect width="512" height="512" rx="112" fill="#0C0D0F"></rect>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"></rect>
+  <g transform="translate(106 106) scale(3)" fill="none">
+    <path d="M61.6 18 A34 34 0 1 1 38.4 18" stroke="#ECEAE1" stroke-width="7" stroke-linecap="round"></path>
+    <line x1="50" y1="50" x2="62.6" y2="32" stroke="#ECEAE1" stroke-width="6" stroke-linecap="round"></line>
+    <circle cx="50" cy="50" r="4.5" fill="#F59E0B"></circle>
+    <rect x="41" y="15" width="18" height="6" rx="3" fill="#F59E0B"></rect>
+    <rect x="47" y="9" width="6" height="18" rx="3" fill="#F59E0B"></rect>
   </g>
 </svg>

@@ -3,6 +3,7 @@ import { getRealRole, getCoachName } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { logout } from "@/lib/actions";
 import { IconLogout } from "@/components/Icons";
+import { Logo90Mark } from "@/components/Logo90";
 import NavLinks from "@/components/NavLinks";
 import SettingsMenu from "@/components/SettingsMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -28,7 +29,8 @@ export default async function Navbar() {
     >
       {/* Huvudrad */}
       <div className="flex items-center h-14 px-4 gap-3">
-        <Link href={homeHref} className="flex items-center shrink-0 mr-1">
+        <Link href={homeHref} className="flex items-center gap-2 shrink-0 mr-1">
+          <Logo90Mark size={22} />
           <span
             className="font-bold text-lg tracking-tight"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px" }}

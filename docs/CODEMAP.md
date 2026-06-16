@@ -28,6 +28,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 | **AI: spelarkortstext, förslag, intervju** | `lib/ai.ts`, `app/api/ai/`, `components/InterviewChat.tsx`, `components/AISuggestButton.tsx` |
 | **Inloggning / roller / inbjudan** | `lib/auth.ts`, `lib/actions.ts` (playerLogin/acceptInvite/setViewAs), `app/login/`, `app/invite/`, `components/RoleSwitcher.tsx` |
 | **Inställningar / white label** | `lib/actions.ts` (updateSettings), `lib/db.ts` (getSetting/setSetting), `components/Settings*.tsx`, `app/(skyddad)/installningar/` |
+| **Branding / logga & tema** | `components/Logo90.tsx` (Logo90Mark + Logo90-lockup, "Stopptidsringen"), `public/{icon,icon-light,logo-mark}.svg`, `app/globals.css` (design-tokens dark+light, grain), `app/page.tsx` (landning), `components/Navbar.tsx` |
 | **Datum / tid (svensk tid!)** | `lib/dates.ts` — använd ALLTID denna, aldrig `toISOString`-datum |
 | **DB-access (lågnivå)** | `lib/db.ts` (all/get/run/batch) |
 
@@ -71,6 +72,7 @@ API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callb
 
 ## Konventioner
 
+- **Design "Dark Mono v2"**: allt går via CSS-variabler i `app/globals.css` (dark `:root` + `[data-theme="light"]`). Accenten är `--primary` (dynamisk per klubb, sätts på `<body>` i `layout.tsx`); möter ytor via `--primary-wash`/`--primary-line` (color-mix), aldrig stor solid yta. `--live` är fast signal, grain styrs av `--grain-blend`/`--grain-opacity`. Inga skuggor — djup via nivåer (`--bg`/`--bg2`/`--bg3`) + borders (`--line`/`--line-2`).
 - **Svensk tid**: använd `lib/dates.ts`. Vercel kör UTC — aldrig råa `toISOString`-datum.
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
 - **Git**: `git push` direkt efter commit.
