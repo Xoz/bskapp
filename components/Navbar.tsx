@@ -5,6 +5,7 @@ import { logout } from "@/lib/actions";
 import { IconLogout } from "@/components/Icons";
 import NavLinks from "@/components/NavLinks";
 import SettingsMenu from "@/components/SettingsMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function Navbar() {
   const [realRole, settings, coachName] = await Promise.all([
@@ -51,6 +52,7 @@ export default async function Navbar() {
               {coachName.split(" ")[0]}
             </span>
           )}
+          <ThemeToggle />
           {realRole === "coach" && <SettingsMenu />}
           {realRole && (
             <form action={logout}>

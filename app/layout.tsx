@@ -12,7 +12,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0a0b0d",
-  colorScheme: "dark",
+  colorScheme: "dark light",
 };
 
 // Designsystem "Dark Mono Dashboard": Syne för display, DM Mono för allt annat
@@ -50,7 +50,8 @@ export default async function RootLayout({
 }>) {
   const settings = await getAllSettings();
   return (
-    <html lang="sv" className={`${display.variable} ${mono.variable} h-full antialiased`}>
+    <html lang="sv" className={`${display.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
+      <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}` }} />
       <body
         className="min-h-full flex flex-col"
         style={
