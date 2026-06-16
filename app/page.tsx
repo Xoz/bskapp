@@ -135,7 +135,7 @@ export default async function LandingPage() {
             </div>
             <div
               className="font-extrabold"
-              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(34px, 12vw, 46px)", lineHeight: 0.95, letterSpacing: "-0.03em", marginTop: "8px" }}
+              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(26px, 9.4vw, 38px)", lineHeight: 0.95, letterSpacing: "-0.03em", marginTop: "8px" }}
             >
               Livescore
             </div>
