@@ -60,9 +60,11 @@ export default async function Dashboard() {
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
 
-  // matches är sorterad datum fallande – senaste spelade ligger först.
+  // matches är sorterad datum fallande – senaste spelade ligger först. Dölj
+  // slutspelsmatcher som blev överflödiga efter utslagning (t.ex. en inställd
+  // final efter semifinalförlust) precis som i kommande-listan ovan.
   const latestMatch = matches.find(
-    (m) => (m.finished || m.our_score !== null) && m.date <= todayStr
+    (m) => (m.finished || m.our_score !== null) && m.date <= todayStr && !moot.has(m.id)
   );
 
   const [matchesWithSquad, scorers] = await Promise.all([
