@@ -2,8 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole, getPlayerSession } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
+import { getMatches, mootMatchIds } from "@/lib/queries";
+import { swedishToday, swedishMinutesSinceMidnight } from "@/lib/dates";
 import PitchLines from "@/components/PitchLines";
-import { IconWhistle, IconPlayers, IconArrowRight, IconLive } from "@/components/Icons";
+import { Logo90Mark } from "@/components/Logo90";
+import { IconWhistle, IconPlayers, IconArrowRight } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -13,121 +16,207 @@ export default async function LandingPage() {
   if (role === "parent") redirect("/matcher");
   if (playerId) redirect("/min-profil");
 
-  const settings = await getAllSettings();
+  const [settings, allMatches] = await Promise.all([getAllSettings(), getMatches()]);
+
+  // "Live nu": matcher idag som startat men inte är klara (samma logik som /live).
+  const today = swedishToday();
+  const nowMinutes = swedishMinutesSinceMidnight();
+  const moot = mootMatchIds(allMatches);
+  const liveCount = allMatches.filter((m) => {
+    if (m.date !== today || moot.has(m.id)) return false;
+    if (m.our_score != null && m.opponent_score != null) return false;
+    if (!m.start_time) return false;
+    const [h, min] = m.start_time.split(":").map(Number);
+    const start = h * 60 + min;
+    return nowMinutes >= start && nowMinutes < start + 120;
+  }).length;
+
+  const clubInitial = (settings.club_name || "B").trim().charAt(0).toUpperCase();
 
   return (
     <main
-      className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      className="flex-1 flex flex-col items-center justify-center px-5 relative overflow-hidden"
       style={{
         background: "var(--bg)",
         minHeight: "100svh",
         paddingTop: "max(1.5rem, env(safe-area-inset-top))",
         paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+        paddingRight: "max(1.25rem, env(safe-area-inset-right))",
       }}
     >
       <PitchLines className="pointer-events-none absolute -left-32 top-1/2 -translate-y-1/2 h-[140%] text-white/[0.025]" />
       <PitchLines className="pointer-events-none absolute -right-40 -bottom-36 h-[110%] rotate-12 text-white/[0.018]" />
 
-      <div className="w-full max-w-xs relative rise space-y-8">
-        {/* Logotyp + lagnamn */}
-        <div className="text-center">
-          <div
-            className="mx-auto mb-5 flex h-24 w-24 items-center justify-center"
-            style={{ borderRadius: "22px", background: "#0a0b0d", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
+      <div className="w-full relative rise" style={{ maxWidth: "360px" }}>
+        {/* Header: logga + klubbinitial */}
+        <header className="flex items-center justify-between">
+          <span className="inline-flex items-center" style={{ gap: "9px" }}>
+            <Logo90Mark size={26} />
             <span
-              className="text-4xl font-bold"
-              style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}
+              className="font-extrabold"
+              style={{ fontFamily: "var(--font-display)", fontSize: "22px", letterSpacing: "-0.02em", lineHeight: 1 }}
             >
               <span style={{ color: "var(--primary)" }}>+</span>
-              <span style={{ color: "#fff" }}>90</span>
+              <span style={{ color: "var(--ink)" }}>90</span>
             </span>
-          </div>
+          </span>
+          <span
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: "34px",
+              height: "34px",
+              border: "1px solid var(--line-2)",
+              fontFamily: "var(--font-display)",
+              fontWeight: 700,
+              fontSize: "14px",
+              color: "var(--ink-dim)",
+            }}
+          >
+            {clubInitial}
+          </span>
+        </header>
+
+        <p className="mt-3.5 text-[0.625rem] uppercase" style={{ letterSpacing: "0.16em", color: "var(--ink-faint)" }}>
+          Spelarutveckling · minut för minut
+        </p>
+
+        {/* Klubbidentitet */}
+        <div className="mt-4">
           <h1
-            className="text-3xl font-semibold tracking-tight"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink)", letterSpacing: "-0.5px" }}
+            className="font-extrabold leading-none"
+            style={{ fontFamily: "var(--font-display)", fontSize: "42px", letterSpacing: "-0.02em", color: "var(--ink)" }}
           >
             {settings.team_name}
           </h1>
-          <p
-            className="mt-2 text-[0.625rem] uppercase tracking-[0.12em]"
-            style={{ color: "var(--ink-faint)" }}
-          >
-            {settings.club_name} · Spelarutveckling &amp; matchstatistik
+          <p className="mt-2 text-xs" style={{ color: "var(--ink-dim)" }}>
+            {settings.club_name}
           </p>
         </div>
 
-        {/* Livescore – publik, ingen inloggning */}
+        {/* HERO – Livescore, publik */}
         <Link
           href="/live"
-          className="flex items-center justify-center gap-2.5 rounded-2xl px-5 py-4 font-semibold transition-opacity hover:opacity-90"
-          style={{ background: "var(--accent)", color: "var(--primary-deep, #0a0b0d)", fontFamily: "var(--font-display)" }}
+          className="relative block overflow-hidden"
+          style={{
+            marginTop: "20px",
+            borderRadius: "24px",
+            padding: "22px",
+            minHeight: "240px",
+            color: "var(--ink)",
+            background: "var(--primary-wash)",
+            border: "1.5px solid var(--primary-line)",
+          }}
         >
-          <IconLive width={20} height={20} />
-          Livescore – följ matchen live
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(120% 78% at 86% 4%, color-mix(in srgb, var(--primary) 26%, transparent), transparent 60%)",
+            }}
+          />
+          {liveCount > 0 && (
+            <div className="relative flex items-center gap-2">
+              <span className="relative inline-flex" style={{ width: "8px", height: "8px" }}>
+                <span className="absolute inset-0 rounded-full" style={{ background: "var(--live)" }} />
+                <span
+                  className="absolute rounded-full"
+                  style={{ inset: "-3px", border: "1px solid var(--live)", animation: "ring90 1.8s ease-out infinite" }}
+                />
+              </span>
+              <span className="text-[0.625rem] uppercase" style={{ letterSpacing: "0.16em", color: "var(--live)" }}>
+                Live nu · {liveCount} {liveCount === 1 ? "match" : "matcher"}
+              </span>
+            </div>
+          )}
+          <div className="relative" style={{ marginTop: liveCount > 0 ? "50px" : "64px" }}>
+            <div className="text-[0.625rem] uppercase" style={{ letterSpacing: "0.18em", color: "var(--ink-dim)" }}>
+              Publik · ingen inloggning
+            </div>
+            <div
+              className="font-extrabold"
+              style={{ fontFamily: "var(--font-display)", fontSize: "46px", lineHeight: 0.95, letterSpacing: "-0.03em", marginTop: "8px" }}
+            >
+              Livescore
+            </div>
+            <div className="mt-2.5 text-[0.78rem]" style={{ color: "var(--ink-dim)", maxWidth: "190px", lineHeight: 1.5 }}>
+              Följ alla lagets matcher i realtid.
+            </div>
+          </div>
+          <span
+            className="absolute flex items-center justify-center rounded-full"
+            style={{
+              right: "18px",
+              bottom: "18px",
+              width: "54px",
+              height: "54px",
+              background: "color-mix(in srgb, var(--primary) 16%, var(--bg2))",
+              border: "1.5px solid var(--primary)",
+              color: "var(--primary)",
+            }}
+          >
+            <IconArrowRight width={20} height={20} />
+          </span>
         </Link>
 
-        {/* Rollkort */}
-        <div className="space-y-3">
-          {/* Tränare */}
+        {/* Rollkort – sekundära */}
+        <div className="flex gap-3" style={{ marginTop: "13px" }}>
           <Link
             href="/login"
-            className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-opacity hover:opacity-85"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+            className="group flex flex-1 flex-col"
+            style={{ background: "var(--bg2)", border: "1px solid var(--line-2)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
           >
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              <IconWhistle width={20} height={20} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>Tränare</p>
-              <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                Trupp, utvärderingar och statistik
-              </p>
+            <div className="flex items-center justify-between">
+              <span style={{ color: "var(--primary)" }}>
+                <IconWhistle width={18} height={18} />
+              </span>
+              <IconArrowRight
+                width={13}
+                height={13}
+                className="transition-transform group-hover:translate-x-0.5"
+                style={{ color: "var(--ink-faint)" }}
+              />
             </div>
-            <IconArrowRight
-              width={14}
-              height={14}
-              className="shrink-0 transition-transform group-hover:translate-x-0.5"
-              style={{ color: "var(--ink-faint)" }}
-            />
+            <span className="mt-auto font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "19px", color: "var(--ink)" }}>
+              Tränare
+            </span>
+            <span className="text-[0.7rem]" style={{ color: "var(--ink-dim)", marginTop: "3px" }}>
+              Trupp, utvärderingar &amp; statistik
+            </span>
           </Link>
 
-          {/* Spelare */}
           <Link
             href="/spelare/login"
-            className="group flex items-center gap-4 rounded-2xl px-5 py-4 transition-opacity hover:opacity-85"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+            className="group flex flex-1 flex-col"
+            style={{ background: "var(--bg2)", border: "1px solid var(--line-2)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
           >
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              <IconPlayers width={20} height={20} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>Spelare</p>
-              <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                Berätta om din säsong för tränaren
-              </p>
+            <div className="flex items-center justify-between">
+              <span style={{ color: "var(--primary)" }}>
+                <IconPlayers width={18} height={18} />
+              </span>
+              <IconArrowRight
+                width={13}
+                height={13}
+                className="transition-transform group-hover:translate-x-0.5"
+                style={{ color: "var(--ink-faint)" }}
+              />
             </div>
-            <IconArrowRight
-              width={14}
-              height={14}
-              className="shrink-0 transition-transform group-hover:translate-x-0.5"
-              style={{ color: "var(--ink-faint)" }}
-            />
+            <span className="mt-auto font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "19px", color: "var(--ink)" }}>
+              Spelare
+            </span>
+            <span className="text-[0.7rem]" style={{ color: "var(--ink-dim)", marginTop: "3px" }}>
+              Berätta om din säsong
+            </span>
           </Link>
         </div>
 
-        <p
-          className="text-center text-[0.55rem] uppercase tracking-[0.14em]"
-          style={{ color: "var(--ink-faint)" }}
+        {/* Footer */}
+        <div
+          className="text-center text-[0.625rem]"
+          style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid var(--line)", letterSpacing: "0.07em", color: "var(--ink-faint)" }}
         >
           Enligt SvFF:s riktlinjer för barnfotboll
-        </p>
+        </div>
       </div>
     </main>
   );

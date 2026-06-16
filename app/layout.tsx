@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 const display = Syne({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const mono = DM_Mono({

@@ -18,21 +18,31 @@
   --primary-fg: var(--primary); /* accent som text – mörkare i ljust läge */
   --accent-soft: color-mix(in srgb, var(--accent), transparent 87%);
 
+  /* Dark Mono v2: accenten används som wash + border + text, aldrig stor solid yta,
+     så white-label håller även med mörk eller skrikig klubbfärg. */
+  --primary-wash: color-mix(in srgb, var(--primary) 13%, var(--bg2));
+  --primary-line: color-mix(in srgb, var(--primary) 55%, transparent);
+
   /* Bakgrunder – tre nivåer av djup */
-  --bg: #0e0f11;
-  --bg2: #15161a;
-  --bg3: #1c1d22;
+  --bg: #0c0d0f;
+  --bg2: #131419;
+  --bg3: #1b1d22;
   --bg-nav: #0a0b0d;
   --card: var(--bg2);
 
   /* Linjer & borders */
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.16);
+  --line: rgba(236, 234, 225, 0.07);
+  --line-2: rgba(236, 234, 225, 0.14);
+  --line-strong: rgba(236, 234, 225, 0.16);
 
   /* Text – tre nivåer, varm off-white (aldrig ren vit) */
-  --ink: #e8e6de;
-  --ink-soft: #9a9890;
-  --ink-faint: #847f74;
+  --ink: #ECEAE1;
+  --ink-soft: #9C9A90;
+  --ink-dim: var(--ink-soft); /* alias enligt Dark Mono v2 */
+  --ink-faint: #5E5D57;
+
+  /* Fast live-signal – oberoende av klubbaccenten */
+  --live: #FF5147;
 
   /* Accentfärger med dim-varianter */
   --teal: #1fba8a;
@@ -487,6 +497,18 @@ table.data-table tbody tr:hover {
   animation: rise 0.25s ease both;
 }
 
+/* Live-puls: expanderande ring runt --live-punkten (landningssidans hero) */
+@keyframes ring90 {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.55);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
 /* ---------- Mobilöverstyrningar (sist i filen → vinner på källordning) ---------- */
 @media (max-width: 640px) {
   /* iOS zoomar in när man fokuserar ett fält med < 16px text. På mobil höjer vi
@@ -543,10 +565,12 @@ details[open] .details-chevron {
   --card: var(--bg2);
 
   --line: rgba(0, 0, 0, 0.09);
+  --line-2: rgba(0, 0, 0, 0.14);
   --line-strong: rgba(0, 0, 0, 0.20);
 
   --ink: #1a1916;
   --ink-soft: #5c5852;
+  --ink-dim: var(--ink-soft);
   --ink-faint: #8a8479;
 
   --ok-bg: rgba(31, 186, 138, 0.13);
