@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRole } from "@/lib/auth";
-import { getPlayer, getPlayerMatchStats, getEvaluations, getScores } from "@/lib/queries";
+import { getPlayer, getPlayerMatchStats, getEvaluations, getScores, getPlayerFormTrend } from "@/lib/queries";
 import { CATEGORIES } from "@/lib/svff";
 import { positionLabel, positionFocus } from "@/lib/positions";
+import { ratingBand, stepByKey } from "@/lib/rating";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,11 @@ export async function POST(req: NextRequest) {
     scores: Record<string, number>;
   };
 
-  const [player, matchStats, evaluations] = await Promise.all([
+  const [player, matchStats, evaluations, formTrend] = await Promise.all([
     getPlayer(playerId),
     getPlayerMatchStats(playerId),
     getEvaluations(playerId),
+    getPlayerFormTrend(playerId),
   ]);
   if (!player) return NextResponse.json({ error: "Spelare saknas" }, { status: 404 });
 
@@ -77,6 +79,26 @@ export async function POST(req: NextRequest) {
     matchSection = `${totals.matcher} spelade matcher: ${totals.mål} mål, ${totals.assist} assist, ${totals.skott} skott (${totals.spm} på mål), ${totals.pass} lyckade passningar, ${totals.brytn} brytningar${totals.räddningar > 0 ? `, ${totals.räddningar} räddningar` : ""}`;
   }
 
+  // Matchform (ELO, nivåjusterad) – stödjande signal om hur spelaren presterat
+  // mot förväntan på sistone. Bandet säger vilken nivå formen motsvarar, och de
+  // senaste betygen ger riktningen. Inte huvudgrund – färg på trenden.
+  let formSection = "Ingen matchform finns ännu (inga betygsatta matcher).";
+  if (formTrend.length > 0) {
+    const band = ratingBand(formTrend[formTrend.length - 1].rating);
+    const recent = formTrend.slice(-3);
+    const dir =
+      recent.length >= 2
+        ? Math.sign(recent[recent.length - 1].rating - recent[0].rating)
+        : 0;
+    const dirWord = dir > 0 ? "stigande" : dir < 0 ? "sjunkande" : "stabil";
+    const outcomeWords = recent
+      .map((p) => stepByKey(p.outcome)?.label.toLowerCase())
+      .filter(Boolean)
+      .join(", ");
+    const matchWord = formTrend.length === 1 ? "betygsatt match" : "betygsatta matcher";
+    formSection = `Ligger i bandet ${band.label} efter ${formTrend.length} ${matchWord}, trenden är ${dirWord} (senaste betyg mot förväntan: ${outcomeWords}).`;
+  }
+
   const posLabel = positionLabel(player.position);
   const posFocus = positionFocus(player.position);
   const positionLine = posLabel ? `Position: ${posLabel} (relevant statistik: ${posFocus})` : "Position: ej angiven";
@@ -92,8 +114,12 @@ ${skillLines}${trendSection}
 Matchstatistik (ENDAST som bakgrund, inte huvudgrund):
 ${matchSection}
 
+Matchform (stödjande signal – nivåjusterad form mot förväntan, inte huvudgrund):
+${formSection}
+
 Viktiga regler:
-- Utgå FRÄMST från tränarens utvärdering och trenden ovan. Matchstatistiken är bara stödjande färg, inte huvudunderlag.
+- Utgå FRÄMST från tränarens utvärdering och trenden ovan. Matchstatistiken och matchformen är bara stödjande färg, inte huvudunderlag.
+- Använd matchformen för att färga tonen (t.ex. lyfta att spelaren är i stigande form), men hitta inte på färdigheter utifrån den.
 - Dra ALDRIG slutsatser om svagheter från låga siffror i positionsberoende statistik. En back ska t.ex. inte bedömas på antal mål, och en målvakt inte på passningar framåt. Få mål betyder inte att spelaren är dålig på avslut.
 - Nämn matchstatistik bara om den tydligt stödjer det utvärderingen redan visar.
 - Hitta inte på siffror eller färdigheter som inte finns med ovan.
