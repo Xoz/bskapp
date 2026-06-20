@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getPlayersLevelInfo, getMatchSquad, getMatchLineup, getMatchesByCup } from "@/lib/queries";
+import { getMatch, getPlayersLevelInfo, getMatchSquad, getMatchLineup, getMatchesByCup, getGroupMemberIds } from "@/lib/queries";
 import { level as levelInfo, fit } from "@/lib/levels";
 import SquadBoard from "@/components/SquadBoard";
 import { IconArrowLeft } from "@/components/Icons";
@@ -16,13 +16,20 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [playersInfo, squadIds, lineup, cupMatches] = await Promise.all([
+  const [playersInfo, squadIds, lineup, cupMatches, cupMembers] = await Promise.all([
     getPlayersLevelInfo(),
     getMatchSquad(match.id),
     getMatchLineup(match.id),
     getMatchesByCup(match.cup_name),
+    // För cupmatcher: cupens uttagna trupp (matchgruppens medlemmar) används som
+    // default-trupp tills matchen fått en egen uttagning.
+    getGroupMemberIds(match.cup_name ? match.group_id : null),
   ]);
   const mLevel = levelInfo(match.level);
+
+  // Egen matchtrupp vinner; annars förvälj cupens uttagna (bara aktiva spelare).
+  const activeIds = new Set(playersInfo.map((p) => p.id));
+  const initialSquad = squadIds.length > 0 ? squadIds : cupMembers.filter((id) => activeIds.has(id));
 
   // Sortera trupplistan så de som passar matchnivån bäst kommer först
   const sortedPlayers = [...playersInfo].sort(
@@ -80,7 +87,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
             position: p.position,
             level: p.level,
           }))}
-          initialSquad={squadIds}
+          initialSquad={initialSquad}
           initialFormation={match.formation}
           initialPositions={lineup}
           cupSize={cupMatches.length}

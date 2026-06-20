@@ -777,6 +777,42 @@ export async function addCupPlayoffMatch(formData: FormData) {
   redirect(`/matcher/cup/${encodeURIComponent(cupName)}${grp}`);
 }
 
+// Spara cupens uttagna trupp som medlemskap i cupens matchgrupp. Truppen blir
+// default-trupp per match (kan justeras per match i laguttagningen, match_squad).
+export async function saveCupSquad(formData: FormData) {
+  await requirePermission("manage_squads");
+  const cupName = String(formData.get("cup_name") ?? "").trim();
+  const cupGroup = String(formData.get("cup_group") ?? "").trim();
+  if (!cupName) return;
+  const groupId = await requireCupAccess(cupName, cupGroup);
+  if (!groupId) {
+    const back = cupGroup ? `?grupp=${encodeURIComponent(cupGroup)}` : "";
+    redirect(`/matcher/cup/${encodeURIComponent(cupName)}${back}`);
+  }
+  const ids = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
+
+  const stmts: { sql: string; args: (string | number | null)[] }[] = [
+    { sql: "DELETE FROM player_group_memberships WHERE group_id = ?", args: [groupId] },
+  ];
+  for (const pid of ids) {
+    stmts.push({
+      sql: "INSERT INTO player_group_memberships (player_id, group_id, is_primary) VALUES (?, ?, 0) ON CONFLICT DO NOTHING",
+      args: [pid, groupId],
+    });
+  }
+  await batch(stmts);
+
+  const matchRows = await all<{ id: number }>(
+    "SELECT id FROM matches WHERE cup_name = ? AND cup_group = ?",
+    [cupName, cupGroup]
+  );
+  for (const m of matchRows) revalidatePath(`/matcher/${m.id}/laguttagning`);
+  revalidatePath("/matcher");
+
+  const grp = cupGroup ? `&grupp=${encodeURIComponent(cupGroup)}` : "";
+  redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=trupp${grp}`);
+}
+
 export async function addCup(formData: FormData) {
   await requirePermission("manage_matches");
   const cupName = String(formData.get("cup_name") ?? "").trim();

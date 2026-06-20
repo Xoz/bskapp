@@ -653,6 +653,17 @@ export async function getMatchSquad(matchId: number): Promise<number[]> {
   return rows.map((r) => r.player_id);
 }
 
+// Spelar-id som ingår i en grupp. För en cups matchgrupp = den uttagna truppen,
+// som används som default-trupp per match i laguttagningen.
+export async function getGroupMemberIds(groupId: number | null): Promise<number[]> {
+  if (!groupId) return [];
+  const rows = await all<{ player_id: number }>(
+    "SELECT player_id FROM player_group_memberships WHERE group_id = ?",
+    [groupId]
+  );
+  return rows.map((r) => r.player_id);
+}
+
 export async function getMatchesWithSquad(matchIds: number[]): Promise<Set<number>> {
   if (matchIds.length === 0) return new Set();
   const placeholders = matchIds.map(() => "?").join(",");

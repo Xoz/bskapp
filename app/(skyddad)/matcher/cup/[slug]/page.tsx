@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatchesByCup } from "@/lib/queries";
+import { getMatchesByCup, getPlayersLevelInfo, getGroupMemberIds } from "@/lib/queries";
 import { updateCup, addCupPlayoffMatch, deleteCupMatch, deleteCup } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft, IconCheck, IconPlus } from "@/components/Icons";
 import DeleteCupMatchButton from "@/components/DeleteCupMatchButton";
 import DeleteCupButton from "@/components/DeleteCupButton";
+import CupSquadPicker from "@/components/CupSquadPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,14 @@ export default async function CupEditorPage({
   const groupMatches = matches.filter((m) => m.cup_phase !== "playoff");
   const playoffMatches = matches.filter((m) => m.cup_phase === "playoff");
   const cupLevel = matches.find((m) => m.level)?.level ?? "";
+
+  // Cupens matchgrupp = group_id på matcherna. Dess medlemskap är cupens uttagna
+  // trupp (cupgemensam laguttagning), som blir default-trupp per match.
+  const cupGroupId = matches.find((m) => m.group_id)?.group_id ?? null;
+  const [playersInfo, cupSquadIds] = await Promise.all([
+    getPlayersLevelInfo(),
+    getGroupMemberIds(cupGroupId),
+  ]);
   // cupGroup is already known from URL param — no need to re-read from matches
   // Matcherna i en cup delar speltidsformat – ta första matchens värden som default.
   const cupPeriods = matches[0].periods ?? 3;
@@ -65,7 +74,7 @@ export default async function CupEditorPage({
           style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
         >
           <IconCheck width={16} height={16} />
-          Cupen är sparad.
+          {sparad === "trupp" ? "Uttagningen är sparad." : "Cupen är sparad."}
         </div>
       )}
 
@@ -293,6 +302,62 @@ export default async function CupEditorPage({
           />
         </div>
       </form>
+
+      {/* Laguttagning – uttagna till cupen (cupgemensam trupp) */}
+      <div className="card p-5 md:p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold">Laguttagning</h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+            Spelarna du tar ut här är cupens trupp och blir förvald i varje match. Du kan
+            sedan justera startelva och avbytare per match.
+          </p>
+        </div>
+        {playersInfo.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            Inga aktiva spelare i truppen ännu.
+          </p>
+        ) : (
+          <CupSquadPicker
+            cupName={cupName}
+            cupGroup={cupGroup}
+            cupLevel={cupLevel}
+            players={playersInfo.map((p) => ({
+              id: p.id,
+              name: p.name,
+              jersey_number: p.jersey_number,
+              position: p.position,
+              level: p.level,
+            }))}
+            initialSquad={cupSquadIds}
+          />
+        )}
+
+        <div className="pt-1" style={{ borderTop: "1px solid var(--line)" }}>
+          <p className="text-xs font-semibold mt-3 mb-2" style={{ color: "var(--ink-faint)" }}>
+            Startelva per match
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {[
+              ...groupMatches.map((m, i) => ({ m, label: `Match ${i + 1}` })),
+              ...playoffMatches.map((m, i) => ({ m, label: `Slutspel ${i + 1}` })),
+            ].map(({ m, label }) => (
+              <Link
+                key={m.id}
+                href={`/matcher/${m.id}/laguttagning`}
+                className="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors hover:text-[var(--primary)]"
+                style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}
+              >
+                <span>
+                  {label} · {m.home_away === "home" ? "hemma mot" : "borta mot"} {m.opponent}
+                </span>
+                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  {m.date} →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Lägg till slutspelsmatch */}
       <div className="card p-5 md:p-6">
