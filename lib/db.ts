@@ -25,7 +25,14 @@ function getClient() {
   if (!sqlClient) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL saknas i miljön");
-    sqlClient = postgres(url, { prepare: false });
+    sqlClient = postgres(url, {
+      prepare: false,
+      // postgres.js returnerar bigint (SUM/COUNT av INTEGER, OID 20) som
+      // sträng som default, eftersom värdet kan överstiga Number.MAX_SAFE_INTEGER.
+      // Våra summor/counts/epoch-tider gör aldrig det, men koden adderar dem
+      // med +, vilket annars blir strängsammanslagning i stället för addition.
+      types: { bigint: { to: 20, from: [20], serialize: (x: number) => "" + x, parse: (x: string) => Number(x) } },
+    });
   }
   return sqlClient;
 }
