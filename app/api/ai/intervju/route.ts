@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callAnthropicChat } from "@/lib/ai";
 import { getPlayers } from "@/lib/queries";
-import { getPlayerSession, getRole } from "@/lib/auth";
+import { getPlayerSession, hasPermission } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +73,8 @@ Skriv sedan dessa två rader SIST – exakt så här:
 
 export async function POST(req: NextRequest) {
   // Skyddad: bara inloggad spelare (PIN) eller tränare får anropa AI:n.
-  const [playerId, role] = await Promise.all([getPlayerSession(), getRole()]);
-  if (!playerId && role !== "coach") {
+  const [playerId, allowedStaff] = await Promise.all([getPlayerSession(), hasPermission("view_interviews")]);
+  if (!playerId && !allowedStaff) {
     return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
   }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRole } from "@/lib/auth";
+import { canAccessGroup, hasPermission } from "@/lib/auth";
 import { get } from "@/lib/db";
 import {
   getLiveState,
@@ -21,8 +21,8 @@ export const dynamic = "force-dynamic";
 async function matchFromId(id: string) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return undefined;
-  return get<{ id: number; report_open: number }>(
-    "SELECT id, report_open FROM matches WHERE id = ?",
+  return get<{ id: number; report_open: number; group_id: number | null }>(
+    "SELECT id, report_open, group_id FROM matches WHERE id = ?",
     [n]
   );
 }
@@ -55,7 +55,7 @@ export async function POST(
     return NextResponse.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   }
 
-  const isCoach = (await getRole()) === "coach";
+  const isCoach = (await hasPermission("report_matches")) && (await canAccessGroup(match.group_id));
   // finish_match: bara tränare. Övriga skrivningar: tränare eller öppen rapportering.
   if (!isCoach && (COACH_ONLY_ACTIONS.has(action.type) || !match.report_open)) {
     return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });

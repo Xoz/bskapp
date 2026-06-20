@@ -26,7 +26,8 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 | **Cup-import via iCal-länk** | `app/(skyddad)/matcher/importera-cup/page.tsx`, `lib/actions.ts` (previewCupImport/importCupMatches), `lib/ical.ts` (calendarName) |
 | **Spelarkort (delningslänk)** | `app/spelarkort/[token]/`, `lib/queries.ts` (getPlayerByShareToken/share*), `lib/actions.ts` (generateShareLink) |
 | **AI: spelarkortstext, förslag, intervju** | `lib/ai.ts`, `app/api/ai/`, `components/InterviewChat.tsx`, `components/AISuggestButton.tsx` |
-| **Inloggning / roller / inbjudan** | `lib/auth.ts`, `lib/actions.ts` (playerLogin/acceptInvite/setViewAs), `app/login/`, `app/invite/`, `components/RoleSwitcher.tsx` |
+| **Inloggning / roller / inbjudan** | `lib/auth.ts`, `lib/organization.ts`, `lib/actions.ts` (playerLogin/acceptInvite/setViewAs + administration), `app/login/`, `app/invite/`, `app/(skyddad)/administration/`, `components/RoleSwitcher.tsx` |
+| **Lag, undergrupper och matchgrupper** | `lib/organization.ts`, `lib/db.ts`, `lib/actions.ts` (createGroup/saveGroup), `app/(skyddad)/administration/`, `docs/SPEC-roller-och-grupper.md` |
 | **Inställningar / white label** | `lib/actions.ts` (updateSettings), `lib/db.ts` (getSetting/setSetting), `components/Settings*.tsx`, `app/(skyddad)/installningar/` |
 | **Branding / logga & tema** | `components/Logo90.tsx` (Logo90Mark + Logo90-lockup, "Stopptidsringen"), `public/{icon,icon-light,logo-mark}.svg`, `app/globals.css` (design-tokens dark+light, grain), `app/page.tsx` (landning), `components/Navbar.tsx` |
 | **Datum / tid (svensk tid!)** | `lib/dates.ts` — använd ALLTID denna, aldrig `toISOString`-datum |
@@ -41,7 +42,8 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
-- **auth.ts**: roller (`Role`/`ViewRole`), session-tokens, getRole/getViewRole/getRealRole, getPlayerSession, getCoachEmail/getCoachName.
+- **auth.ts**: sex roller, funktionsrättigheter, användarsession, grupp-/spelarscope och kompatibilitetslagret getRole.
+- **organization.ts**: läsmodeller för användare, roller, grupper och medlemskap till administrationsvyn.
 - **svff.ts**: SvFF-färdigheter — `CATEGORIES`/`ALL_SKILLS`/`SVFF_PRINCIPLES`, skillById/categoryById.
 - **stats.ts**: `STAT_FIELDS`/`CARD_FIELDS`/`LIVE_COUNT_IDS` (definition av vilka stats som finns).
 - **levels.ts**: `LEVELS`, level/levelByRank/suggestLevel, fit() (matchar spelarnivå mot matchnivå).
@@ -57,14 +59,15 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 `settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
 `match_events`, `match_reporters`, `match_squad`, `match_lineup`, `match_subs`, `match_ratings`,
-`player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`.
+`player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`, `users`, `user_roles`,
+`user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
 
 ---
 
 ## Routes (app/)
 
-Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera), statistik, intervjuer, installningar.
+Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera), statistik, intervjuer, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
 API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google}`, `app/api/live/[id]`.
 

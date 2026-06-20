@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getRealRole, getCoachName } from "@/lib/auth";
+import { getCurrentUser, getCoachName, isStaffRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { logout } from "@/lib/actions";
 import { IconLogout } from "@/components/Icons";
@@ -9,14 +9,13 @@ import SettingsMenu from "@/components/SettingsMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function Navbar() {
-  const [realRole, settings, coachName] = await Promise.all([
-    getRealRole(),
+  const [user, settings, coachName] = await Promise.all([
+    getCurrentUser(),
     getAllSettings(),
     getCoachName(),
   ]);
-  const role = realRole;
-
-  const homeHref = realRole === "coach" ? "/oversikt" : "/";
+  const isStaff = !!user && isStaffRole(user.primaryRole);
+  const homeHref = isStaff ? "/oversikt" : user ? "/mina-spelare" : "/";
 
   return (
     <header
@@ -41,12 +40,10 @@ export default async function Navbar() {
         </Link>
 
         {/* Navlänkar — visas på desktop */}
-        <nav className="hidden md:flex flex-1 items-center gap-1">
-          <NavLinks role={role} horizontal />
-        </nav>
+        {isStaff && <nav className="hidden md:flex flex-1 items-center gap-1"><NavLinks permissions={user?.permissions ?? []} horizontal /></nav>}
 
         <div className="ml-auto flex items-center gap-1">
-          {realRole === "coach" && coachName && (
+          {isStaff && coachName && (
             <span
               className="hidden sm:block text-sm font-medium px-2"
               style={{ color: "var(--ink-soft)" }}
@@ -55,8 +52,8 @@ export default async function Navbar() {
             </span>
           )}
           <ThemeToggle />
-          {realRole === "coach" && <SettingsMenu />}
-          {realRole && (
+          {user?.permissions.includes("manage_settings") && <SettingsMenu />}
+          {user && (
             <form action={logout}>
               <button
                 type="submit"

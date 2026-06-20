@@ -2,34 +2,79 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import path from "path";
 import fs from "fs";
+import { cache } from "react";
+import { all, get } from "./db";
 
-export type Role = "coach";
+export const ROLES = ["admin", "head_coach", "coach", "leader", "player", "parent"] as const;
+export type Role = (typeof ROLES)[number];
 
-export function coachEmailToken(email: string): string {
-  return `${email}.${sign(`coach_email:${email}`)}`;
-}
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin",
+  head_coach: "Huvudtränare",
+  coach: "Tränare",
+  leader: "Ledare",
+  player: "Spelare",
+  parent: "Förälder",
+};
 
-export async function getCoachEmail(): Promise<string | null> {
-  const store = await cookies();
-  const token = store.get("bsk_coach_email")?.value;
-  if (!token) return null;
-  const dot = token.lastIndexOf(".");
-  if (dot < 1) return null;
-  const email = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
-  if (sig !== sign(`coach_email:${email}`)) return null;
-  return email;
-}
+export const PERMISSIONS = [
+  "manage_users",
+  "manage_settings",
+  "manage_groups",
+  "view_players",
+  "manage_players",
+  "view_private_player_data",
+  "manage_evaluations",
+  "view_matches",
+  "manage_matches",
+  "manage_squads",
+  "report_matches",
+  "view_statistics",
+  "view_interviews",
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
 
-export async function getCoachName(): Promise<string | null> {
-  const store = await cookies();
-  return store.get("bsk_coach_name")?.value || null;
-}
-// Visningsroll inkl. "player" (publik vy) – används för navigering och växeln.
-export type ViewRole = "coach" | "player";
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  manage_users: "Hantera användare och roller",
+  manage_settings: "Hantera klubbinställningar",
+  manage_groups: "Hantera lag och grupper",
+  view_players: "Se spelare",
+  manage_players: "Hantera spelare",
+  view_private_player_data: "Se privata anteckningar och utveckling",
+  manage_evaluations: "Skapa och ändra utvärderingar",
+  view_matches: "Se matcher",
+  manage_matches: "Skapa och ändra matcher/cuper",
+  manage_squads: "Hantera kallelser och laguttagningar",
+  report_matches: "Rapportera live och matchstatistik",
+  view_statistics: "Se lagstatistik",
+  view_interviews: "Se spelarintervjuer",
+};
 
-// I produktion (Vercel) MÅSTE SESSION_SECRET sättas som miljövariabel –
-// filsystemet är flyktigt där. Lokalt genereras en hemlighet i data/.
+const DEFAULT_PERMISSIONS: Record<Role, readonly Permission[]> = {
+  admin: PERMISSIONS,
+  head_coach: PERMISSIONS.filter((p) => p !== "manage_settings"),
+  coach: [
+    "view_players", "manage_players", "view_private_player_data", "manage_evaluations",
+    "view_matches", "manage_matches", "manage_squads", "report_matches",
+    "view_statistics", "view_interviews",
+  ],
+  leader: ["view_players", "view_matches", "manage_squads", "report_matches"],
+  player: [],
+  parent: [],
+};
+
+export type CurrentUser = {
+  id: number;
+  email: string;
+  name: string;
+  roles: Role[];
+  primaryRole: Role;
+  permissions: Permission[];
+  groupIds: number[];
+};
+
+export type ViewRole = "staff" | "player" | "parent";
+
 const SECRET_FILE = path.join(process.cwd(), "data", "session-secret");
 
 function getSecret(): string {
@@ -45,50 +90,157 @@ function sign(value: string): string {
   return crypto.createHmac("sha256", getSecret()).update(value).digest("hex");
 }
 
-export function sessionToken(role: Role): string {
+export function userSessionToken(userId: number): string {
+  const value = `user:${userId}`;
+  return `${value}.${sign(value)}`;
+}
+
+/** @deprecated Behålls bara för att äldre deployade cookies ska kunna kännas igen. */
+export function sessionToken(role: "coach"): string {
   return `${role}.${sign(role)}`;
+}
+
+export function coachEmailToken(email: string): string {
+  return `${email}.${sign(`coach_email:${email}`)}`;
 }
 
 export function playerSessionToken(playerId: number): string {
   return `${playerId}.${sign(`player:${playerId}`)}`;
 }
 
+export async function getCoachEmail(): Promise<string | null> {
+  const token = (await cookies()).get("bsk_coach_email")?.value;
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const email = token.slice(0, dot);
+  return token.slice(dot + 1) === sign(`coach_email:${email}`) ? email : null;
+}
+
+export async function getCoachName(): Promise<string | null> {
+  const user = await getCurrentUser();
+  if (user?.name) return user.name;
+  return (await cookies()).get("bsk_coach_name")?.value || null;
+}
+
 export async function getPlayerSession(): Promise<number | null> {
-  const store = await cookies();
-  const token = store.get("bsk_player_session")?.value;
+  const token = (await cookies()).get("bsk_player_session")?.value;
   if (!token) return null;
   const dot = token.lastIndexOf(".");
   if (dot < 1) return null;
   const id = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
-  if (sig !== sign(`player:${id}`)) return null;
+  if (token.slice(dot + 1) !== sign(`player:${id}`)) return null;
   const num = Number(id);
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
-// Den verkligt inloggade rollen (från den signerade sessionscookien).
-export async function getRealRole(): Promise<Role | null> {
-  const store = await cookies();
-  const token = store.get("bsk_session")?.value;
+const ROLE_ORDER: Role[] = ["admin", "head_coach", "coach", "leader", "parent", "player"];
+
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<CurrentUser | null> {
+  const token = (await cookies()).get("bsk_session")?.value;
   if (!token) return null;
-  const [role, sig] = token.split(".");
-  if (role === "coach" && sig === sign(role)) return role;
-  return null;
-}
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const value = token.slice(0, dot);
+  if (!value.startsWith("user:") || token.slice(dot + 1) !== sign(value)) return null;
+  const id = Number(value.slice(5));
+  if (!Number.isInteger(id) || id < 1) return null;
 
-// Visningsrollen. En tränare kan förhandsvisa appen som förälder eller spelare
-// via cookien bsk_view (sätts bara nedåt – ingen behörighetshöjning sker här).
-export async function getViewRole(): Promise<ViewRole> {
-  const real = await getRealRole();
-  if (real === "coach") {
-    const v = (await cookies()).get("bsk_view")?.value;
-    if (v === "player") return v;
-    return "coach";
+  const user = await get<{ id: number; email: string; name: string }>(
+    "SELECT id, email, name FROM users WHERE id = ? AND active = 1",
+    [id]
+  );
+  if (!user) return null;
+  const [roleRows, overrideRows, groupRows] = await Promise.all([
+    all<{ role: Role }>("SELECT role FROM user_roles WHERE user_id = ?", [id]),
+    all<{ permission_key: Permission; allowed: number }>(
+      "SELECT permission_key, allowed FROM user_permissions WHERE user_id = ?",
+      [id]
+    ),
+    all<{ group_id: number }>("SELECT group_id FROM user_group_access WHERE user_id = ?", [id]),
+  ]);
+  const roles = roleRows.map((r) => r.role).filter((r): r is Role => ROLES.includes(r));
+  if (roles.length === 0) return null;
+  const primaryRole = ROLE_ORDER.find((role) => roles.includes(role)) ?? roles[0];
+  const effective = new Set<Permission>();
+  for (const role of roles) for (const permission of DEFAULT_PERMISSIONS[role]) effective.add(permission);
+  if (!roles.includes("admin")) {
+    for (const row of overrideRows) {
+      if (!PERMISSIONS.includes(row.permission_key)) continue;
+      if (row.allowed) effective.add(row.permission_key);
+      else effective.delete(row.permission_key);
+    }
   }
-  return "player";
+  return {
+    ...user,
+    roles,
+    primaryRole,
+    permissions: [...effective],
+    groupIds: groupRows.map((r) => r.group_id),
+  };
+});
+
+export function isStaffRole(role: Role | null | undefined): boolean {
+  return role === "admin" || role === "head_coach" || role === "coach" || role === "leader";
 }
 
-// Effektiv roll för behörighet/sidoskydd.
+export async function hasPermission(permission: Permission): Promise<boolean> {
+  return (await getCurrentUser())?.permissions.includes(permission) ?? false;
+}
+
+// Tom grupplista betyder alla grupper. När minst en grupp väljs blir åtkomsten
+// uttryckligen begränsad till dessa (Admin ignorerar alltid begränsningen).
+export async function canAccessGroup(groupId: number | null | undefined): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  if (user.roles.includes("admin") || groupId == null || user.groupIds.length === 0) return true;
+  if (user.groupIds.includes(groupId)) return true;
+  const inherited = await get<{ ok: number }>(
+    `SELECT 1 AS ok FROM groups g
+     JOIN user_group_access uga ON uga.user_id = ? AND uga.group_id = g.parent_id
+     WHERE g.id = ? LIMIT 1`,
+    [user.id, groupId]
+  );
+  return !!inherited;
+}
+
+export async function canAccessPlayer(playerId: number): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  if (user.permissions.includes("view_players")) {
+    if (user.roles.includes("admin") || user.groupIds.length === 0) return true;
+    const row = await get<{ ok: number }>(
+      `SELECT 1 AS ok FROM player_group_memberships pgm
+       JOIN groups g ON g.id = pgm.group_id
+       JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = pgm.group_id OR uga.group_id = g.parent_id)
+       WHERE pgm.player_id = ? LIMIT 1`,
+      [user.id, playerId]
+    );
+    return !!row;
+  }
+  const link = await get<{ ok: number }>(
+    "SELECT 1 AS ok FROM user_player_links WHERE user_id = ? AND player_id = ? LIMIT 1",
+    [user.id, playerId]
+  );
+  return !!link;
+}
+
+export async function getRealRole(): Promise<Role | null> {
+  return (await getCurrentUser())?.primaryRole ?? null;
+}
+
 export async function getRole(): Promise<Role | null> {
-  return getRealRole();
+  const role = await getRealRole();
+  // Kompatibilitetslager för äldre sidor: alla personalroller renderar det
+  // befintliga tränargränssnittet. Den verkliga auktoriseringen sker alltid
+  // med permissions i server actions och route-layouts.
+  return isStaffRole(role) ? "coach" : role;
+}
+
+export async function getViewRole(): Promise<ViewRole> {
+  const user = await getCurrentUser();
+  if (!user) return "player";
+  const view = (await cookies()).get("bsk_view")?.value;
+  if (isStaffRole(user.primaryRole) && (view === "player" || view === "parent")) return view;
+  return isStaffRole(user.primaryRole) ? "staff" : user.primaryRole === "parent" ? "parent" : "player";
 }

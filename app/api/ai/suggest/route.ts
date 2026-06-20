@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRole } from "@/lib/auth";
+import { canAccessPlayer, hasPermission } from "@/lib/auth";
 import { getPlayer, getPlayerMatchStats, getEvaluations, getScores, getPlayerFormTrend } from "@/lib/queries";
 import { CATEGORIES } from "@/lib/svff";
 import { positionLabel, positionFocus } from "@/lib/positions";
@@ -8,13 +8,13 @@ import { ratingBand, stepByKey } from "@/lib/rating";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const role = await getRole();
-  if (role !== "coach") return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
-
   const { playerId, scores } = (await req.json()) as {
     playerId: number;
     scores: Record<string, number>;
   };
+  if (!(await hasPermission("manage_evaluations")) || !(await canAccessPlayer(playerId))) {
+    return NextResponse.json({ error: "Ej behörig" }, { status: 401 });
+  }
 
   const [player, matchStats, evaluations, formTrend] = await Promise.all([
     getPlayer(playerId),

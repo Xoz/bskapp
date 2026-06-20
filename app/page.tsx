@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function LandingPage() {
   const [role, playerId] = await Promise.all([getRole(), getPlayerSession()]);
   if (role === "coach") redirect("/oversikt");
-  if (role === "parent") redirect("/matcher");
+  if (role === "parent" || role === "player") redirect("/mina-spelare");
   if (playerId) redirect("/min-profil");
 
   const [settings, allMatches] = await Promise.all([getAllSettings(), getMatches()]);

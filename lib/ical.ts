@@ -21,6 +21,7 @@ export interface CalendarMatch {
   homeAway: "home" | "away";
   location: string;
   series: string | null;
+  teamVariant: string | null; // lagsuffix ur serien, t.ex. "Friendly 1" – skiljer flera egna lag i samma cup. null = huvud-/tävlingslaget
   level: string; // nivå-id, härlett ur serieparentesen (kan vara "")
   cupName: string; // cup/turneringsnamn för gruppering (bara cup-matcher)
   matchType: "seriespel" | "cup" | "traningsmatch";
@@ -210,8 +211,52 @@ export function parseEvents(ics: string): RawEvent[] {
   return events;
 }
 
+// Hittar matchande slutparentes för en parentes som börjar vid startIdx (parenshantering
+// som klarar nästling, t.ex. "Stockholm Football Cup (Friendly 2)"). Returnerar null om obalanserad.
+function matchBalancedParen(s: string, startIdx: number): string | null {
+  if (s[startIdx] !== "(") return null;
+  let depth = 0;
+  for (let i = startIdx; i < s.length; i++) {
+    if (s[i] === "(") depth++;
+    else if (s[i] === ")") {
+      depth--;
+      if (depth === 0) return s.slice(startIdx + 1, i);
+    }
+  }
+  return null;
+}
+
+// Tar bort en avslutande parentesgrupp (nästlingssäkert), t.ex.
+// "FC Siili Vit (Stockholm Football Cup (Friendly 2))" → "FC Siili Vit".
+function stripTrailingParenGroup(s: string): string {
+  const trimmed = s.trimEnd();
+  if (!trimmed.endsWith(")")) return s;
+  let depth = 0;
+  let openIdx = -1;
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    if (trimmed[i] === ")") depth++;
+    else if (trimmed[i] === "(") {
+      depth--;
+      if (depth === 0) {
+        openIdx = i;
+        break;
+      }
+    }
+  }
+  if (openIdx === -1) return s; // obalanserad – rör inte
+  return trimmed.slice(0, openIdx);
+}
+
 function cleanTeamName(s: string): string {
-  return s.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s{2,}/g, " ").trim();
+  return stripTrailingParenGroup(s).replace(/\s{2,}/g, " ").trim();
+}
+
+// Identifierar ett lagsuffix i serien, t.ex. "Stockholm Football Cup (Friendly 1)" → "Friendly 1".
+// Saknas suffixet (bara "Stockholm Football Cup") betyder huvud-/tävlingslaget.
+function extractTeamVariant(series: string | null): string | null {
+  if (!series) return null;
+  const m = series.match(/\(([^()]+)\)\s*$/);
+  return m ? m[1].trim() : null;
 }
 
 // Plockar ut motståndare ur en matchrubrik (och DESCRIPTION för CupManager-format).
@@ -240,7 +285,11 @@ function extractOpponent(
   let s = summary.split("//")[0].trim();
   s = s.replace(/^(match|sammandrag|seriespel|cup|träningsmatch)[:\s]+/i, "").trim();
 
-  const series = s.match(/\(([^)]+)\)/)?.[1]?.replace(/\s+/g, " ").trim() ?? null;
+  const parenStart = s.indexOf("(");
+  const series =
+    parenStart >= 0
+      ? matchBalancedParen(s, parenStart)?.replace(/\s+/g, " ").trim() ?? null
+      : null;
 
   const parts = s
     .split(/\s+-\s+|\s+–\s+|\s+vs\.?\s+/i)
@@ -320,6 +369,7 @@ export function extractMatches(ics: string, ownNames: string[]): CalendarMatch[]
         homeAway,
         location: e.location,
         series,
+        teamVariant: extractTeamVariant(series),
         level: matchType === "seriespel" ? deriveLevel(e.summary, series) : "",
         cupName: matchType === "cup" ? extractCupName(e.summary) : "",
         matchType,

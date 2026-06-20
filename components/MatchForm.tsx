@@ -5,15 +5,18 @@ import { LEVELS } from "@/lib/levels";
 import StatsFields from "@/components/StatsFields";
 import Link from "next/link";
 import { swedishToday } from "@/lib/dates";
+import type { OrganizationGroup } from "@/lib/organization";
 
 export default function MatchForm({
   players,
   match,
   matchPlayers,
+  groups = [],
 }: {
   players: Player[];
   match?: Match;
   matchPlayers?: MatchPlayerRow[];
+  groups?: OrganizationGroup[];
 }) {
   const today = swedishToday();
 
@@ -22,6 +25,18 @@ export default function MatchForm({
       {match && <input type="hidden" name="id" value={match.id} />}
 
       <div className="card p-6 grid gap-5 sm:grid-cols-2">
+        {groups.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="group_id">Lag eller matchgrupp</label>
+            <select id="group_id" name="group_id" defaultValue={match?.group_id ?? groups[0]?.id ?? ""} className="input" required>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}{group.group_type === "matchgroup" && group.cup_name ? ` · ${group.cup_name}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="label" htmlFor="date">Datum</label>
           <input id="date" name="date" type="date" required defaultValue={match?.date ?? today} className="input" />

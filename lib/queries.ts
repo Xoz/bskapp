@@ -4,6 +4,7 @@ import { ALL_SKILLS, CATEGORIES } from "./svff";
 import { STAT_IDS } from "./stats";
 import { swedishToday } from "./dates";
 import { seedRating } from "./rating";
+import { getCurrentUser } from "./auth";
 
 export interface Player {
   id: number;
@@ -55,6 +56,13 @@ export interface Match {
   cup_group: string; // t.ex. "Grupp A", fritext, tom = ej satt
   report_open: number; // 1 = föräldrar/hjälpare får liverapportera
   location: string;
+  group_id: number | null;
+}
+
+async function restrictedUserId(): Promise<number | null> {
+  const user = await getCurrentUser();
+  if (!user || user.roles.includes("admin") || user.groupIds.length === 0) return null;
+  return user.id;
 }
 
 // Ordning för slutspelsrundor – gruppspel först, sedan kvarts → semi → brons → final
@@ -148,9 +156,11 @@ export function mootMatchIds(allMatches: Match[]): Set<number> {
 // Matcher som ingår i samma cup/turnering (cup_name + cup_group är sammansatt nyckel)
 export async function getMatchesByCup(cupName: string, cupGroup = ""): Promise<Match[]> {
   if (!cupName) return [];
+  const userId = await restrictedUserId();
   const rows = await all<Match>(
-    "SELECT * FROM matches WHERE cup_name = ? AND cup_group = ?",
-    [cupName, cupGroup]
+    `SELECT m.* FROM matches m WHERE m.cup_name = ? AND m.cup_group = ?
+     ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}`,
+    userId ? [cupName, cupGroup, userId] : [cupName, cupGroup]
   );
   return rows.sort(cupMatchCompare);
 }
@@ -169,6 +179,7 @@ export interface CupScorerRow {
 // spelare sorterade på flest mål, för "skyttar i cupen"-listan. Bara spelare
 // med minst ett mål eller en assist tas med. En query för alla cuper.
 export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
+  const userId = await restrictedUserId();
   const rows = await all<CupScorerRow>(
     `SELECT m.cup_name, p.id, p.name, p.jersey_number,
             COALESCE(SUM(mp.goals), 0) AS goals,
@@ -177,11 +188,50 @@ export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
      FROM match_players mp
      JOIN matches m ON m.id = mp.match_id AND m.cup_name <> ''
      JOIN players p ON p.id = mp.player_id
+     ${userId ? "WHERE EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
      GROUP BY m.cup_name, p.id
      HAVING COALESCE(SUM(mp.goals), 0) > 0 OR COALESCE(SUM(mp.assists), 0) > 0
-     ORDER BY m.cup_name, goals DESC, assists DESC, lower(p.name)`
+     ORDER BY m.cup_name, goals DESC, assists DESC, lower(p.name)`,
+    userId ? [userId] : []
   );
   const byCup = new Map<string, CupScorerRow[]>();
+  for (const r of rows) {
+    if (!byCup.has(r.cup_name)) byCup.set(r.cup_name, []);
+    byCup.get(r.cup_name)!.push(r);
+  }
+  return byCup;
+}
+
+export interface CupFormRow {
+  cup_name: string;
+  id: number;
+  name: string;
+  jersey_number: number | null;
+  form_delta: number;
+  rated_count: number;
+}
+
+// Bästa form i cupen: summan av matchbetygens delta per spelare över cupens
+// matcher (hur mycket spelaren rörde sin form *i* cupen, nivåjusterat mot
+// förväntan). Returnerar map cup_name → spelare sorterade på störst uppgång, för
+// "bästa form"-listan vid sidan av skytteligan. Bara de som höjt formen (delta >
+// 0) tas med. En query för alla cuper.
+export async function getCupFormLeaders(): Promise<Map<string, CupFormRow[]>> {
+  const userId = await restrictedUserId();
+  const rows = await all<CupFormRow>(
+    `SELECT m.cup_name, p.id, p.name, p.jersey_number,
+            COALESCE(SUM(r.delta), 0) AS form_delta,
+            COUNT(r.match_id) AS rated_count
+     FROM match_ratings r
+     JOIN matches m ON m.id = r.match_id AND m.cup_name <> ''
+     JOIN players p ON p.id = r.player_id
+     ${userId ? "WHERE EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
+     GROUP BY m.cup_name, p.id
+     HAVING COALESCE(SUM(r.delta), 0) > 0
+     ORDER BY m.cup_name, form_delta DESC, lower(p.name)`,
+    userId ? [userId] : []
+  );
+  const byCup = new Map<string, CupFormRow[]>();
   for (const r of rows) {
     if (!byCup.has(r.cup_name)) byCup.set(r.cup_name, []);
     byCup.get(r.cup_name)!.push(r);
@@ -219,11 +269,22 @@ export interface MatchPlayerRow {
 }
 
 export async function getPlayers(): Promise<Player[]> {
-  return all<Player>("SELECT * FROM players WHERE active = 1 ORDER BY lower(name)");
+  const userId = await restrictedUserId();
+  return all<Player>(
+    `SELECT p.* FROM players p WHERE p.active = 1
+     ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}
+     ORDER BY lower(p.name)`,
+    userId ? [userId] : []
+  );
 }
 
 export async function getPlayer(id: number): Promise<Player | undefined> {
-  return get<Player>("SELECT * FROM players WHERE id = ?", [id]);
+  const userId = await restrictedUserId();
+  return get<Player>(
+    `SELECT p.* FROM players p WHERE p.id = ?
+     ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}`,
+    userId ? [id, userId] : [id]
+  );
 }
 
 export async function getPlayerByShareToken(token: string): Promise<Player | undefined> {
@@ -298,11 +359,22 @@ export async function getPlayerDevelopment(playerId: number) {
 }
 
 export async function getMatches(): Promise<Match[]> {
-  return all<Match>("SELECT * FROM matches ORDER BY date DESC, id DESC");
+  const userId = await restrictedUserId();
+  return all<Match>(
+    `SELECT m.* FROM matches m
+     ${userId ? "WHERE EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
+     ORDER BY m.date DESC, m.id DESC`,
+    userId ? [userId] : []
+  );
 }
 
 export async function getMatch(id: number): Promise<Match | undefined> {
-  return get<Match>("SELECT * FROM matches WHERE id = ?", [id]);
+  const userId = await restrictedUserId();
+  return get<Match>(
+    `SELECT m.* FROM matches m WHERE m.id = ?
+     ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}`,
+    userId ? [id, userId] : [id]
+  );
 }
 
 
@@ -395,6 +467,7 @@ export interface FormOverviewRow {
 }
 
 export async function getFormOverview(): Promise<FormOverviewRow[]> {
+  const userId = await restrictedUserId();
   return all<FormOverviewRow>(
     `SELECT p.id, p.name, p.jersey_number, p.form_rating,
             (SELECT r.delta FROM match_ratings r JOIN matches m ON m.id = r.match_id
@@ -402,7 +475,9 @@ export async function getFormOverview(): Promise<FormOverviewRow[]> {
             (SELECT COUNT(*) FROM match_ratings r WHERE r.player_id = p.id) AS rated_count
      FROM players p
      WHERE p.active = 1 AND p.form_rating IS NOT NULL
-     ORDER BY p.form_rating DESC, lower(p.name)`
+       ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}
+     ORDER BY p.form_rating DESC, lower(p.name)`,
+    userId ? [userId] : []
   );
 }
 
@@ -445,6 +520,7 @@ function todayStr() {
 }
 
 export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatchRow[]> {
+  const userId = await restrictedUserId();
   return all<PlayerMatchRow>(
     `SELECT m.id AS match_id, m.date, m.opponent, m.home_away,
             m.our_score, m.opponent_score,
@@ -453,8 +529,9 @@ export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatch
      FROM match_players mp
      JOIN matches m ON m.id = mp.match_id
      WHERE mp.player_id = ? AND ${PLAYED_MATCH_SQL}
+       ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
      ORDER BY m.date DESC, m.id DESC`,
-    [playerId, todayStr()]
+    userId ? [playerId, todayStr(), userId] : [playerId, todayStr()]
   );
 }
 
@@ -462,6 +539,7 @@ export async function getPlayerMatchStats(playerId: number): Promise<PlayerMatch
 // Bara spelade matcher räknas, så siffran stämmer med spelarprofilen.
 export async function getSeasonStats(): Promise<SeasonStatRow[]> {
   const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n              ");
+  const userId = await restrictedUserId();
   return all<SeasonStatRow>(
     `SELECT p.id, p.name, p.jersey_number,
             COUNT(mp.match_id) AS matches_played,
@@ -470,9 +548,10 @@ export async function getSeasonStats(): Promise<SeasonStatRow[]> {
      LEFT JOIN (match_players mp JOIN matches m ON m.id = mp.match_id AND ${PLAYED_MATCH_SQL})
        ON mp.player_id = p.id
      WHERE p.active = 1
+       ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}
      GROUP BY p.id
      ORDER BY lower(p.name)`,
-    [todayStr()]
+    userId ? [todayStr(), userId] : [todayStr()]
   );
 }
 
@@ -500,6 +579,7 @@ export interface TeamMatchStatRow {
 // KPI-kort och match-för-match-vyn på statistiksidan. Bara spelade matcher.
 export async function getTeamMatchStats(): Promise<TeamMatchStatRow[]> {
   const sums = STAT_IDS.map((c) => `COALESCE(SUM(mp.${c}), 0) AS ${c}`).join(",\n            ");
+  const userId = await restrictedUserId();
   return all<TeamMatchStatRow>(
     `SELECT m.id, m.date, m.opponent, m.home_away, m.our_score, m.opponent_score,
             m.finished, m.level, m.cup_name,
@@ -508,9 +588,10 @@ export async function getTeamMatchStats(): Promise<TeamMatchStatRow[]> {
      FROM matches m
      LEFT JOIN match_players mp ON mp.match_id = m.id
      WHERE ${PLAYED_MATCH_SQL}
+       ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
      GROUP BY m.id
      ORDER BY m.date DESC, m.id DESC`,
-    [todayStr()]
+    userId ? [todayStr(), userId] : [todayStr()]
   );
 }
 
@@ -534,6 +615,7 @@ export interface PlayerLevelRow {
 }
 
 export async function getPlayersLevelInfo(): Promise<PlayerLevelRow[]> {
+  const userId = await restrictedUserId();
   return all<PlayerLevelRow>(
     `SELECT p.id, p.name, p.jersey_number, p.position, p.level,
             (SELECT AVG(es.level) FROM evaluation_scores es
@@ -543,7 +625,9 @@ export async function getPlayersLevelInfo(): Promise<PlayerLevelRow[]> {
                )) AS eval_avg
      FROM players p
      WHERE p.active = 1
-     ORDER BY lower(p.name)`
+       ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}
+     ORDER BY lower(p.name)`,
+    userId ? [userId] : []
   );
 }
 
@@ -604,7 +688,13 @@ export async function getMatchEvents(matchId: number): Promise<MatchEventRow[]> 
 }
 
 export async function getMatchesByDate(date: string): Promise<Match[]> {
-  return all<Match>("SELECT * FROM matches WHERE date = ? ORDER BY start_time ASC, id ASC", [date]);
+  const userId = await restrictedUserId();
+  return all<Match>(
+    `SELECT m.* FROM matches m WHERE m.date = ?
+     ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
+     ORDER BY m.start_time ASC, m.id ASC`,
+    userId ? [date, userId] : [date]
+  );
 }
 
 export async function getAllTimeReporterHighscore(): Promise<{ name: string; events: number }[]> {
@@ -645,8 +735,12 @@ export async function getMatchReporters(matchId: number): Promise<Record<string,
 }
 
 export async function getLatestEvaluationDates(): Promise<Record<number, string>> {
+  const userId = await restrictedUserId();
   const rows = await all<{ player_id: number; latest: string }>(
-    "SELECT player_id, MAX(date) AS latest FROM evaluations GROUP BY player_id"
+    `SELECT e.player_id, MAX(e.date) AS latest FROM evaluations e
+     ${userId ? "WHERE EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = e.player_id)" : ""}
+     GROUP BY e.player_id`,
+    userId ? [userId] : []
   );
   return Object.fromEntries(rows.map((r) => [r.player_id, r.latest]));
 }

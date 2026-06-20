@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Role } from "@/lib/auth";
+import type { Permission } from "@/lib/auth";
 import {
   IconOverview,
   IconPlayers,
@@ -11,19 +11,19 @@ import {
   IconChat,
 } from "@/components/Icons";
 
-const COACH_ITEMS = [
+const STAFF_ITEMS: { href: string; label: string; Icon: typeof IconOverview; permission?: Permission }[] = [
   { href: "/oversikt", label: "Hem", Icon: IconOverview },
-  { href: "/spelare", label: "Spelare", Icon: IconPlayers },
-  { href: "/matcher", label: "Matcher", Icon: IconPitch },
-  { href: "/statistik", label: "Statistik", Icon: IconChart },
-  { href: "/intervjuer", label: "Intervjuer", Icon: IconChat },
+  { href: "/spelare", label: "Spelare", Icon: IconPlayers, permission: "view_players" },
+  { href: "/matcher", label: "Matcher", Icon: IconPitch, permission: "view_matches" },
+  { href: "/statistik", label: "Statistik", Icon: IconChart, permission: "view_statistics" },
+  { href: "/intervjuer", label: "Intervjuer", Icon: IconChat, permission: "view_interviews" },
 ];
 
-export default function BottomNav({ role }: { role: Role | null }) {
+export default function BottomNav({ permissions, staff = true }: { permissions: Permission[]; staff?: boolean }) {
   const pathname = usePathname();
-  const items = role === "coach" ? COACH_ITEMS : [];
+  const items = STAFF_ITEMS.filter((item) => !item.permission || permissions.includes(item.permission));
 
-  if (items.length === 0) return null;
+  if (!staff || items.length === 0) return null;
 
   return (
     <nav

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSetting } from "@/lib/db";
-import { sessionToken, coachEmailToken } from "@/lib/auth";
+import { get, getSetting, run } from "@/lib/db";
+import { userSessionToken, coachEmailToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -61,22 +61,60 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?google_error=1`);
   }
 
-  // Kontrollera mot vitlistan
+  // Nya konton administreras i users/user_roles. Den gamla vitlistan accepteras
+  // under migreringen och skapar då ett riktigt konto vid första inloggningen.
   const allowed = await getSetting("allowed_coach_emails");
   const list = allowed
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+  const inviteToken = req.cookies.get("bsk_invite_token")?.value ?? "";
+  const storedInvite = (await getSetting("coach_invite_token")).trim();
+  const inviteExpires = (await getSetting("coach_invite_expires")).trim();
+  const validInvite = !!inviteToken && inviteToken === storedInvite && !!inviteExpires && new Date(inviteExpires) > new Date();
 
-  if (!list.includes(email.toLowerCase())) {
+  const normalizedEmail = String(email).trim().toLowerCase();
+  let appUser = await get<{ id: number; active: number }>(
+    "SELECT id, active FROM users WHERE lower(email) = ?",
+    [normalizedEmail]
+  );
+  if (!appUser && (list.includes(normalizedEmail) || validInvite)) {
+    const adminEmail = (process.env.ADMIN_EMAIL ?? list[0] ?? normalizedEmail).trim().toLowerCase();
+    const created = await run(
+      "INSERT INTO users (email, name) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET name = excluded.name RETURNING id, active",
+      [normalizedEmail, typeof name === "string" ? name.slice(0, 60) : ""]
+    );
+    appUser = created[0] as { id: number; active: number } | undefined;
+    if (appUser) {
+      await run(
+        "INSERT INTO user_roles (user_id, role) VALUES (?, ?) ON CONFLICT DO NOTHING",
+        [appUser.id, normalizedEmail === adminEmail ? "admin" : "coach"]
+      );
+      if (validInvite) {
+        await run("UPDATE settings SET value = '' WHERE key IN ('coach_invite_token', 'coach_invite_expires')");
+      }
+    }
+  }
+  if (!appUser || !appUser.active) {
     return NextResponse.redirect(`${origin}/login?google_error=not_allowed`);
   }
+  if (process.env.ADMIN_EMAIL?.trim().toLowerCase() === normalizedEmail) {
+    await run("INSERT INTO user_roles (user_id, role) VALUES (?, 'admin') ON CONFLICT DO NOTHING", [appUser.id]);
+  }
 
+  const primaryRole = await get<{ role: string }>(
+    `SELECT role FROM user_roles WHERE user_id = ?
+     ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'head_coach' THEN 1 WHEN 'coach' THEN 2 WHEN 'leader' THEN 3 WHEN 'parent' THEN 4 ELSE 5 END
+     LIMIT 1`,
+    [appUser.id]
+  );
+  const destination = primaryRole?.role === "parent" || primaryRole?.role === "player" ? "/mina-spelare" : "/oversikt";
   const maxAge = 60 * 60 * 24 * 90;
-  const res = NextResponse.redirect(`${origin}/oversikt`);
+  const res = NextResponse.redirect(`${origin}${destination}`);
 
-  res.cookies.set("bsk_session", sessionToken("coach"), {
+  res.cookies.set("bsk_session", userSessionToken(appUser.id), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge,
     path: "/",
@@ -99,6 +137,7 @@ export async function GET(req: NextRequest) {
   }
 
   res.cookies.delete("bsk_oauth_state");
+  res.cookies.delete("bsk_invite_token");
 
   return res;
 }

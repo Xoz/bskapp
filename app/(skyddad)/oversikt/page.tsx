@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getCurrentUser, getRole } from "@/lib/auth";
 import { getAllSettings, getRecentActivity, type ActivityEntry } from "@/lib/db";
 import {
   getPlayers,
@@ -39,6 +39,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
+  const user = await getCurrentUser();
 
   // Oberoende queries körs parallellt – annars staplas latensen mot Turso.
   const [settings, players, matches, latestEvals, activity, formRows] =
@@ -47,7 +48,7 @@ export default async function Dashboard() {
       getPlayers(),
       getMatches(),
       getLatestEvaluationDates(),
-      getRecentActivity(6),
+      user?.groupIds.length ? Promise.resolve([] as ActivityEntry[]) : getRecentActivity(6),
       getFormOverview(),
     ]);
 

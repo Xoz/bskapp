@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getCurrentUser, getRole, hasPermission } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
+import { getOrganizationGroups } from "@/lib/organization";
+import { addPlayer } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
 import { level as levelInfo } from "@/lib/levels";
 import { daysSinceLabel } from "@/lib/dates";
@@ -12,11 +14,17 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const [players, latestEvals, stats] = await Promise.all([
+  const [players, latestEvals, stats, canManagePlayers, canEvaluate, canViewPrivate, allGroups, user] = await Promise.all([
     getPlayers(),
     getLatestEvaluationDates(),
     getSeasonStats(),
+    hasPermission("manage_players"),
+    hasPermission("manage_evaluations"),
+    hasPermission("view_private_player_data"),
+    getOrganizationGroups(),
+    getCurrentUser(),
   ]);
+  const groups = allGroups.filter((group) => group.active && group.group_type === "subgroup" && (!user || user.roles.includes("admin") || user.groupIds.length === 0 || user.groupIds.includes(group.id)));
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   return (
     <div className="space-y-6">
@@ -27,6 +35,15 @@ export default async function PlayersPage() {
           {players.length} spelare · klicka på en spelare för utvecklingsprofil
         </p>
       </div>
+
+      {canManagePlayers && (
+        <form action={addPlayer} className="card p-5 grid sm:grid-cols-[1fr_8rem_1fr_auto] gap-3 items-end">
+          <label><span className="label">Namn</span><input name="name" className="input" required placeholder="Förnamn Efternamn" /></label>
+          <label><span className="label">Tröja</span><input name="jersey_number" type="number" min="1" max="99" className="input" /></label>
+          <label><span className="label">Undergrupp</span><select name="group_id" className="input" required><option value="">Välj grupp</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+          <button type="submit" className="btn-primary">Lägg till</button>
+        </form>
+      )}
 
       {/* Highscore-kort */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -49,7 +66,7 @@ export default async function PlayersPage() {
               ) : (
                 <div className="space-y-2.5">
                   {top.map((s, i) => (
-                    <Link key={s.id} href={`/spelare/${s.id}`} className="flex items-center gap-3 group">
+                    <Link key={s.id} href={canViewPrivate ? `/spelare/${s.id}` : "#"} className="flex items-center gap-3 group">
                       <span
                         className="stat-number text-xs w-4 shrink-0 text-right"
                         style={{ color: i === 0 ? "var(--accent)" : "var(--ink-faint)" }}
@@ -97,7 +114,7 @@ export default async function PlayersPage() {
               return (
                 <tr key={p.id}>
                   <td>
-                    <Link href={`/spelare/${p.id}`} className="flex items-center gap-3 group">
+                    <Link href={canViewPrivate ? `/spelare/${p.id}` : "#"} className="flex items-center gap-3 group">
                       <Avatar name={p.name} jersey={p.jersey_number} size={36} />
                       <span>
                         <span className="flex items-center gap-2 font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
@@ -134,9 +151,7 @@ export default async function PlayersPage() {
                   <td className="hidden lg:table-cell">{s?.passes_completed ?? 0}</td>
                   <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
                   <td className="text-right">
-                    <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">
-                      Utvärdera
-                    </Link>
+                    {canEvaluate && <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">Utvärdera</Link>}
                   </td>
                 </tr>
               );

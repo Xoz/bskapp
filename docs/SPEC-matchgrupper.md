@@ -1,9 +1,8 @@
 # Kravspec: Matchgrupper (flera lag i samma app)
 
-Status: **Ej byggd** (planerad 2026-06-16). Inget i koden ännu – se "Faser" nedan.
-Implementation (planerad): ny tabell `teams`, `matches.team_id` + `players.team_id`,
-gruppväljare (cookie, likt `setViewAs`/`RoleSwitcher`), per-grupp-scoping av översikt,
-matchlista, statistik och KPI-rad.
+Status: **Ersatt och byggd 2026-06-20**. Den slutliga modellen använder `groups` och
+många-till-många-medlemskap i stället för ett enda `players.team_id`. Se
+[SPEC-roller-och-grupper.md](SPEC-roller-och-grupper.md).
 
 ## Mål
 Stödja **flera matchgrupper i samma app** med en **delad spelarpool**, så att:
@@ -27,12 +26,11 @@ Då krävs **noll schemaändringar** vid sammanslagningen – bara omflyttning a
 | Begrepp | Modell | Varför det överlever sammanslagningen |
 |---|---|---|
 | **Matchgrupp** (Gul/Grön) | Ny tabell `teams` (namn, färger, tröjfärger, kalender-url) | Efter merge byter man bara namn/antal grupper – strukturen är redan N-grupper |
-| **Spelare** | `players.team_id` = *hemgrupp* (delad pool bakom) | Vid merge flyttas bara hemgrupp; historiken rörs inte |
-| **Match** | `matches.team_id` = vilken grupp som spelade | Varje match minns sin grupp för all framtid |
+| **Spelare** | `player_group_memberships` = flera under-/matchgrupper | Cupmedlemskap skriver inte över ordinarie grupp |
+| **Match** | `matches.group_id` = vilken grupp som spelade | Varje match minns sin grupp för all framtid |
 | **Lån** | `match_squad`/`match_lineup` är *redan* per match | En annan grupps spelare kan väljas in i en match – inget extra behövs |
 
-Lån är alltså **gratis i datamodellen**. Det är bara UI som idag antar
-"alla aktiva spelare = ett lag". En lånad spelare = `player.team_id ≠ match.team_id`.
+Lån och cuputtagningar är många-till-många-medlemskap och kräver ingen kopiering av spelare.
 
 ## Datamodell (skiss)
 - Ny tabell `teams`: `id`, `name`, `color`, `accent_color`, `jersey_color`,

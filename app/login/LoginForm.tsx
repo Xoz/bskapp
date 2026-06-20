@@ -19,7 +19,7 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-4">
-      <p className="label mb-2">Tränare</p>
+      <p className="label mb-2">Personal, spelare eller förälder</p>
       <a
         href="/api/auth/google"
         className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-85"

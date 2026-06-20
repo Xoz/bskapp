@@ -6,7 +6,19 @@ import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, logActivity, DEFAULT_COLORS } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
 import { generatePlayerCardText } from "./ai";
-import { sessionToken, playerSessionToken, getRole, getRealRole, Role, getCoachName } from "./auth";
+import {
+  playerSessionToken,
+  getCurrentUser,
+  getRealRole,
+  hasPermission,
+  canAccessPlayer,
+  canAccessGroup,
+  isStaffRole,
+  PERMISSIONS,
+  ROLES,
+  Permission,
+  getCoachName,
+} from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
@@ -21,10 +33,63 @@ import {
   RATING_AREAS,
 } from "./rating";
 
-async function requireRole(allowed: Role[]): Promise<Role> {
-  const role = await getRole();
-  if (!role || !allowed.includes(role)) redirect("/login");
-  return role;
+async function requirePermission(permission: Permission): Promise<void> {
+  if (!(await hasPermission(permission))) redirect("/oversikt?behorighet=saknas");
+}
+
+async function requirePlayerPermission(permission: Permission, playerId: number): Promise<void> {
+  await requirePermission(permission);
+  if (!(await canAccessPlayer(playerId))) redirect("/oversikt?behorighet=saknas");
+}
+
+async function requireMatchPermission(permission: Permission, matchId: number): Promise<void> {
+  await requirePermission(permission);
+  const match = await get<{ group_id: number | null }>("SELECT group_id FROM matches WHERE id = ?", [matchId]);
+  if (!match || !(await canAccessGroup(match.group_id))) redirect("/oversikt?behorighet=saknas");
+}
+
+async function resolveWritableGroupId(requested: number | null = null): Promise<number | null> {
+  if (requested) {
+    if (!(await canAccessGroup(requested))) redirect("/oversikt?behorighet=saknas");
+    return requested;
+  }
+  const user = await getCurrentUser();
+  if (user?.groupIds.length) return user.groupIds[0];
+  const group = await get<{ id: number }>(
+    "SELECT id FROM groups WHERE active = 1 AND group_type = 'subgroup' ORDER BY id LIMIT 1"
+  );
+  return group?.id ?? null;
+}
+
+async function ensureCupMatchGroup(cupName: string, requested: number | null = null): Promise<number | null> {
+  if (requested) return resolveWritableGroupId(requested);
+  const parentId = await resolveWritableGroupId();
+  const existing = await get<{ id: number }>(
+    "SELECT id FROM groups WHERE active = 1 AND group_type = 'matchgroup' AND lower(cup_name) = lower(?) AND parent_id IS NOT DISTINCT FROM ? ORDER BY id LIMIT 1",
+    [cupName, parentId]
+  );
+  if (existing) return existing.id;
+  const rows = await run(
+    "INSERT INTO groups (name, group_type, parent_id, cup_name) VALUES (?, 'matchgroup', ?, ?) ON CONFLICT DO NOTHING RETURNING id",
+    [cupName, parentId, cupName]
+  );
+  if (rows[0]?.id) return Number(rows[0].id);
+  const raced = await get<{ id: number }>(
+    "SELECT id FROM groups WHERE group_type = 'matchgroup' AND lower(cup_name) = lower(?) AND parent_id IS NOT DISTINCT FROM ? ORDER BY id LIMIT 1",
+    [cupName, parentId]
+  );
+  return raced?.id ?? parentId;
+}
+
+async function requireCupAccess(cupName: string, cupGroup = ""): Promise<number | null> {
+  const rows = await all<{ group_id: number | null }>(
+    "SELECT DISTINCT group_id FROM matches WHERE cup_name = ? AND cup_group = ?",
+    [cupName, cupGroup]
+  );
+  for (const row of rows) {
+    if (!(await canAccessGroup(row.group_id))) redirect("/oversikt?behorighet=saknas");
+  }
+  return rows[0]?.group_id ?? null;
 }
 
 // ---- Auth ----
@@ -34,13 +99,17 @@ export async function logout() {
   store.delete("bsk_view");
   store.delete("bsk_coach_email");
   store.delete("bsk_coach_name");
+  store.delete("bsk_player_session");
+  store.delete("bsk_invite_token");
   redirect("/login");
 }
 
 export async function updateCoachProfile(formData: FormData) {
-  await requireRole(["coach"]);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   if (!name) return;
+  await run("UPDATE users SET name = ? WHERE id = ?", [name, user.id]);
   const store = await cookies();
   store.set("bsk_coach_name", name, {
     httpOnly: true,
@@ -52,7 +121,7 @@ export async function updateCoachProfile(formData: FormData) {
 }
 
 export async function addCoachEmail(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_users");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
   const current = await getSetting("allowed_coach_emails");
@@ -63,7 +132,7 @@ export async function addCoachEmail(formData: FormData) {
 }
 
 export async function removeCoachEmail(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_users");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const current = await getSetting("allowed_coach_emails");
   const list = current.split(",").map((e) => e.trim().toLowerCase()).filter((e) => e && e !== email);
@@ -139,9 +208,9 @@ export async function playerLogout() {
 }
 
 export async function generatePlayerPin(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("player_id"));
   if (!id) return;
+  await requirePlayerPermission("manage_players", id);
   // Generera unik 6-siffrig PIN
   let pin: string;
   do {
@@ -152,7 +221,7 @@ export async function generatePlayerPin(formData: FormData) {
 }
 
 export async function generateCoachInvite() {
-  await requireRole(["coach"]);
+  await requirePermission("manage_users");
   const token = crypto.randomUUID().replace(/-/g, "");
   const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   await setSetting("coach_invite_token", token);
@@ -170,17 +239,14 @@ export async function acceptInvite(
   if (!stored || token !== stored || !expires || new Date(expires) < new Date()) {
     return { error: "Inbjudningslänken är ogiltig eller har gått ut." };
   }
-  // Single-use: rensa direkt
-  await setSetting("coach_invite_token", "");
-  await setSetting("coach_invite_expires", "");
   const store = await cookies();
-  store.set("bsk_session", sessionToken("coach"), {
+  store.set("bsk_invite_token", token, {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 90,
+    maxAge: 15 * 60,
     path: "/",
   });
-  redirect("/oversikt");
+  redirect("/api/auth/google");
 }
 
 // Växla visningsroll. En tränare kan förhandsvisa som förälder/spelare (sätter
@@ -190,15 +256,15 @@ export async function setViewAs(formData: FormData) {
   const target = String(formData.get("view") ?? "");
   const store = await cookies();
 
-  if (real === "coach") {
-    if (target === "player") {
-      store.set("bsk_view", "player", {
+  if (isStaffRole(real)) {
+    if (target === "player" || target === "parent") {
+      store.set("bsk_view", target, {
         httpOnly: true,
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7,
         path: "/",
       });
-      redirect("/matcher");
+      redirect("/mina-spelare");
     }
     store.delete("bsk_view");
     redirect("/oversikt");
@@ -207,22 +273,140 @@ export async function setViewAs(formData: FormData) {
   redirect("/login");
 }
 
+// ---- Användare, roller och grupper ----
+export async function createOrganizationUser(formData: FormData) {
+  await requirePermission("manage_users");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const role = String(formData.get("role") ?? "coach");
+  const actor = await getCurrentUser();
+  if (!actor || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !ROLES.includes(role as never)) return;
+  if (role === "admin" && !actor.roles.includes("admin")) redirect("/administration?behorighet=saknas");
+  const rows = await run(
+    "INSERT INTO users (email, name) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET name = excluded.name, active = 1 RETURNING id",
+    [email, name]
+  );
+  const id = Number(rows[0]?.id);
+  if (!id) return;
+  await run("INSERT INTO user_roles (user_id, role) VALUES (?, ?) ON CONFLICT DO NOTHING", [id, role]);
+  revalidatePath("/administration");
+  redirect(`/administration?anvandare=${id}`);
+}
+
+export async function saveUserAccess(formData: FormData) {
+  await requirePermission("manage_users");
+  const actor = await getCurrentUser();
+  const userId = Number(formData.get("user_id"));
+  if (!actor || !userId) return;
+  const existingRoles = await all<{ role: string }>("SELECT role FROM user_roles WHERE user_id = ?", [userId]);
+  const targetIsAdmin = existingRoles.some((row) => row.role === "admin");
+  if (targetIsAdmin && !actor.roles.includes("admin")) redirect("/administration?behorighet=saknas");
+
+  const roles = formData.getAll("role").map(String).filter((role): role is (typeof ROLES)[number] => ROLES.includes(role as never));
+  if (roles.length === 0) return;
+  if (roles.includes("admin") && !actor.roles.includes("admin")) redirect("/administration?behorighet=saknas");
+  if (userId === actor.id && actor.roles.includes("admin") && !roles.includes("admin")) {
+    redirect("/administration?fel=egen-admin");
+  }
+
+  const active = formData.get("active") === "1" ? 1 : 0;
+  const statements: { sql: string; args?: (string | number | null)[] }[] = [
+    { sql: "UPDATE users SET active = ? WHERE id = ?", args: [userId === actor.id ? 1 : active, userId] },
+    { sql: "DELETE FROM user_roles WHERE user_id = ?", args: [userId] },
+    ...roles.map((role) => ({ sql: "INSERT INTO user_roles (user_id, role) VALUES (?, ?)", args: [userId, role] })),
+    { sql: "DELETE FROM user_permissions WHERE user_id = ?", args: [userId] },
+    { sql: "DELETE FROM user_group_access WHERE user_id = ?", args: [userId] },
+    { sql: "DELETE FROM user_player_links WHERE user_id = ?", args: [userId] },
+  ];
+  if (!roles.includes("admin")) {
+    for (const permission of PERMISSIONS) {
+      const value = formData.get(`permission_${permission}`);
+      if (value === "allow" || value === "deny") {
+        statements.push({
+          sql: "INSERT INTO user_permissions (user_id, permission_key, allowed) VALUES (?, ?, ?)",
+          args: [userId, permission, value === "allow" ? 1 : 0],
+        });
+      }
+    }
+  }
+  for (const groupId of formData.getAll("group_id").map(Number).filter(Boolean)) {
+    if (!(await canAccessGroup(groupId))) redirect("/administration?behorighet=saknas");
+    statements.push({ sql: "INSERT INTO user_group_access (user_id, group_id) VALUES (?, ?)", args: [userId, groupId] });
+  }
+  for (const playerId of formData.getAll("parent_player_id").map(Number).filter(Boolean)) {
+    statements.push({ sql: "INSERT INTO user_player_links (user_id, player_id, relation) VALUES (?, ?, 'parent')", args: [userId, playerId] });
+  }
+  const selfPlayerId = Number(formData.get("self_player_id"));
+  if (selfPlayerId) {
+    statements.push({ sql: "INSERT INTO user_player_links (user_id, player_id, relation) VALUES (?, ?, 'self')", args: [userId, selfPlayerId] });
+  }
+  await batch(statements);
+  revalidatePath("/administration");
+  redirect(`/administration?sparad=1&anvandare=${userId}`);
+}
+
+export async function createGroup(formData: FormData) {
+  await requirePermission("manage_groups");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const groupType = String(formData.get("group_type") ?? "subgroup");
+  const parentId = Number(formData.get("parent_id")) || null;
+  const cupName = String(formData.get("cup_name") ?? "").trim().slice(0, 100);
+  const color = String(formData.get("color") ?? "").trim().slice(0, 20);
+  if (!name || !["squad", "subgroup", "matchgroup"].includes(groupType)) return;
+  if (parentId && !(await canAccessGroup(parentId))) redirect("/administration?behorighet=saknas");
+  await run(
+    "INSERT INTO groups (name, group_type, parent_id, cup_name, color) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+    [name, groupType, parentId, groupType === "matchgroup" ? cupName : "", color]
+  );
+  revalidatePath("/administration");
+}
+
+export async function saveGroup(formData: FormData) {
+  await requirePermission("manage_groups");
+  const groupId = Number(formData.get("group_id"));
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  if (!groupId || !name) return;
+  if (!(await canAccessGroup(groupId))) redirect("/administration?behorighet=saknas");
+  const parentId = Number(formData.get("parent_id")) || null;
+  if (parentId && !(await canAccessGroup(parentId))) redirect("/administration?behorighet=saknas");
+  const cupName = String(formData.get("cup_name") ?? "").trim().slice(0, 100);
+  const color = String(formData.get("color") ?? "").trim().slice(0, 20);
+  const active = formData.get("active") === "1" ? 1 : 0;
+  await run("UPDATE groups SET name = ?, parent_id = ?, cup_name = ?, color = ?, active = ? WHERE id = ?", [name, parentId, cupName, color, active, groupId]);
+  await run("DELETE FROM player_group_memberships WHERE group_id = ?", [groupId]);
+  const playerIds = formData.getAll("player_id").map(Number).filter(Boolean);
+  for (const playerId of playerIds) {
+    await run(
+      "INSERT INTO player_group_memberships (player_id, group_id, is_primary) VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET is_primary = excluded.is_primary",
+      [playerId, groupId, formData.get(`primary_${playerId}`) === "1" ? 1 : 0]
+    );
+  }
+  revalidatePath("/administration");
+  revalidatePath("/spelare");
+}
+
 // ---- Spelare ----
 export async function addPlayer(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_players");
   const name = String(formData.get("name") ?? "").trim();
   const jersey = formData.get("jersey_number");
+  const groupId = Number(formData.get("group_id")) || null;
   if (!name) return;
-  await run("INSERT INTO players (name, jersey_number) VALUES (?, ?)", [
+  if (groupId && !(await canAccessGroup(groupId))) redirect("/oversikt?behorighet=saknas");
+  const rows = await run("INSERT INTO players (name, jersey_number) VALUES (?, ?) RETURNING id", [
     name,
     jersey ? Number(jersey) : null,
   ]);
+  const playerId = Number(rows[0]?.id);
+  if (playerId && groupId) {
+    await run("INSERT INTO player_group_memberships (player_id, group_id, is_primary) VALUES (?, ?, 1)", [playerId, groupId]);
+  }
   revalidatePath("/spelare");
 }
 
 // Klistra in truppen från svenskalag.se – ett namn per rad
 export async function addPlayersBulk(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_players");
   const raw = String(formData.get("names") ?? "");
   const existingRows = await all<{ name: string }>("SELECT name FROM players WHERE active = 1");
   const existing = new Set(existingRows.map((r) => r.name.toLowerCase()));
@@ -256,14 +440,13 @@ export async function addPlayersBulk(formData: FormData) {
 
 // Tar bort alla exempelspelare i ett klick (mjuk borttagning)
 export async function removeDemoPlayers() {
-  await requireRole(["coach"]);
+  await requirePermission("manage_players");
   await run("UPDATE players SET active = 0 WHERE name LIKE 'Exempel:%'");
   revalidatePath("/spelare");
   redirect("/spelare");
 }
 
 export async function updatePlayer(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") ?? "").trim();
   const jersey = formData.get("jersey_number");
@@ -271,6 +454,7 @@ export async function updatePlayer(formData: FormData) {
   const position = String(formData.get("position") ?? "");
   const level = String(formData.get("level") ?? "");
   if (!id || !name) return;
+  await requirePlayerPermission("manage_players", id);
   await run("UPDATE players SET name = ?, jersey_number = ?, notes = ?, position = ?, level = ? WHERE id = ?", [
     name,
     jersey ? Number(jersey) : null,
@@ -286,10 +470,10 @@ export async function updatePlayer(formData: FormData) {
 // Sätter spelarens nivå direkt (t.ex. när tränaren bekräftar ett nivåförslag
 // från matchformen). Kopplar till samma `players.level` som laguttagningen läser.
 export async function setPlayerLevel(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   const level = String(formData.get("level") ?? "");
   if (!id || !level) return;
+  await requirePlayerPermission("manage_evaluations", id);
   await run("UPDATE players SET level = ? WHERE id = ?", [level, id]);
   revalidatePath(`/spelare/${id}`);
   revalidatePath("/spelare");
@@ -298,9 +482,9 @@ export async function setPlayerLevel(formData: FormData) {
 // Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal.
 // Genererar samtidigt en peppande AI-text riktad till spelaren.
 export async function generateShareLink(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requirePlayerPermission("manage_players", id);
   await renewShareToken(id);
   const summary = await generatePlayerCardText(id);
   await run("UPDATE players SET share_summary = ? WHERE id = ?", [summary, id]);
@@ -309,17 +493,17 @@ export async function generateShareLink(formData: FormData) {
 
 // Återkalla länken direkt
 export async function revokeShareLink(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requirePlayerPermission("manage_players", id);
   await revokeShareToken(id);
   revalidatePath(`/spelare/${id}`);
 }
 
 export async function removePlayer(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requirePlayerPermission("manage_players", id);
   // Mjuk borttagning – historiken finns kvar
   await run("UPDATE players SET active = 0 WHERE id = ?", [id]);
   revalidatePath("/spelare");
@@ -328,13 +512,13 @@ export async function removePlayer(formData: FormData) {
 
 // ---- Utvärderingar ----
 export async function createEvaluation(formData: FormData) {
-  await requireRole(["coach"]);
   const playerId = Number(formData.get("player_id"));
   const date = String(formData.get("date") ?? "").slice(0, 10);
   const strengths = String(formData.get("strengths") ?? "");
   const goals = String(formData.get("development_goals") ?? "");
   const coachName = String(formData.get("coach_name") ?? "");
   if (!playerId || !date) return;
+  await requirePlayerPermission("manage_evaluations", playerId);
 
   const scores: { skillId: string; level: number }[] = [];
   for (const skill of ALL_SKILLS) {
@@ -367,8 +551,10 @@ export async function createEvaluation(formData: FormData) {
 }
 
 export async function deleteEvaluation(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
+  const evaluation = await get<{ player_id: number }>("SELECT player_id FROM evaluations WHERE id = ?", [id]);
+  if (!evaluation) return;
+  await requirePlayerPermission("manage_evaluations", evaluation.player_id);
   const playerId = Number(formData.get("player_id"));
   if (!id) return;
   await run("DELETE FROM evaluations WHERE id = ?", [id]);
@@ -408,8 +594,9 @@ async function savePlayerStats(matchId: number, formData: FormData) {
 
 // ---- Matcher (tränare) ----
 export async function saveMatch(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const id = formData.get("id") ? Number(formData.get("id")) : null;
+  let groupId = Number(formData.get("group_id")) || null;
   const date = String(formData.get("date") ?? "").slice(0, 10);
   const opponent = String(formData.get("opponent") ?? "").trim();
   const homeAway = formData.get("home_away") === "away" ? "away" : "home";
@@ -427,6 +614,8 @@ export async function saveMatch(formData: FormData) {
   const cupName = String(formData.get("cup_name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim();
   if (!date || !opponent) return;
+  if (id) await requireMatchPermission("manage_matches", id);
+  groupId = await resolveWritableGroupId(groupId);
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
   const oppScore = oppScoreRaw !== null && oppScoreRaw !== "" ? Number(oppScoreRaw) : null;
@@ -434,14 +623,14 @@ export async function saveMatch(formData: FormData) {
   let matchId: number;
   if (id) {
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ?, cup_name = ?, location = ? WHERE id = ?",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location, id]
+      "UPDATE matches SET date = ?, start_time = ?, periods = ?, period_minutes = ?, opponent = ?, home_away = ?, match_type = ?, our_score = ?, opponent_score = ?, notes = ?, level = ?, cup_name = ?, location = ?, group_id = COALESCE(?, group_id) WHERE id = ?",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location, groupId, id]
     );
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, location, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual') RETURNING id",
-      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location]
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, location, group_id, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual') RETURNING id",
+      [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location, groupId]
     );
     matchId = Number(res[0].id);
   }
@@ -459,11 +648,12 @@ export async function saveMatch(formData: FormData) {
 // ---- Cup-hantering ----
 
 export async function updateCup(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const originalName = String(formData.get("original_cup_name") ?? "").trim();
   const originalGroup = String(formData.get("original_cup_group") ?? "").trim();
   const newName = String(formData.get("new_cup_name") ?? "").trim();
   if (!originalName || !newName) return;
+  await requireCupAccess(originalName, originalGroup);
 
   // Byt cup-namn om det ändrats – bara matcher i denna grupp påverkas.
   if (newName !== originalName) {
@@ -509,8 +699,8 @@ export async function updateCup(formData: FormData) {
 }
 
 export async function deleteCupMatch(id: number, cupName: string, cupGroup: string) {
-  await requireRole(["coach"]);
   if (!id) return;
+  await requireMatchPermission("manage_matches", id);
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
@@ -532,8 +722,9 @@ export async function deleteCupMatch(id: number, cupName: string, cupGroup: stri
 }
 
 export async function deleteCup(cupName: string, cupGroup: string) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   if (!cupName) return;
+  await requireCupAccess(cupName, cupGroup);
   // Hämta alla match-id:n i denna cup+grupp för att rensa relaterade tabeller.
   const ids = await all<{ id: number }>(
     "SELECT id FROM matches WHERE cup_name = ? AND cup_group = ?",
@@ -558,17 +749,18 @@ export async function deleteCup(cupName: string, cupGroup: string) {
 }
 
 export async function addCupPlayoffMatch(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const cupName = String(formData.get("cup_name") ?? "").trim();
   const cupGroup = String(formData.get("cup_group") ?? "").trim();
   if (!cupName) return;
+  await requireCupAccess(cupName, cupGroup);
   // Ärver datum och speltidsformat från cupens befintliga matcher.
-  const existing = await get<{ date: string; periods: number; period_minutes: number; level: string }>(
-    "SELECT date, periods, period_minutes, level FROM matches WHERE cup_name = ? AND cup_group = ? ORDER BY date DESC, start_time DESC LIMIT 1",
+  const existing = await get<{ date: string; periods: number; period_minutes: number; level: string; group_id: number | null }>(
+    "SELECT date, periods, period_minutes, level, group_id FROM matches WHERE cup_name = ? AND cup_group = ? ORDER BY date DESC, start_time DESC LIMIT 1",
     [cupName, cupGroup]
   );
   await run(
-    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_group, cup_phase, periods, period_minutes, level) VALUES (?, ?, 'home', 'cup', ?, ?, 'playoff', ?, ?, ?)",
+    "INSERT INTO matches (date, opponent, home_away, match_type, cup_name, cup_group, cup_phase, periods, period_minutes, level, group_id) VALUES (?, ?, 'home', 'cup', ?, ?, 'playoff', ?, ?, ?, ?)",
     [
       existing?.date ?? swedishToday(),
       "TBD",
@@ -577,6 +769,7 @@ export async function addCupPlayoffMatch(formData: FormData) {
       existing?.periods ?? 3,
       existing?.period_minutes ?? 20,
       existing?.level ?? "",
+      existing?.group_id ?? await ensureCupMatchGroup(cupName),
     ]
   );
   revalidatePath("/matcher");
@@ -585,10 +778,11 @@ export async function addCupPlayoffMatch(formData: FormData) {
 }
 
 export async function addCup(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const cupName = String(formData.get("cup_name") ?? "").trim();
   const level = String(formData.get("level") ?? "");
   if (!cupName) return;
+  const groupId = await ensureCupMatchGroup(cupName, Number(formData.get("group_id")) || null);
 
   const matchCount = Number(formData.get("match_count") ?? 0);
   for (let i = 0; i < matchCount; i++) {
@@ -598,8 +792,8 @@ export async function addCup(formData: FormData) {
     const homeAway = String(formData.get(`home_away_${i}`) ?? "home");
     if (!opponent || !date) continue;
     await run(
-      "INSERT INTO matches (date, start_time, opponent, home_away, match_type, level, cup_name, cup_phase) VALUES (?, ?, ?, ?, 'cup', ?, ?, 'group')",
-      [date, time || null, opponent, homeAway, level, cupName]
+      "INSERT INTO matches (date, start_time, opponent, home_away, match_type, level, cup_name, cup_phase, group_id) VALUES (?, ?, ?, ?, 'cup', ?, ?, 'group', ?)",
+      [date, time || null, opponent, homeAway, level, cupName, groupId]
     );
   }
 
@@ -612,16 +806,16 @@ export async function addCup(formData: FormData) {
 // Sätt/ändra matchens svårighetsnivå. Med "apply_cup" sätts samma nivå på alla
 // matcher i cupen (matcherna i en cup spelas på samma nivå).
 export async function setMatchLevel(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   const level = String(formData.get("level") ?? "");
   if (!id) return;
+  await requireMatchPermission("manage_matches", id);
 
   const applyCup = formData.get("apply_cup") === "on";
   if (applyCup) {
-    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [id]);
+    const m = await get<{ cup_name: string; group_id: number | null }>("SELECT cup_name, group_id FROM matches WHERE id = ?", [id]);
     if (m?.cup_name) {
-      await run("UPDATE matches SET level = ? WHERE cup_name = ?", [level, m.cup_name]);
+      await run("UPDATE matches SET level = ? WHERE cup_name = ? AND group_id IS NOT DISTINCT FROM ?", [level, m.cup_name, m.group_id]);
       revalidatePath(`/matcher/${id}/laguttagning`);
       revalidatePath(`/matcher/${id}`);
       revalidatePath("/matcher");
@@ -639,9 +833,9 @@ export async function setMatchLevel(formData: FormData) {
 // löpande form-tal. Idempotent: betygsätter man om matchen ångras det förra
 // betygets delta först, så form-talet inte dubbelräknas. Se lib/rating.ts.
 export async function saveMatchRatings(formData: FormData) {
-  await requireRole(["coach"]);
   const matchId = Number(formData.get("match_id"));
   if (!matchId) return;
+  await requireMatchPermission("manage_evaluations", matchId);
 
   const match = await get<{ level: string; opponent: string }>(
     "SELECT level, opponent FROM matches WHERE id = ?",
@@ -724,17 +918,17 @@ export async function saveMatchRatings(formData: FormData) {
 // Spara uttagen trupp för en match (ersätter tidigare urval). Om "apply_cup"
 // är satt och matchen ingår i en cup appliceras truppen på alla matcher i cupen.
 export async function saveSquad(formData: FormData) {
-  await requireRole(["coach"]);
   const matchId = Number(formData.get("match_id"));
   if (!matchId) return;
+  await requireMatchPermission("manage_squads", matchId);
   const ids = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
   const applyCup = formData.get("apply_cup") === "on";
 
   let targetIds = [matchId];
   if (applyCup) {
-    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [matchId]);
+    const m = await get<{ cup_name: string; group_id: number | null }>("SELECT cup_name, group_id FROM matches WHERE id = ?", [matchId]);
     if (m?.cup_name) {
-      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [m.cup_name]);
+      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ? AND group_id IS NOT DISTINCT FROM ?", [m.cup_name, m.group_id]);
       if (rows.length > 0) targetIds = rows.map((r) => r.id);
     }
   }
@@ -763,9 +957,9 @@ export async function saveSquad(formData: FormData) {
 // Spara laguttagning: kallad trupp + formation + utplacerade spelare (startelva).
 // Truppen kan appliceras på hela cupen; utplaceringen sparas bara för matchen.
 export async function saveLineup(formData: FormData) {
-  await requireRole(["coach"]);
   const matchId = Number(formData.get("match_id"));
   if (!matchId) return;
+  await requireMatchPermission("manage_squads", matchId);
 
   const squadIds = formData.getAll("player_id").map(Number).filter((n) => Number.isFinite(n) && n > 0);
   const formation = String(formData.get("formation") ?? "");
@@ -787,9 +981,9 @@ export async function saveLineup(formData: FormData) {
   // Trupp + formation: gäller matchen, eller hela cupen om valt
   let squadTargets = [matchId];
   if (applyCup) {
-    const m = await get<{ cup_name: string }>("SELECT cup_name FROM matches WHERE id = ?", [matchId]);
+    const m = await get<{ cup_name: string; group_id: number | null }>("SELECT cup_name, group_id FROM matches WHERE id = ?", [matchId]);
     if (m?.cup_name) {
-      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ?", [m.cup_name]);
+      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ? AND group_id IS NOT DISTINCT FROM ?", [m.cup_name, m.group_id]);
       if (rows.length > 0) squadTargets = rows.map((r) => r.id);
     }
   }
@@ -823,9 +1017,9 @@ export async function saveLineup(formData: FormData) {
 }
 
 export async function deleteMatch(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requireMatchPermission("manage_matches", id);
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
@@ -840,18 +1034,18 @@ export async function deleteMatch(formData: FormData) {
 
 // Öppnar/stänger föräldrarapportering för en match (tränar-toggle).
 export async function toggleMatchReporting(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requireMatchPermission("report_matches", id);
   const open = formData.get("open") === "1";
   await run("UPDATE matches SET report_open = ? WHERE id = ?", [open ? 1 : 0, id]);
   revalidatePath(`/matcher/${id}`);
 }
 
 export async function resetMatch(formData: FormData) {
-  await requireRole(["coach"]);
   const id = Number(formData.get("id"));
   if (!id) return;
+  await requireMatchPermission("report_matches", id);
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
@@ -872,7 +1066,6 @@ export async function addManualEvent(
   _prev: { error?: string; ok?: boolean } | null,
   formData: FormData
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireRole(["coach"]);
   const matchId = Number(formData.get("match_id"));
   const playerId = formData.get("player_id") === "opponent" ? null : Number(formData.get("player_id")) || null;
   const statId = String(formData.get("stat_id") ?? "");
@@ -883,6 +1076,7 @@ export async function addManualEvent(
   const isOpponentGoal = formData.get("player_id") === "opponent";
 
   if (!matchId || !statId) return { error: "Ogiltiga värden" };
+  await requireMatchPermission("report_matches", matchId);
 
   const ENSURE_ROW = "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT(match_id, player_id) DO NOTHING";
 
@@ -910,10 +1104,10 @@ export async function addManualEvent(
 
 // Ta bort en enskild felaktig händelse ur matchflödet och justera räknarna
 export async function deleteMatchEvent(formData: FormData) {
-  await requireRole(["coach"]);
   const eventId = Number(formData.get("event_id"));
   const matchId = Number(formData.get("match_id"));
   if (!eventId || !matchId) return;
+  await requireMatchPermission("report_matches", matchId);
 
   const ev = await get<{ id: number; player_id: number | null; stat_id: string }>(
     "SELECT id, player_id, stat_id FROM match_events WHERE id = ? AND match_id = ?",
@@ -949,9 +1143,10 @@ export async function deleteMatchEvent(formData: FormData) {
 
 // ---- Kalenderimport (svenskalag.se m.fl.) ----
 export async function importCalendarMatches() {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const url = (await getSetting("calendar_url")).trim();
   if (!url) redirect("/installningar?kalender=saknas");
+  const groupId = await resolveWritableGroupId();
 
   let imported = 0;
   try {
@@ -959,13 +1154,27 @@ export async function importCalendarMatches() {
     const ownNames = [await getSetting("team_name"), await getSetting("club_name")].filter(Boolean);
     const matches = extractMatches(ics, ownNames);
 
+    // Flera egna lag kan vara anmälda till samma cup (skiljs åt av teamVariant, t.ex.
+    // "Friendly 1"/"Friendly 2"). Varje variant får en egen matchgrupp så att laguttagning
+    // inte blandas ihop mellan lagen; huvud-/tävlingslaget (teamVariant null) använder
+    // den vanliga gruppen.
+    const variantGroupIds = new Map<string, number | null>();
+    async function resolveMatchGroupId(m: (typeof matches)[number]): Promise<number | null> {
+      if (!m.teamVariant) return groupId;
+      const key = `${m.cupName}::${m.teamVariant}`;
+      if (!variantGroupIds.has(key)) {
+        variantGroupIds.set(key, await ensureCupMatchGroup(`${m.cupName} (${m.teamVariant})`));
+      }
+      return variantGroupIds.get(key) ?? groupId;
+    }
+
     for (const m of matches) {
       if (!m.date) continue;
       const exists = await get<{ 1: number }>("SELECT 1 FROM matches WHERE external_uid = ?", [
         m.uid,
       ]);
       if (exists) {
-        // Fyll i nivå/cup/tid/plats på redan importerade matcher som saknar det
+        // Fyll i nivå/cup/grupp/tid/plats på redan importerade matcher som saknar det
         if (m.level) {
           await run(
             "UPDATE matches SET level = ? WHERE external_uid = ? AND (level IS NULL OR level = '')",
@@ -976,6 +1185,12 @@ export async function importCalendarMatches() {
           await run(
             "UPDATE matches SET cup_name = ? WHERE external_uid = ? AND (cup_name IS NULL OR cup_name = '')",
             [m.cupName, m.uid]
+          );
+        }
+        if (m.teamVariant) {
+          await run(
+            "UPDATE matches SET cup_group = ? WHERE external_uid = ? AND (cup_group IS NULL OR cup_group = '')",
+            [m.teamVariant, m.uid]
           );
         }
         if (m.time) {
@@ -993,9 +1208,10 @@ export async function importCalendarMatches() {
         continue;
       }
       const notes = m.series ? `Serie: ${m.series}` : "";
+      const matchGroupId = await resolveMatchGroupId(m);
       await run(
-        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, notes, level, cup_name, location, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'calendar', ?)",
-        [m.date, m.time, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, m.location, m.uid]
+        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, notes, level, cup_name, cup_group, location, group_id, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'calendar', ?)",
+        [m.date, m.time, m.opponent, m.homeAway, m.matchType, notes, m.level, m.cupName, m.teamVariant ?? "", m.location, matchGroupId, m.uid]
       );
       imported++;
     }
@@ -1029,7 +1245,7 @@ export async function previewCupImport(
   _prev: CupPreviewState,
   formData: FormData
 ): Promise<CupPreviewState> {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const url = String(formData.get("url") ?? "").trim();
   if (!url) return { ok: false, error: "Klistra in en iCal-länk." };
 
@@ -1064,11 +1280,12 @@ export async function previewCupImport(
 }
 
 export async function importCupMatches(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_matches");
   const url = String(formData.get("url") ?? "").trim();
   const cupName = String(formData.get("cup_name") ?? "").trim();
   const level = String(formData.get("level") ?? "");
   if (!url || !cupName) redirect("/matcher/importera-cup?fel=saknas");
+  const groupId = await ensureCupMatchGroup(cupName, Number(formData.get("group_id")) || null);
 
   let imported = 0;
   try {
@@ -1086,8 +1303,8 @@ export async function importCupMatches(formData: FormData) {
         .filter(Boolean)
         .join(" · ");
       await run(
-        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, cup_phase, notes, level, cup_name, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, 'cup', 'group', ?, ?, ?, 'coach', 'calendar', ?)",
-        [m.date, m.time, m.opponent, m.homeAway, notes, level, cupName, m.uid]
+        "INSERT INTO matches (date, start_time, opponent, home_away, match_type, cup_phase, notes, level, cup_name, group_id, created_by_role, source, external_uid) VALUES (?, ?, ?, ?, 'cup', 'group', ?, ?, ?, ?, 'coach', 'calendar', ?)",
+        [m.date, m.time, m.opponent, m.homeAway, notes, level, cupName, groupId, m.uid]
       );
       imported++;
     }
@@ -1103,7 +1320,7 @@ export async function importCupMatches(formData: FormData) {
 
 // ---- Inställningar ----
 export async function updateSettings(formData: FormData) {
-  await requireRole(["coach"]);
+  await requirePermission("manage_settings");
   const keys = [
     "club_name",
     "team_name",
@@ -1128,7 +1345,7 @@ export async function updateSettings(formData: FormData) {
 }
 
 export async function resetColors() {
-  await requireRole(["coach"]);
+  await requirePermission("manage_settings");
   for (const [key, value] of Object.entries(DEFAULT_COLORS)) {
     await setSetting(key, value);
   }

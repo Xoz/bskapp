@@ -3,7 +3,8 @@ import type { ViewRole } from "@/lib/auth";
 
 const ITEMS: { key: ViewRole; label: string }[] = [
   { key: "player", label: "Spelare" },
-  { key: "coach", label: "Tränare" },
+  { key: "parent", label: "Förälder" },
+  { key: "staff", label: "Personal" },
 ];
 
 // Tränaren kan förhandsvisa appen som förälder/spelare. För övriga fungerar
