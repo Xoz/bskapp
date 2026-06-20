@@ -178,7 +178,7 @@ export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
      JOIN matches m ON m.id = mp.match_id AND m.cup_name <> ''
      JOIN players p ON p.id = mp.player_id
      GROUP BY m.cup_name, p.id
-     HAVING goals > 0 OR assists > 0
+     HAVING COALESCE(SUM(mp.goals), 0) > 0 OR COALESCE(SUM(mp.assists), 0) > 0
      ORDER BY m.cup_name, goals DESC, assists DESC, lower(p.name)`
   );
   const byCup = new Map<string, CupScorerRow[]>();
