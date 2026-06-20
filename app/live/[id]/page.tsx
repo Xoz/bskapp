@@ -4,6 +4,7 @@ import { getMatch } from "@/lib/queries";
 import { getLiveState } from "@/lib/live";
 import { getAllSettings } from "@/lib/db";
 import LiveScoreboard from "@/components/LiveScoreboard";
+import LiveClock from "@/components/LiveClock";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,9 @@ export default async function PublicLivePage({ params }: { params: Promise<{ id:
 
   return (
     <main className="flex-1 p-4 sm:p-6 max-w-lg w-full mx-auto" style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}>
+      <div className="flex justify-end mb-3">
+        <LiveClock />
+      </div>
       <div className="mb-5">
         <Link
           href="/live"

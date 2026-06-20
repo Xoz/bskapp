@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { canAccessGroup, hasPermission } from "@/lib/auth";
 import { get } from "@/lib/db";
+import { reportingAutoOpen } from "@/lib/dates";
 import {
   getLiveState,
   recordEvent,
@@ -16,13 +17,21 @@ import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
 
 export const dynamic = "force-dynamic";
 
-// Läsning (Livescore) är publik. Skrivning kräver tränare, ELLER att tränaren
-// öppnat rapportering för matchen (report_open) – då får föräldrar/hjälpare logga.
+// Läsning (Livescore) är publik. Skrivning kräver tränare, ELLER att rapporteringen
+// är öppen för matchen – antingen manuellt öppnad av tränaren (report_open) eller
+// automatiskt 60 min före avspark – då får föräldrar/hjälpare logga.
 async function matchFromId(id: string) {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) return undefined;
-  return get<{ id: number; report_open: number; group_id: number | null }>(
-    "SELECT id, report_open, group_id FROM matches WHERE id = ?",
+  return get<{
+    id: number;
+    report_open: number;
+    group_id: number | null;
+    date: string;
+    start_time: string | null;
+    finished: number;
+  }>(
+    "SELECT id, report_open, group_id, date, start_time, finished FROM matches WHERE id = ?",
     [n]
   );
 }
@@ -56,8 +65,10 @@ export async function POST(
   }
 
   const isCoach = (await hasPermission("report_matches")) && (await canAccessGroup(match.group_id));
+  const reportOpen =
+    !!match.report_open || (!match.finished && reportingAutoOpen(match.date, match.start_time));
   // finish_match: bara tränare. Övriga skrivningar: tränare eller öppen rapportering.
-  if (!isCoach && (COACH_ONLY_ACTIONS.has(action.type) || !match.report_open)) {
+  if (!isCoach && (COACH_ONLY_ACTIONS.has(action.type) || !reportOpen)) {
     return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });
   }
 

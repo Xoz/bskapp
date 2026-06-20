@@ -14,7 +14,7 @@ import ManualEventForm from "@/components/ManualEventForm";
 import EventEditor from "@/components/EventEditor";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft, IconArrowRight, IconLive } from "@/components/Icons";
-import { swedishToday } from "@/lib/dates";
+import { swedishToday, reportingAutoOpen } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const mLevel = levelInfo(match.level);
   const today = swedishToday();
   const isUpcoming = match.date >= today;
+  // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
+  // report_open är tränarens manuella override – effektivt öppen = endera.
+  const reportAutoOpen = !match.finished && reportingAutoOpen(match.date, match.start_time);
+  const reportOpen = !!match.report_open || reportAutoOpen;
 
   // Betygsättning: en rad per spelare med speltid. Förslag räknas fram ur
   // matchstatistik vägt mot position och nivåskillnad (tränaren justerar).
@@ -250,7 +254,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {!match.finished && (
             <div
               className="card p-5 flex items-center gap-4 flex-wrap"
-              style={match.report_open ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
+              style={reportOpen ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
@@ -263,7 +267,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
                   {match.report_open
                     ? "Öppen – föräldrar kan hjälpa till att rapportera. Alla kan följa Livescore."
-                    : "Stängd – bara du rapporterar. Livescore är alltid öppen att följa."}
+                    : reportAutoOpen
+                    ? "Öppen automatiskt (60 min före avspark) – föräldrar kan hjälpa till att rapportera. Alla kan följa Livescore."
+                    : match.start_time
+                    ? "Öppnar automatiskt 60 min före avspark – eller öppna direkt. Livescore är alltid öppen att följa."
+                    : "Stängd – sätt en avsparktid så öppnas den automatiskt, eller öppna manuellt. Livescore är alltid öppen att följa."}
                 </p>
                 <div className="mt-2">
                   <CopyLinkButton code={String(match.id)} path="live" variant="light" label="Kopiera Livescore-länk" />
@@ -277,7 +285,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                   className="btn-secondary"
                   style={match.report_open ? { color: "var(--danger)" } : undefined}
                 >
-                  {match.report_open ? "Stäng rapportering" : "Öppna rapportering"}
+                  {match.report_open ? "Stäng rapportering" : reportAutoOpen ? "Lås öppen" : "Öppna nu"}
                 </button>
               </form>
             </div>

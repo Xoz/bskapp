@@ -4,7 +4,7 @@
 import { all, get, run, batch } from "./db";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter, SubEntry } from "./liveTypes";
-import { swedishToday } from "./dates";
+import { swedishToday, reportingAutoOpen, swedishWallClockToEpoch } from "./dates";
 
 interface MatchRow {
   id: number;
@@ -47,12 +47,11 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
 
   // Auto-avslut baserat på verklig tid – bara om matchen är idag eller tidigare.
   if (!m.finished && m.start_time && m.date <= todayLocal) {
-    const [h, min] = m.start_time.split(":").map(Number);
-    // Konstruera starttiden i svensk lokal tid (UTC+2 sommartid)
-    const matchStart = new Date(`${m.date}T${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00+02:00`);
+    // Starttiden tolkas som svensk väggklocka (DST-säkert, inte hårdkodat +02:00).
+    const matchStartMs = swedishWallClockToEpoch(m.date, m.start_time);
     const totalMinutes = (m.periods ?? 3) * (m.period_minutes ?? 20) + 5;
-    const expectedEnd = new Date(matchStart.getTime() + totalMinutes * 60000);
-    if (Date.now() > expectedEnd.getTime()) {
+    const expectedEnd = matchStartMs + totalMinutes * 60000;
+    if (Date.now() > expectedEnd) {
       await run("UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL WHERE id = ?", [matchId]);
       m = { ...m, finished: 1, clock_running: 0, clock_started_at: null };
     }
@@ -139,7 +138,7 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     minutes,
     onField,
     hasLineup: starters.length > 0,
-    reportOpen: !!m.report_open,
+    reportOpen: !!m.report_open || (!m.finished && reportingAutoOpen(m.date, m.start_time)),
   };
 }
 

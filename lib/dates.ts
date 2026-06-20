@@ -53,3 +53,51 @@ export function swedishMinutesSinceMidnight(): number {
   const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0");
   return h * 60 + m;
 }
+
+// Europe/Stockholm-offset (ms) vid ett givet ögonblick – +1h vinter, +2h sommar.
+function stockholmOffsetMs(at: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at);
+  const m: Record<string, number> = {};
+  for (const p of parts) if (p.type !== "literal") m[p.type] = Number(p.value);
+  // 24:00 normaliseras till 0 av vissa motorer; håll det robust.
+  const asUTC = Date.UTC(m.year, m.month - 1, m.day, m.hour % 24, m.minute, m.second);
+  return asUTC - at.getTime();
+}
+
+// Gör om en svensk väggklocka (date "YYYY-MM-DD" + time "HH:MM") till absolut
+// epoch-ms, DST-säkert. Ersätter hårdkodad "+02:00" som blir fel på vintern.
+export function swedishWallClockToEpoch(date: string, time: string): number {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const utcGuess = Date.UTC(y, mo - 1, d, h, mi);
+  const offset = stockholmOffsetMs(new Date(utcGuess));
+  let epoch = utcGuess - offset;
+  // Räkna om vid själva ögonblicket ifall vi snubblade över en DST-gräns.
+  const offset2 = stockholmOffsetMs(new Date(epoch));
+  if (offset2 !== offset) epoch = utcGuess - offset2;
+  return epoch;
+}
+
+// Hur många minuter före avspark som föräldrarapporteringen öppnar automatiskt.
+export const AUTO_OPEN_MINUTES_BEFORE = 60;
+
+// Är liverapporteringen automatiskt öppen just nu för en match?
+// Öppnar AUTO_OPEN_MINUTES_BEFORE min före avspark och hålls öppen matchdagen
+// ut (svensk tid). date = "YYYY-MM-DD", startTime = "HH:MM" (svensk lokaltid).
+// Returnerar false om matchen inte är idag eller saknar avsparktid – då gäller
+// bara tränarens manuella report_open-flagga.
+export function reportingAutoOpen(date: string, startTime: string | null): boolean {
+  if (!startTime || date !== swedishToday()) return false;
+  const [h, m] = startTime.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return false;
+  return swedishMinutesSinceMidnight() >= h * 60 + m - AUTO_OPEN_MINUTES_BEFORE;
+}

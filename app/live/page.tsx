@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getMatches, mootMatchIds, cupRoundLabel, type Match } from "@/lib/queries";
 import { IconLive } from "@/components/Icons";
+import LiveClock from "@/components/LiveClock";
 import { getAllSettings } from "@/lib/db";
-import { swedishToday, swedishMinutesSinceMidnight } from "@/lib/dates";
+import { swedishToday, swedishMinutesSinceMidnight, reportingAutoOpen } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Livescore" };
@@ -61,6 +62,9 @@ export default async function LiveLandingPage() {
 
   return (
     <main className="flex-1 p-6 max-w-md w-full mx-auto" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
+      <div className="flex justify-end mb-4">
+        <LiveClock />
+      </div>
       <div className="text-center mb-8">
         <p className="eyebrow">{settings.team_name}</p>
         <h1 className="text-[1.7rem] font-bold mt-0.5">Livescore</h1>
@@ -106,7 +110,7 @@ export default async function LiveLandingPage() {
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
                       {m.start_time ? `Avspark ${m.start_time}` : "Idag"}
-                      {m.report_open ? " · rapportering öppen" : ""}
+                      {m.report_open || reportingAutoOpen(m.date, m.start_time) ? " · rapportering öppen" : ""}
                     </p>
                   </div>
                   <span className="stat-number text-lg" style={{ color: "var(--ink-faint)" }}>–</span>
