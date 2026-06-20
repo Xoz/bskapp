@@ -4,7 +4,7 @@
 > Öppna **inte** hela `lib/` eller `components/` för att leta. Uppdatera kartan när du
 > lägger till en fil, route, tabell eller exportfunktion.
 
-Stack: Next.js 16 (App Router, server actions), React 19, Turso/libSQL, Anthropic SDK, Recharts, Tailwind v4.
+Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Anthropic SDK, Recharts, Tailwind v4.
 OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/next/dist/docs/`.
 
 ---
@@ -38,7 +38,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 - **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch (inkl. location), addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, setMatchLevel, saveSquad/saveLineup, saveMatchRatings, setPlayerLevel (bekräfta nivåförslag från form), deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches (fyller start_time + location från kalender), previewCupImport/importCupMatches (cup-import via iCal), updateSettings, resetColors (återställ klubb-/tröjfärger till `DEFAULT_COLORS`), generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
-- **db.ts**: libSQL-klient + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
+- **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
 - **auth.ts**: roller (`Role`/`ViewRole`), session-tokens, getRole/getViewRole/getRealRole, getPlayerSession, getCoachEmail/getCoachName.

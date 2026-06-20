@@ -1,27 +1,37 @@
 # Staging-miljö
 
+> **Läge just nu (sedan Supabase-flytten, 2026-06-20):** produktionen kör
+> Supabase/Postgres (`DATABASE_URL`). Det finns ännu ingen Supabase-databas
+> för staging – free-tier tillåter bara 2 projekt och det andra är redan
+> upptaget av ett annat projekt. Vercel Preview pekar tills vidare fortfarande
+> mot den gamla `bsk-staging`-databasen i Turso (separat `TURSO_DATABASE_URL`/
+> `TURSO_AUTH_TOKEN`, bara satta i Preview-scope) – appen stödjer numera bara
+> en databasmotor (Postgres) i runtime-koden, så Preview-deployen fungerar
+> inte mot Turso längre förrän en Supabase-staging finns. Lägg till ett tredje
+> Supabase-projekt (`bsk-staging`) när det finns plats, och peka Preview-scope
+> i Vercel mot dess `DATABASE_URL` – resten av det här dokumentet beskriver
+> målbilden.
+
 Staging låter dig testa nya funktioner mot en driftsatt app **utan** att röra
-produktionsdata. Stacken är redan byggd för det: databasen väljs via
+produktionsdata. Stacken är byggd för det: databasen väljs via
 miljövariabler, så staging = en egen branch + Vercels Preview-miljö pekad mot
-en separat Turso-databas.
+en separat Supabase-databas.
 
 ```
-main      → Vercel Production → Turso: bsk (produktion)
-staging   → Vercel Preview    → Turso: bsk-staging (testdata)
+main      → Vercel Production → Supabase: bsk-prod (produktion)
+staging   → Vercel Preview    → Supabase: bsk-staging (testdata, ej skapad än)
 ```
 
-Ingen kodändring behövs — `lib/db.ts` läser `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`
-och `init()` skapar/migrerar schemat automatiskt vid första anropet. En tom
-staging-DB fyller alltså sig själv med tabeller + exempelspelare.
+Ingen kodändring behövs — `lib/db.ts` läser `DATABASE_URL` och `init()`
+skapar/migrerar schemat automatiskt vid första anropet. En tom staging-DB
+fyller alltså sig själv med tabeller + exempelspelare.
 
 ## Engångsuppsättning
 
-### 1. Skapa staging-databasen i Turso
-```bash
-turso db create bsk-staging
-turso db show bsk-staging --url            # → TURSO_DATABASE_URL
-turso db tokens create bsk-staging         # → TURSO_AUTH_TOKEN
-```
+### 1. Skapa staging-projektet i Supabase
+Supabase Dashboard → New project → `bsk-staging`. Hämta sedan:
+Project Settings → Database → Connection string → **Transaction pooler**
+(port 6543) → `DATABASE_URL`.
 
 ### 2. Sätt miljövariabler i Vercel (scope: **Preview**)
 Vercel → Project → Settings → Environment Variables. Lägg till med scope
@@ -30,8 +40,7 @@ produktionen är orörd:
 
 | Variabel | Värde |
 |---|---|
-| `TURSO_DATABASE_URL` | staging-DB:ns URL från steg 1 |
-| `TURSO_AUTH_TOKEN` | staging-token från steg 1 |
+| `DATABASE_URL` | staging-projektets connection string från steg 1 |
 | `SESSION_SECRET` | **egen** hemlighet för staging (`openssl rand -hex 32`) |
 | `ANTHROPIC_API_KEY` | samma som prod, eller en separat nyckel |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | samma som prod |
@@ -65,12 +74,12 @@ kan dela och testa mot. Varje annan feature-branch får också en egen preview
 (med samma Preview-env, dvs. staging-DB:n).
 
 ## Bra att veta
-- **Dataisolering:** Preview använder `bsk-staging`, Production använder `bsk`.
-  De delar inga rader. Testa fritt — radera, lägg in testmatcher, öppna
-  rapportering osv. utan att påverka riktiga laget.
+- **Dataisolering:** Preview använder `bsk-staging`, Production använder
+  `bsk-prod`. De delar inga rader. Testa fritt — radera, lägg in testmatcher,
+  öppna rapportering osv. utan att påverka riktiga laget.
 - **Schema:** staging-DB:n migreras automatiskt vid första anropet. När du lägger
   till en ny tabell/kolumn/`ALTER` i `lib/db.ts` måste du **bumpa `SCHEMA_VERSION`**
   i samma fil – annars hoppar cold-start-grinden över migrationerna och kolumnen
   skapas aldrig.
-- **Nollställa staging:** `turso db shell bsk-staging` och rensa tabeller, eller
-  skapa om databasen och uppdatera env-varen.
+- **Nollställa staging:** Supabase Dashboard → SQL Editor → `TRUNCATE` relevanta
+  tabeller, eller skapa om projektet och uppdatera `DATABASE_URL`.

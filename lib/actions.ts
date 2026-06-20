@@ -347,10 +347,10 @@ export async function createEvaluation(formData: FormData) {
   if (scores.length === 0) return;
 
   const res = await run(
-    "INSERT INTO evaluations (player_id, date, strengths, development_goals, coach_name) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO evaluations (player_id, date, strengths, development_goals, coach_name) VALUES (?, ?, ?, ?, ?) RETURNING id",
     [playerId, date, strengths, goals, coachName]
   );
-  const evalId = Number(res.lastInsertRowid);
+  const evalId = Number(res[0].id);
   await batch(
     scores.map((s) => ({
       sql: "INSERT INTO evaluation_scores (evaluation_id, skill_id, level) VALUES (?, ?, ?)",
@@ -440,10 +440,10 @@ export async function saveMatch(formData: FormData) {
     matchId = id;
   } else {
     const res = await run(
-      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, location, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual')",
+      "INSERT INTO matches (date, start_time, periods, period_minutes, opponent, home_away, match_type, our_score, opponent_score, notes, level, cup_name, location, created_by_role, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'coach', 'manual') RETURNING id",
       [date, startTime, periods, periodMinutes, opponent, homeAway, matchType, ourScore, oppScore, notes, level, cupName, location]
     );
-    matchId = Number(res.lastInsertRowid);
+    matchId = Number(res[0].id);
   }
 
   await savePlayerStats(matchId, formData);
@@ -744,7 +744,7 @@ export async function saveSquad(formData: FormData) {
     stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
     for (const pid of ids) {
       stmts.push({
-        sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)",
+        sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
         args: [mid, pid],
       });
     }
@@ -798,7 +798,7 @@ export async function saveLineup(formData: FormData) {
   for (const mid of squadTargets) {
     stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
     for (const pid of squadIds) {
-      stmts.push({ sql: "INSERT OR IGNORE INTO match_squad (match_id, player_id) VALUES (?, ?)", args: [mid, pid] });
+      stmts.push({ sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING", args: [mid, pid] });
     }
     stmts.push({ sql: "UPDATE matches SET formation = ? WHERE id = ?", args: [formation, mid] });
     revalidatePath(`/matcher/${mid}/laguttagning`);
@@ -808,7 +808,7 @@ export async function saveLineup(formData: FormData) {
   stmts.push({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [matchId] });
   for (const p of positions) {
     stmts.push({
-      sql: "INSERT OR IGNORE INTO match_lineup (match_id, player_id, x, y) VALUES (?, ?, ?, ?)",
+      sql: "INSERT INTO match_lineup (match_id, player_id, x, y) VALUES (?, ?, ?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
       args: [matchId, p.id, p.x, p.y],
     });
   }

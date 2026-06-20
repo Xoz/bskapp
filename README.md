@@ -30,33 +30,27 @@ Standardkoder (byt under Inställningar):
 
 Truppen innehåller exempelspelare vid första start – byt namn eller ta bort dem under **Spelare**.
 
+OBS: lokal utveckling pekar mot samma `DATABASE_URL` som produktionen (se
+nedan) – det finns ännu ingen separat dev-databas.
+
 ## Teknik
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
-- Databas via `@libsql/client`: **Turso** i produktion, lokal SQLite-fil (`data/bsk.db`) vid utveckling
+- Databas via `postgres` (postgres.js): **Supabase** (Postgres), både produktion och lokal utveckling
 - Recharts för diagram
 - Sessioner via signerad HTTP-only-cookie
 - Design: "Dark Mono Dashboard" – Syne + DM Mono, mörk palett, grain-textur
 
-## Produktion (Vercel + Turso)
+## Produktion (Vercel + Supabase)
 
 Sätt följande miljövariabler i Vercel:
 
 | Variabel | Värde |
 | --- | --- |
-| `TURSO_DATABASE_URL` | `libsql://<din-databas>.turso.io` |
-| `TURSO_AUTH_TOKEN` | Token från Turso |
+| `DATABASE_URL` | Supabase connection string (Transaction pooler, port 6543) |
 | `SESSION_SECRET` | Lång slumpsträng, t.ex. `openssl rand -hex 32` |
 
-Utan `TURSO_DATABASE_URL` används den lokala filen `data/bsk.db` (utveckling).
-Schemat skapas och migreras automatiskt vid första anropet.
-
-Flytta lokal data till Turso:
-
-```bash
-sqlite3 data/bsk.db .dump > dump.sql
-turso db shell <din-databas> < dump.sql
-```
+Schemat skapas och migreras automatiskt vid första anropet (`lib/db.ts`).
 
 ## Integritet
 
