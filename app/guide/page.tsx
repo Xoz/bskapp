@@ -115,26 +115,28 @@ export default function GuidePage() {
             Innehåll
           </p>
           <TocLink href="#inloggning">1. Inloggning</TocLink>
-          <TocLink href="#oversikt">2. Översikten</TocLink>
-          <TocLink href="#matcher">3. Matcher</TocLink>
-          <TocLink href="#liverapportering">4. Liverapportering</TocLink>
-          <TocLink href="#spelare">5. Spelare och trupp</TocLink>
-          <TocLink href="#utvarderingar">6. Utvärderingar</TocLink>
-          <TocLink href="#statistik">7. Statistik</TocLink>
-          <TocLink href="#intervjuer">8. Spelarintervjuer (AI)</TocLink>
-          <TocLink href="#spelarprofiler">9. Spelarprofiler och PIN</TocLink>
-          <TocLink href="#installningar">10. Inställningar</TocLink>
-          <TocLink href="#foraldrar">11. För föräldrar och rapportörer</TocLink>
+          <TocLink href="#roller-grupper">2. Roller, grupper och Administration</TocLink>
+          <TocLink href="#oversikt">3. Översikten</TocLink>
+          <TocLink href="#matcher">4. Matcher</TocLink>
+          <TocLink href="#liverapportering">5. Liverapportering</TocLink>
+          <TocLink href="#spelare">6. Spelare och trupp</TocLink>
+          <TocLink href="#utvarderingar">7. Utvärderingar</TocLink>
+          <TocLink href="#statistik">8. Statistik</TocLink>
+          <TocLink href="#intervjuer">9. Spelarintervjuer (AI)</TocLink>
+          <TocLink href="#spelarprofiler">10. Spelarprofiler och PIN</TocLink>
+          <TocLink href="#installningar">11. Inställningar</TocLink>
+          <TocLink href="#foraldrar">12. För föräldrar och rapportörer</TocLink>
         </div>
 
         {/* 1. Inloggning */}
         <section id="inloggning">
           <H2>1. Inloggning</H2>
           <P>
-            Det finns två sätt att logga in som tränare: med Google-konto eller med tränarkoden.
+            All personal (tränare, ledare m.fl.) loggar in med Google. Spelare och föräldrar har
+            egna inloggningar – se avsnitt 10 och 12.
           </P>
 
-          <H3>Logga in med Google (rekommenderat)</H3>
+          <H3>Logga in med Google</H3>
           <Step n={1} title="Gå till inloggningssidan">
             Öppna appen och klicka på <strong>Tränare</strong> på startsidan, eller gå direkt till <strong>/login</strong>.
           </Step>
@@ -142,16 +144,11 @@ export default function GuidePage() {
             Du omdirigeras till Google. Välj ditt Google-konto.
           </Step>
           <Step n={3} title="Klart – du är inloggad">
-            Du hamnar direkt på Översikten. Din inloggning håller i 90 dagar.
+            Du hamnar på Översikten (eller Mina spelare om du bara har rollen Spelare/Förälder). Inloggningen håller i 90 dagar.
           </Step>
           <Tip>
-            Din Gmail-adress måste vara godkänd av en befintlig tränare under Inställningar → Tränarinloggning med Google. Kontakta admin om du får felmeddelande.
+            Din Gmail-adress måste vara kopplad till ett konto av en admin under Administration → Användare, eller via en inbjudningslänk. Kontakta din admin om du får felmeddelandet &quot;inte godkänd&quot;.
           </Tip>
-
-          <H3>Logga in med tränarkod</H3>
-          <P>
-            Ange tränarkoden i fältet <strong>Tränarkod</strong> på inloggningssidan. Koden hittar du (eller ändrar) under Inställningar.
-          </P>
 
           <H3>Logga ut</H3>
           <P>
@@ -159,9 +156,72 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 2. Översikten */}
+        {/* 2. Roller, grupper och Administration */}
+        <section id="roller-grupper">
+          <H2>2. Roller, grupper och Administration</H2>
+          <P>
+            Under <strong>Administration</strong> i menyn (synlig om du har rätt behörighet) styr du
+            vem som kommer åt vad, och hur truppen är indelad i lag. Sidan har två flikar: Användare
+            och Organisation.
+          </P>
+
+          <H3>Roller</H3>
+          <Note>
+            <strong>Admin</strong> – full åtkomst, kan aldrig begränsas.<br />
+            <strong>Huvudtränare</strong> – hela den sportsliga verksamheten samt användare och grupper.<br />
+            <strong>Tränare</strong> – spelare, utvärderingar, matcher, laguttagningar och statistik.<br />
+            <strong>Ledare</strong> – grundläggande spelarlista, matcher, laguttagning och liverapportering.<br />
+            <strong>Spelare</strong> – bara sin egen profil.<br />
+            <strong>Förälder</strong> – bara sina kopplade barns profiler.
+          </Note>
+          <P>
+            En person kan ha flera roller samtidigt. Vill du finjustera utöver rollens standard kan
+            du under fliken Användare tillåta eller neka enskilda funktioner för just den personen.
+          </P>
+
+          <H3>Lägga till en ny tränare/ledare</H3>
+          <Step n={1} title="Gå till Administration → Användare" />
+          <Step n={2} title="Fyll i namn, Google-e-post och första roll" />
+          <Step n={3} title='Klicka "Lägg till"'>
+            Personen kan nu logga in med Google direkt – inget mer krävs.
+          </Step>
+          <Tip>
+            Alternativ: skicka en engångs-inbjudningslänk via Inställningar → Bjud in tränare. Funkar bra om du inte vill skriva in personens e-post själv.
+          </Tip>
+
+          <H3>Grupper – huvudtrupp, undergrupp och matchgrupp</H3>
+          <Note>
+            <strong>Huvudtrupp</strong> – hela laget, t.ex. BSK F2014. Alla spelare hör hit.<br />
+            <strong>Undergrupp</strong> – ett permanent lag inom truppen, t.ex. Gul eller Grön. Använd
+            det här om klubben har flera lag som delar spelarpool.<br />
+            <strong>Matchgrupp</strong> – skapas automatiskt när en cup importeras och flera egna lag
+            är anmälda till samma turnering, så matcherna inte blandas ihop. Sköts av sig själv.
+          </Note>
+
+          <H3>Skapa ett nytt lag (undergrupp) och flagga spelare</H3>
+          <Step n={1} title="Gå till Administration → Organisation" />
+          <Step n={2} title='Fyll i namn (t.ex. "Grön"), typ "Undergrupp" och vilken huvudtrupp den tillhör' />
+          <Step n={3} title='Klicka "Skapa"' />
+          <Step n={4} title="Öppna gruppens kort och fäll ut Spelare">
+            Bocka i vilka spelare som hör till laget. En spelare kan ingå i flera grupper samtidigt –
+            det är inte antingen/eller.
+          </Step>
+          <Tip>
+            Nya spelare kan kopplas till rätt undergrupp direkt när de läggs till – se avsnitt 6,
+            &quot;Lägga till en spelare&quot;.
+          </Tip>
+
+          <H3>Begränsa en person till ett visst lag</H3>
+          <P>
+            Som standard ser all personal alla lag. Under Användare → en person → Lagåtkomst kan du
+            bocka i ett eller flera lag för att begränsa vad personen ser och kan ändra – till exempel
+            en ledare som bara ska sköta Grön.
+          </P>
+        </section>
+
+        {/* 3. Översikten */}
         <section id="oversikt">
-          <H2>2. Översikten</H2>
+          <H2>3. Översikten</H2>
           <P>
             Översikten är startsidan för tränare och ger en snabb lägesbild av laget.
           </P>
@@ -190,9 +250,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 3. Matcher */}
+        {/* 4. Matcher */}
         <section id="matcher">
-          <H2>3. Matcher</H2>
+          <H2>4. Matcher</H2>
 
           <H3>Skapa en ny match</H3>
           <Step n={1} title='Klicka på "Registrera match" eller gå till Matcher → Lägg till match' />
@@ -223,9 +283,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 4. Liverapportering */}
+        {/* 5. Liverapportering */}
         <section id="liverapportering">
-          <H2>4. Liverapportering</H2>
+          <H2>5. Liverapportering</H2>
           <H3>Starta matchen</H3>
           <P>
             Öppna matchlänken och tryck <strong>Starta period 1</strong> när matchen drar igång. Matchklockan tickar live.
@@ -250,9 +310,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 5. Spelare */}
+        {/* 6. Spelare */}
         <section id="spelare">
-          <H2>5. Spelare och trupp</H2>
+          <H2>6. Spelare och trupp</H2>
 
           <H3>Truppen</H3>
           <P>
@@ -260,10 +320,15 @@ export default function GuidePage() {
           </P>
 
           <H3>Lägga till en spelare</H3>
-          <Step n={1} title='Klicka på "Lägg till spelare"' />
-          <Step n={2} title="Fyll i namn, tröjnummer och position">
-            Position-fältet används av AI-intervjun för att anpassa frågorna.
+          <Step n={1} title="Fyll i formuläret högst upp på Spelare-sidan">
+            Namn, tröjnummer och vilken undergrupp (t.ex. Gul eller Grön) spelaren ska tillhöra.
           </Step>
+          <Step n={2} title='Klicka "Lägg till"'>
+            Spelaren dyker upp i listan direkt, kopplad till rätt lag.
+          </Step>
+          <Tip>
+            Saknas undergruppen du vill välja? Skapa den först under Administration → Organisation (se avsnitt 2).
+          </Tip>
 
           <H3>Spelarkortet (delbart)</H3>
           <P>
@@ -276,9 +341,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 6. Utvärderingar */}
+        {/* 7. Utvärderingar */}
         <section id="utvarderingar">
-          <H2>6. Utvärderingar</H2>
+          <H2>7. Utvärderingar</H2>
           <P>
             Appen bygger på SvFF:s färdighetsmodell med fem kategorier. Varje spelare utvärderas på en skala 1–4 per färdighet.
           </P>
@@ -313,9 +378,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 7. Statistik */}
+        {/* 8. Statistik */}
         <section id="statistik">
-          <H2>7. Statistik</H2>
+          <H2>8. Statistik</H2>
           <P>
             Statistiksidan visar en säsongssammanställning för hela truppen. Du ser varje spelares totala antal matcher, mål, passningar, skott och mer. Sortera på valfri kolumn.
           </P>
@@ -324,9 +389,9 @@ export default function GuidePage() {
           </P>
         </section>
 
-        {/* 8. Spelarintervjuer */}
+        {/* 9. Spelarintervjuer */}
         <section id="intervjuer">
-          <H2>8. Spelarintervjuer (AI)</H2>
+          <H2>9. Spelarintervjuer (AI)</H2>
           <P>
             AI-intervjuerna låter spelaren prata med en AI-coach inför spelarsamtalet eller kvartalsutvärderingen. Svaren sparas och är tillgängliga för dig under Intervjuer.
           </P>
@@ -353,9 +418,9 @@ export default function GuidePage() {
           </Tip>
         </section>
 
-        {/* 9. Spelarprofiler */}
+        {/* 10. Spelarprofiler */}
         <section id="spelarprofiler">
-          <H2>9. Spelarprofiler och PIN-koder</H2>
+          <H2>10. Spelarprofiler och PIN-koder</H2>
           <P>
             Varje spelare kan logga in i appen med en personlig 6-siffrig PIN-kod. De ser då sin egen profil med senaste utvärdering, matchantal och kan starta en intervju.
           </P>
@@ -373,9 +438,9 @@ export default function GuidePage() {
           </Tip>
         </section>
 
-        {/* 10. Inställningar */}
+        {/* 11. Inställningar */}
         <section id="installningar">
-          <H2>10. Inställningar</H2>
+          <H2>11. Inställningar</H2>
           <P>
             Nås via kugghjulet i menyn. Alla inställningar är klubbspecifika och gäller för alla inloggade tränare.
           </P>
@@ -395,24 +460,58 @@ export default function GuidePage() {
             Primärfärgen används i gränssnittet. Utespelartröjan och målvaktströjan visas som avatarer på alla spelarsidor. Välj rätt färger så det matchar lagets riktiga tröjor.
           </P>
 
-          <H3>Inloggningskoder</H3>
+          <H3>Tränarinloggning med Google (snabbtillägg)</H3>
           <P>
-            Tränarkoden kan ändras här och ger full åtkomst som reservmetod för inloggning.
-          </P>
-
-          <H3>Tränarinloggning med Google</H3>
-          <P>
-            Lägg till Gmail-adresser för varje tränare som ska kunna logga in med Google. Adressen måste stämma exakt med det Google-konto tränaren använder. Klicka <strong>Ta bort</strong> för att återkalla åtkomst.
+            Lägg till en Gmail-adress här för att snabbt ge någon tränaråtkomst med Google – ett enklare
+            alternativ till Administration → Användare när du inte behöver välja roll eller begränsningar
+            direkt. Adressen måste stämma exakt med Google-kontot personen loggar in med. Klicka <strong>Ta bort</strong> för att återkalla åtkomst.
           </P>
 
           <H3>Bjud in tränare</H3>
           <P>
-            Generera en engångslänk giltig i 48 timmar. Skicka länken till en ny tränare – de klickar och får direkt tränaråtkomst utan att behöva koden. Länken slutar fungera när den använts.
+            Generera en engångslänk giltig i 48 timmar. Skicka länken till en ny tränare – de klickar och får direkt tränaråtkomst utan att behöva läggas till manuellt. Länken slutar fungera när den använts.
           </P>
 
           <H3>Spelarprofiler (PIN-koder)</H3>
           <P>
-            Se och generera PIN-koder för alla aktiva spelare. Beskrivs utförligare under avsnitt 9 ovan.
+            Se och generera PIN-koder för alla aktiva spelare. Beskrivs utförligare under avsnitt 10 ovan.
+          </P>
+        </section>
+
+        {/* 12. För föräldrar och rapportörer */}
+        <section id="foraldrar">
+          <H2>12. För föräldrar och rapportörer</H2>
+          <P>
+            Föräldrar behöver inget konto för att rapportera en match, men kan logga in för att följa
+            sitt barns utveckling.
+          </P>
+
+          <H3>Rapportera en match utan inloggning</H3>
+          <P>
+            Tränaren delar en matchlänk (se avsnitt 4). Den som öppnar länken hamnar direkt i
+            liverapporteringen och kan registrera mål, byten och händelser under matchen – helt utan
+            konto eller PIN.
+          </P>
+
+          <H3>Följa allt i realtid (Livescore)</H3>
+          <P>
+            <strong>/live</strong> är den publika startsidan för livescore – ingen inloggning behövs.
+            Alla pågående och nyligen spelade matcher listas där.
+          </P>
+
+          <H3>Spelarens egen profil (PIN-kod)</H3>
+          <P>
+            Spelaren loggar in på <strong>/spelare/login</strong> med PIN-koden tränaren delat (se
+            avsnitt 10) och ser sin profil under <strong>/min-profil</strong>: senaste utvärdering,
+            matchantal och möjlighet att starta en AI-intervju.
+          </P>
+
+          <H3>Förälder med Google-konto</H3>
+          <P>
+            Vill en förälder följa flera barn, eller logga in med sitt eget Google-konto i stället för
+            barnets PIN-kod, kopplar en admin förälderns e-post till rätt spelare under Administration →
+            Användare → Kopplade spelare (rollen Förälder). Föräldern loggar då in via <strong>/login</strong>{" "}
+            och hamnar på <strong>/mina-spelare</strong> med en lista över sina barn.
           </P>
         </section>
 

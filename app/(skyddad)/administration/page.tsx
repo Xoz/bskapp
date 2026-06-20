@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   PERMISSIONS,
   PERMISSION_LABELS,
@@ -12,6 +13,7 @@ import {
   getOrganizationGroups,
   getOrganizationUsers,
   getPlayerGroupMemberships,
+  type OrganizationGroup,
 } from "@/lib/organization";
 import {
   createGroup,
@@ -23,10 +25,12 @@ import {
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Administration" };
 
+type Tab = "anvandare" | "organisation";
+
 export default async function AdministrationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ anvandare?: string; sparad?: string; fel?: string }>;
+  searchParams: Promise<{ anvandare?: string; sparad?: string; fel?: string; yta?: string }>;
 }) {
   const [canManageUsers, canManageGroups, currentUser] = await Promise.all([
     hasPermission("manage_users"),
@@ -48,8 +52,14 @@ export default async function AdministrationPage({
   const selected = users.find((user) => user.id === selectedId);
   const canAssignAdmin = currentUser.roles.includes("admin");
 
+  // Flikar – bara visa växlaren om personen har båda behörigheterna.
+  const tab: Tab = params.yta === "organisation" ? "organisation" : "anvandare";
+  const showTabs = canManageUsers && canManageGroups;
+  const showUsers = canManageUsers && (!showTabs || tab === "anvandare");
+  const showGroups = canManageGroups && (!showTabs || tab === "organisation");
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <header>
         <p className="eyebrow">Åtkomst och organisation</p>
         <h1 className="text-[1.7rem] font-bold mt-0.5">Administration</h1>
@@ -58,14 +68,25 @@ export default async function AdministrationPage({
         </p>
       </header>
 
+      {showTabs && (
+        <nav className="flex gap-1 p-1 w-fit rounded-xl" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+          <TabLink href="/administration?yta=anvandare" active={tab === "anvandare"}>Användare</TabLink>
+          <TabLink href="/administration?yta=organisation" active={tab === "organisation"}>Organisation</TabLink>
+        </nav>
+      )}
+
       {params.sparad && <Notice text="Ändringarna är sparade." />}
       {params.fel === "egen-admin" && <Notice text="Du kan inte ta bort din egen adminbehörighet." warning />}
 
-      {canManageUsers && (
+      {showUsers && (
         <section className="space-y-5">
           <div>
             <p className="eyebrow">Användare</p>
             <h2 className="text-xl font-semibold mt-1">Roller och begränsningar</h2>
+            <p className="text-sm mt-1 max-w-2xl" style={{ color: "var(--ink-soft)" }}>
+              Lägg till en person med Google-adressen de loggar in med. Rollen styr vad de ser som
+              standard – lägg på funktions- eller lagbegränsningar bara om någon ska se mindre än sin roll.
+            </p>
           </div>
 
           <form action={createOrganizationUser} className="card p-5 grid md:grid-cols-[1fr_1fr_11rem_auto] gap-3 items-end">
@@ -84,7 +105,7 @@ export default async function AdministrationPage({
               {users.map((user) => (
                 <a
                   key={user.id}
-                  href={`/administration?anvandare=${user.id}`}
+                  href={`/administration?anvandare=${user.id}${tab === "organisation" ? "&yta=organisation" : ""}`}
                   className="block rounded-xl px-3 py-2.5 text-sm"
                   style={{ background: user.id === selectedId ? "var(--primary-soft)" : "transparent", color: user.active ? "var(--ink)" : "var(--ink-faint)" }}
                 >
@@ -148,37 +169,129 @@ export default async function AdministrationPage({
         </section>
       )}
 
-      {canManageGroups && (
-        <section className="space-y-5">
-          <div><p className="eyebrow">Organisation</p><h2 className="text-xl font-semibold mt-1">Huvudtrupp, undergrupper och matchgrupper</h2></div>
-          <form action={createGroup} className="card p-5 grid md:grid-cols-[1fr_11rem_1fr_1fr_auto] gap-3 items-end">
-            <Field label="Namn"><input name="name" className="input" required placeholder="Cup – Lag Gul" /></Field>
-            <Field label="Typ"><select name="group_type" className="input" defaultValue="subgroup"><option value="squad">Huvudtrupp</option><option value="subgroup">Undergrupp</option><option value="matchgroup">Matchgrupp</option></select></Field>
-            <Field label="Tillhör"><select name="parent_id" className="input"><option value="">Ingen</option>{groups.filter((group) => group.group_type !== "matchgroup").map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
-            <Field label="Cup (valfritt)"><input name="cup_name" className="input" /></Field>
-            <button className="btn-primary" type="submit">Skapa</button>
-          </form>
-
-          <div className="grid xl:grid-cols-2 gap-5">
-            {groups.map((group) => (
-              <form key={group.id} action={saveGroup} className="card p-5 space-y-4">
-                <input type="hidden" name="group_id" value={group.id} />
-                <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-                  <Field label={groupTypeLabel(group.group_type)}><input name="name" className="input" defaultValue={group.name} /></Field>
-                  <label className="flex items-center gap-2 text-sm pb-3"><input type="checkbox" name="active" value="1" defaultChecked={!!group.active} /> Aktiv</label>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Field label="Tillhör"><select name="parent_id" className="input" defaultValue={group.parent_id ?? ""}><option value="">Ingen</option>{groups.filter((candidate) => candidate.id !== group.id && candidate.group_type !== "matchgroup").map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></Field>
-                  <Field label="Cup"><input name="cup_name" className="input" defaultValue={group.cup_name} disabled={group.group_type !== "matchgroup"} /></Field>
-                </div>
-                <details><summary className="text-sm cursor-pointer">Spelare ({group.member_count})</summary><div className="grid sm:grid-cols-2 gap-2 mt-3">{players.map((player) => <Check key={player.id} name="player_id" value={String(player.id)} label={player.name} checked={memberships.some((membership) => membership.group_id === group.id && membership.player_id === player.id)} />)}</div></details>
-                <button className="btn-secondary" type="submit">Spara grupp</button>
-              </form>
-            ))}
-          </div>
-        </section>
+      {showGroups && (
+        <GroupsSection groups={groups} players={players} memberships={memberships} />
       )}
     </div>
+  );
+}
+
+function GroupsSection({
+  groups,
+  players,
+  memberships,
+}: {
+  groups: OrganizationGroup[];
+  players: { id: number; name: string }[];
+  memberships: { player_id: number; group_id: number; is_primary: number }[];
+}) {
+  const squads = groups.filter((g) => g.group_type === "squad");
+  const subgroups = groups.filter((g) => g.group_type === "subgroup");
+  const matchgroups = groups.filter((g) => g.group_type === "matchgroup");
+  // Undergrupper/matchgrupper som pekar på ett föräldraobjekt utanför listan (t.ex. inaktiverat) – tappa inte bort dem.
+  const orphanSubgroups = subgroups.filter((g) => !squads.some((s) => s.id === g.parent_id));
+  const orphanMatchgroups = matchgroups.filter((g) => !subgroups.some((s) => s.id === g.parent_id) && !squads.some((s) => s.id === g.parent_id));
+
+  return (
+    <section className="space-y-5">
+      <div>
+        <p className="eyebrow">Organisation</p>
+        <h2 className="text-xl font-semibold mt-1">Huvudtrupp, undergrupper och matchgrupper</h2>
+      </div>
+
+      <div className="card p-5 space-y-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+        <p><strong style={{ color: "var(--ink)" }}>Huvudtrupp</strong> – hela laget, t.ex. BSK F2014. Alla spelare hör hit.</p>
+        <p><strong style={{ color: "var(--ink)" }}>Undergrupp</strong> – ett permanent lag inom truppen, t.ex. Gul eller Grön. Skapa en här och bocka i vilka spelare som hör dit.</p>
+        <p><strong style={{ color: "var(--ink)" }}>Matchgrupp</strong> – skapas automatiskt när en cup importeras, för att hålla isär flera egna lag i samma turnering. Du behöver sällan röra dessa själv.</p>
+      </div>
+
+      <form action={createGroup} className="card p-5 grid md:grid-cols-[1fr_11rem_1fr_1fr_auto] gap-3 items-end">
+        <Field label="Namn"><input name="name" className="input" required placeholder="t.ex. Grön" /></Field>
+        <Field label="Typ"><select name="group_type" className="input" defaultValue="subgroup"><option value="squad">Huvudtrupp</option><option value="subgroup">Undergrupp</option><option value="matchgroup">Matchgrupp</option></select></Field>
+        <Field label="Tillhör"><select name="parent_id" className="input"><option value="">Ingen</option>{groups.filter((group) => group.group_type !== "matchgroup").map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
+        <Field label="Cup (valfritt)"><input name="cup_name" className="input" /></Field>
+        <button className="btn-primary" type="submit">Skapa</button>
+      </form>
+
+      <div className="space-y-5">
+        {squads.map((squad) => (
+          <div key={squad.id} className="space-y-3">
+            <GroupCard group={squad} players={players} memberships={memberships} groups={groups} />
+            <div className="pl-4 md:pl-6 space-y-3" style={{ borderLeft: "2px solid var(--line)" }}>
+              {subgroups.filter((sg) => sg.parent_id === squad.id).map((subgroup) => (
+                <div key={subgroup.id} className="space-y-3">
+                  <GroupCard group={subgroup} players={players} memberships={memberships} groups={groups} />
+                  <MatchgroupList matchgroups={matchgroups.filter((mg) => mg.parent_id === subgroup.id)} players={players} memberships={memberships} groups={groups} indent />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {orphanSubgroups.length > 0 && (
+          <div className="grid xl:grid-cols-2 gap-5">
+            {orphanSubgroups.map((g) => <GroupCard key={g.id} group={g} players={players} memberships={memberships} groups={groups} />)}
+          </div>
+        )}
+        {orphanMatchgroups.length > 0 && (
+          <MatchgroupList matchgroups={orphanMatchgroups} players={players} memberships={memberships} groups={groups} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MatchgroupList({
+  matchgroups,
+  players,
+  memberships,
+  groups,
+  indent = false,
+}: {
+  matchgroups: OrganizationGroup[];
+  players: { id: number; name: string }[];
+  memberships: { player_id: number; group_id: number; is_primary: number }[];
+  groups: OrganizationGroup[];
+  indent?: boolean;
+}) {
+  if (matchgroups.length === 0) return null;
+  return (
+    <details className={indent ? "pl-4 md:pl-6" : undefined}>
+      <summary className="text-sm cursor-pointer" style={{ color: "var(--ink-faint)" }}>
+        Matchgrupper ({matchgroups.length}) – auto-skapade vid cup-import
+      </summary>
+      <div className="grid xl:grid-cols-2 gap-5 mt-3">
+        {matchgroups.map((g) => <GroupCard key={g.id} group={g} players={players} memberships={memberships} groups={groups} />)}
+      </div>
+    </details>
+  );
+}
+
+function GroupCard({
+  group,
+  players,
+  memberships,
+  groups,
+}: {
+  group: OrganizationGroup;
+  players: { id: number; name: string }[];
+  memberships: { player_id: number; group_id: number; is_primary: number }[];
+  groups: OrganizationGroup[];
+}) {
+  return (
+    <form action={saveGroup} className="card p-5 space-y-4">
+      <input type="hidden" name="group_id" value={group.id} />
+      <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+        <Field label={groupTypeLabel(group.group_type)}><input name="name" className="input" defaultValue={group.name} /></Field>
+        <label className="flex items-center gap-2 text-sm pb-3"><input type="checkbox" name="active" value="1" defaultChecked={!!group.active} /> Aktiv</label>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Tillhör"><select name="parent_id" className="input" defaultValue={group.parent_id ?? ""}><option value="">Ingen</option>{groups.filter((candidate) => candidate.id !== group.id && candidate.group_type !== "matchgroup").map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></Field>
+        <Field label="Cup"><input name="cup_name" className="input" defaultValue={group.cup_name} disabled={group.group_type !== "matchgroup"} /></Field>
+      </div>
+      <details><summary className="text-sm cursor-pointer">Spelare ({group.member_count})</summary><div className="grid sm:grid-cols-2 gap-2 mt-3">{players.map((player) => <Check key={player.id} name="player_id" value={String(player.id)} label={player.name} checked={memberships.some((membership) => membership.group_id === group.id && membership.player_id === player.id)} />)}</div></details>
+      <button className="btn-secondary" type="submit">Spara grupp</button>
+    </form>
   );
 }
 
@@ -200,4 +313,16 @@ function Block({ title, hint, children }: { title: string; hint: string; childre
 
 function Check({ name, value, label, checked, disabled = false }: { name: string; value: string; label: string; checked: boolean; disabled?: boolean }) {
   return <label className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid var(--line)" }}><input type="checkbox" name={name} value={value} defaultChecked={checked} disabled={disabled} />{label}</label>;
+}
+
+function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+      style={{ background: active ? "var(--primary)" : "transparent", color: active ? "var(--primary-deep)" : "var(--ink-soft)" }}
+    >
+      {children}
+    </Link>
+  );
 }
