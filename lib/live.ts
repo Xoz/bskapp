@@ -59,7 +59,7 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
   }
 
   const players = await all<LiveState["players"][number]>(
-    "SELECT id, name, jersey_number FROM players WHERE active = 1 ORDER BY name COLLATE NOCASE"
+    "SELECT id, name, jersey_number FROM players WHERE active = 1 ORDER BY lower(name)"
   );
 
   const mpRows = await all<Record<string, number>>(
@@ -201,7 +201,7 @@ export async function claimStats(matchId: number, name: string, stats: string[])
   // Skiftlägesokänsligt: återanvänd en redan registrerad rapportör med samma
   // namn oavsett stora/små bokstäver ("Itzas Pappa" == "itzas pappa").
   const existing = await get<{ name: string }>(
-    "SELECT name FROM match_reporters WHERE match_id = ? AND name = ? COLLATE NOCASE",
+    "SELECT name FROM match_reporters WHERE match_id = ? AND lower(name) = lower(?)",
     [matchId, trimmed]
   );
   const finalName = existing?.name ?? trimmed;

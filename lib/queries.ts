@@ -179,7 +179,7 @@ export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
      JOIN players p ON p.id = mp.player_id
      GROUP BY m.cup_name, p.id
      HAVING goals > 0 OR assists > 0
-     ORDER BY m.cup_name, goals DESC, assists DESC, p.name COLLATE NOCASE`
+     ORDER BY m.cup_name, goals DESC, assists DESC, lower(p.name)`
   );
   const byCup = new Map<string, CupScorerRow[]>();
   for (const r of rows) {
@@ -219,7 +219,7 @@ export interface MatchPlayerRow {
 }
 
 export async function getPlayers(): Promise<Player[]> {
-  return all<Player>("SELECT * FROM players WHERE active = 1 ORDER BY name COLLATE NOCASE");
+  return all<Player>("SELECT * FROM players WHERE active = 1 ORDER BY lower(name)");
 }
 
 export async function getPlayer(id: number): Promise<Player | undefined> {
@@ -377,7 +377,7 @@ export async function getMatchScorers(matchId: number): Promise<MatchScorerRow[]
     `SELECT p.id AS player_id, p.name, p.jersey_number, mp.goals, mp.assists
      FROM match_players mp JOIN players p ON p.id = mp.player_id
      WHERE mp.match_id = ? AND (mp.goals > 0 OR mp.assists > 0)
-     ORDER BY mp.goals DESC, mp.assists DESC, p.name COLLATE NOCASE`,
+     ORDER BY mp.goals DESC, mp.assists DESC, lower(p.name)`,
     [matchId]
   );
 }
@@ -402,7 +402,7 @@ export async function getFormOverview(): Promise<FormOverviewRow[]> {
             (SELECT COUNT(*) FROM match_ratings r WHERE r.player_id = p.id) AS rated_count
      FROM players p
      WHERE p.active = 1 AND p.form_rating IS NOT NULL
-     ORDER BY p.form_rating DESC, p.name COLLATE NOCASE`
+     ORDER BY p.form_rating DESC, lower(p.name)`
   );
 }
 
@@ -471,7 +471,7 @@ export async function getSeasonStats(): Promise<SeasonStatRow[]> {
        ON mp.player_id = p.id
      WHERE p.active = 1
      GROUP BY p.id
-     ORDER BY p.name COLLATE NOCASE`,
+     ORDER BY lower(p.name)`,
     [todayStr()]
   );
 }
@@ -543,7 +543,7 @@ export async function getPlayersLevelInfo(): Promise<PlayerLevelRow[]> {
                )) AS eval_avg
      FROM players p
      WHERE p.active = 1
-     ORDER BY p.name COLLATE NOCASE`
+     ORDER BY lower(p.name)`
   );
 }
 
