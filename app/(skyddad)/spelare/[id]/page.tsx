@@ -8,6 +8,7 @@ import {
   getPlayerDevelopment,
   getPlayerMatchStats,
   getPlayerFormTrend,
+  getPlayerInterviews,
   shareLinkActive,
   getLatestSelfEval,
   SHARE_TTL_MS,
@@ -20,6 +21,7 @@ import { ratingBand, EXPECTATION_STEPS, levelSuggestion } from "@/lib/rating";
 import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import FormTrendChart from "@/components/FormTrendChart";
+import IntervjuCard from "@/components/IntervjuCard";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
@@ -52,12 +54,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
   const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
 
-  const [evaluations, development, matchStats, selfEval, formTrend] = await Promise.all([
+  const [evaluations, development, matchStats, selfEval, formTrend, interviews] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
     getLatestSelfEval(player.id, shareSinceIso),
     getPlayerFormTrend(player.id),
+    getPlayerInterviews(player.name),
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
@@ -447,6 +450,28 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Samtal – spelarens egna AI-intervjuer (matchas på namn). */}
+      {interviews.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="eyebrow">Samtal</p>
+              <h2 className="text-[1.05rem] font-semibold mt-0.5">
+                {interviews.length} {interviews.length === 1 ? "samtal" : "samtal"} med {player.name.split(" ")[0]}
+              </h2>
+            </div>
+            <Link
+              href="/spelare/intervjuer"
+              className="text-xs font-semibold"
+              style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+            >
+              Alla samtal
+            </Link>
+          </div>
+          {await Promise.all(interviews.map(async (iv) => <IntervjuCard key={iv.id} intervju={iv} showName={false} />))}
         </div>
       )}
 

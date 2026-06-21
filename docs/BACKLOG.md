@@ -12,8 +12,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   det kräver särskild information. Frågan: vad behöver vi göra för att vara
   GDPR-kompatibla, och vad är minsta rimliga steg? *(Spec saknas – behöver skrivas.)*
 
-- **Matchbetyg – Fas 2** (integrationer): nivåförslag, väg in form i AI-förslag,
-  form-topplista i Översikt, bästa form-kort i cup. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
+- **Matchbetyg – Fas 2** (integrationer): kvar är **form-topplista i Översikt** och
+  **bästa form-kort i cup**. Klart sedan tidigare: nivåförslag från matchform och
+  invävning av form i AI-förslaget. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
 
-- **Staging** – koden klar, 3 manuella engångssteg kvar (Turso-DB, Vercel-env,
-  Google-redirect). Se [STAGING.md](STAGING.md).
+- **Staging** – koden klar, manuella engångssteg kvar (Vercel-env, Google-redirect).
+  OBS: DB:n är migrerad från Turso till **Supabase/Postgres** – stegen i STAGING.md
+  behöver uppdateras till en Supabase-stagingdatabas. Se [STAGING.md](STAGING.md).

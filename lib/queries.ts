@@ -814,6 +814,19 @@ export async function getIntervjuer(): Promise<PlayerInterview[]> {
   );
 }
 
+// Samtal/intervjuer för en enskild spelare. Intervjuerna lagrar fritt `player_name`
+// (spelaren skriver själv) så vi matchar på fullt namn eller förnamn, ASCII-okänsligt.
+export async function getPlayerInterviews(playerName: string): Promise<PlayerInterview[]> {
+  const clean = playerName.trim();
+  return all<PlayerInterview>(
+    `SELECT id, player_name, position, interview_type, summary, scores, messages, created_at
+       FROM player_interviews
+      WHERE LOWER(player_name) = LOWER(?) OR LOWER(?) LIKE LOWER(player_name) || ' %'
+      ORDER BY created_at DESC`,
+    [clean, clean]
+  );
+}
+
 // Kategorisnitt från tränarens senaste utvärdering – för jämförelse med kvartalsutvärdering
 export async function getCoachCategoryScores(
   playerId: number

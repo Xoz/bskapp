@@ -27,6 +27,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 | **Cup-import via iCal-länk** | `app/(skyddad)/matcher/importera-cup/page.tsx`, `lib/actions.ts` (previewCupImport/importCupMatches), `lib/ical.ts` (calendarName) |
 | **Spelarkort (delningslänk)** | `app/spelarkort/[token]/`, `lib/queries.ts` (getPlayerByShareToken/share*), `lib/actions.ts` (generateShareLink) |
 | **AI: spelarkortstext, förslag, intervju** | `lib/ai.ts`, `app/api/ai/`, `components/InterviewChat.tsx`, `components/AISuggestButton.tsx` |
+| **Spelarsamtal (intervjuer) – tränarvy** | `app/(skyddad)/spelare/intervjuer/page.tsx` (samlad lista, flik under Spelare), `components/IntervjuCard.tsx` (delat kort), `components/SpelareTabs.tsx` (flikrad Spelare\|Samtal), `lib/queries.ts` (getIntervjuer/getPlayerInterviews), monteras även på `app/(skyddad)/spelare/[id]/page.tsx` + i Att-göra på `oversikt`. Gammal `/intervjuer` → redirect i `next.config.ts` |
 | **Inloggning / roller / inbjudan** | `lib/auth.ts`, `lib/organization.ts`, `lib/actions.ts` (playerLogin/acceptInvite/setViewAs + administration), `app/login/`, `app/invite/`, `app/(skyddad)/administration/`, `components/RoleSwitcher.tsx` |
 | **Lag, undergrupper och matchgrupper** | `lib/organization.ts`, `lib/db.ts`, `lib/actions.ts` (createGroup/saveGroup), `app/(skyddad)/administration/`, `docs/SPEC-roller-och-grupper.md` |
 | **Inställningar / white label** | `lib/actions.ts` (updateSettings), `lib/db.ts` (getSetting/setSetting), `components/Settings*.tsx`, `app/(skyddad)/installningar/` |
@@ -39,7 +40,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 ## lib/ — exports per fil
 
 - **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch (inkl. location), addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, saveCupSquad (cupens uttagna trupp), setMatchLevel, saveSquad/saveLineup, saveMatchRatings, setPlayerLevel (bekräfta nivåförslag från form), deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches (fyller start_time + location från kalender), previewCupImport/importCupMatches (cup-import via iCal), updateSettings, resetColors (återställ klubb-/tröjfärger till `DEFAULT_COLORS`), generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
-- **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getGroupMemberIds (gruppens spelar-id, t.ex. cupens uttagna trupp), getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
+- **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getGroupMemberIds (gruppens spelar-id, t.ex. cupens uttagna trupp), getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getIntervjuer/getPlayerInterviews (spelarsamtal, alla resp. per spelare), getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
@@ -68,7 +69,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 ## Routes (app/)
 
-Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera), statistik, intervjuer, installningar, administration och mina-spelare.
+Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, intervjuer), statistik, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
 API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google}`, `app/api/live/[id]`.
 

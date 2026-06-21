@@ -8,7 +8,7 @@ import {
   IconPlayers,
   IconPitch,
   IconChart,
-  IconChat,
+  IconBook,
 } from "@/components/Icons";
 
 const STAFF_ITEMS: { href: string; label: string; Icon: typeof IconOverview; permission?: Permission }[] = [
@@ -16,7 +16,7 @@ const STAFF_ITEMS: { href: string; label: string; Icon: typeof IconOverview; per
   { href: "/spelare", label: "Spelare", Icon: IconPlayers, permission: "view_players" },
   { href: "/matcher", label: "Matcher", Icon: IconPitch, permission: "view_matches" },
   { href: "/statistik", label: "Statistik", Icon: IconChart, permission: "view_statistics" },
-  { href: "/intervjuer", label: "Intervjuer", Icon: IconChat, permission: "view_interviews" },
+  { href: "/guide", label: "Guide", Icon: IconBook },
 ];
 
 export default function BottomNav({ permissions, staff = true }: { permissions: Permission[]; staff?: boolean }) {

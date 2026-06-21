@@ -1,7 +1,4 @@
-import { getIntervjuer, getCoachCategoryScores, findPlayerForIntervju, type PlayerInterview } from "@/lib/queries";
-
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Spelarintervjuer" };
+import { getCoachCategoryScores, findPlayerForIntervju, type PlayerInterview } from "@/lib/queries";
 
 const CAT_LABELS: Record<string, string> = {
   anfall_boll: "Med boll",
@@ -36,11 +33,7 @@ function ScoreBar({ value }: { value: number }) {
   );
 }
 
-async function ScoreComparison({
-  intervju,
-}: {
-  intervju: PlayerInterview;
-}) {
+async function ScoreComparison({ intervju }: { intervju: PlayerInterview }) {
   let playerScores: Record<string, number> = {};
   try { playerScores = JSON.parse(intervju.scores); } catch { /* tom */ }
   if (Object.keys(playerScores).length === 0) return null;
@@ -114,20 +107,25 @@ function Transcript({ messages }: { messages: string }) {
   );
 }
 
-async function IntervjuCard({ intervju }: { intervju: PlayerInterview }) {
+// Delat intervjukort – används både i samlade listan (/spelare/intervjuer) och
+// på den enskilda spelarprofilen. När `showName` är false döljs namnchippet
+// (på profilen vet man redan vems samtal det är).
+export default async function IntervjuCard({ intervju, showName = true }: { intervju: PlayerInterview; showName?: boolean }) {
   const isKvartal = intervju.interview_type === "kvartal";
   return (
     <details className="rounded-2xl overflow-hidden" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
       <summary className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none" style={{ listStyle: "none" }}>
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
-        >
-          {intervju.player_name[0]?.toUpperCase()}
-        </div>
+        {showName && (
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+            style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+          >
+            {intervju.player_name[0]?.toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>{intervju.player_name}</p>
+            {showName && <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>{intervju.player_name}</p>}
             <span
               className="text-[0.55rem] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wide"
               style={{
@@ -166,38 +164,5 @@ async function IntervjuCard({ intervju }: { intervju: PlayerInterview }) {
         </details>
       </div>
     </details>
-  );
-}
-
-export default async function IntervjuerPage() {
-  const intervjuer = await getIntervjuer();
-
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
-          Spelarintervjuer
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-faint)" }}>
-          {intervjuer.length === 0
-            ? "Inga intervjuer än."
-            : `${intervjuer.length} intervju${intervjuer.length === 1 ? "" : "er"}`}
-        </p>
-      </div>
-
-      {intervjuer.length === 0 ? (
-        <div className="rounded-2xl flex flex-col items-center gap-3 py-14 text-center" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
-          <span className="text-4xl">💬</span>
-          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
-            Spelarna når intervjun via landningssidan eller direkt på{" "}
-            <span style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}>/intervju</span>
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {await Promise.all(intervjuer.map(async (iv) => <IntervjuCard key={iv.id} intervju={iv} />))}
-        </div>
-      )}
-    </div>
   );
 }

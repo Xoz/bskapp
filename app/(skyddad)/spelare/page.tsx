@@ -5,6 +5,7 @@ import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/quer
 import { getOrganizationGroups } from "@/lib/organization";
 import { addPlayer } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
+import SpelareTabs from "@/components/SpelareTabs";
 import { level as levelInfo } from "@/lib/levels";
 import { daysSinceLabel } from "@/lib/dates";
 
@@ -14,13 +15,14 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const [players, latestEvals, stats, canManagePlayers, canEvaluate, canViewPrivate, allGroups, user] = await Promise.all([
+  const [players, latestEvals, stats, canManagePlayers, canEvaluate, canViewPrivate, canViewInterviews, allGroups, user] = await Promise.all([
     getPlayers(),
     getLatestEvaluationDates(),
     getSeasonStats(),
     hasPermission("manage_players"),
     hasPermission("manage_evaluations"),
     hasPermission("view_private_player_data"),
+    hasPermission("view_interviews"),
     getOrganizationGroups(),
     getCurrentUser(),
   ]);
@@ -28,6 +30,7 @@ export default async function PlayersPage() {
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   return (
     <div className="space-y-6">
+      <SpelareTabs canViewInterviews={canViewInterviews} />
       <div>
         <p className="eyebrow">Truppen</p>
         <h1 className="text-[1.7rem] font-bold mt-0.5">Spelare</h1>

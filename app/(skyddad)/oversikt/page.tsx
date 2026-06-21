@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser, getRole } from "@/lib/auth";
+import { getCurrentUser, getRole, hasPermission } from "@/lib/auth";
 import { getAllSettings, getRecentActivity, type ActivityEntry } from "@/lib/db";
 import {
   getPlayers,
@@ -10,6 +10,7 @@ import {
   getMatchesWithSquad,
   getMatchScorers,
   getFormOverview,
+  getIntervjuer,
   cupRoundLabel,
   matchTitle,
   mootMatchIds,
@@ -25,6 +26,7 @@ import {
   IconArrowRight,
   IconBall,
   IconWhistle,
+  IconChat,
 } from "@/components/Icons";
 
 function formatActivityTime(ts: string): string {
@@ -42,7 +44,7 @@ export default async function Dashboard() {
   const user = await getCurrentUser();
 
   // Oberoende queries körs parallellt – annars staplas latensen mot Turso.
-  const [settings, players, matches, latestEvals, activity, formRows] =
+  const [settings, players, matches, latestEvals, activity, formRows, canViewInterviews, allInterviews] =
     await Promise.all([
       getAllSettings(),
       getPlayers(),
@@ -50,6 +52,8 @@ export default async function Dashboard() {
       getLatestEvaluationDates(),
       user?.groupIds.length ? Promise.resolve([] as ActivityEntry[]) : getRecentActivity(6),
       getFormOverview(),
+      hasPermission("view_interviews"),
+      getIntervjuer(),
     ]);
 
   const todayStr = swedishToday();
@@ -127,6 +131,12 @@ export default async function Dashboard() {
     (m) => m.date < todayStr && m.our_score == null && !moot.has(m.id)
   );
 
+  // Nya spelarsamtal senaste två veckorna – något tränaren bör läsa.
+  const interviewCutoff = swedishDateOffset(-14);
+  const recentInterviews = canViewInterviews
+    ? allInterviews.filter((iv) => iv.created_at.slice(0, 10) >= interviewCutoff)
+    : [];
+
   const todos: Todo[] = [
     ...upcomingMatches
       .filter((m) => !matchesWithSquad.has(m.id))
@@ -150,6 +160,13 @@ export default async function Dashboard() {
       title: `Utvärdera ${p.name}`,
       sub: latestEvals[p.id] ? `Senast ${latestEvals[p.id]}` : "Aldrig utvärderad",
       player: { name: p.name, jersey: p.jersey_number },
+    })),
+    ...recentInterviews.map((iv) => ({
+      key: `interview-${iv.id}`,
+      href: "/spelare/intervjuer",
+      title: `Läs samtal med ${iv.player_name}`,
+      sub: iv.interview_type === "kvartal" ? "Kvartalssamtal" : "Nytt spelarsamtal",
+      icon: <IconChat width={16} height={16} />,
     })),
   ];
 
