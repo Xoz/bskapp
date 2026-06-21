@@ -962,9 +962,16 @@ export async function saveSquad(formData: FormData) {
 
   let targetIds = [matchId];
   if (applyCup) {
-    const m = await get<{ cup_name: string; group_id: number | null }>("SELECT cup_name, group_id FROM matches WHERE id = ?", [matchId]);
+    const m = await get<{ cup_name: string; cup_group: string; group_id: number | null }>(
+      "SELECT cup_name, cup_group, group_id FROM matches WHERE id = ?",
+      [matchId]
+    );
     if (m?.cup_name) {
-      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ? AND group_id IS NOT DISTINCT FROM ?", [m.cup_name, m.group_id]);
+      const rows = await all<{ id: number }>(
+        `SELECT id FROM matches
+         WHERE cup_name = ? AND cup_group = ? AND group_id IS NOT DISTINCT FROM ?`,
+        [m.cup_name, m.cup_group, m.group_id]
+      );
       if (rows.length > 0) targetIds = rows.map((r) => r.id);
     }
   }
@@ -1017,9 +1024,16 @@ export async function saveLineup(formData: FormData) {
   // Trupp + formation: gäller matchen, eller hela cupen om valt
   let squadTargets = [matchId];
   if (applyCup) {
-    const m = await get<{ cup_name: string; group_id: number | null }>("SELECT cup_name, group_id FROM matches WHERE id = ?", [matchId]);
+    const m = await get<{ cup_name: string; cup_group: string; group_id: number | null }>(
+      "SELECT cup_name, cup_group, group_id FROM matches WHERE id = ?",
+      [matchId]
+    );
     if (m?.cup_name) {
-      const rows = await all<{ id: number }>("SELECT id FROM matches WHERE cup_name = ? AND group_id IS NOT DISTINCT FROM ?", [m.cup_name, m.group_id]);
+      const rows = await all<{ id: number }>(
+        `SELECT id FROM matches
+         WHERE cup_name = ? AND cup_group = ? AND group_id IS NOT DISTINCT FROM ?`,
+        [m.cup_name, m.cup_group, m.group_id]
+      );
       if (rows.length > 0) squadTargets = rows.map((r) => r.id);
     }
   }
