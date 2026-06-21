@@ -5,6 +5,38 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 
 ## Öppet
 
+### Cupberedskap – kvar från kodgranskning
+
+- **[Hög] Live-status ändrar matchen vid läsning** – `getLiveState()` kan
+  autoavsluta en match utifrån schemalagd avspark när publikvy/API pollar. En
+  försenad match eller lång paus kan därför avslutas felaktigt. Flytta ändringen
+  till en explicit tränaråtgärd eller en separat klockbaserad övergång.
+  (`lib/live.ts`)
+
+- **[Medel] Slutspelslogik blandar cupgrupper** – `mootMatchIds()` grupperar på
+  `cup_name` men inte `cup_group`. En förlust i en grupp kan dölja kommande
+  matcher i en annan grupp med samma cupnamn. (`lib/queries.ts`)
+
+- **[Medel] Cupredigering litar på match-ID från formuläret** – individuella
+  uppdateringar verifierar `id + cup_name`, men inte ursprunglig `cup_group` och
+  användarens gruppscope. Validera varje match server-side. (`lib/actions.ts`)
+
+- **[Medel] Offlinehändelser saknar idempotensnyckel** – om servern sparar men
+  svaret tappas kan samma händelse skickas igen efter återanslutning. Ge varje
+  mutation ett klientgenererat UUID och en unik DB-constraint.
+  (`components/LiveTracker.tsx`, `match_events`)
+
+### Övriga granskningsfynd
+
+- **[Hög] Intervjuer är inte bundna till spelar-ID** – en spelarsession
+  kontrolleras vid API-anropet, men namn och position tas från requesten och
+  intervjuer kopplas senare via fritextnamn. Spara `player_id` och hämta
+  identiteten server-side. (`app/api/ai/intervju/`, `lib/queries.ts`)
+
+- **Testskydd** – lägg till automatiska tester för behörighet, gruppscope,
+  cupgrupper, parallell liverapportering och offline-replay. Projektet saknar
+  även separata test- och lintscript.
+
 - **GDPR** – appen lagrar personuppgifter om **minderåriga** (spelare 11–12 år):
   namn, bedömningar/betyg, AI-intervjusvar, närvaro m.m. Behöver gås igenom:
   rättslig grund/samtycke (vårdnadshavare), lagringstid & gallring, rätt till
