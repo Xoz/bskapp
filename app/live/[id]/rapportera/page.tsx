@@ -47,7 +47,7 @@ export default async function PublicReportPage({ params }: { params: Promise<{ i
     );
   }
 
-  const initial = await getLiveState(matchId);
+  const initial = await getLiveState(matchId, true);
 
   return (
     <main className="flex-1 p-4 sm:p-6 max-w-lg w-full mx-auto" style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}>

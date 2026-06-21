@@ -14,6 +14,7 @@ import {
   undoLastSub,
 } from "@/lib/live";
 import { OPPONENT_GOAL, LiveAction } from "@/lib/liveTypes";
+import { LIVE_COUNT_IDS, STAT_IDS } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +37,36 @@ async function matchFromId(id: string) {
   );
 }
 
-// Att avsluta matchen stänger rapporteringen för alla – förbehålls tränaren.
-const COACH_ONLY_ACTIONS = new Set<LiveAction["type"]>(["finish_match"]);
+const PUBLIC_REPORTER_ACTIONS = new Set<LiveAction["type"]>([
+  "event",
+  "opponent_goal",
+  "undo",
+  "claim_stats",
+]);
+const REPORTER_ID_PATTERN = /^[a-zA-Z0-9_-]{16,80}$/;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const match = await matchFromId(id);
   if (!match) return NextResponse.json({ error: "Matchen finns inte" }, { status: 404 });
-  return NextResponse.json(await getLiveState(match.id));
+
+  // Publik livescore får bara ställning och händelseflöde. Trupp, intern
+  // statistik, byten och rapportörsnamn lämnas enbart till den öppna
+  // rapporteringsvyn eller en behörig tränare.
+  const wantsReportingDetails = req.nextUrl.searchParams.get("reporter") === "1";
+  let includeReportingDetails = false;
+  if (wantsReportingDetails) {
+    const reportOpen =
+      !match.finished &&
+      (!!match.report_open || reportingAutoOpen(match.date, match.start_time));
+    const isCoach =
+      (await hasPermission("report_matches")) && (await canAccessGroup(match.group_id));
+    includeReportingDetails = reportOpen || isCoach;
+  }
+  return NextResponse.json(await getLiveState(match.id, includeReportingDetails));
 }
 
 export async function POST(
@@ -66,22 +86,67 @@ export async function POST(
 
   const isCoach = (await hasPermission("report_matches")) && (await canAccessGroup(match.group_id));
   const reportOpen =
-    !!match.report_open || (!match.finished && reportingAutoOpen(match.date, match.start_time));
-  // finish_match: bara tränare. Övriga skrivningar: tränare eller öppen rapportering.
-  if (!isCoach && (COACH_ONLY_ACTIONS.has(action.type) || !reportOpen)) {
-    return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });
+    !match.finished &&
+    (!!match.report_open || reportingAutoOpen(match.date, match.start_time));
+
+  if (!isCoach) {
+    if (!reportOpen) {
+      return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });
+    }
+    if (!PUBLIC_REPORTER_ACTIONS.has(action.type)) {
+      return NextResponse.json({ error: "Åtgärden kräver tränarbehörighet" }, { status: 403 });
+    }
+    if (
+      (action.type === "event" || action.type === "opponent_goal" || action.type === "undo") &&
+      !REPORTER_ID_PATTERN.test(action.reporterId ?? "")
+    ) {
+      return NextResponse.json({ error: "Rapportör saknas" }, { status: 400 });
+    }
+    if (action.type === "event" || action.type === "opponent_goal") {
+      const rate = await get<{ count: number }>(
+        `SELECT COUNT(*) AS count FROM match_events
+         WHERE match_id = ? AND reporter_key = ? AND created_at > ?`,
+        [match.id, action.reporterId!, Math.floor(Date.now() / 1000) - 10]
+      );
+      if (Number(rate?.count ?? 0) >= 30) {
+        return NextResponse.json({ error: "För många händelser – vänta några sekunder" }, { status: 429 });
+      }
+    }
   }
 
   try {
     switch (action.type) {
-      case "event":
-        await recordEvent(match.id, action.playerId, action.statId, action.reporter ?? null);
+      case "event": {
+        const allowedStats = isCoach ? LIVE_COUNT_IDS : STAT_IDS;
+        if (!Number.isInteger(action.playerId) || !allowedStats.includes(action.statId)) {
+          return NextResponse.json({ error: "Ogiltig statistik" }, { status: 400 });
+        }
+        if (!isCoach) {
+          const state = await getLiveState(match.id, true);
+          if (!state.players.some((player) => player.id === action.playerId)) {
+            return NextResponse.json({ error: "Spelaren ingår inte i matchtruppen" }, { status: 400 });
+          }
+        }
+        await recordEvent(
+          match.id,
+          action.playerId,
+          action.statId,
+          action.reporter ?? null,
+          action.reporterId ?? null
+        );
         break;
+      }
       case "opponent_goal":
-        await recordEvent(match.id, null, OPPONENT_GOAL, action.reporter ?? null);
+        await recordEvent(
+          match.id,
+          null,
+          OPPONENT_GOAL,
+          action.reporter ?? null,
+          action.reporterId ?? null
+        );
         break;
       case "undo":
-        await undoLastEvent(match.id);
+        await undoLastEvent(match.id, isCoach ? null : action.reporterId!);
         break;
       case "clock":
         await setClock(match.id, action.op);
@@ -89,9 +154,17 @@ export async function POST(
       case "toggle_played":
         await togglePlayed(match.id, action.playerId);
         break;
-      case "claim_stats":
-        await claimStats(match.id, action.name, action.stats);
+      case "claim_stats": {
+        const name = typeof action.name === "string" ? action.name.trim() : "";
+        const stats = Array.isArray(action.stats)
+          ? [...new Set(action.stats.filter((stat): stat is string => STAT_IDS.includes(stat)))]
+          : [];
+        if (!name || name.length > 60 || stats.length === 0) {
+          return NextResponse.json({ error: "Ogiltiga rapportörsuppgifter" }, { status: 400 });
+        }
+        await claimStats(match.id, name, stats);
         break;
+      }
       case "sub":
         await recordSub(match.id, action.offId, action.onId);
         break;
@@ -108,5 +181,5 @@ export async function POST(
     return NextResponse.json({ error: "Kunde inte spara" }, { status: 500 });
   }
 
-  return NextResponse.json(await getLiveState(match.id));
+  return NextResponse.json(await getLiveState(match.id, true));
 }

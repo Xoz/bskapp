@@ -53,11 +53,27 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
   const [isOnline, setIsOnline] = useState(true);
   const reclaimedRef = useRef(false);
   const autoFinishedRef = useRef(false);
+  const reporterIdRef = useRef("");
   // Sortering "mest aktiva först" – frusen medan man trycker så knapparna inte hoppar
   const lastTapRef = useRef(0);
   const liveRef = useRef(live);
   liveRef.current = live;
   const [order, setOrder] = useState<number[]>([]);
+
+  useEffect(() => {
+    try {
+      let id = localStorage.getItem("live-reporter-id") ?? "";
+      if (!id) {
+        id = typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `reporter_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem("live-reporter-id", id);
+      }
+      reporterIdRef.current = id;
+    } catch {
+      reporterIdRef.current = `reporter_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+    }
+  }, []);
 
   const computeOrder = useCallback((stat: string, state: LiveState): number[] => {
     const ps = [...state.players];
@@ -199,7 +215,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
     const t = setInterval(async () => {
       if (pending > 0 || document.hidden) return;
       try {
-        const res = await fetch(`/api/live/${code}`);
+        const res = await fetch(`/api/live/${code}?reporter=1`);
         if (res.ok) applyState((await res.json()) as LiveState);
       } catch {}
     }, 10000);
@@ -219,13 +235,13 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
 
   // Auto-avslut: 5 min efter sista periodens sluttid
   useEffect(() => {
-    if (live.finished || autoFinishedRef.current) return;
+    if (!isCoach || live.finished || autoFinishedRef.current) return;
     const autoFinishThreshold = live.periodMinutes * 60 + 300;
     if (live.period >= live.periods && clockNow >= autoFinishThreshold) {
       autoFinishedRef.current = true;
       post({ type: "finish_match" });
     }
-  }, [live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
+  }, [isCoach, live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
 
   // Automatisk halvtid/periodpaus-sammanfattning när perioden ökar
   useEffect(() => {
@@ -276,7 +292,13 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
     }));
     setFlash(playerId);
     setTimeout(() => setFlash((f) => (f === playerId ? null : f)), 350);
-    post({ type: "event", playerId, statId: activeStat, reporter: myName || undefined });
+    post({
+      type: "event",
+      playerId,
+      statId: activeStat,
+      reporter: myName || undefined,
+      reporterId: reporterIdRef.current,
+    });
   };
 
   useEffect(() => {
@@ -492,8 +514,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
             </p>
           </div>
           <div className="flex-1" />
-          {/* Klockan körs av den som rapporterar – ofta en förälder, inte tränaren */}
-          <div className="flex flex-col items-end gap-2">
+          {isCoach && <div className="flex flex-col items-end gap-2">
             <button
               type="button"
               onClick={() => {
@@ -535,23 +556,24 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                 Starta period {live.period + 1} →
               </button>
             )}
-          </div>
+          </div>}
         </div>
         <div className="mt-3 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm("Nollställa matchklockan till period 1, 00:00?"))
-                  post({ type: "clock", op: "reset" });
-              }}
-              className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Nollställ klocka
-            </button>
-            {/* Avsluta stänger rapporteringen för alla – behålls tränar-låst.
-                Auto-avslut 5 min efter sista perioden är skyddsnät för förälder-körda matcher. */}
+            {isCoach && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Nollställa matchklockan till period 1, 00:00?"))
+                    post({ type: "clock", op: "reset" });
+                }}
+                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Nollställ klocka
+              </button>
+            )}
+            {/* Avsluta stänger rapporteringen för alla och är tränarlåst. */}
             {isCoach && (
               <button
                 type="button"
@@ -568,7 +590,11 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
           </div>
           <button
             type="button"
-            onClick={() => post({ type: "opponent_goal", reporter: myName || undefined })}
+            onClick={() => post({
+              type: "opponent_goal",
+              reporter: myName || undefined,
+              reporterId: reporterIdRef.current,
+            })}
             className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
             style={{
               fontFamily: "var(--font-display)",
@@ -836,8 +862,12 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                   ? "Sparar…"
                   : "Sparat"}
             </span>
-            <button type="button" onClick={() => post({ type: "undo" })} className="btn-secondary px-5 text-sm shrink-0">
-              Ångra
+            <button
+              type="button"
+              onClick={() => post({ type: "undo", reporterId: reporterIdRef.current })}
+              className="btn-secondary px-5 text-sm shrink-0"
+            >
+              {isCoach ? "Ångra" : "Ångra min"}
             </button>
           </div>
         </div>

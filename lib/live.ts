@@ -33,7 +33,10 @@ export function clockSeconds(m: MatchRow): number {
   return base;
 }
 
-export async function getLiveState(matchId: number): Promise<LiveState> {
+export async function getLiveState(
+  matchId: number,
+  includeReportingDetails = false
+): Promise<LiveState> {
   let m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
 
   const todayLocal = swedishToday(); // YYYY-MM-DD i svensk tidszon (Europe/Stockholm)
@@ -57,14 +60,53 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     }
   }
 
-  const players = await all<LiveState["players"][number]>(
-    "SELECT id, name, jersey_number FROM players WHERE active = 1 ORDER BY lower(name)"
-  );
+  // Skicka aldrig hela spelarregistret via det publika live-API:t. Använd den
+  // explicita matchtruppen när den finns, annars matchens grupp (t.ex. cupens
+  // gemensamma trupp). Spelare med redan registrerad aktivitet tas alltid med
+  // så att äldre händelser och byten fortsätter visas efter en truppändring.
+  const players: LiveState["players"] = includeReportingDetails ? await all<LiveState["players"][number]>(
+    `SELECT p.id, p.name, p.jersey_number
+       FROM players p
+      WHERE p.active = 1
+        AND (
+          EXISTS (
+            SELECT 1 FROM match_squad ms
+             WHERE ms.match_id = ? AND ms.player_id = p.id
+          )
+          OR (
+            NOT EXISTS (SELECT 1 FROM match_squad WHERE match_id = ?)
+            AND EXISTS (
+              SELECT 1
+                FROM matches m
+                JOIN player_group_memberships pgm ON pgm.group_id = m.group_id
+               WHERE m.id = ? AND pgm.player_id = p.id
+            )
+          )
+          OR EXISTS (
+            SELECT 1 FROM match_lineup ml
+             WHERE ml.match_id = ? AND ml.player_id = p.id
+          )
+          OR EXISTS (
+            SELECT 1 FROM match_players mp
+             WHERE mp.match_id = ? AND mp.player_id = p.id
+          )
+          OR EXISTS (
+            SELECT 1 FROM match_events me
+             WHERE me.match_id = ? AND me.player_id = p.id
+          )
+          OR EXISTS (
+            SELECT 1 FROM match_subs ms
+             WHERE ms.match_id = ? AND (ms.off_player = p.id OR ms.on_player = p.id)
+          )
+        )
+      ORDER BY lower(p.name)`,
+    [matchId, matchId, matchId, matchId, matchId, matchId, matchId]
+  ) : [];
 
-  const mpRows = await all<Record<string, number>>(
+  const mpRows = includeReportingDetails ? await all<Record<string, number>>(
     "SELECT * FROM match_players WHERE match_id = ?",
     [matchId]
-  );
+  ) : [];
 
   const counts: LiveState["counts"] = {};
   const played: number[] = [];
@@ -80,10 +122,10 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     [matchId]
   );
 
-  const reporterRows = await all<{ name: string; stats: string; last_seen: number | null }>(
+  const reporterRows = includeReportingDetails ? await all<{ name: string; stats: string; last_seen: number | null }>(
     "SELECT name, stats, last_seen FROM match_reporters WHERE match_id = ?",
     [matchId]
-  );
+  ) : [];
   const reporters: Reporter[] = reporterRows.map((r) => ({
     name: r.name,
     stats: JSON.parse(r.stats) as string[],
@@ -92,10 +134,10 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
 
   // Byten, startelva och speltid
   const nameById = new Map(players.map((p) => [p.id, p.name]));
-  const subRows = await all<{ id: number; off_player: number | null; on_player: number | null; match_second: number | null; period: number | null }>(
+  const subRows = includeReportingDetails ? await all<{ id: number; off_player: number | null; on_player: number | null; match_second: number | null; period: number | null }>(
     "SELECT id, off_player, on_player, match_second, period FROM match_subs WHERE match_id = ? ORDER BY id",
     [matchId]
-  );
+  ) : [];
   const subs: SubEntry[] = subRows.map((s) => ({
     id: s.id,
     offId: s.off_player,
@@ -106,10 +148,10 @@ export async function getLiveState(matchId: number): Promise<LiveState> {
     period: s.period,
   }));
 
-  const starterRows = await all<{ player_id: number }>(
+  const starterRows = includeReportingDetails ? await all<{ player_id: number }>(
     "SELECT player_id FROM match_lineup WHERE match_id = ?",
     [matchId]
-  );
+  ) : [];
   const starters = starterRows.map((r) => r.player_id);
   const periodSec = (m.period_minutes ?? 20) * 60;
   const nowAbs = ((m.clock_period ?? 1) - 1) * periodSec + clockSeconds(m);
@@ -194,7 +236,7 @@ export async function finishMatch(matchId: number): Promise<void> {
 }
 
 export async function claimStats(matchId: number, name: string, stats: string[]): Promise<void> {
-  const trimmed = name.trim().replace(/\s+/g, " ");
+  const trimmed = name.trim().replace(/\s+/g, " ").slice(0, 60);
   if (!trimmed) return;
   const now = Math.floor(Date.now() / 1000);
   // Skiftlägesokänsligt: återanvänd en redan registrerad rapportör med samma
@@ -203,6 +245,13 @@ export async function claimStats(matchId: number, name: string, stats: string[])
     "SELECT name FROM match_reporters WHERE match_id = ? AND lower(name) = lower(?)",
     [matchId, trimmed]
   );
+  if (!existing) {
+    const total = await get<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM match_reporters WHERE match_id = ?",
+      [matchId]
+    );
+    if (Number(total?.count ?? 0) >= 25) throw new Error("För många rapportörer");
+  }
   const finalName = existing?.name ?? trimmed;
   await run(
     `INSERT INTO match_reporters (match_id, name, stats, last_seen)
@@ -219,7 +268,8 @@ export async function recordEvent(
   matchId: number,
   playerId: number | null,
   statId: string,
-  reporter: string | null = null
+  reporter: string | null = null,
+  reporterKey: string | null = null
 ) {
   if (statId !== OPPONENT_GOAL && !LIVE_COUNT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
@@ -228,13 +278,21 @@ export async function recordEvent(
   // Dubbeltrycksskydd per rapportör: slår bara ihop när SAMMA rapportör trycker
   // samma sak på samma spelare inom 8 sekunder (fettfinger). Olika rapportörer
   // blockerar aldrig varandra – två personer kan räkna mål samtidigt.
-  const rep = reporter && reporter.trim() ? reporter.trim() : null;
-  const recent = await get<{ id: number }>(
-    `SELECT id FROM match_events
-     WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter IS ? AND created_at > ?
-     LIMIT 1`,
-    [matchId, playerId, statId, rep, now - 8]
-  );
+  const rep = reporter && reporter.trim() ? reporter.trim().slice(0, 60) : null;
+  const key = reporterKey && reporterKey.trim() ? reporterKey.trim().slice(0, 80) : null;
+  const recent = key
+    ? await get<{ id: number }>(
+        `SELECT id FROM match_events
+         WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter_key = ? AND created_at > ?
+         LIMIT 1`,
+        [matchId, playerId, statId, key, now - 8]
+      )
+    : await get<{ id: number }>(
+        `SELECT id FROM match_events
+         WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter IS ? AND created_at > ?
+         LIMIT 1`,
+        [matchId, playerId, statId, rep, now - 8]
+      );
   if (recent) return;
 
   const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
@@ -243,8 +301,8 @@ export async function recordEvent(
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [
     {
-      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at, reporter) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      args: [matchId, playerId, statId, second, period, now, rep],
+      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at, reporter, reporter_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      args: [matchId, playerId, statId, second, period, now, rep, key],
     },
   ];
 
@@ -269,10 +327,12 @@ export async function recordEvent(
   await batch(stmts);
 }
 
-export async function undoLastEvent(matchId: number) {
+export async function undoLastEvent(matchId: number, reporterKey: string | null = null) {
   const last = await get<{ id: number; player_id: number | null; stat_id: string }>(
-    "SELECT * FROM match_events WHERE match_id = ? ORDER BY id DESC LIMIT 1",
-    [matchId]
+    `SELECT * FROM match_events
+     WHERE match_id = ?${reporterKey ? " AND reporter_key = ?" : ""}
+     ORDER BY id DESC LIMIT 1`,
+    reporterKey ? [matchId, reporterKey] : [matchId]
   );
   if (!last) return;
 

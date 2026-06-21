@@ -16,7 +16,7 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [initial, coachName] = await Promise.all([getLiveState(match.id), getCoachName()]);
+  const [initial, coachName] = await Promise.all([getLiveState(match.id, true), getCoachName()]);
 
   return (
     <div className="space-y-5 max-w-3xl">

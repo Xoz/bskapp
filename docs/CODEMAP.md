@@ -42,7 +42,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 - **actions.ts** (server actions, ~38 st): all skrivande logik. login/logout, addPlayer(sBulk), updatePlayer, createEvaluation/submitSelfEval, saveMatch (inkl. location), addCup/updateCup/deleteCupMatch/deleteCup/addCupPlayoffMatch, saveCupSquad (cupens uttagna trupp), setMatchLevel, saveSquad/saveLineup, saveMatchRatings, setPlayerLevel (bekräfta nivåförslag från form), deleteMatch, toggleMatchReporting/resetMatch, addManualEvent/deleteMatchEvent, importCalendarMatches (fyller start_time + location från kalender), previewCupImport/importCupMatches (cup-import via iCal), updateSettings, resetColors (återställ klubb-/tröjfärger till `DEFAULT_COLORS`), generate/revokeShareLink, generateCoachInvite/acceptInvite, setViewAs.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `Match` + getPlayers/getPlayer, getMatches/getMatch/getMatchPlayers/getMatchSquad, getEvaluations/getScores/getPlayerDevelopment, getGroupMemberIds (gruppens spelar-id, t.ex. cupens uttagna trupp), getSeasonStats/getPlayerMatchStats/getTeamMatchStats, getMatchRatings/getPlayerFormTrend/getMatchScorers/getFormOverview, getIntervjuer/getPlayerInterviews (spelarsamtal, alla resp. per spelare), getPlayersLevelInfo/getPlayerEvalAverage, cup-helpers (matchTitle/cupRoundLabel/cupMatchCompare/mootMatchIds), share-token-helpers.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
-- **live.ts**: getLiveState, recordEvent/undoLastEvent, recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
+- **live.ts**: getLiveState (publik eller rapporteringsdetaljer), recordEvent/undoLastEvent (egen ångra via reporter_key), recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
 - **auth.ts**: sex roller, funktionsrättigheter, användarsession, grupp-/spelarscope och kompatibilitetslagret getRole.
 - **organization.ts**: läsmodeller för användare, roller, grupper och medlemskap till administrationsvyn.
@@ -60,7 +60,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 ## DB-tabeller (definieras i lib/db.ts)
 
 `settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
-`match_events`, `match_reporters`, `match_squad`, `match_lineup`, `match_subs`, `match_ratings`,
+`match_events` (inkl. lokal `reporter_key` för egen ångra), `match_reporters`, `match_squad`, `match_lineup`, `match_subs`, `match_ratings`,
 `player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
