@@ -77,6 +77,18 @@ komponenter är oförändrade). Berör läsfrågor i `lib/queries.ts` (getPlayer
 stats, matchbetyg, utveckling, spelarkort) och publik live-vy. Administrationen
 (`lib/organization.ts`, `app/(skyddad)/administration/`) behåller `name`.
 
+## Lagringstid och automatisk radering
+Två regler (beslut 2026-06-21), motsvarar "Hur länge sparas uppgifterna?" i
+[integritetspolicy.md](integritetspolicy.md):
+1. Personuppgifter raderas **säsongen efter** att en spelare slutat (markerats inaktiv).
+2. Ingen data sparas längre än **två säsonger**, oavsett spelarens status – äldre
+   uppgifter anses inaktuella och tas bort.
+
+Kräver en **schemalagd städrutin** (finns inte idag) – t.ex. Vercel Cron som kör båda
+reglerna periodiskt. Rör spelar- och matchanknuten data (`players`, `evaluations`,
+`match_*`, `player_self_evals`, `player_interviews`, `match_ratings`). Säsong styrs av
+`settings.season`. Server-/datalagring inom EU/EES (Supabase – bekräftat).
+
 ## Texten (samtyckesskärmen)
 
 Rubrik: **Får vi följa [barnets namn]s utveckling i appen?**
