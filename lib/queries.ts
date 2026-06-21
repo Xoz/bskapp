@@ -139,8 +139,11 @@ export function mootMatchIds(allMatches: Match[]): Set<number> {
   const byCup = new Map<string, Match[]>();
   for (const m of allMatches) {
     if (!m.cup_name) continue;
-    if (!byCup.has(m.cup_name)) byCup.set(m.cup_name, []);
-    byCup.get(m.cup_name)!.push(m);
+    // Samma cupnamn kan innehålla flera av lagets grupper/trupper. Ett lag som
+    // åker ur i en grupp får inte göra en annan grupps slutspelsmatcher moot.
+    const cupKey = JSON.stringify([m.cup_name, m.cup_group ?? ""]);
+    if (!byCup.has(cupKey)) byCup.set(cupKey, []);
+    byCup.get(cupKey)!.push(m);
   }
   const ids = new Set<number>();
   for (const ms of byCup.values()) {

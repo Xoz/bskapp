@@ -92,6 +92,26 @@ async function requireCupAccess(cupName: string, cupGroup = ""): Promise<number 
   return rows[0]?.group_id ?? null;
 }
 
+async function requireCupMatchAccess(
+  matchId: number,
+  cupName: string,
+  cupGroup: string
+): Promise<void> {
+  const match = await get<{
+    cup_name: string;
+    cup_group: string;
+    group_id: number | null;
+  }>("SELECT cup_name, cup_group, group_id FROM matches WHERE id = ?", [matchId]);
+  if (
+    !match ||
+    match.cup_name !== cupName ||
+    match.cup_group !== cupGroup ||
+    !(await canAccessGroup(match.group_id))
+  ) {
+    redirect("/oversikt?behorighet=saknas");
+  }
+}
+
 // ---- Auth ----
 export async function logout() {
   const store = await cookies();
@@ -655,26 +675,23 @@ export async function updateCup(formData: FormData) {
   if (!originalName || !newName) return;
   await requireCupAccess(originalName, originalGroup);
 
-  // Byt cup-namn om det ändrats – bara matcher i denna grupp påverkas.
-  if (newName !== originalName) {
-    await run(
-      "UPDATE matches SET cup_name = ? WHERE cup_name = ? AND cup_group = ?",
-      [newName, originalName, originalGroup]
-    );
-    revalidatePath(`/matcher/cup/${encodeURIComponent(originalName)}`);
-  }
+  const ids = [
+    ...new Set(
+      String(formData.get("match_ids") ?? "")
+        .split(",")
+        .map(Number)
+        .filter((id) => Number.isInteger(id) && id > 0)
+    ),
+  ];
+  // Hidden formfält är inte betrodda. Verifiera samtliga match-id:n mot den
+  // ursprungliga cupen, cupgruppen och användarens gruppscope före första skrivningen.
+  for (const id of ids) await requireCupMatchAccess(id, originalName, originalGroup);
 
-  const cupName = newName;
   const level = String(formData.get("level") ?? "");
   const cupGroup = String(formData.get("cup_group") ?? "").trim();
   const periods = Math.min(9, Math.max(1, Number(formData.get("periods")) || 3));
   const periodMinutes = Math.min(90, Math.max(1, Number(formData.get("period_minutes")) || 20));
-  await run(
-    "UPDATE matches SET level = ?, periods = ?, period_minutes = ?, cup_group = ? WHERE cup_name = ? AND cup_group = ?",
-    [level, periods, periodMinutes, cupGroup, cupName, originalGroup]
-  );
 
-  const ids = String(formData.get("match_ids") ?? "").split(",").map(Number).filter(Boolean);
   for (const id of ids) {
     const date = String(formData.get(`date_${id}`) ?? "").trim();
     const time = String(formData.get(`time_${id}`) ?? "").trim();
@@ -687,15 +704,25 @@ export async function updateCup(formData: FormData) {
     if (!isPlayoff && !opponent) continue;
     const finalOpponent = opponent || (isPlayoff ? "TBD" : opponent);
     await run(
-      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ? WHERE id = ? AND cup_name = ?",
-      [date, time || null, finalOpponent, homeAway, phase, round || null, id, cupName]
+      "UPDATE matches SET date = ?, start_time = ?, opponent = ?, home_away = ?, cup_phase = ?, cup_round = ? WHERE id = ? AND cup_name = ? AND cup_group = ?",
+      [date, time || null, finalOpponent, homeAway, phase, round || null, id, originalName, originalGroup]
     );
+  }
+
+  // Cupens gemensamma fält uppdateras sist så de individuella uppdateringarna
+  // ovan alltid kan scopeas mot de ursprungliga, serververifierade värdena.
+  await run(
+    "UPDATE matches SET level = ?, periods = ?, period_minutes = ?, cup_group = ?, cup_name = ? WHERE cup_name = ? AND cup_group = ?",
+    [level, periods, periodMinutes, cupGroup, newName, originalName, originalGroup]
+  );
+  if (newName !== originalName) {
+    revalidatePath(`/matcher/cup/${encodeURIComponent(originalName)}`);
   }
 
   revalidatePath("/matcher");
   revalidatePath("/matcher", "layout");
   const grp = cupGroup ? `&grupp=${encodeURIComponent(cupGroup)}` : "";
-  redirect(`/matcher/cup/${encodeURIComponent(cupName)}?sparad=1${grp}`);
+  redirect(`/matcher/cup/${encodeURIComponent(newName)}?sparad=1${grp}`);
 }
 
 export async function deleteCupMatch(id: number, cupName: string, cupGroup: string) {

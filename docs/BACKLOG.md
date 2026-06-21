@@ -13,14 +13,6 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   till en explicit tränaråtgärd eller en separat klockbaserad övergång.
   (`lib/live.ts`)
 
-- **[Medel] Slutspelslogik blandar cupgrupper** – `mootMatchIds()` grupperar på
-  `cup_name` men inte `cup_group`. En förlust i en grupp kan dölja kommande
-  matcher i en annan grupp med samma cupnamn. (`lib/queries.ts`)
-
-- **[Medel] Cupredigering litar på match-ID från formuläret** – individuella
-  uppdateringar verifierar `id + cup_name`, men inte ursprunglig `cup_group` och
-  användarens gruppscope. Validera varje match server-side. (`lib/actions.ts`)
-
 - **[Medel] Offlinehändelser saknar idempotensnyckel** – om servern sparar men
   svaret tappas kan samma händelse skickas igen efter återanslutning. Ge varje
   mutation ett klientgenererat UUID och en unik DB-constraint.
