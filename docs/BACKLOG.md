@@ -13,10 +13,13 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   avslutas nu enbart via tränarens explicita "Avsluta match" (`finishMatch()`).
   (`lib/live.ts`)
 
-- **[Medel] Offlinehändelser saknar idempotensnyckel** – om servern sparar men
-  svaret tappas kan samma händelse skickas igen efter återanslutning. Ge varje
-  mutation ett klientgenererat UUID och en unik DB-constraint.
-  (`components/LiveTracker.tsx`, `match_events`)
+- ~~**[Medel] Offlinehändelser saknar idempotensnyckel**~~ – **KLART 2026-06-25.**
+  Klientgenererad UUID per räknande mutation (`event`/`opponent_goal`/`sub`) +
+  unika index `idx_match_events_idem`/`idx_match_subs_idem` på
+  `(match_id, idempotency_key)`. `recordEvent`/`recordSub` skippar dubbletter;
+  unikt index är backstop vid sann samtidighet. Verifierat i
+  `scripts/test-live.sh` steg O (33/33). (`components/LiveTracker.tsx`,
+  `lib/live.ts`, `lib/db.ts`)
 
 ### Övriga granskningsfynd
 

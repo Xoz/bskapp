@@ -32,7 +32,7 @@ Skriptet:
 - kör alla steg A–N nedan och jämför faktiska värden mot förväntade,
 - återställer matchen efteråt (idempotent — kan köras om).
 
-Förväntad utslag: **28 passerade, 0 misslyckade**.
+Förväntad utslag: **33 passerade, 0 misslyckade**.
 
 ## Manuella steg (samma som skriptet)
 
@@ -77,6 +77,16 @@ max 30 accepterade (HTTP 200), resten `429`. (Identiska händelser within 8 s
 slås ihop av fettfinger-dedup, så använd distinkta kombos för att testa just
 rate-limit.)
 
+### O. Idempotens (offline-replay-skydd)
+Klienten genererar en `idempotencyKey` per räknande mutation (`event`,
+`opponent_goal`, `sub`). Om servern sparar men svaret tappas och klienten
+skickar igen, skippar servern dubbletten via unikt index på
+`match_events.idempotency_key` / `match_subs.idempotency_key`. Testet
+isolerar idempotensen från 8 s-fettfinger-dedupen genom att återställa matchen
+och skicka SAMMA nyckel med OLIKA spelare i replayen (dedupen matchar bara
+spelare+stat+reporter, så olika spelare bypassar den och idempotensen är det
+som skippar).
+
 ## Bugghistorik (fixade 2026-06-25, commit 346fba2)
 
 Alla tre skulle ha gjort att live-rapporteringen inte fungerade på matchdag:
@@ -91,6 +101,16 @@ Alla tre skulle ha gjort att live-rapporteringen inte fungerade på matchdag:
 4. **Tidsbaserat auto-avslut i `getLiveState()`** borttaget — en publik läsning
    kunde annars avsluta en pågående match vid försening/förlängning. Match avslutas
    nu bara via tränarens explicita `finishMatch()`.
+
+## Idempotens tillagt 2026-06-25
+
+Offline-replay kunde dubbelräkna en händelse om servern sparade men svaret
+tappades och klienten skickade igen vid återanslutning. Fix: klientgenererad
+UUID per mutation (`event`/`opponent_goal`/`sub`) + unika index
+`idx_match_events_idem` / `idx_match_subs_idem` på `(match_id, idempotency_key)`.
+Servern skippar dubbletter i `recordEvent`/`recordSub`. Backstop: det unika
+indexet fångar sann samtidighet. `SCHEMA_VERSION` bumpad till
+`2026-06-25-idempotency`.
 
 ## Viktigt vid driftsättning
 

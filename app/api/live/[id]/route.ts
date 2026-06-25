@@ -44,6 +44,10 @@ const PUBLIC_REPORTER_ACTIONS = new Set<LiveAction["type"]>([
   "claim_stats",
 ]);
 const REPORTER_ID_PATTERN = /^[a-zA-Z0-9_-]{16,80}$/;
+// Klientgenererad idempotensnyckel per mutation (UUID-lik). Valideras när den
+// skickas; saknas den körs mutationen som tidigare (bakåtkompatibelt).
+const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
+const MUTATIONS_WITH_KEY = new Set<LiveAction["type"]>(["event", "opponent_goal", "sub"]);
 
 export async function GET(
   req: NextRequest,
@@ -115,6 +119,16 @@ export async function POST(
   }
 
   try {
+    // Validera idempotensnyckel om den skickas (event/opponent_goal/sub).
+    const idempotencyKey =
+      MUTATIONS_WITH_KEY.has(action.type) && "idempotencyKey" in action
+        ? (action.idempotencyKey ?? "")
+        : "";
+    if (idempotencyKey && !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
+      return NextResponse.json({ error: "Ogiltig idempotensnyckel" }, { status: 400 });
+    }
+    const idem = idempotencyKey || null;
+
     switch (action.type) {
       case "event": {
         const allowedStats = isCoach ? LIVE_COUNT_IDS : STAT_IDS;
@@ -132,7 +146,8 @@ export async function POST(
           action.playerId,
           action.statId,
           action.reporter ?? null,
-          action.reporterId ?? null
+          action.reporterId ?? null,
+          idem
         );
         break;
       }
@@ -142,7 +157,8 @@ export async function POST(
           null,
           OPPONENT_GOAL,
           action.reporter ?? null,
-          action.reporterId ?? null
+          action.reporterId ?? null,
+          idem
         );
         break;
       case "undo":
@@ -166,7 +182,7 @@ export async function POST(
         break;
       }
       case "sub":
-        await recordSub(match.id, action.offId, action.onId);
+        await recordSub(match.id, action.offId, action.onId, idem);
         break;
       case "undo_sub":
         await undoLastSub(match.id);

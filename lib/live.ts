@@ -262,7 +262,8 @@ export async function recordEvent(
   playerId: number | null,
   statId: string,
   reporter: string | null = null,
-  reporterKey: string | null = null
+  reporterKey: string | null = null,
+  idempotencyKey: string | null = null
 ) {
   if (statId !== OPPONENT_GOAL && !LIVE_COUNT_IDS.includes(statId)) throw new Error("Okänd statistik");
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
@@ -288,14 +289,25 @@ export async function recordEvent(
       );
   if (recent) return;
 
+  // Idempotens: om händelsen redan sparats med denna nyckel (t.ex. offline-replay
+  // där servern sparat men svaret tappades) → hoppa över så den inte räknas dubbelt.
+  // Det unika indexet idx_match_events_idem är backstop vid sann samtidighet.
+  if (idempotencyKey) {
+    const dup = await get<{ id: number }>(
+      `SELECT id FROM match_events WHERE match_id = ? AND idempotency_key = ? LIMIT 1`,
+      [matchId, idempotencyKey]
+    );
+    if (dup) return;
+  }
+
   const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
   const second = clockTouched ? clockSeconds(m) : null;
   const period = clockTouched ? (m.clock_period ?? 1) : null;
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [
     {
-      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at, reporter, reporter_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      args: [matchId, playerId, statId, second, period, now, rep, key],
+      sql: "INSERT INTO match_events (match_id, player_id, stat_id, match_second, period, created_at, reporter, reporter_key, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      args: [matchId, playerId, statId, second, period, now, rep, key, idempotencyKey],
     },
   ];
 
@@ -355,8 +367,21 @@ export async function undoLastEvent(matchId: number, reporterKey: string | null 
 
 // Logga ett byte (ut → in) vid aktuell matchtid. Inkommande spelare markeras
 // som spelad så hen syns i statistiken.
-export async function recordSub(matchId: number, offId: number, onId: number) {
+export async function recordSub(
+  matchId: number,
+  offId: number,
+  onId: number,
+  idempotencyKey: string | null = null
+) {
   if (!offId || !onId || offId === onId) return;
+  // Idempotens: ett byte med denna nyckel är redan sparat (offline-replay) → hoppa över.
+  if (idempotencyKey) {
+    const dup = await get<{ id: number }>(
+      `SELECT id FROM match_subs WHERE match_id = ? AND idempotency_key = ? LIMIT 1`,
+      [matchId, idempotencyKey]
+    );
+    if (dup) return;
+  }
   const m = (await get<MatchRow>("SELECT * FROM matches WHERE id = ?", [matchId]))!;
   const now = Math.floor(Date.now() / 1000);
   const clockTouched = m.clock_running || m.clock_offset > 0 || (m.clock_period ?? 1) > 1;
@@ -365,8 +390,8 @@ export async function recordSub(matchId: number, offId: number, onId: number) {
 
   await batch([
     {
-      sql: "INSERT INTO match_subs (match_id, off_player, on_player, match_second, period, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      args: [matchId, offId, onId, second, period, now],
+      sql: "INSERT INTO match_subs (match_id, off_player, on_player, match_second, period, created_at, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      args: [matchId, offId, onId, second, period, now, idempotencyKey],
     },
     { sql: ENSURE_ROW, args: [matchId, onId] },
   ]);

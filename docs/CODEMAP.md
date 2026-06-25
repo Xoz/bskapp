@@ -60,7 +60,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 ## DB-tabeller (definieras i lib/db.ts)
 
 `settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
-`match_events` (inkl. lokal `reporter_key` för egen ångra), `match_reporters`, `match_squad`, `match_lineup`, `match_subs`, `match_ratings`,
+`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
 `player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)

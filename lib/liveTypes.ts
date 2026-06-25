@@ -61,13 +61,16 @@ export interface LiveState {
 }
 
 export type LiveAction =
-  | { type: "event"; playerId: number; statId: string; reporter?: string; reporterId?: string }
-  | { type: "opponent_goal"; reporter?: string; reporterId?: string }
+  // idempotencyKey: klientgenererad UUID per mutation. Skyddar mot att en
+  // offline-replay (servern sparade men svaret tappades) räknar samma händelse
+  // två gånger. Servern skippar dubbletter via unikt index på idempotency_key.
+  | { type: "event"; playerId: number; statId: string; reporter?: string; reporterId?: string; idempotencyKey?: string }
+  | { type: "opponent_goal"; reporter?: string; reporterId?: string; idempotencyKey?: string }
   | { type: "undo"; reporterId?: string }
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "toggle_played"; playerId: number }
   | { type: "claim_stats"; name: string; stats: string[] }
-  | { type: "sub"; offId: number; onId: number }
+  | { type: "sub"; offId: number; onId: number; idempotencyKey?: string }
   | { type: "undo_sub" }
   | { type: "finish_match" };
 

@@ -134,6 +134,47 @@ done
 echo "  40 distinkta händelser → 200: $OK   429: $BL"
 if [ "$OK" -le 30 ] && [ "$BL" -ge 1 ]; then ok "rate-limit: max 30 accepterade, resten 429"; else bad "rate-limit" "$OK 200/$BL 429" "≤30 200 och ≥1 429"; fi
 
+echo "=== O) Idempotens: samma idempotencyKey räknas inte dubbelt (offline-replay) ==="
+# Isolerat test: återställ matchen först så ourScore=0 och inga tidigare
+# händelser påverkar. Triggar idempotensen (inte 8s-dedup) genom att skicka
+# SAMMA nyckel med OLIKA spelare i replayen — dedupen matchar bara
+# spelare+stat+reporter, så olika spelare bypassar den och idempotenskontrollen
+# är det som skippar dubbletten.
+DATABASE_URL="$DEVDB" node scripts/reset-dev-match.mjs >/dev/null 2>&1
+KEY="idem-AAAAAAAA-0001"
+# 1) Första händelsen med nyckel → räknas (ourScore 0 → 1).
+curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" \
+  -d "{\"type\":\"event\",\"playerId\":$P1,\"statId\":\"goals\",\"idempotencyKey\":\"$KEY\"}" >/dev/null
+check "$(get "?reporter=1"|val "d['ourScore']")" "1" "första händelse med nyckel räknas (ourScore=1)"
+# 2) Replay med SAMMA nyckel men annan spelare → idempotens skippar (ej dedup).
+curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" \
+  -d "{\"type\":\"event\",\"playerId\":$P2,\"statId\":\"goals\",\"idempotencyKey\":\"$KEY\"}" >/dev/null
+check "$(get "?reporter=1"|val "d['ourScore']")" "1" "replay med samma nyckel ignoreras (idempotens)"
+NEV=$(DATABASE_URL="$DEVDB" node -e '
+import("postgres").then(async ({default: postgres}) => {
+  const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+  const r = await sql`SELECT COUNT(*)::int AS n FROM match_events WHERE match_id = ${process.argv[1]} AND idempotency_key = ${process.argv[2]}`;
+  console.log(r[0].n); await sql.end();
+})' "$MID" "$KEY" 2>/dev/null)
+check "$NEV" "1" "bara 1 event-rad med nyckeln (p2 ej dubbellagrad)"
+# 3) Olik nyckel + olik spelare → ny händelse (ourScore 1 → 2).
+curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" \
+  -d "{\"type\":\"event\",\"playerId\":$P2,\"statId\":\"goals\",\"idempotencyKey\":\"idem-BBBBBBBB-0002\"}" >/dev/null
+check "$(get "?reporter=1"|val "d['ourScore']")" "2" "olik nyckel → ny händelse (ourScore=2)"
+# 4) Sub-idempotens: samma nyckel två gånger (olika off) → bara 1 sub-rad.
+SUBKEY="idem-sub-CCCCCC-0003"
+curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" \
+  -d "{\"type\":\"sub\",\"offId\":$P1,\"onId\":$BENCH,\"idempotencyKey\":\"$SUBKEY\"}" >/dev/null
+curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" \
+  -d "{\"type\":\"sub\",\"offId\":$P2,\"onId\":$BENCH,\"idempotencyKey\":\"$SUBKEY\"}" >/dev/null
+NSUBS=$(DATABASE_URL="$DEVDB" node -e '
+import("postgres").then(async ({default: postgres}) => {
+  const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+  const r = await sql`SELECT COUNT(*)::int AS n FROM match_subs WHERE match_id = ${process.argv[1]} AND idempotency_key = ${process.argv[2]}`;
+  console.log(r[0].n); await sql.end();
+})' "$MID" "$SUBKEY" 2>/dev/null)
+check "$NSUBS" "1" "replay av byte med samma nyckel → bara 1 sub-rad"
+
 echo "=== K) Coach: avsluta matchen ==="
 post '{"type":"finish_match"}' >/dev/null
 S=$(get "?reporter=1")

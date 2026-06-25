@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-06-25-reporter-key";
+const SCHEMA_VERSION = "2026-06-25-idempotency";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -294,6 +294,11 @@ async function init(): Promise<void> {
     // Lokal, slumpad webbläsaridentitet. Kräver inget konto men gör att en
     // föräldrarapportör bara kan ångra sina egna händelser.
     `ALTER TABLE match_events ADD COLUMN reporter_key TEXT`,
+    // Klientgenererad idempotensnyckel per mutation. Null för äldre rader och
+    // händelser utan nyckel. Det unika indexet (se nedan) gör att en offline-replay
+    // inte dubbellagrar samma händelse när svaret tappades.
+    `ALTER TABLE match_events ADD COLUMN idempotency_key TEXT`,
+    `ALTER TABLE match_subs ADD COLUMN idempotency_key TEXT`,
     `ALTER TABLE player_interviews ADD COLUMN interview_type TEXT NOT NULL DEFAULT 'spelarsamtal'`,
     `ALTER TABLE player_interviews ADD COLUMN scores TEXT NOT NULL DEFAULT '{}'`,
     `ALTER TABLE players ADD COLUMN pin TEXT`,
@@ -309,6 +314,11 @@ async function init(): Promise<void> {
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_memberships_group ON player_group_memberships(group_id)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_user_group_access_group ON user_group_access(group_id)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_match_events_reporter ON match_events(match_id, reporter_key, id DESC)`);
+  // Idempotens: en klientgenererad nyckel får bara finnas en gång per match.
+  // Postgres behandlar NULL som distinkt i unika index, så äldre rader och
+  // händelser utan nyckel krockar inte med varandra.
+  await tryExec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_match_events_idem ON match_events(match_id, idempotency_key)`);
+  await tryExec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_match_subs_idem ON match_subs(match_id, idempotency_key)`);
   await tryExec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_groups_identity ON groups(group_type, lower(name), COALESCE(parent_id, 0), lower(cup_name))`);
 
   await tryExec(

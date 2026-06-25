@@ -32,6 +32,16 @@ function firstName(name: string) {
   return name.replace(/^Exempel:\s*/, "").split(" ")[0];
 }
 
+// Klientgenererad idempotensnyckel per mutation. Gör att en offline-replay
+// (servern spara → svaret tappas → skickas igen) inte räknar samma händelse
+// dubbelt: servern skippar dubbletter via unikt index på idempotency_key.
+function newIdempotencyKey(): string {
+  try {
+    if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  } catch {}
+  return `idem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function LiveTracker({ code, initial, isCoach = false, coachName = "" }: { code: string; initial: LiveState; isCoach?: boolean; coachName?: string }) {
   const [live, setLive] = useState<LiveState>(initial);
   const [fetchedAt, setFetchedAt] = useState(() => Date.now());
@@ -147,20 +157,30 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
 
   const post = useCallback(
     (action: LiveAction) => {
+      // Fäst en idempotensnyckel på räknande mutationer. Samma nyckel följer med
+      // om actionen hamnar i offline-kön och spelas om — servern skippar då
+      // dubbletten så målet/bytet inte räknas två gånger.
+      let a = action;
+      if (action.type === "event" || action.type === "opponent_goal" || action.type === "sub") {
+        if (!action.idempotencyKey) {
+          a = { ...action, idempotencyKey: newIdempotencyKey() };
+        }
+      }
       setPending((p) => p + 1);
       queue.current = queue.current
         .then(async () => {
           const res = await fetch(`/api/live/${code}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(action),
+            body: JSON.stringify(a),
           });
           if (res.ok) applyState((await res.json()) as LiveState);
         })
         .catch((err: unknown) => {
-          // Nätverksfel (TypeError: Failed to fetch) → lägg i offline-kö
+          // Nätverksfel (TypeError: Failed to fetch) → lägg i offline-kö.
+          // `a` (med nyckel) köas, så replayen bär samma idempotensnyckel.
           if (err instanceof TypeError) {
-            saveOfflineQueue([...offlineQueue.current, action]);
+            saveOfflineQueue([...offlineQueue.current, a]);
           }
         })
         .finally(() => setPending((p) => p - 1));
