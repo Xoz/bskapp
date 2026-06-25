@@ -71,7 +71,9 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 
 Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, intervjuer), statistik, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
-API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google}`, `app/api/live/[id]`.
+API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google,dev}`, `app/api/live/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
+
+Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). Se `projects/bsk-app` i GBrain för uppsättning.
 
 ---
 

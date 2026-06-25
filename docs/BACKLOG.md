@@ -7,10 +7,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 
 ### Cupberedskap – kvar från kodgranskning
 
-- **[Hög] Live-status ändrar matchen vid läsning** – `getLiveState()` kan
-  autoavsluta en match utifrån schemalagd avspark när publikvy/API pollar. En
-  försenad match eller lång paus kan därför avslutas felaktigt. Flytta ändringen
-  till en explicit tränaråtgärd eller en separat klockbaserad övergång.
+- ~~**[Hög] Live-status ändrar matchen vid läsning**~~ – **KLART 2026-06-25.**
+  Det tidsbaserade auto-avslutet i `getLiveState()` är borttaget; en publik
+  läsning (publikvy/API-poll) kan inte längre stänga en pågående match. Match
+  avslutas nu enbart via tränarens explicita "Avsluta match" (`finishMatch()`).
   (`lib/live.ts`)
 
 - **[Medel] Offlinehändelser saknar idempotensnyckel** – om servern sparar men

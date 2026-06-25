@@ -4,7 +4,7 @@
 import { all, get, run, batch } from "./db";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL, LiveState, LiveEvent, Reporter, SubEntry } from "./liveTypes";
-import { swedishToday, reportingAutoOpen, swedishWallClockToEpoch } from "./dates";
+import { swedishToday, reportingAutoOpen } from "./dates";
 
 interface MatchRow {
   id: number;
@@ -48,17 +48,10 @@ export async function getLiveState(
     m = { ...m, finished: 0, clock_running: 0, clock_started_at: null };
   }
 
-  // Auto-avslut baserat på verklig tid – bara om matchen är idag eller tidigare.
-  if (!m.finished && m.start_time && m.date <= todayLocal) {
-    // Starttiden tolkas som svensk väggklocka (DST-säkert, inte hårdkodat +02:00).
-    const matchStartMs = swedishWallClockToEpoch(m.date, m.start_time);
-    const totalMinutes = (m.periods ?? 3) * (m.period_minutes ?? 20) + 5;
-    const expectedEnd = matchStartMs + totalMinutes * 60000;
-    if (Date.now() > expectedEnd) {
-      await run("UPDATE matches SET finished = 1, clock_running = 0, clock_started_at = NULL WHERE id = ?", [matchId]);
-      m = { ...m, finished: 1, clock_running: 0, clock_started_at: null };
-    }
-  }
+  // OBS: Tidigare auto-avslutades matchen här utifrån väggklockan (avspark +
+  // speltid). Det togs bort: en publik LÄSNING (publikvy/API-poll) fick avsluta
+  // matchen och stänga föräldrarapporteringen mitt i en försenad/förlängd match.
+  // Match avslutas nu enbart via tränarens explicita finishMatch().
 
   // Skicka aldrig hela spelarregistret via det publika live-API:t. Använd den
   // explicita matchtruppen när den finns, annars matchens grupp (t.ex. cupens
@@ -283,13 +276,13 @@ export async function recordEvent(
   const recent = key
     ? await get<{ id: number }>(
         `SELECT id FROM match_events
-         WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter_key = ? AND created_at > ?
+         WHERE match_id = ? AND player_id IS NOT DISTINCT FROM ? AND stat_id = ? AND reporter_key = ? AND created_at > ?
          LIMIT 1`,
         [matchId, playerId, statId, key, now - 8]
       )
     : await get<{ id: number }>(
         `SELECT id FROM match_events
-         WHERE match_id = ? AND player_id IS ? AND stat_id = ? AND reporter IS ? AND created_at > ?
+         WHERE match_id = ? AND player_id IS NOT DISTINCT FROM ? AND stat_id = ? AND reporter IS NOT DISTINCT FROM ? AND created_at > ?
          LIMIT 1`,
         [matchId, playerId, statId, rep, now - 8]
       );
@@ -342,17 +335,17 @@ export async function undoLastEvent(matchId: number, reporterKey: string | null 
 
   if (last.stat_id === OPPONENT_GOAL) {
     stmts.push({
-      sql: "UPDATE matches SET opponent_score = MAX(COALESCE(opponent_score, 0) - 1, 0) WHERE id = ?",
+      sql: "UPDATE matches SET opponent_score = GREATEST(COALESCE(opponent_score, 0) - 1, 0) WHERE id = ?",
       args: [matchId],
     });
   } else if (last.player_id != null && LIVE_COUNT_IDS.includes(last.stat_id)) {
     stmts.push({
-      sql: `UPDATE match_players SET ${last.stat_id} = MAX(${last.stat_id} - 1, 0) WHERE match_id = ? AND player_id = ?`,
+      sql: `UPDATE match_players SET ${last.stat_id} = GREATEST(${last.stat_id} - 1, 0) WHERE match_id = ? AND player_id = ?`,
       args: [matchId, last.player_id],
     });
     if (last.stat_id === "goals") {
       stmts.push({
-        sql: "UPDATE matches SET our_score = MAX(COALESCE(our_score, 0) - 1, 0) WHERE id = ?",
+        sql: "UPDATE matches SET our_score = GREATEST(COALESCE(our_score, 0) - 1, 0) WHERE id = ?",
         args: [matchId],
       });
     }
