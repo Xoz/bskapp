@@ -73,7 +73,7 @@ Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]
 Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
 API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google,dev}`, `app/api/live/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 
-Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). Se `projects/bsk-app` i GBrain för uppsättning.
+Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). `scripts/reset-dev-match.mjs` återställer testmatchen till rent pågående tillstånd (behåller trupp/startelva). `scripts/test-live.sh` kör hela end-to-end-testprotokollet för liverapportering (se `docs/TESTPROTOKOLL-live.md`). Alla tre vägrar köra mot icke-lokal DB. Se `projects/bsk-app` i GBrain för uppsättning.
 
 ---
 
