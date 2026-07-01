@@ -1,9 +1,22 @@
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { cache } from "react";
 import { all, get } from "./db";
+
+// next start bakom nginx (loopback-bunden) återspeglar inte Host-headern i
+// req.url — den visar serverns egen bind-adress (t.ex. localhost:3001) istället
+// för den publika domänen. nginx sätter X-Forwarded-Proto/-Host med egna
+// variabler och skriver alltid över klientens egna värden, så de går att lita
+// på här. Utan proxy (lokal dev) faller vi tillbaka på req.url som förut.
+export function requestOrigin(req: NextRequest): string {
+  const proto = req.headers.get("x-forwarded-proto");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (proto && host) return `${proto}://${host}`;
+  return new URL(req.url).origin;
+}
 
 export const ROLES = ["admin", "head_coach", "coach", "leader", "player", "parent"] as const;
 export type Role = (typeof ROLES)[number];

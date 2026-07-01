@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { get, getSetting, run } from "@/lib/db";
-import { userSessionToken, coachEmailToken } from "@/lib/auth";
+import { userSessionToken, coachEmailToken, requestOrigin } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
-  const origin = url.origin;
+  const origin = requestOrigin(req);
 
   if (errorParam) {
     return NextResponse.redirect(`${origin}/login?google_error=1`);
