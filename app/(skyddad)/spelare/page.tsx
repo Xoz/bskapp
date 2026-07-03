@@ -2,8 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getRole, hasPermission } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
-import { getOrganizationGroups } from "@/lib/organization";
-import { addPlayer } from "@/lib/actions";
 import Avatar from "@/components/Avatar";
 import SpelareTabs from "@/components/SpelareTabs";
 import { level as levelInfo } from "@/lib/levels";
@@ -15,18 +13,15 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const [players, latestEvals, stats, canManagePlayers, canEvaluate, canViewPrivate, canViewInterviews, allGroups, user] = await Promise.all([
+  const [players, latestEvals, stats, canEvaluate, canViewPrivate, canViewInterviews, user] = await Promise.all([
     getPlayers(),
     getLatestEvaluationDates(),
     getSeasonStats(),
-    hasPermission("manage_players"),
     hasPermission("manage_evaluations"),
     hasPermission("view_private_player_data"),
     hasPermission("view_interviews"),
-    getOrganizationGroups(),
     getCurrentUser(),
   ]);
-  const groups = allGroups.filter((group) => group.active && group.group_type === "subgroup" && (!user || user.roles.includes("admin") || user.groupIds.length === 0 || user.groupIds.includes(group.id)));
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   return (
     <div className="space-y-6">
@@ -37,62 +32,6 @@ export default async function PlayersPage() {
         <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
           {players.length} spelare · klicka på en spelare för utvecklingsprofil
         </p>
-      </div>
-
-      {canManagePlayers && (
-        <form action={addPlayer} className="card p-5 grid sm:grid-cols-[1fr_8rem_1fr_auto] gap-3 items-end">
-          <label><span className="label">Namn</span><input name="name" className="input" required placeholder="Förnamn Efternamn" /></label>
-          <label><span className="label">Tröja</span><input name="jersey_number" type="number" min="1" max="99" className="input" /></label>
-          <label><span className="label">Undergrupp</span><select name="group_id" className="input" required><option value="">Välj grupp</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-          <button type="submit" className="btn-primary">Lägg till</button>
-        </form>
-      )}
-
-      {/* Highscore-kort */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {(
-          [
-            { label: "Flest mål", key: "goals" },
-            { label: "Flest assist", key: "assists" },
-            { label: "Flest passningar", key: "passes_completed" },
-          ] as { label: string; key: keyof typeof stats[0] }[]
-        ).map(({ label, key }) => {
-          const top = [...stats]
-            .filter((s) => (s[key] as number) > 0)
-            .sort((a, b) => (b[key] as number) - (a[key] as number))
-            .slice(0, 3);
-          return (
-            <div key={key as string} className="card p-5">
-              <p className="eyebrow mb-3">{label}</p>
-              {top.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Ingen statistik ännu</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {top.map((s, i) => (
-                    <Link key={s.id} href={canViewPrivate ? `/spelare/${s.id}` : "#"} className="flex items-center gap-3 group">
-                      <span
-                        className="stat-number text-xs w-4 shrink-0 text-right"
-                        style={{ color: i === 0 ? "var(--accent)" : "var(--ink-faint)" }}
-                      >
-                        {i + 1}
-                      </span>
-                      <Avatar name={s.name} jersey={s.jersey_number} size={28} />
-                      <span className="flex-1 min-w-0 text-sm font-medium truncate group-hover:underline" style={{ color: "var(--ink)" }}>
-                        {s.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
-                      </span>
-                      <span
-                        className="stat-number text-lg shrink-0"
-                        style={{ color: i === 0 ? "var(--primary)" : "var(--ink)" }}
-                      >
-                        {s[key] as number}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
       </div>
 
       <div className="card overflow-x-auto">
