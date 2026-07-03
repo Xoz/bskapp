@@ -6,6 +6,9 @@ import { previewCupImport, importCupMatches } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft } from "@/components/Icons";
 
+// Förhindra prerendering som kräver databas
+export const dynamic = "force-dynamic";
+
 export default function ImportCupPage() {
   const [state, previewAction, pending] = useActionState(previewCupImport, null);
 
