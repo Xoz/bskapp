@@ -1,0 +1,59 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: bsk-vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup SSH
+        env:
+          BSK_VPS_SSH_KEY: ${{ secrets.BSK_VPS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$BSK_VPS_SSH_KEY" > ~/.ssh/bsk_vps_key
+          chmod 600 ~/.ssh/bsk_vps_key
+          ssh-keyscan -H 217.160.55.151 >> ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        run: |
+          ssh -i ~/.ssh/bsk_vps_key root@217.160.55.151 '
+            set -e
+            cd /opt/bsk/bsk-f2014
+            git pull --ff-only origin main
+            npm ci
+            set -a
+            . /etc/bsk/bsk.env
+            set +a
+            npm run build
+            systemctl restart bsk.service
+            systemctl is-active --quiet bsk.service
+          '
+
+      - name: Verify app
+        run: |
+          ssh -i ~/.ssh/bsk_vps_key root@217.160.55.151 '
+            set -e
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS http://127.0.0.1:3001/login > /dev/null; then
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "App did not become healthy on 127.0.0.1:3001/login" >&2
+            systemctl status --no-pager bsk.service >&2 || true
+            exit 1
+          '
