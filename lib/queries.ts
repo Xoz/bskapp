@@ -764,6 +764,109 @@ export async function countEvaluations(): Promise<number> {
   return Number(row?.c ?? 0);
 }
 
+export interface AttendanceImportSummary {
+  id: number;
+  file_name: string;
+  period_label: string;
+  team_name: string;
+  exported_at: string | null;
+  created_at: string;
+  player_count: number;
+  activity_count: number;
+  present_count: number;
+  total_rows: number;
+}
+
+export async function getLatestAttendanceImportSummary(): Promise<AttendanceImportSummary | null> {
+  const row = await get<AttendanceImportSummary>(
+    `SELECT ai.id, ai.file_name, ai.period_label, ai.team_name, ai.exported_at, ai.created_at,
+            COUNT(DISTINCT ae.player_name) AS player_count,
+            COUNT(DISTINCT ae.source_column) AS activity_count,
+            COALESCE(SUM(ae.present), 0) AS present_count,
+            COUNT(*) AS total_rows
+     FROM attendance_imports ai
+     LEFT JOIN attendance_events ae ON ae.import_id = ai.id
+     WHERE ai.id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+     GROUP BY ai.id`,
+    []
+  );
+  return row ?? null;
+}
+
+export interface PlayerAttendanceOverview {
+  total_activities: number;
+  attended_activities: number;
+  attendance_rate: number | null;
+}
+
+export interface PlayerAttendanceCategoryRow {
+  category: string;
+  total_activities: number;
+  attended_activities: number;
+  attendance_rate: number | null;
+}
+
+export interface PlayerAttendanceTrendRow {
+  month: string;
+  total_activities: number;
+  attended_activities: number;
+  attendance_rate: number | null;
+  training_total: number;
+  training_attended: number;
+  training_rate: number | null;
+}
+
+export async function getPlayerAttendanceOverview(playerId: number): Promise<PlayerAttendanceOverview | null> {
+  const row = await get<PlayerAttendanceOverview>(
+    `SELECT COUNT(*) AS total_activities,
+            COALESCE(SUM(present), 0) AS attended_activities,
+            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate
+     FROM attendance_events
+     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+       AND player_id = ?`,
+    [playerId]
+  );
+  return row && row.total_activities > 0 ? row : null;
+}
+
+export async function getPlayerAttendanceByCategory(playerId: number): Promise<PlayerAttendanceCategoryRow[]> {
+  return all<PlayerAttendanceCategoryRow>(
+    `SELECT category,
+            COUNT(*) AS total_activities,
+            COALESCE(SUM(present), 0) AS attended_activities,
+            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate
+     FROM attendance_events
+     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+       AND player_id = ?
+     GROUP BY category
+     ORDER BY total_activities DESC, category ASC`,
+    [playerId]
+  );
+}
+
+export async function getPlayerAttendanceTrend(playerId: number): Promise<PlayerAttendanceTrendRow[]> {
+  return all<PlayerAttendanceTrendRow>(
+    `SELECT substr(activity_date, 1, 7) AS month,
+            COUNT(*) AS total_activities,
+            COALESCE(SUM(present), 0) AS attended_activities,
+            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate,
+            COALESCE(SUM(CASE WHEN category = 'training' THEN 1 ELSE 0 END), 0) AS training_total,
+            COALESCE(SUM(CASE WHEN category = 'training' THEN present ELSE 0 END), 0) AS training_attended,
+            ROUND(
+              100.0 * COALESCE(SUM(CASE WHEN category = 'training' THEN present ELSE 0 END), 0)
+              / NULLIF(SUM(CASE WHEN category = 'training' THEN 1 ELSE 0 END), 0),
+              1
+            ) AS training_rate
+     FROM attendance_events
+     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+       AND player_id = ?
+       AND activity_date IS NOT NULL
+     GROUP BY substr(activity_date, 1, 7)
+     ORDER BY month ASC`,
+    [playerId]
+  );
+}
+
 export { ALL_SKILLS, CATEGORIES };
 
 export interface PlayerSelfEval {

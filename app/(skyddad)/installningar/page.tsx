@@ -2,11 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings, getSetting } from "@/lib/db";
-import { getPlayers } from "@/lib/queries";
+import { getLatestAttendanceImportSummary, getPlayers } from "@/lib/queries";
 import {
   updateSettings,
   updateCoachProfile,
   importCalendarMatches,
+  importAttendanceWorkbook,
   generatePlayerPin,
   generateCoachInvite,
   addCoachEmail,
@@ -60,7 +61,14 @@ function JerseyPreview({ fill, ink, label }: { fill: string; ink: string; label:
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sparad?: string; kalender?: string }>;
+  searchParams: Promise<{
+    sparad?: string;
+    kalender?: string;
+    narvaro?: string;
+    narvaro_spelare?: string;
+    narvaro_aktiviteter?: string;
+    narvaro_matchade?: string;
+  }>;
 }) {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
@@ -82,9 +90,14 @@ export default async function SettingsPage({
   const proto = host.startsWith("localhost") ? "http" : "https";
   const inviteUrl = inviteValid ? `${proto}://${host}/invite?token=${inviteToken}` : null;
 
-  const [settings, players] = await Promise.all([getAllSettings(), getPlayers()]);
+  const [settings, players, latestAttendanceImport] = await Promise.all([
+    getAllSettings(),
+    getPlayers(),
+    getLatestAttendanceImportSummary(),
+  ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender } = await searchParams;
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade } =
+    await searchParams;
 
   return (
     <div>
@@ -135,6 +148,33 @@ export default async function SettingsPage({
               {Number(kalender) === 0
                 ? "Kalendern är synkad – inga nya matcher hittades."
                 : `${kalender} ${Number(kalender) === 1 ? "ny match hämtades" : "nya matcher hämtades"} från kalendern.`}
+            </div>
+          )}
+          {narvaro === "ok" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+            >
+              <IconCheck width={16} height={16} />
+              {`${narvaro_spelare ?? "0"} spelare och ${narvaro_aktiviteter ?? "0"} tillfällen importerades. ${narvaro_matchade ?? "0"} spelare matchades mot aktiva profiler.`}
+            </div>
+          )}
+          {narvaro === "fil" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+            >
+              <IconAlert width={16} height={16} />
+              Välj en Excel-fil från Svenska Lag innan du importerar närvaro.
+            </div>
+          )}
+          {narvaro === "fel" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+            >
+              <IconAlert width={16} height={16} />
+              Kunde inte läsa närvarofilen. Använd exporten &quot;Närvarotillfällen per aktivitet &amp; person&quot; från Svenska Lag.
             </div>
           )}
         </div>
@@ -437,6 +477,62 @@ export default async function SettingsPage({
                   <button type="submit" className="btn-primary">Lägg till spelarna</button>
                 </form>
               </details>
+            </div>
+
+            <div className="card p-6 md:p-7 space-y-5">
+              <div className="flex items-start gap-3">
+                <span
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                >
+                  <IconPlayers width={17} height={17} />
+                </span>
+                <div>
+                  <h2 className="font-semibold">Närvaro från Svenska Lag</h2>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                    Importera Excel-filen <strong>Närvarotillfällen per aktivitet &amp; person</strong> för att bygga upp trenddata per spelare och månad.
+                  </p>
+                </div>
+              </div>
+              {latestAttendanceImport ? (
+                <div
+                  className="rounded-xl px-4 py-3 text-sm"
+                  style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                >
+                  <p className="font-medium" style={{ color: "var(--ink)" }}>
+                    Senaste import: {latestAttendanceImport.file_name || "Excel-fil"}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                    {latestAttendanceImport.player_count} spelare · {latestAttendanceImport.activity_count} aktiviteter · {latestAttendanceImport.present_count} närvaromarkeringar
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                    {latestAttendanceImport.period_label || "Period okänd"}
+                    {latestAttendanceImport.team_name ? ` · ${latestAttendanceImport.team_name}` : ""}
+                    {latestAttendanceImport.exported_at ? ` · export ${latestAttendanceImport.exported_at}` : ""}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+                  Ingen närvarofil importerad ännu.
+                </p>
+              )}
+              <form action={importAttendanceWorkbook} className="space-y-3">
+                <div>
+                  <label className="label" htmlFor="attendance_file">Excel-fil</label>
+                  <input
+                    id="attendance_file"
+                    name="attendance_file"
+                    type="file"
+                    accept=".xlsx,.xls"
+                    required
+                    className="input h-auto cursor-pointer py-3"
+                  />
+                </div>
+                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  Varje import sparas som ett nytt underlag. Spelarvyn använder alltid den senaste importen för närvarotrenden.
+                </p>
+                <button type="submit" className="btn-primary">Importera närvaro</button>
+              </form>
             </div>
 
             <div className="card p-6 md:p-7 space-y-5">

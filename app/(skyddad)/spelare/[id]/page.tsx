@@ -9,6 +9,9 @@ import {
   getPlayerMatchStats,
   getPlayerFormTrend,
   getPlayerInterviews,
+  getPlayerAttendanceOverview,
+  getPlayerAttendanceByCategory,
+  getPlayerAttendanceTrend,
   shareLinkActive,
   getLatestSelfEval,
   SHARE_TTL_MS,
@@ -20,6 +23,7 @@ import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
 import { ratingBand, EXPECTATION_STEPS, levelSuggestion } from "@/lib/rating";
 import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
+import AttendanceTrendChart from "@/components/AttendanceTrendChart";
 import FormTrendChart from "@/components/FormTrendChart";
 import IntervjuCard from "@/components/IntervjuCard";
 import SkillRadar from "@/components/SkillRadar";
@@ -54,13 +58,16 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
   const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
 
-  const [evaluations, development, matchStats, selfEval, formTrend, interviews] = await Promise.all([
+  const [evaluations, development, matchStats, selfEval, formTrend, interviews, attendanceOverview, attendanceByCategory, attendanceTrend] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
     getLatestSelfEval(player.id, shareSinceIso),
     getPlayerFormTrend(player.id),
     getPlayerInterviews(player.name),
+    getPlayerAttendanceOverview(player.id),
+    getPlayerAttendanceByCategory(player.id),
+    getPlayerAttendanceTrend(player.id),
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
@@ -88,6 +95,16 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       evaluations.map(async (ev) => [ev.id, await getScores(ev.id)] as const)
     )
   );
+  const attendanceCategoryLabels: Record<string, string> = {
+    training: "Träningar",
+    match: "Matcher",
+    cup: "Cuper",
+    competition: "Tävlingar",
+    meeting: "Möten",
+    education: "Utbildningar",
+    work: "Arbetspass",
+    other: "Övrigt",
+  };
 
   return (
     <div className="space-y-6">
@@ -379,6 +396,68 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               {latest.development_goals || "Inga noteringar i senaste utvärderingen."}
             </p>
           </div>
+        </div>
+      )}
+
+      {attendanceOverview && (
+        <div className="card p-6 md:p-7">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <p className="eyebrow mb-0.5">Närvaro</p>
+              <h2 className="font-semibold mb-1">Närvarotrend</h2>
+              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                Bygger på senaste importen från Svenska Lag
+              </p>
+            </div>
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+            >
+              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>Total närvaro</p>
+              <p className="text-lg font-semibold">
+                {attendanceOverview.attended_activities}/{attendanceOverview.total_activities}
+                {attendanceOverview.attendance_rate != null ? (
+                  <span className="text-sm ml-2" style={{ color: "var(--ink-soft)" }}>
+                    {attendanceOverview.attendance_rate}%
+                  </span>
+                ) : null}
+              </p>
+            </div>
+          </div>
+          {attendanceTrend.length >= 2 ? (
+            <AttendanceTrendChart
+              data={attendanceTrend.map((row) => ({
+                month: row.month.slice(5),
+                attendanceRate: row.attendance_rate ?? 0,
+                trainingRate: row.training_rate,
+              }))}
+            />
+          ) : (
+            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+              Importera fler månader för att se en tydlig trendkurva.
+            </p>
+          )}
+          {attendanceByCategory.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+              {attendanceByCategory.map((row) => (
+                <div
+                  key={row.category}
+                  className="rounded-xl px-4 py-3"
+                  style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                >
+                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                    {attendanceCategoryLabels[row.category] ?? row.category}
+                  </p>
+                  <p className="font-semibold mt-1">
+                    {row.attended_activities}/{row.total_activities}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--ink-soft)" }}>
+                    {row.attendance_rate != null ? `${row.attendance_rate}% närvaro` : "Saknar procent"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

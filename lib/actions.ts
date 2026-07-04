@@ -23,6 +23,7 @@ import { ALL_SKILLS } from "./svff";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
+import { normalizePersonName, parseAttendanceWorkbook } from "./attendance";
 import { swedishToday } from "./dates";
 import {
   stepByKey,
@@ -1419,6 +1420,75 @@ export async function updateSettings(formData: FormData) {
 
   revalidatePath("/", "layout");
   redirect("/installningar?sparad=1");
+}
+
+export async function importAttendanceWorkbook(formData: FormData) {
+  await requirePermission("manage_settings");
+  const file = formData.get("attendance_file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/installningar?narvaro=fil");
+  }
+
+  let parsed;
+  try {
+    parsed = parseAttendanceWorkbook(await file.arrayBuffer());
+  } catch {
+    redirect("/installningar?narvaro=fel");
+  }
+
+  const activePlayers = await all<{ id: number; name: string }>(
+    "SELECT id, name FROM players WHERE active = 1"
+  );
+  const playerIdsByName = new Map(
+    activePlayers.map((player) => [normalizePersonName(player.name), player.id] as const)
+  );
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  const importRow = await run(
+    `INSERT INTO attendance_imports (file_name, period_label, team_name, exported_at, imported_by)
+     VALUES (?, ?, ?, ?, ?) RETURNING id`,
+    [file.name.slice(0, 180), parsed.period ?? "", parsed.teamName ?? "", parsed.exportedAt, importedBy]
+  );
+  const importId = Number(importRow[0]?.id);
+  if (!importId) redirect("/installningar?narvaro=fel");
+
+  const statements: { sql: string; args: (string | number | null)[] }[] = [];
+  let matchedPlayers = 0;
+  for (const player of parsed.players) {
+    const playerId = playerIdsByName.get(normalizePersonName(player.name)) ?? null;
+    if (playerId) matchedPlayers++;
+    for (const activity of parsed.activities) {
+      statements.push({
+        sql: `INSERT INTO attendance_events
+          (import_id, player_id, player_name, birth_date, activity_date, start_time, end_time, title, category, source_column, source_label, present)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          importId,
+          playerId,
+          player.name,
+          player.birthDate,
+          activity.date,
+          activity.startTime,
+          activity.endTime,
+          activity.title,
+          activity.category,
+          activity.sourceColumn,
+          activity.sourceLabel,
+          player.attendanceByColumn.get(activity.sourceColumn) ? 1 : 0,
+        ],
+      });
+    }
+  }
+
+  for (let i = 0; i < statements.length; i += 500) {
+    await batch(statements.slice(i, i + 500));
+  }
+
+  await logActivity(importedBy, "Importerade närvaro", `${parsed.players.length} spelare`);
+  revalidatePath("/installningar");
+  revalidatePath("/spelare");
+  redirect(
+    `/installningar?narvaro=ok&narvaro_spelare=${parsed.players.length}&narvaro_aktiviteter=${parsed.activities.length}&narvaro_matchade=${matchedPlayers}`
+  );
 }
 
 export async function resetColors() {
