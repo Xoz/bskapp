@@ -9,3 +9,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Innan du ändrar eller lägger till kod: läs `docs/CODEMAP.md` och öppna bara de filer den
 pekar på för uppgiften. Svep inte hela `lib/` eller `components/` för att leta — det slösar tokens.
 När du lägger till en fil, route, DB-tabell eller exportfunktion: uppdatera `docs/CODEMAP.md` i samma ändring.
+
+## Kallprioritet
+
+For detta repo galler:
+
+1. repots kod och lokala docs
+2. `docs/CODEMAP.md` och `docs/PROJECT_CONTEXT.md`
+3. Obsidian-projektsidan for BSK App
+4. GBrain endast som fallback
+
+Projektstatus och handover ska i forsta hand lasas fran repo och Obsidian, inte fran GBrain.
