@@ -109,7 +109,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
                   <p className="text-xs mb-2.5" style={{ color: "var(--ink-faint)" }}>
                     {skill.description}
                   </p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="space-y-1.5">
                     {LEVELS.map((level) => (
                       <label key={level.value}>
                         <input
@@ -119,7 +119,17 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
                           defaultChecked={latestScores[skill.id] === level.value}
                           className="sr-only"
                         />
-                        <span className="level-pill">{level.label}</span>
+                        <span className="level-row">
+                          <span
+                            className="text-[0.65rem] font-semibold uppercase tracking-wide shrink-0"
+                            style={{ color: "var(--ink-faint)", minWidth: "5rem" }}
+                          >
+                            {level.label}
+                          </span>
+                          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+                            {skill.criteria[level.value]}
+                          </span>
+                        </span>
                       </label>
                     ))}
                   </div>

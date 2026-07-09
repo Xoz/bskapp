@@ -33,12 +33,14 @@ export default function UtvecklingChecklist({
   playerId,
   firstName,
   initialStatuses,
-  initialNote,
+  initialNote = "",
+  readOnly = false,
 }: {
   playerId: number;
   firstName: string;
   initialStatuses: StatusMap;
-  initialNote: string;
+  initialNote?: string;
+  readOnly?: boolean;
 }) {
   const [statuses, setStatuses] = useState(initialStatuses);
   const [note, setNote] = useState(initialNote);
@@ -68,25 +70,27 @@ export default function UtvecklingChecklist({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="inline-flex rounded-full p-0.5 gap-0.5 text-xs" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
-          {(["coach", "player"] as const).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRole(r)}
-              className="px-3 py-1.5 rounded-full font-medium transition-colors"
-              style={
-                role === r
-                  ? { background: "var(--primary)", color: "var(--primary-deep)" }
-                  : { color: "var(--ink-faint)" }
-              }
-            >
-              {r === "coach" ? "Tränarvy" : "Spelarvy"}
-            </button>
-          ))}
+      {!readOnly && (
+        <div className="flex items-center justify-end">
+          <div className="inline-flex rounded-full p-0.5 gap-0.5 text-xs" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+            {(["coach", "player"] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRole(r)}
+                className="px-3 py-1.5 rounded-full font-medium transition-colors"
+                style={
+                  role === r
+                    ? { background: "var(--primary)", color: "var(--primary-deep)" }
+                    : { color: "var(--ink-faint)" }
+                }
+              >
+                {r === "coach" ? "Tränarvy" : "Spelarvy"}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="card p-5">
@@ -219,7 +223,7 @@ export default function UtvecklingChecklist({
                             <button
                               key={opt}
                               type="button"
-                              disabled={!unlocked}
+                              disabled={readOnly || !unlocked}
                               title={STATUS_LABEL[opt]}
                               onClick={() => updateStatus(s.id, opt)}
                               className="w-6 h-6 rounded-full border transition disabled:opacity-30 disabled:cursor-not-allowed"
@@ -263,7 +267,7 @@ export default function UtvecklingChecklist({
         })}
       </div>
 
-      {role === "coach" && (
+      {!readOnly && role === "coach" && (
         <div className="card p-5">
           <label className="label mb-2" htmlFor="skill_note">
             Tränaranteckningar

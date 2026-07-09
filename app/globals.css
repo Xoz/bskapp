@@ -419,6 +419,28 @@ input:checked + .level-pill {
   color: var(--primary-deep);
 }
 
+/* Nivårad i utvärderingen – kriterietext per nivå, inte bara en etikett */
+.level-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.625rem 0.75rem;
+  transition: all 0.15s;
+}
+.level-row:hover {
+  border-color: var(--line-strong);
+}
+input:focus-visible + .level-row {
+  border-color: var(--primary);
+}
+input:checked + .level-row {
+  background: var(--primary-ghost, var(--primary-soft)) !important;
+  border-color: var(--primary-line, var(--primary)) !important;
+}
+
 /* Egenutvärdering – emoji-radioknapp */
 input:checked + .emoji-pill {
   border-color: var(--primary) !important;
@@ -705,3 +727,4 @@ details[open] .details-chevron {
 [data-theme="light"] .recharts-tooltip-cursor {
   fill: rgba(0, 0, 0, 0.04) !important;
 }
+
