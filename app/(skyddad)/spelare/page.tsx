@@ -26,12 +26,17 @@ export default async function PlayersPage() {
   return (
     <div className="space-y-6">
       <SpelareTabs canViewInterviews={canViewInterviews} />
-      <div>
-        <p className="eyebrow">Truppen</p>
-        <h1 className="text-[1.7rem] font-bold mt-0.5">Spelare</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-          {players.length} spelare · klicka på en spelare för utvecklingsprofil
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="eyebrow">Truppen</p>
+          <h1 className="text-[1.7rem] font-bold mt-0.5">Spelare</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+            {players.length} spelare · klicka på en spelare för utvecklingsprofil
+          </p>
+        </div>
+        <Link href="/utveckling" className="btn-secondary shrink-0">
+          🪜 Lagets utvecklingsträd
+        </Link>
       </div>
 
       <div className="card overflow-x-auto">

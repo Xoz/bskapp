@@ -137,6 +137,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               : `${evaluations.length} ${evaluations.length === 1 ? "utvärdering" : "utvärderingar"} · senast ${latest.date}`}
           </p>
         </div>
+        <Link href={`/spelare/${player.id}/utveckling`} className="btn-secondary">
+          🪜 Utvecklingsträd
+        </Link>
         <Link href={`/spelare/${player.id}/utvardera`} className="btn-primary">
           <IconPlus width={15} height={15} /> Ny utvärdering
         </Link>

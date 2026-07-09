@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-07-04-attendance-import";
+const SCHEMA_VERSION = "2026-07-09-skill-trappan";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -272,6 +272,20 @@ async function init(): Promise<void> {
       source_column INTEGER NOT NULL DEFAULT 0,
       source_label TEXT NOT NULL DEFAULT '',
       present INTEGER NOT NULL DEFAULT 0 CHECK (present IN (0, 1))
+    )`,
+    // Utvecklingsträdet (7v7 → 9v9): en rad per spelare/färdighet som klickas
+    // i checklistan. skill_id pekar in i lib/skillTrappan.ts (statisk data, ingen tabell).
+    `CREATE TABLE IF NOT EXISTS player_skill_status (
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      skill_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'training', 'almost', 'done')),
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      PRIMARY KEY (player_id, skill_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS player_skill_notes (
+      player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      note TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
   ];
   for (const sql of tables) await getClient().unsafe(sql);

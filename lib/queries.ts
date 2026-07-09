@@ -5,6 +5,7 @@ import { STAT_IDS } from "./stats";
 import { swedishToday } from "./dates";
 import { seedRating } from "./rating";
 import { getCurrentUser } from "./auth";
+import { CATEGORIES as SKILL_CATEGORIES, categoryProgress, type StatusMap } from "./skillTrappan";
 
 export interface Player {
   id: number;
@@ -972,4 +973,52 @@ export async function findPlayerForIntervju(name: string): Promise<Player | unde
       [clean, clean]
     ))
   );
+}
+
+// ---------- Utvecklingsträdet (skillTrappan) ----------
+
+export async function getPlayerSkillStatuses(playerId: number): Promise<StatusMap> {
+  const rows = await all<{ skill_id: string; status: string }>(
+    "SELECT skill_id, status FROM player_skill_status WHERE player_id = ?",
+    [playerId]
+  );
+  return Object.fromEntries(rows.map((r) => [r.skill_id, r.status])) as StatusMap;
+}
+
+export async function getPlayerSkillNote(playerId: number): Promise<string> {
+  const row = await get<{ note: string }>("SELECT note FROM player_skill_notes WHERE player_id = ?", [playerId]);
+  return row?.note ?? "";
+}
+
+export interface TeamSkillOverviewRow {
+  category: string;
+  avgPercent: number;
+  avgLevel: number;
+}
+
+// Snitt per kategori över alla aktiva spelare – till lagets startsida för utvecklingsträdet.
+export async function getTeamSkillOverview(): Promise<TeamSkillOverviewRow[]> {
+  const userId = await restrictedUserId();
+  const players = await all<{ id: number }>(
+    `SELECT p.id FROM players p WHERE p.active = 1
+     ${userId ? "AND EXISTS (SELECT 1 FROM player_group_memberships pgm JOIN groups scope_g ON scope_g.id = pgm.group_id JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE pgm.player_id = p.id)" : ""}`,
+    userId ? [userId] : []
+  );
+  if (players.length === 0) return SKILL_CATEGORIES.map((c) => ({ category: c.id, avgPercent: 0, avgLevel: 1 }));
+
+  const rows = await all<{ player_id: number; skill_id: string; status: string }>(
+    `SELECT player_id, skill_id, status FROM player_skill_status WHERE player_id IN (${players.map(() => "?").join(",")})`,
+    players.map((p) => p.id)
+  );
+  const byPlayer = new Map<number, StatusMap>(players.map((p) => [p.id, {}]));
+  for (const r of rows) byPlayer.get(r.player_id)![r.skill_id] = r.status as StatusMap[string];
+
+  return SKILL_CATEGORIES.map((cat) => {
+    const progresses = players.map((p) => categoryProgress(cat.id, byPlayer.get(p.id)!));
+    return {
+      category: cat.id,
+      avgPercent: Math.round(progresses.reduce((sum, p) => sum + p.percent, 0) / progresses.length),
+      avgLevel: Math.round(progresses.reduce((sum, p) => sum + p.currentLevel, 0) / progresses.length),
+    };
+  });
 }

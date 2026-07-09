@@ -19,6 +19,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 | **Laguttagning / trupp / formation** | `components/SquadBoard.tsx`, `lib/formations.ts`, `lib/positions.ts`, `lib/actions.ts` (saveSquad/saveLineup) |
 | **Cupgemensam laguttagning** (uttagna till cupen, default per match) | `components/CupSquadPicker.tsx`, `lib/actions.ts` (saveCupSquad → matchgruppens `player_group_memberships`), `lib/queries.ts` (getGroupMemberIds), `app/(skyddad)/matcher/cup/[slug]/page.tsx` + `…/matcher/[id]/laguttagning/page.tsx` (förväljer cupens trupp) |
 | **Spelarutvärdering (SvFF-färdigheter)** | `components/SkillRadar.tsx`, `components/SelfEvalForm.tsx`, `lib/svff.ts`, `lib/actions.ts` (createEvaluation/submitSelfEval), `app/(skyddad)/spelare/[id]/utvardera/` |
+| **Utvecklingsträd (checklista 7v7→9v9, 12 kategorier × nivå 1–5)** | `lib/skillTrappan.ts` (kategorier/färdigheter + statuslogik: upplåsning/prioritering/nästa steg), `components/UtvecklingChecklist.tsx`, `lib/queries.ts` (getPlayerSkillStatuses/getPlayerSkillNote/getTeamSkillOverview), `lib/actions.ts` (setSkillStatus/setSkillNote – anropas direkt från klienten, inte via `<form>`), `app/(skyddad)/spelare/[id]/utveckling/` (individuell checklista), `app/(skyddad)/utveckling/` (lagets snitt per kategori) |
 | **Matchbetyg / form (ELO)** | `lib/rating.ts`, `lib/actions.ts` (saveMatchRatings), `lib/queries.ts` (getMatchRatings/getPlayerFormTrend), `components/MatchRatings.tsx`, `components/FormTrendChart.tsx`, monteras i `app/(skyddad)/matcher/[id]/page.tsx` + `app/(skyddad)/spelare/[id]/page.tsx` |
 | **Utveckling över tid / diagram** | `components/DevelopmentChart.tsx`, `components/ParticipationChart.tsx`, `lib/queries.ts` (getPlayerDevelopment) |
 | **Närvaroimport / närvarotrend** | `lib/attendance.ts`, `lib/actions.ts` (importAttendanceWorkbook), `lib/queries.ts` (getLatestAttendanceImportSummary/getPlayerAttendance*), `components/AttendanceTrendChart.tsx`, `app/(skyddad)/installningar/page.tsx`, `app/(skyddad)/spelare/[id]/page.tsx` |
@@ -49,6 +50,7 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 - **auth.ts**: sex roller, funktionsrättigheter, användarsession, grupp-/spelarscope och kompatibilitetslagret getRole.
 - **organization.ts**: läsmodeller för användare, roller, grupper och medlemskap till administrationsvyn.
 - **svff.ts**: SvFF-färdigheter — `CATEGORIES`/`ALL_SKILLS`/`SVFF_PRINCIPLES`, skillById/categoryById.
+- **skillTrappan.ts**: Utvecklingsträdet — `CATEGORIES`/`SKILLS`/`LEVEL_INFO` (12 kategorier × nivå 1–5), skillsByCategory/skill, statuslogik: isUnlocked/categoryProgress/allCategoryProgress/totalProgress/priorityAreas/nextRecommendedSkill/filterSkills, `SkillStatus`/`StatusMap`/`STATUS_LABEL`/`STATUS_COLOR`.
 - **stats.ts**: `STAT_FIELDS`/`CARD_FIELDS`/`LIVE_COUNT_IDS` (definition av vilka stats som finns).
 - **levels.ts**: `LEVELS`, level/levelByRank/suggestLevel, fit() (matchar spelarnivå mot matchnivå).
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
@@ -64,14 +66,15 @@ OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/n
 `settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
 `match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
 `player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`, `users`, `user_roles`,
-`user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`.
+`user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
+`player_skill_status` (utvecklingsträdet, PK player_id+skill_id), `player_skill_notes`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
 
 ---
 
 ## Routes (app/)
 
-Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, intervjuer), statistik, installningar, administration och mina-spelare.
+Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, utveckling, intervjuer), utveckling (lagets snitt), statistik, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
 API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google,dev}`, `app/api/live/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 
