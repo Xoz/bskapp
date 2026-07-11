@@ -49,7 +49,6 @@ export function filterNavItems(
 ): NavItem[] {
   return NAV_ITEMS.filter((item) => {
     // Göm funktioner som är avstängda via feature-flags
-    if (item.href === "/matcher" && !FEATURES.matchStats) return false;
     if (item.href === "/statistik" && !FEATURES.matchStats) return false;
 
     if (mobile && (item as NavItem & { desktopOnly?: boolean }).desktopOnly) {

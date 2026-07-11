@@ -6,7 +6,12 @@
  * för att återaktivera.
  */
 export const FEATURES = {
-  /** Matchstatistik: matchflöde, "rätta statistik", spelarmatchstatistik, statistiksidan */
+  /**
+   * Individuell matchstatistik: pass, skott, mål, assist etc. per spelare.
+   * Döljer: statistiksidan, matchflöde, rätta statistik, lägg till händelse,
+   * spelarens matchstatistik-tabell, STAT_FIELDS-tabeller.
+   * Matchhanteringen (laguttagning, registrera, resultat, betyg) finns kvar.
+   */
   matchStats: false,
   /** Livescore: publik livescore-landning, live-CTA, liverapportering, föräldrarapportering */
   liveScore: false,

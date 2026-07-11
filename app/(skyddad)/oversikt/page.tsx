@@ -108,9 +108,7 @@ export default async function Dashboard() {
       ? { href: `/matcher/${todayMatch.id}/live`, label: "Rapportera dagens match", live: false, note: null }
       : nextNoSquad
         ? { href: `/matcher/${nextNoSquad.id}/laguttagning`, label: `Ta ut trupp · ${nextOpp}`, live: false, note: "Trupp saknas till nästa match" }
-        : FEATURES.matchStats
-          ? { href: "/matcher/ny", label: "Registrera match", live: false, note: null }
-          : null;
+        : { href: "/matcher/ny", label: "Registrera match", live: false, note: null };
 
   const cutoffStr = swedishDateOffset(-60);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
@@ -134,17 +132,15 @@ export default async function Dashboard() {
     : [];
 
   const todos: Todo[] = [
-    ...(FEATURES.matchStats
-      ? upcomingMatches
-          .filter((m) => !matchesWithSquad.has(m.id))
-          .map((m) => ({
-            key: `squad-${m.id}`,
-            href: `/matcher/${m.id}/laguttagning`,
-            title: "Ta ut trupp",
-            sub: matchTitle(m),
-            icon: <IconWhistle width={16} height={16} />,
-          }))
-      : []),
+    ...upcomingMatches
+      .filter((m) => !matchesWithSquad.has(m.id))
+      .map((m) => ({
+        key: `squad-${m.id}`,
+        href: `/matcher/${m.id}/laguttagning`,
+        title: "Ta ut trupp",
+        sub: matchTitle(m),
+        icon: <IconWhistle width={16} height={16} />,
+      })),
     ...(FEATURES.liveScore
       ? pastUnreported.map((m) => ({
           key: `result-${m.id}`,
@@ -310,7 +306,7 @@ export default async function Dashboard() {
                 })}
               </div>
             )}
-            {upcomingMatches.length > 0 && FEATURES.matchStats && (
+            {upcomingMatches.length > 0 && (
               <Link
                 href="/matcher"
                 className="mt-3 flex items-center gap-1 caption transition-colors hover:opacity-70"
@@ -323,8 +319,7 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* Senaste matchen + Form just nu (dold när matchStats är av) */}
-      {FEATURES.matchStats && (
+      {/* Senaste matchen + Form just nu */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Senaste matchen */}
         <Card>
@@ -376,7 +371,7 @@ export default async function Dashboard() {
                   </p>
                 </div>
               </div>
-              {scorers.length > 0 && (
+              {FEATURES.matchStats && scorers.length > 0 && (
                 <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                   {scorers.map((s) => (
                     <li key={s.player_id} className="flex items-center gap-1.5 body-small">
@@ -396,7 +391,8 @@ export default async function Dashboard() {
           )}
         </Card>
 
-        {/* Form just nu */}
+        {/* Form just nu (dold när matchStats är av — bygger på individuell statistik) */}
+        {FEATURES.matchStats && (
         <Card>
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -430,8 +426,9 @@ export default async function Dashboard() {
             </div>
           )}
         </Card>
+        )}
+
       </div>
-      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Att göra */}
@@ -440,9 +437,7 @@ export default async function Dashboard() {
             <div>
               <h2 className="font-semibold" style={{ fontSize: "18px" }}>Att göra</h2>
               <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
-                {FEATURES.matchStats
-                  ? "Trupper, resultat och utvärderingar att ta tag i"
-                  : "Utvärderingar att ta tag i"}
+                Trupper, resultat och utvärderingar att ta tag i
               </p>
             </div>
             {todos.length > 0 && (

@@ -5,7 +5,7 @@ import { FEATURES } from "@/lib/features";
 export const metadata = { title: "Manual – BSK F2014" };
 
 const HIDDEN_CHAPTERS = new Set<string>();
-if (!FEATURES.matchStats) HIDDEN_CHAPTERS.add("matcher").add("statistik");
+if (!FEATURES.matchStats) HIDDEN_CHAPTERS.add("statistik");
 if (!FEATURES.liveScore) HIDDEN_CHAPTERS.add("live");
 
 const CHAPTERS = [
@@ -362,7 +362,6 @@ export default function GuidePage() {
               </Topic>
             </Chapter>
 
-            {FEATURES.matchStats && (
             <Chapter
               id="matcher"
               number="05"
@@ -406,7 +405,6 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
             </Chapter>
-            )}
 
             <Chapter
               id="laguttagning"
