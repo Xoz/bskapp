@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, DM_Mono } from "next/font/google";
+import { Bebas_Neue, Inter, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -11,21 +11,34 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0a0b0d",
+  themeColor: "#0B0F14",
   colorScheme: "dark light",
 };
 
-// Designsystem "Dark Mono Dashboard": Syne för display, DM Mono för allt annat
-const display = Syne({
+// Designsystem: Bebas Neue (display), Inter (body/UI), IBM Plex Sans (stats),
+// JetBrains Mono (kod). Premium sportplattform-känsla.
+const display = Bebas_Neue({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400"],
 });
 
-const mono = DM_Mono({
+const body = Inter({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const stat = IBM_Plex_Sans({
+  variable: "--font-stat",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const code = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -56,7 +69,7 @@ export default async function RootLayout({
 }>) {
   const settings = await getAllSettings();
   return (
-    <html lang="sv" className={`${display.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="sv" className={`${display.variable} ${body.variable} ${stat.variable} ${code.variable} h-full antialiased`} suppressHydrationWarning>
       <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}` }} />
       <body
         className="min-h-full flex flex-col"
