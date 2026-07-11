@@ -1,0 +1,4 @@
+import { Badge, PageHeader } from "@/components/ui";
+import { goals, players } from "@/data/demo";
+
+export default function PlayersPage() { return <div className="page"><PageHeader eyebrow="F2014 GUL" title={`Spelare (${players.length})`}><button className="button primary">+ Lägg till spelare</button></PageHeader><div className="player-grid">{players.map((player, index) => <article className="player-card" key={player.id}><div className="avatar">{player.name[0]}</div><div><h2>{player.name}</h2><p>#{player.number} · {player.positions.join(" / ")}</p>{goals.some(goal => goal.playerId === player.id) ? <Badge tone="amber">AKTIVT MÅL</Badge> : <Badge>AKTIV</Badge>}</div><div className="skill-ring" aria-label={`Utvecklingsprogression ${48 + index * 2}%`}>{48 + index * 2}%</div></article>)}</div></div> }
