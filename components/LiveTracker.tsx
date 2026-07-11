@@ -368,7 +368,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
               <p className="eyebrow text-white/45">
                 {live.homeAway === "home" ? "Hemma mot" : "Borta mot"}
               </p>
-              <p className="font-semibold text-white truncate text-[1.05rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+              <p className="font-semibold text-white truncate text-[18px] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                 {live.opponent}
               </p>
             </div>
@@ -389,9 +389,9 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
             <h2 className="font-semibold mb-3">Matchsammanställning</h2>
             <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
               {STAT_FIELDS.map((f) => (
-                <div key={f.id} className="text-center rounded-xl py-3 px-1" style={{ background: "var(--bg2)" }}>
+                <div key={f.id} className="text-center rounded-xl py-3 px-1" style={{ background: "var(--surface)" }}>
                   <p className="stat-number text-2xl">{totals[f.id]}</p>
-                  <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
+                  <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{f.short}</p>
                 </div>
               ))}
             </div>
@@ -400,7 +400,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
           {/* Spelarstatistik */}
           {Object.keys(live.counts).length > 0 && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+              <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
                 <h2 className="font-semibold">Spelarstatistik</h2>
               </div>
               <div className="overflow-x-auto">
@@ -430,17 +430,17 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
           {live.hasLineup && finMinutes.length > 0 && (
             <div className="card p-5">
               <h2 className="font-semibold mb-1">Spelade minuter</h2>
-              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption mb-4" style={{ color: "var(--ink-muted)" }}>
                 {live.subs.length} {live.subs.length === 1 ? "byte" : "byten"} registrerade
               </p>
               <div className="space-y-2">
                 {finMinutes.map((r) => (
                   <div key={r.id} className="flex items-center gap-2.5">
-                    <span className="text-sm w-20 truncate" style={{ color: "var(--ink-soft)" }}>{r.name}</span>
-                    <span className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "var(--bg2)" }}>
+                    <span className="body-small w-20 truncate" style={{ color: "var(--ink-secondary)" }}>{r.name}</span>
+                    <span className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "var(--surface)" }}>
                       <span className="block h-full" style={{ width: `${Math.round((r.m / finMaxMin) * 100)}%`, background: "var(--primary)" }} />
                     </span>
-                    <span className="stat-number text-sm w-14 text-right" style={{ color: "var(--ink-soft)" }}>{r.m} min</span>
+                    <span className="stat-number text-sm w-14 text-right" style={{ color: "var(--ink-secondary)" }}>{r.m} min</span>
                   </div>
                 ))}
               </div>
@@ -504,7 +504,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
               {live.homeAway === "home" ? "Hemma mot" : "Borta mot"}
             </p>
             <p
-              className="font-semibold text-white truncate text-[1.05rem] leading-tight"
+              className="font-semibold text-white truncate text-[18px] leading-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {live.opponent}
@@ -565,7 +565,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                   if (confirm(`Avsluta period ${live.period} och starta period ${live.period + 1}?`))
                     post({ type: "clock", op: "next_period" });
                 }}
-                className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
+                className="body-small font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
                 style={{
                   fontFamily: "var(--font-display)",
                   background: "rgba(255,255,255,0.1)",
@@ -587,7 +587,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                   if (confirm("Nollställa matchklockan till period 1, 00:00?"))
                     post({ type: "clock", op: "reset" });
                 }}
-                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+                className="caption uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Nollställ klocka
@@ -601,7 +601,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                   if (confirm("Avsluta matchen? Rapportering stängs för alla."))
                     post({ type: "finish_match" });
                 }}
-                className="text-[0.7rem] uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
+                className="caption uppercase tracking-[0.1em] text-white/35 hover:text-white/70"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Avsluta match
@@ -615,7 +615,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
               reporter: myName || undefined,
               reporterId: reporterIdRef.current,
             })}
-            className="text-sm font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
+            className="body-small font-semibold rounded-full px-4 py-2.5 min-h-[44px]"
             style={{
               fontFamily: "var(--font-display)",
               background: "rgba(255,255,255,0.1)",
@@ -664,9 +664,9 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       {selected && !setupOpen && (
         <>
           {myName && (
-            <p className="px-4 pt-3 text-xs" style={{ color: "var(--ink-faint)" }}>
+            <p className="px-4 pt-3 text-xs" style={{ color: "var(--ink-muted)" }}>
               Loggar som{" "}
-              <span className="font-semibold" style={{ color: "var(--ink-soft)" }}>{myName}</span>
+              <span className="font-semibold" style={{ color: "var(--ink-secondary)" }}>{myName}</span>
             </p>
           )}
           <div className="px-4 pt-4 flex gap-2 overflow-x-auto items-center no-scrollbar">
@@ -678,9 +678,9 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                 className="shrink-0 inline-flex items-center rounded-full px-4 py-2.5 min-h-[44px] text-[0.95rem] font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: activeStat === statId ? "var(--primary)" : "var(--bg2)",
-                  color: activeStat === statId ? "var(--primary-deep)" : "var(--ink-soft)",
-                  border: "1px solid " + (activeStat === statId ? "var(--primary)" : "var(--line-strong)"),
+                  background: activeStat === statId ? "var(--primary)" : "var(--surface)",
+                  color: activeStat === statId ? "var(--primary-deep)" : "var(--ink-secondary)",
+                  border: "1px solid " + (activeStat === statId ? "var(--primary)" : "var(--border)"),
                 }}
               >
                 {statId === PLAYED_TAB ? "Spelade" : STAT_LABEL[statId]}
@@ -693,15 +693,15 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
               style={{
                 fontFamily: "var(--font-display)",
                 background: "transparent",
-                color: "var(--ink-faint)",
-                border: "1px dashed var(--line-strong)",
+                color: "var(--ink-muted)",
+                border: "1px dashed var(--border)",
               }}
             >
               Ändra
             </button>
           </div>
 
-          <p className="px-4 pt-3 pb-1 text-xs" style={{ color: "var(--ink-faint)" }}>
+          <p className="px-4 pt-3 pb-1 text-xs" style={{ color: "var(--ink-muted)" }}>
             {activeStat === PLAYED_TAB
               ? "Bocka av alla som var med i matchen."
               : "Tryck på spelaren när det händer – varje tryck sparas direkt med matchtid."}
@@ -729,7 +729,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                     <span className="block truncate font-semibold text-[0.95rem] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                       {firstName(p.name)}
                     </span>
-                    <span className="block text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                    <span className="block text-xs mt-0.5" style={{ color: "var(--ink-muted)" }}>
                       {p.jersey_number != null ? `#${p.jersey_number}` : " "}
                     </span>
                   </span>
@@ -739,7 +739,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                       background: (isPlayedTab ? playedOn : count > 0)
                         ? "var(--primary)"
                         : "var(--primary-ghost)",
-                      color: (isPlayedTab ? playedOn : count > 0) ? "var(--primary-deep)" : "var(--ink-faint)",
+                      color: (isPlayedTab ? playedOn : count > 0) ? "var(--primary-deep)" : "var(--ink-muted)",
                     }}
                   >
                     {isPlayedTab ? (playedOn ? "✓" : "–") : count}
@@ -757,7 +757,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                 className="w-full flex items-center justify-between card p-3.5"
               >
                 <span className="font-semibold text-sm">Byte</span>
-                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
                   {live.subs.length > 0 ? `${live.subs.length} gjorda · ` : ""}{subOpen ? "dölj" : "logga byte"}
                 </span>
               </button>
@@ -781,13 +781,13 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
                     Logga byte vid {formatClock(clockNow)}
                   </button>
                   {lastSub && (
-                    <div className="flex items-center justify-between text-xs" style={{ color: "var(--ink-soft)" }}>
+                    <div className="flex items-center justify-between text-xs" style={{ color: "var(--ink-secondary)" }}>
                       <span>Senaste: <strong>{lastSub.onName}</strong> in · {lastSub.offName} ut</span>
                       <button type="button" onClick={() => post({ type: "undo_sub" })} className="underline" style={{ color: "var(--danger)" }}>Ångra</button>
                     </div>
                   )}
                   {!live.hasLineup && (
-                    <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                    <p className="caption" style={{ color: "var(--ink-muted)" }}>
                       Tips: sätt startelvan i laguttagningen så blir speltiden exakt.
                     </p>
                   )}
@@ -810,40 +810,40 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       {showHalftime && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
           <div className="card w-full max-w-sm p-6 max-h-[85vh] overflow-y-auto">
-            <p className="eyebrow text-center" style={{ color: "var(--primary-fg)" }}>
+            <p className="eyebrow text-center" style={{ color: "var(--primary)" }}>
               {live.period > 2 ? `Paus före period ${live.period}` : "Halvtid"}
             </p>
             <p className="stat-number text-4xl text-center my-1.5">{live.ourScore}–{live.oppScore}</p>
-            <p className="text-center text-sm mb-4" style={{ color: "var(--ink-soft)" }}>
+            <p className="text-center text-sm mb-4" style={{ color: "var(--ink-secondary)" }}>
               {live.homeAway === "home" ? "Hemma mot" : "Borta mot"} {live.opponent}
             </p>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="rounded-xl p-3" style={{ background: "var(--bg2)" }}>
-                <p className="text-[0.7rem] mb-1" style={{ color: "var(--ink-faint)" }}>Mål</p>
-                <p className="text-sm">{goalLeaders.length ? goalLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
+              <div className="rounded-xl p-3" style={{ background: "var(--surface)" }}>
+                <p className="caption mb-1" style={{ color: "var(--ink-muted)" }}>Mål</p>
+                <p className="body-small">{goalLeaders.length ? goalLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
               </div>
-              <div className="rounded-xl p-3" style={{ background: "var(--bg2)" }}>
-                <p className="text-[0.7rem] mb-1" style={{ color: "var(--ink-faint)" }}>Assist</p>
-                <p className="text-sm">{assistLeaders.length ? assistLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
+              <div className="rounded-xl p-3" style={{ background: "var(--surface)" }}>
+                <p className="caption mb-1" style={{ color: "var(--ink-muted)" }}>Assist</p>
+                <p className="body-small">{assistLeaders.length ? assistLeaders.slice(0, 3).map((r) => `${r.name} ${r.n}`).join(" · ") : "–"}</p>
               </div>
             </div>
 
-            <p className="text-[0.7rem] mb-2" style={{ color: "var(--ink-faint)" }}>Spelade minuter</p>
+            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>Spelade minuter</p>
             {live.hasLineup && minutesList.length > 0 ? (
               <div className="space-y-1.5 mb-4">
                 {minutesList.map((r) => (
                   <div key={r.id} className="flex items-center gap-2">
-                    <span className="text-xs w-16 truncate" style={{ color: "var(--ink-soft)" }}>{r.name}</span>
-                    <span className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg2)" }}>
+                    <span className="caption w-16 truncate" style={{ color: "var(--ink-secondary)" }}>{r.name}</span>
+                    <span className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--surface)" }}>
                       <span className="block h-full" style={{ width: `${Math.round((r.m / maxMin) * 100)}%`, background: "var(--primary)" }} />
                     </span>
-                    <span className="stat-number text-xs w-12 text-right" style={{ color: "var(--ink-faint)" }}>{r.m} min</span>
+                    <span className="stat-number text-xs w-12 text-right" style={{ color: "var(--ink-muted)" }}>{r.m} min</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs mb-4" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption mb-4" style={{ color: "var(--ink-muted)" }}>
                 Sätt startelvan i laguttagningen så räknas spelade minuter per spelare.
               </p>
             )}
@@ -858,7 +858,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       {lastEvent && (
         <div className="fixed bottom-0 inset-x-0 z-30" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="max-w-md mx-auto m-3 card flex items-center gap-3 p-3 shadow-lg" style={{ boxShadow: "var(--shadow-lift)" }}>
-            <span className="text-[0.8rem] flex-1 truncate" style={{ color: "var(--ink-soft)" }}>
+            <span className="text-[0.8rem] flex-1 truncate" style={{ color: "var(--ink-secondary)" }}>
               Senast:{" "}
               <span className="font-semibold" style={{ color: "var(--ink)" }}>
                 {lastEvent.player_name ? firstName(lastEvent.player_name) : "Motståndaren"} ·{" "}
@@ -868,10 +868,10 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
               </span>
             </span>
             <span
-              className="text-[0.65rem] uppercase tracking-wider"
+              className="caption uppercase tracking-wider"
               style={{
                 fontFamily: "var(--font-display)",
-                color: !isOnline ? "var(--danger)" : pending > 0 ? "var(--warn)" : "var(--ok)",
+                color: !isOnline ? "var(--danger)" : pending > 0 ? "var(--warning)" : "var(--success)",
               }}
             >
               {!isOnline
@@ -930,9 +930,9 @@ function SetupCard({
   return (
     <div className="px-4 pt-5">
       <div className="card p-5">
-        <p className="eyebrow mb-1" style={{ color: "var(--primary-fg)" }}>Innan du börjar</p>
+        <p className="eyebrow mb-1" style={{ color: "var(--primary)" }}>Innan du börjar</p>
         <h2 className="font-semibold text-lg">Vem rapporterar?</h2>
-        <p className="text-sm mt-1 mb-4" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-1 mb-4" style={{ color: "var(--ink-secondary)" }}>
           Ange ditt namn och välj vad du räknar. Dela upp er – en räknar passningar, en annan
           brytningar.
         </p>
@@ -951,9 +951,9 @@ function SetupCard({
                   onClick={() => setName(r.name)}
                   className="rounded-full px-3 py-1 text-xs font-medium transition-all"
                   style={{
-                    background: name === r.name ? "var(--primary)" : "var(--bg2)",
-                    color: name === r.name ? "var(--primary-deep)" : "var(--ink-soft)",
-                    border: "1px solid " + (name === r.name ? "var(--primary)" : "var(--line-strong)"),
+                    background: name === r.name ? "var(--primary)" : "var(--surface)",
+                    color: name === r.name ? "var(--primary-deep)" : "var(--ink-secondary)",
+                    border: "1px solid " + (name === r.name ? "var(--primary)" : "var(--border)"),
                   }}
                 >
                   {r.name}{ago ? <span className="opacity-60"> · {ago}</span> : null}
@@ -970,8 +970,8 @@ function SetupCard({
           placeholder="T.ex. Annas mamma"
           className="w-full px-3.5 py-3 rounded-lg mb-5"
           style={{
-            background: "var(--bg2)",
-            border: "1.5px solid var(--line-strong)",
+            background: "var(--surface)",
+            border: "1.5px solid var(--border)",
             color: "var(--ink)",
             outline: "none",
             fontFamily: "inherit",
@@ -993,14 +993,14 @@ function SetupCard({
                 className="rounded-full px-4 py-2.5 text-sm font-semibold transition-all"
                 style={{
                   fontFamily: "var(--font-display)",
-                  background: on ? "var(--primary)" : "var(--bg2)",
-                  color: on ? "var(--primary-deep)" : hasConflict ? "var(--warn)" : "var(--ink-soft)",
-                  border: "1.5px solid " + (on ? "var(--primary)" : hasConflict ? "var(--warn)" : "var(--line-strong)"),
+                  background: on ? "var(--primary)" : "var(--surface)",
+                  color: on ? "var(--primary-deep)" : hasConflict ? "var(--warning)" : "var(--ink-secondary)",
+                  border: "1.5px solid " + (on ? "var(--primary)" : hasConflict ? "var(--warning)" : "var(--border)"),
                 }}
               >
                 {f.label}{f.hint ? ` (${f.hint})` : ""}
                 {hasConflict && !on && (
-                  <span className="ml-1 text-[0.7em] opacity-80">· {takenBy.map(r => r.name.split(" ")[0]).join(", ")} räknar</span>
+                  <span className="ml-1 caption opacity-80">· {takenBy.map(r => r.name.split(" ")[0]).join(", ")} räknar</span>
                 )}
               </button>
             );
@@ -1008,7 +1008,7 @@ function SetupCard({
         </div>
 
         {picked.some((id) => otherReporters.some((r) => r.stats.includes(id))) && (
-          <p className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--warn-bg, rgba(234,179,8,0.1))", color: "var(--warn)" }}>
+          <p className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--warn-bg, rgba(234,179,8,0.1))", color: "var(--warning)" }}>
             Du har valt samma statistik som någon annan. Händelser loggas ändå bara en gång tack vare duplikatskydd – men koordinera gärna med de andra.
           </p>
         )}

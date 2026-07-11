@@ -108,7 +108,7 @@ function EventCard({
       <div
         className="rounded-2xl px-3.5 py-2.5"
         style={{
-          background: ourGoal ? "var(--primary)" : "var(--bg3)",
+          background: ourGoal ? "var(--primary)" : "var(--elevated)",
           border: ourGoal ? "1px solid transparent" : "1px solid var(--coral)",
         }}
       >
@@ -124,7 +124,7 @@ function EventCard({
           </span>
           <div className="min-w-0 flex-1">
             <p
-              className="text-[0.7rem] font-bold uppercase tracking-[0.1em] leading-none"
+              className="caption font-bold uppercase tracking-[0.1em] leading-none"
               style={{
                 fontFamily: "var(--font-display)",
                 color: ourGoal ? "var(--primary-deep)" : "var(--coral)",
@@ -139,7 +139,7 @@ function EventCard({
               {ourGoal ? (e.player_name ? firstName(e.player_name) : "Vi") : opponent}
             </p>
             {reporter && (
-              <p className="text-[0.65rem] mt-0.5 opacity-60" style={{ color: ourGoal ? "var(--primary-deep)" : "var(--ink)" }}>
+              <p className="caption mt-0.5 opacity-60" style={{ color: ourGoal ? "var(--primary-deep)" : "var(--ink)" }}>
                 via {reporter}
               </p>
             )}
@@ -158,11 +158,11 @@ function EventCard({
   return (
     <div
       className="rounded-2xl px-3.5 py-2 flex items-center gap-2"
-      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <span
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-        style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+        style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
       >
         <Icon width={13} height={13} />
       </span>
@@ -170,7 +170,7 @@ function EventCard({
         <span className="font-semibold">
           {e.player_name ? firstName(e.player_name) : "Laget"}
         </span>
-        <span className="block text-xs leading-tight" style={{ color: "var(--ink-soft)" }}>
+        <span className="block text-xs leading-tight" style={{ color: "var(--ink-secondary)" }}>
           {STAT_LABEL[e.stat_id] ?? e.stat_id}
           {reporter && <span className="opacity-60"> · via {reporter}</span>}
         </span>
@@ -196,7 +196,7 @@ export default function LiveFeed({
     return (
       <div
         className="rounded-2xl border border-dashed p-6 text-center text-sm"
-        style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
+        style={{ borderColor: "var(--border)", color: "var(--ink-secondary)" }}
       >
         {emptyText}
       </div>
@@ -208,7 +208,7 @@ export default function LiveFeed({
       {/* Mittspine */}
       <div
         className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2"
-        style={{ background: "var(--line-strong)" }}
+        style={{ background: "var(--border)" }}
         aria-hidden
       />
       <ul className="space-y-2.5 relative">
@@ -231,11 +231,11 @@ export default function LiveFeed({
           }
           const time = (
             <span
-              className="stat-number relative z-10 flex h-7 min-w-12 items-center justify-center rounded-full px-1.5 text-[0.7rem]"
+              className="stat-number relative z-10 flex h-7 min-w-12 items-center justify-center rounded-full px-1.5 caption"
               style={{
-                background: "var(--bg2)",
-                border: "1px solid var(--line-strong)",
-                color: "var(--ink-soft)",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                color: "var(--ink-secondary)",
                 boxShadow: "0 0 0 3px var(--bg)",
               }}
             >

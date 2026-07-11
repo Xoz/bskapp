@@ -13,7 +13,7 @@ export default function RoleSwitcher({ view }: { view: ViewRole }) {
   return (
     <div
       className="flex items-center rounded-full p-0.5 gap-0.5 shrink-0"
-      style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       {ITEMS.map(({ key, label }) => {
         const active = key === view;
@@ -23,11 +23,11 @@ export default function RoleSwitcher({ view }: { view: ViewRole }) {
             <button
               type="submit"
               aria-pressed={active}
-              className="text-[0.625rem] px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap uppercase tracking-wide cursor-pointer"
+              className="caption px-2.5 py-1.5 rounded-full font-medium transition-colors whitespace-nowrap uppercase tracking-wide cursor-pointer"
               style={
                 active
                   ? { background: "var(--primary)", color: "var(--primary-deep)" }
-                  : { color: "var(--ink-faint)" }
+                  : { color: "var(--ink-muted)" }
               }
             >
               {label}

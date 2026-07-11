@@ -76,7 +76,7 @@ export default function ManualEventForm({
               className="input w-20 text-center"
               aria-label="Minuter"
             />
-            <span style={{ color: "var(--ink-faint)" }}>:</span>
+            <span style={{ color: "var(--ink-muted)" }}>:</span>
             <input
               type="number"
               name="seconds"
@@ -86,16 +86,16 @@ export default function ManualEventForm({
               className="input w-20 text-center"
               aria-label="Sekunder"
             />
-            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>min : sek</span>
+            <span className="caption" style={{ color: "var(--ink-muted)" }}>min : sek</span>
           </div>
         </div>
       </div>
 
       {state?.error && (
-        <p className="text-sm" style={{ color: "var(--danger)" }}>{state.error}</p>
+        <p className="body-small" style={{ color: "var(--danger)" }}>{state.error}</p>
       )}
       {state?.ok && (
-        <p className="text-sm" style={{ color: "var(--ok)" }}>Händelse tillagd!</p>
+        <p className="body-small" style={{ color: "var(--success)" }}>Händelse tillagd!</p>
       )}
 
       <button type="submit" disabled={pending} className="btn-primary disabled:opacity-50">

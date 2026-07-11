@@ -19,9 +19,9 @@ export default async function TeamSkillTreePage() {
       <div>
         <p className="eyebrow mb-1">Laget</p>
         <h1 className="text-2xl font-bold">Utvecklingsträd 7v7 → 9v9</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Snitt per kategori över hela truppen. Öppna en spelare under{" "}
-          <Link href="/spelare" className="underline" style={{ color: "var(--primary-fg)" }}>
+          <Link href="/spelare" className="underline" style={{ color: "var(--primary)" }}>
             Spelare
           </Link>{" "}
           för att se och redigera individuell checklista.
@@ -45,9 +45,9 @@ export default async function TeamSkillTreePage() {
                     <i key={n} className={n <= level ? "on" : ""} />
                   ))}
                 </span>
-                <span className="text-xs tabular-nums" style={{ color: "var(--ink-faint)" }}>{percent}%</span>
+                <span className="caption tabular-nums" style={{ color: "var(--ink-muted)" }}>{percent}%</span>
               </div>
-              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--bg3)" }}>
+              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--elevated)" }}>
                 <div className="h-full rounded-full" style={{ width: `${percent}%`, background: cat.color }} />
               </div>
             </div>

@@ -29,14 +29,14 @@ export default async function PublicLivePage({ params }: { params: Promise<{ id:
         <Link
           href="/live"
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Livescore
         </Link>
         <h1 className="text-[1.5rem] font-bold mt-2">
           {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
           {settings.team_name} · {match.date}
           {match.start_time ? ` · ${match.start_time}` : ""}
         </p>

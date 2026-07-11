@@ -58,12 +58,12 @@ export default async function CupEditorPage({
         <Link
           href="/matcher"
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Matcher
         </Link>
-        <h1 className="text-[1.7rem] font-bold mt-2">{cupName}</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-2">{cupName}</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           {dateRange} · {matches.length} matcher · {goalsScored} gjorda mål
         </p>
       </div>
@@ -71,7 +71,7 @@ export default async function CupEditorPage({
       {sparad && (
         <div
           className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-          style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+          style={{ background: "var(--ok-bg)", color: "var(--success)" }}
         >
           <IconCheck width={16} height={16} />
           {sparad === "trupp" ? "Uttagningen är sparad." : "Cupen är sparad."}
@@ -87,7 +87,7 @@ export default async function CupEditorPage({
         <div className="card p-5 md:p-6 space-y-4">
           <div>
             <h2 className="font-semibold">Cupinställningar</h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
               Gäller alla matcher i cupen.
             </p>
           </div>
@@ -103,7 +103,7 @@ export default async function CupEditorPage({
               />
             </div>
             <div>
-              <label className="label" htmlFor="cup_group">Grupp <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(valfri)</span></label>
+              <label className="label" htmlFor="cup_group">Grupp <span style={{ color: "var(--ink-muted)", fontWeight: 400 }}>(valfri)</span></label>
               <input
                 id="cup_group"
                 name="cup_group"
@@ -150,9 +150,9 @@ export default async function CupEditorPage({
 
         {/* Gruppspel */}
         <div className="card overflow-hidden">
-          <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+          <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
             <h2 className="font-semibold">Gruppspel</h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
               {groupMatches.length} matcher
             </p>
           </div>
@@ -161,7 +161,7 @@ export default async function CupEditorPage({
               <div key={m.id} className="px-5 md:px-6 py-4 space-y-3">
                 <input type="hidden" name={`phase_${m.id}`} value="group" />
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption font-semibold" style={{ color: "var(--ink-muted)" }}>
                     Match {i + 1}
                   </p>
                   <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName, cupGroup)} />
@@ -214,9 +214,9 @@ export default async function CupEditorPage({
         {/* Slutspel */}
         {playoffMatches.length > 0 && (
           <div className="card overflow-hidden">
-            <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+            <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
               <h2 className="font-semibold">Slutspel</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                 {playoffMatches.length} matcher – uppdatera motståndare efter gruppspelet
               </p>
             </div>
@@ -225,11 +225,11 @@ export default async function CupEditorPage({
                 <div
                   key={m.id}
                   className="px-5 md:px-6 py-4 space-y-3"
-                  style={{ borderTop: i > 0 ? "1px solid var(--line)" : undefined }}
+                  style={{ borderTop: i > 0 ? "1px solid var(--border)" : undefined }}
                 >
                   <input type="hidden" name={`phase_${m.id}`} value="playoff" />
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>
+                    <p className="caption font-semibold" style={{ color: "var(--ink-muted)" }}>
                       Slutspelsmatch {i + 1}
                     </p>
                     <DeleteCupMatchButton action={deleteCupMatch.bind(null, m.id, cupName, cupGroup)} />
@@ -307,13 +307,13 @@ export default async function CupEditorPage({
       <div className="card p-5 md:p-6 space-y-4">
         <div>
           <h2 className="font-semibold">Laguttagning</h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+          <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
             Spelarna du tar ut här är cupens trupp och blir förvald i varje match. Du kan
             sedan justera startelva och avbytare per match.
           </p>
         </div>
         {playersInfo.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
             Inga aktiva spelare i truppen ännu.
           </p>
         ) : (
@@ -332,8 +332,8 @@ export default async function CupEditorPage({
           />
         )}
 
-        <div className="pt-1" style={{ borderTop: "1px solid var(--line)" }}>
-          <p className="text-xs font-semibold mt-3 mb-2" style={{ color: "var(--ink-faint)" }}>
+        <div className="pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+          <p className="caption font-semibold mt-3 mb-2" style={{ color: "var(--ink-muted)" }}>
             Startelva per match
           </p>
           <div className="flex flex-col gap-1.5">
@@ -345,12 +345,12 @@ export default async function CupEditorPage({
                 key={m.id}
                 href={`/matcher/${m.id}/laguttagning`}
                 className="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors hover:text-[var(--primary)]"
-                style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}
+                style={{ background: "var(--surface)", color: "var(--ink-secondary)" }}
               >
                 <span>
                   {label} · {m.home_away === "home" ? "hemma mot" : "borta mot"} {m.opponent}
                 </span>
-                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
                   {m.date} →
                 </span>
               </Link>
@@ -362,7 +362,7 @@ export default async function CupEditorPage({
       {/* Lägg till slutspelsmatch */}
       <div className="card p-5 md:p-6">
         <h2 className="font-semibold mb-1">Slutspel</h2>
-        <p className="text-sm mt-0.5 mb-4" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-0.5 mb-4" style={{ color: "var(--ink-secondary)" }}>
           {playoffMatches.length === 0
             ? "Cupen saknar slutspelsomgångar. Lägg till en match för varje slutspelsrunda."
             : `${playoffMatches.length} slutspelsmatch${playoffMatches.length !== 1 ? "er" : ""} tillagd${playoffMatches.length !== 1 ? "a" : ""}. Fyll i motståndare ovan efter gruppspelet.`}

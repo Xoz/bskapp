@@ -29,9 +29,9 @@ export default function LiveClock({ className = "" }: { className?: string }) {
     <div
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium tabular-nums ${className}`}
       style={{
-        background: "var(--bg2)",
-        border: "1px solid var(--line)",
-        color: "var(--ink-soft)",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        color: "var(--ink-secondary)",
         fontFamily: "var(--font-display)",
       }}
       aria-label="Aktuell tid (svensk tid)"

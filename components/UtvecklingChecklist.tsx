@@ -72,7 +72,7 @@ export default function UtvecklingChecklist({
     <div className="space-y-6">
       {!readOnly && (
         <div className="flex items-center justify-end">
-          <div className="inline-flex rounded-full p-0.5 gap-0.5 text-xs" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+          <div className="inline-flex rounded-full p-0.5 gap-0.5 text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             {(["coach", "player"] as const).map((r) => (
               <button
                 key={r}
@@ -82,7 +82,7 @@ export default function UtvecklingChecklist({
                 style={
                   role === r
                     ? { background: "var(--primary)", color: "var(--primary-deep)" }
-                    : { color: "var(--ink-faint)" }
+                    : { color: "var(--ink-muted)" }
                 }
               >
                 {r === "coach" ? "Tränarvy" : "Spelarvy"}
@@ -97,11 +97,11 @@ export default function UtvecklingChecklist({
           <p className="eyebrow mb-2">Total utvecklingsnivå</p>
           <div className="flex items-center justify-between mb-2">
             <span className="stat-number text-2xl">{total.percent}%</span>
-            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            <span className="caption" style={{ color: "var(--ink-muted)" }}>
               {total.done}/{total.total} klara
             </span>
           </div>
-          <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--bg3)" }}>
+          <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--elevated)" }}>
             <div className="h-full rounded-full" style={{ width: `${total.percent}%`, background: "var(--primary)" }} />
           </div>
         </div>
@@ -110,10 +110,10 @@ export default function UtvecklingChecklist({
           {next ? (
             <>
               <p className="font-medium text-sm mb-0.5">{next.title}</p>
-              <p className="text-xs" style={{ color: "var(--ink-soft)" }}>{next.question}</p>
+              <p className="caption" style={{ color: "var(--ink-secondary)" }}>{next.question}</p>
             </>
           ) : (
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>Allt klart – grymt jobbat! 🎉</p>
+            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>Allt klart – grymt jobbat! 🎉</p>
           )}
         </div>
       </div>
@@ -129,9 +129,9 @@ export default function UtvecklingChecklist({
                 type="button"
                 onClick={() => setCategoryFilter(p.category)}
                 className="badge"
-                style={{ background: "var(--bg2)", color: "var(--ink)", border: "1px solid var(--line)" }}
+                style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
               >
-                {cat.icon} {cat.name} <span style={{ color: "var(--ink-faint)" }}>{p.percent}%</span>
+                {cat.icon} {cat.name} <span style={{ color: "var(--ink-muted)" }}>{p.percent}%</span>
               </button>
             );
           })}
@@ -149,8 +149,8 @@ export default function UtvecklingChecklist({
               onClick={() => setCategoryFilter(active ? "all" : p.category)}
               className="text-left rounded-lg p-2.5 transition"
               style={{
-                border: `1px solid ${active ? cat.color : "var(--line)"}`,
-                background: active ? `color-mix(in srgb, ${cat.color}, transparent 90%)` : "var(--bg2)",
+                border: `1px solid ${active ? cat.color : "var(--border)"}`,
+                background: active ? `color-mix(in srgb, ${cat.color}, transparent 90%)` : "var(--surface)",
               }}
             >
               <div className="flex items-center gap-1.5 text-xs mb-1.5">
@@ -176,8 +176,8 @@ export default function UtvecklingChecklist({
             className="px-3 py-1.5 rounded-full text-xs font-medium transition"
             style={
               filterMode === f.mode
-                ? { background: "var(--primary-soft)", color: "var(--primary-fg)", border: "1px solid var(--primary-line)" }
-                : { color: "var(--ink-faint)", border: "1px solid var(--line)" }
+                ? { background: "var(--primary-soft)", color: "var(--primary)", border: "1px solid var(--primary-line)" }
+                : { color: "var(--ink-muted)", border: "1px solid var(--border)" }
             }
           >
             {f.label}
@@ -188,7 +188,7 @@ export default function UtvecklingChecklist({
             type="button"
             onClick={() => setCategoryFilter("all")}
             className="px-3 py-1.5 rounded-full text-xs"
-            style={{ color: "var(--ink-faint)", border: "1px solid var(--line)" }}
+            style={{ color: "var(--ink-muted)", border: "1px solid var(--border)" }}
           >
             Visa alla kategorier ×
           </button>
@@ -213,7 +213,7 @@ export default function UtvecklingChecklist({
                     <div key={s.id} className="card p-3" style={{ opacity: unlocked ? 1 : 0.5 }}>
                       <div className="flex items-start justify-between gap-3 mb-1.5">
                         <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                          <span className="text-xs tabular-nums" style={{ color: "var(--ink-faint)" }}>
+                          <span className="caption tabular-nums" style={{ color: "var(--ink-muted)" }}>
                             Nivå {s.level}
                           </span>
                           <span className="font-medium text-sm">{s.question}</span>
@@ -237,22 +237,22 @@ export default function UtvecklingChecklist({
                       </div>
 
                       {!unlocked ? (
-                        <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                        <p className="caption" style={{ color: "var(--ink-muted)" }}>
                           🔒 Lås upp genom att klara föregående steg.
                         </p>
                       ) : (
                         <>
-                          <p className="text-xs mb-1" style={{ color: "var(--ink-soft)" }}>
-                            <span style={{ color: "var(--ink-faint)" }}>Klart när: </span>
+                          <p className="caption mb-1" style={{ color: "var(--ink-secondary)" }}>
+                            <span style={{ color: "var(--ink-muted)" }}>Klart när: </span>
                             {s.criterion}
                           </p>
                           {st !== "done" ? (
-                            <p className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                              <span style={{ color: "var(--ink-faint)" }}>Träningsråd: </span>
+                            <p className="caption" style={{ color: "var(--ink-secondary)" }}>
+                              <span style={{ color: "var(--ink-muted)" }}>Träningsråd: </span>
                               {s.advice}
                             </p>
                           ) : (
-                            <p className="text-xs" style={{ color: "#1fba8a" }}>
+                            <p className="caption" style={{ color: "#1fba8a" }}>
                               {s.nextStep}
                             </p>
                           )}

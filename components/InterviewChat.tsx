@@ -137,13 +137,13 @@ export default function InterviewChat({
       <div className="flex flex-col items-center justify-center gap-8 text-center px-6 w-full max-w-sm mx-auto" style={{ minHeight: "100svh" }}>
         <div
           className="flex h-20 w-20 items-center justify-center rounded-full text-4xl"
-          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "2px solid var(--primary)", color: "var(--primary-fg)" }}
+          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "2px solid var(--primary)", color: "var(--primary)" }}
         >✓</div>
         <div>
           <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
             Toppen, {name}!
           </h1>
-          <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+          <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
             Din {interviewType === "kvartal" ? "utvärdering" : "intervju"} är sparad och skickas till tränaren.<br />Bra jobbat! ⚽
           </p>
         </div>
@@ -161,18 +161,18 @@ export default function InterviewChat({
       <div className="flex flex-col items-center gap-7 w-full max-w-sm mx-auto px-6 py-10" style={{ minHeight: "100svh", justifyContent: "center" }}>
         {/* Header */}
         <div className="text-center">
-          <p className="text-[0.65rem] uppercase tracking-[0.14em] mb-3" style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}>
+          <p className="caption uppercase tracking-[0.14em] mb-3" style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>
             {clubName} · {teamName}
           </p>
-          <h1 className="text-[1.9rem] font-bold leading-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px", color: "var(--ink)" }}>
-            Berätta för<br /><span style={{ color: "var(--primary-fg)" }}>tränaren</span>
+          <h1 className="text-[30px] font-bold leading-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px", color: "var(--ink)" }}>
+            Berätta för<br /><span style={{ color: "var(--primary)" }}>tränaren</span>
           </h1>
         </div>
 
         {/* Namn — dolt om pre-ifyllt (inloggad spelare) */}
         {!isPrefilled && (
           <div className="w-full space-y-2">
-            <label className="block text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+            <label className="block caption uppercase tracking-[0.1em]" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}>
               Vad heter du?
             </label>
             <input
@@ -193,7 +193,7 @@ export default function InterviewChat({
         {/* Position — dolt om pre-ifyllt */}
         {!isPrefilled && (
           <div className="w-full space-y-2">
-            <p className="text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+            <p className="caption uppercase tracking-[0.1em]" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}>
               Din position
             </p>
             <div className="flex flex-wrap gap-2">
@@ -202,11 +202,11 @@ export default function InterviewChat({
                   key={p.value}
                   type="button"
                   onClick={() => setPosition(p.value)}
-                  className="text-sm rounded-lg px-3 py-2 transition-all"
+                  className="body-small rounded-lg px-3 py-2 transition-all"
                   style={{
-                    background: position === p.value ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg2)",
-                    border: `1px solid ${position === p.value ? "var(--primary)" : "var(--line)"}`,
-                    color: position === p.value ? "var(--primary)" : "var(--ink-soft)",
+                    background: position === p.value ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface)",
+                    border: `1px solid ${position === p.value ? "var(--primary)" : "var(--border)"}`,
+                    color: position === p.value ? "var(--primary)" : "var(--ink-secondary)",
                   }}
                 >
                   {p.label}
@@ -220,24 +220,24 @@ export default function InterviewChat({
         {isPrefilled && (
           <div
             className="w-full flex items-center gap-3 rounded-2xl px-4 py-3"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold text-sm"
-              style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+              style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
             >
               {name[0]?.toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{name}</p>
-              {position && <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{position}</p>}
+              <p className="body-small font-semibold" style={{ color: "var(--ink)" }}>{name}</p>
+              {position && <p className="caption" style={{ color: "var(--ink-muted)" }}>{position}</p>}
             </div>
           </div>
         )}
 
         {/* Intervjutyp */}
         <div className="w-full space-y-2">
-          <p className="text-[0.65rem] uppercase tracking-[0.1em]" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+          <p className="caption uppercase tracking-[0.1em]" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}>
             Typ av intervju
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -251,14 +251,14 @@ export default function InterviewChat({
                 onClick={() => setInterviewType(t.value)}
                 className="flex flex-col gap-1 rounded-xl p-3 text-left transition-all"
                 style={{
-                  background: interviewType === t.value ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "var(--bg2)",
-                  border: `1.5px solid ${interviewType === t.value ? "var(--primary)" : "var(--line)"}`,
+                  background: interviewType === t.value ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "var(--surface)",
+                  border: `1.5px solid ${interviewType === t.value ? "var(--primary)" : "var(--border)"}`,
                 }}
               >
-                <span className="text-sm font-semibold" style={{ color: interviewType === t.value ? "var(--primary)" : "var(--ink)" }}>
+                <span className="body-small font-semibold" style={{ color: interviewType === t.value ? "var(--primary)" : "var(--ink)" }}>
                   {t.label}
                 </span>
-                <span className="text-[0.65rem] leading-snug" style={{ color: "var(--ink-faint)" }}>
+                <span className="caption leading-snug" style={{ color: "var(--ink-muted)" }}>
                   {t.desc}
                 </span>
               </button>
@@ -284,24 +284,24 @@ export default function InterviewChat({
       {/* Topbar */}
       <div
         className="flex items-center gap-3 px-5 py-3 shrink-0"
-        style={{ background: "var(--bg2)", borderBottom: "1px solid var(--line)", paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
       >
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{ background: "color-mix(in srgb, var(--primary) 20%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+          style={{ background: "color-mix(in srgb, var(--primary) 20%, transparent)", border: "1.5px solid var(--primary)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
         >
           {name[0]?.toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight" style={{ color: "var(--ink)" }}>{name}</p>
-          <p className="text-[0.65rem] leading-tight" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}>
+          <p className="body-small font-semibold leading-tight" style={{ color: "var(--ink)" }}>{name}</p>
+          <p className="caption leading-tight" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}>
             {position} · {interviewType === "kvartal" ? "Kvartalsutvärdering" : "Spelarsamtal"}
           </p>
         </div>
         <button
           onClick={restart}
-          className="text-[0.65rem] px-3 py-1.5 rounded-lg"
-          style={{ border: "1px solid var(--line)", color: "var(--ink-faint)", background: "transparent" }}
+          className="caption px-3 py-1.5 rounded-lg"
+          style={{ border: "1px solid var(--border)", color: "var(--ink-muted)", background: "transparent" }}
         >
           ↩ Börja om
         </button>
@@ -312,18 +312,18 @@ export default function InterviewChat({
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col max-w-[82%] ${m.role === "ai" ? "self-start" : "self-end"}`}>
             <div
-              className="text-sm leading-relaxed px-4 py-3"
+              className="body-small leading-relaxed px-4 py-3"
               style={
                 m.role === "ai"
-                  ? { background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: "14px 14px 14px 4px", color: "var(--ink)" }
+                  ? { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px 14px 14px 4px", color: "var(--ink)" }
                   : { background: "var(--primary)", borderRadius: "14px 14px 4px 14px", color: "var(--primary-deep)", fontWeight: 500 }
               }
             >
               {m.text}
             </div>
             <p
-              className="text-[0.6rem] mt-1 px-1"
-              style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)", textAlign: m.role === "player" ? "right" : "left" }}
+              className="caption mt-1 px-1"
+              style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)", textAlign: m.role === "player" ? "right" : "left" }}
             >
               {m.time}
             </p>
@@ -332,9 +332,9 @@ export default function InterviewChat({
 
         {busy && (
           <div className="self-start">
-            <div className="flex gap-1.5 items-center px-4 py-3" style={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: "14px 14px 14px 4px" }}>
+            <div className="flex gap-1.5 items-center px-4 py-3" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px 14px 14px 4px" }}>
               {[0, 1, 2].map((i) => (
-                <span key={i} className="block h-2 w-2 rounded-full" style={{ background: "var(--ink-faint)", animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                <span key={i} className="block h-2 w-2 rounded-full" style={{ background: "var(--ink-muted)", animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
               ))}
             </div>
           </div>
@@ -345,7 +345,7 @@ export default function InterviewChat({
       {/* Input */}
       <div
         className="flex gap-3 px-4 pt-3 shrink-0"
-        style={{ background: "var(--bg)", borderTop: "1px solid var(--line)", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        style={{ background: "var(--bg)", borderTop: "1px solid var(--border)", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
       >
         <textarea
           ref={textareaRef}
@@ -357,13 +357,13 @@ export default function InterviewChat({
           maxLength={500}
           disabled={busy}
           className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none"
-          style={{ background: "var(--bg2)", border: "1px solid var(--line)", color: "var(--ink)", fontSize: "16px", maxHeight: "120px", minHeight: "46px" }}
+          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)", fontSize: "16px", maxHeight: "120px", minHeight: "46px" }}
         />
         <button
           onClick={() => send()}
           disabled={busy || !input.trim()}
           className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl transition-all"
-          style={{ background: busy || !input.trim() ? "var(--bg3)" : "var(--primary)", color: busy || !input.trim() ? "var(--ink-faint)" : "var(--primary-deep)" }}
+          style={{ background: busy || !input.trim() ? "var(--elevated)" : "var(--primary)", color: busy || !input.trim() ? "var(--ink-muted)" : "var(--primary-deep)" }}
           aria-label="Skicka"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -21,32 +21,42 @@ export default async function Navbar() {
     <header
       className="sticky top-0 z-50"
       style={{
-        background: "var(--bg-nav)",
-        borderBottom: "1px solid var(--line)",
+        background: "var(--surface)",
+        borderBottom: "1px solid var(--border)",
         paddingTop: "env(safe-area-inset-top)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
       }}
     >
       {/* Huvudrad */}
-      <div className="flex items-center h-14 px-4 gap-3">
+      <div className="flex items-center h-14 px-4 md:px-6 gap-3">
         <Link href={homeHref} className="flex items-center gap-2 shrink-0 mr-1">
           <Logo90Mark size={22} />
           <span
-            className="font-bold text-lg tracking-tight"
-            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.5px" }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "24px",
+              letterSpacing: "0.02em",
+              lineHeight: 1,
+            }}
           >
-            <span style={{ color: "var(--primary-fg)" }}>+</span>
+            <span style={{ color: "var(--primary)" }}>+</span>
             <span style={{ color: "var(--ink)" }}>90</span>
           </span>
         </Link>
 
         {/* Navlänkar — visas på desktop */}
-        {isStaff && <nav className="hidden md:flex flex-1 items-center gap-1"><NavLinks permissions={user?.permissions ?? []} horizontal /></nav>}
+        {isStaff && (
+          <nav className="hidden md:flex flex-1 items-center gap-1">
+            <NavLinks permissions={user?.permissions ?? []} horizontal />
+          </nav>
+        )}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
           {isStaff && coachName && (
             <span
-              className="hidden sm:block text-sm font-medium px-2"
-              style={{ color: "var(--ink-soft)" }}
+              className="hidden sm:block body-small font-medium px-2"
+              style={{ color: "var(--ink-secondary)" }}
             >
               {coachName.split(" ")[0]}
             </span>
@@ -58,8 +68,9 @@ export default async function Navbar() {
               <button
                 type="submit"
                 title="Logga ut"
-                className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg2)]"
-                style={{ color: "var(--ink-faint)" }}
+                aria-label="Logga ut"
+                className="icon-btn"
+                style={{ width: 32, height: 32 }}
               >
                 <IconLogout width={15} height={15} />
               </button>
@@ -67,7 +78,6 @@ export default async function Navbar() {
           )}
         </div>
       </div>
-
     </header>
   );
 }

@@ -25,7 +25,7 @@ export default function LoginForm() {
         className="flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-85"
         style={{
           background: "var(--bg)",
-          border: "1px solid var(--line)",
+          border: "1px solid var(--border)",
           color: "var(--ink)",
         }}
       >
@@ -34,7 +34,7 @@ export default function LoginForm() {
       </a>
       {googleError === "not_allowed" && (
         <p
-          className="text-[0.6875rem] text-center py-2 px-3"
+          className="caption text-center py-2 px-3"
           style={{
             color: "var(--coral)",
             background: "rgba(248,113,113,0.06)",
@@ -47,7 +47,7 @@ export default function LoginForm() {
       )}
       {googleError === "1" && (
         <p
-          className="text-[0.6875rem] text-center py-2 px-3"
+          className="caption text-center py-2 px-3"
           style={{
             color: "var(--coral)",
             background: "rgba(248,113,113,0.06)",

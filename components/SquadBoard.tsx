@@ -149,7 +149,7 @@ export default function SquadBoard({
     <div ref={wrapRef} className="relative space-y-4">
       {/* Verktygsrad: formation + auto */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>Formation:</span>
+        <span className="caption" style={{ color: "var(--ink-muted)" }}>Formation:</span>
         {FORMATIONS.map((f) => (
           <button
             key={f.id}
@@ -159,16 +159,16 @@ export default function SquadBoard({
             style={
               f.id === formationId
                 ? { background: "var(--primary)", color: "var(--primary-deep)" }
-                : { background: "var(--bg2)", color: "var(--ink-soft)" }
+                : { background: "var(--surface)", color: "var(--ink-secondary)" }
             }
           >
             {f.label}
           </button>
         ))}
-        <button type="button" onClick={autoPlace} className="badge cursor-pointer ml-auto" style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}>
+        <button type="button" onClick={autoPlace} className="badge cursor-pointer ml-auto" style={{ background: "var(--surface)", color: "var(--ink-secondary)" }}>
           Autoplacera
         </button>
-        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+        <span className="caption" style={{ color: "var(--ink-muted)" }}>
           Startelva {placedIds.length}/7
         </span>
       </div>
@@ -232,7 +232,7 @@ export default function SquadBoard({
             >
               <Jersey num={p.jersey_number} gk={p.position === "malvakt" || p.jersey_number === 1} size={TOKEN} />
               <span
-                className="mt-0.5 px-1.5 rounded text-[0.65rem] font-semibold whitespace-nowrap"
+                className="mt-0.5 px-1.5 rounded caption font-semibold whitespace-nowrap"
                 style={{ background: "rgba(0,0,0,0.45)", color: "#fff" }}
               >
                 {firstName(p.name)}
@@ -245,16 +245,16 @@ export default function SquadBoard({
       {/* Bänken (avbytare = kallade utan plats) – släpp här för att ta ner */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold" style={{ color: "var(--ink-soft)" }}>Bänk</span>
-          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>dra upp på planen för att starta</span>
+          <span className="body-small font-semibold" style={{ color: "var(--ink-secondary)" }}>Bänk</span>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>dra upp på planen för att starta</span>
         </div>
         <div
           ref={benchRef}
           className="rounded-2xl p-3 flex flex-wrap gap-2 min-h-16"
-          style={{ background: "var(--bg2)", border: "1px dashed var(--line-strong)" }}
+          style={{ background: "var(--surface)", border: "1px dashed var(--border)" }}
         >
           {benchIds.length === 0 && (
-            <span className="text-xs self-center" style={{ color: "var(--ink-faint)" }}>
+            <span className="caption self-center" style={{ color: "var(--ink-muted)" }}>
               Alla kallade står på planen.
             </span>
           )}
@@ -267,10 +267,10 @@ export default function SquadBoard({
                 key={id}
                 onPointerDown={(e) => onPointerDownToken(e, id)}
                 className="flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1"
-                style={{ background: "var(--bg3)", touchAction: "none", cursor: "grab", opacity: isDragging ? 0.3 : 1 }}
+                style={{ background: "var(--elevated)", touchAction: "none", cursor: "grab", opacity: isDragging ? 0.3 : 1 }}
               >
                 <Jersey num={p.jersey_number} gk={p.position === "malvakt" || p.jersey_number === 1} size={30} />
-                <span className="text-sm font-medium">{firstName(p.name)}</span>
+                <span className="body-small font-medium">{firstName(p.name)}</span>
               </div>
             );
           })}
@@ -279,8 +279,8 @@ export default function SquadBoard({
 
       {/* Trupp – kalla in spelare (färg efter hur de passar matchens nivå) */}
       <div>
-        <span className="text-sm font-semibold block mb-2" style={{ color: "var(--ink-soft)" }}>
-          Kalla trupp <span className="font-normal text-xs" style={{ color: "var(--ink-faint)" }}>· {squad.size} uttagna</span>
+        <span className="body-small font-semibold block mb-2" style={{ color: "var(--ink-secondary)" }}>
+          Kalla trupp <span className="font-normal text-xs" style={{ color: "var(--ink-muted)" }}>· {squad.size} uttagna</span>
         </span>
         <div className="flex flex-wrap gap-2">
           {players.map((p) => {
@@ -288,7 +288,7 @@ export default function SquadBoard({
             const f = fit(p.level, matchLevel);
             const pl = levelInfo(p.level);
             const tone =
-              f.tone === "ok" ? "var(--ok)" : f.tone === "warn" ? "var(--warn)" : f.tone === "danger" ? "var(--danger)" : "var(--ink-faint)";
+              f.tone === "ok" ? "var(--success)" : f.tone === "warn" ? "var(--warning)" : f.tone === "danger" ? "var(--danger)" : "var(--ink-muted)";
             return (
               <button
                 key={p.id}
@@ -297,17 +297,17 @@ export default function SquadBoard({
                 title={`${positionLabel(p.position) ?? "Position ej satt"} · ${f.label}`}
                 className="flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 text-sm transition-colors"
                 style={{
-                  background: inSquad ? "var(--primary-soft)" : "var(--bg2)",
-                  border: `1px solid ${inSquad ? "var(--primary)" : "var(--line)"}`,
-                  color: inSquad ? "var(--primary)" : "var(--ink-soft)",
+                  background: inSquad ? "var(--primary-soft)" : "var(--surface)",
+                  border: `1px solid ${inSquad ? "var(--primary)" : "var(--border)"}`,
+                  color: inSquad ? "var(--primary)" : "var(--ink-secondary)",
                   borderLeft: `4px solid ${tone}`,
                 }}
               >
-                <span className="stat-number text-xs" style={{ minWidth: 16, textAlign: "center", color: "var(--ink-faint)" }}>
+                <span className="stat-number text-xs" style={{ minWidth: 16, textAlign: "center", color: "var(--ink-muted)" }}>
                   {p.jersey_number ?? "–"}
                 </span>
                 {firstName(p.name)}
-                {pl && <span className="text-[0.6rem]" style={{ color: tone }}>{pl.short}</span>}
+                {pl && <span className="caption" style={{ color: tone }}>{pl.short}</span>}
               </button>
             );
           })}

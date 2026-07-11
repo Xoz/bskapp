@@ -5,6 +5,7 @@ import { getMatches, getCupScorers, getCupFormLeaders, cupMatchCompare, cupRound
 import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -29,17 +30,17 @@ export default async function MatchesPage() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <p className="eyebrow">Säsongen</p>
-          <h1 className="text-[1.7rem] font-bold mt-0.5">Matcher</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          <h1 className="mt-1" style={{ fontSize: "40px" }}>Matcher</h1>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             {matches.length} {matches.length === 1 ? "match registrerad" : "matcher registrerade"}
           </p>
         </div>
         {role === "coach" && (
           <div className="flex gap-2.5 flex-wrap">
-            <Link href="/matcher/importera-cup" className="btn-secondary text-sm">
+            <Link href="/matcher/importera-cup" className="btn-secondary btn-sm">
               Importera cup
             </Link>
-            <Link href="/matcher/ny-cup" className="btn-secondary text-sm">
+            <Link href="/matcher/ny-cup" className="btn-secondary btn-sm">
               + Ny cup
             </Link>
           </div>
@@ -47,34 +48,19 @@ export default async function MatchesPage() {
       </div>
 
       {matches.length === 0 ? (
-        <div className="card p-10 text-center">
-          <span
-            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-            style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
-          >
-            <IconPitch width={22} height={22} />
-          </span>
-          <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
-            Inga matcher ännu
-          </p>
-          {role === "coach" ? (
-            <>
-              <p className="text-sm mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
-                Koppla lagets kalender eller lägg till matcher manuellt under Inställningar.
-              </p>
-              <Link href="/installningar" className="btn-secondary">Till Inställningar</Link>
-            </>
-          ) : (
-            <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
-              Tränaren har inte lagt in några matcher ännu.
-            </p>
-          )}
-        </div>
+        <EmptyState
+          icon={<IconPitch width={22} height={22} />}
+          title="Inga matcher ännu"
+          body={role === "coach"
+            ? "Koppla lagets kalender eller lägg till matcher manuellt under Inställningar."
+            : "Tränaren har inte lagt in några matcher ännu."}
+          action={role === "coach" ? <Link href="/installningar" className="btn-secondary">Till Inställningar</Link> : undefined}
+        />
       ) : (
         <MatchSections matches={matches} role={role} cupScorers={cupScorers} cupForm={cupForm} />
       )}
 
-      <p className="text-xs max-w-xl" style={{ color: "var(--ink-faint)" }}>
+      <p className="caption max-w-xl" style={{ color: "var(--ink-muted)" }}>
         Enligt SvFF:s riktlinjer ligger fokus i barnfotbollen på utveckling – inte på resultat och
         tabeller. Resultatet är frivilligt att fylla i.
       </p>
@@ -88,15 +74,15 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
     <Link href={`/matcher/${m.id}`} className="card card-hover p-5 flex items-center gap-4">
       <div
         className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+        style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
       >
         <IconPitch width={20} height={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
+        <p className="font-semibold truncate body" style={{ fontFamily: "var(--font-display)" }}>
           {m.home_away === "home" ? "Hemma mot" : "Borta mot"} {m.opponent}
         </p>
-        <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+        <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
           {m.date}
         </p>
       </div>
@@ -108,17 +94,17 @@ function MatchCard({ m, role, today }: { m: MatchType; role: string; today: stri
       {(() => {
         const ml = levelInfo(m.level);
         return ml ? (
-          <span className="badge level-tag inline-flex" data-level={ml.id} style={{ background: "var(--bg2)" }}>
+          <span className="badge level-tag inline-flex" data-level={ml.id} style={{ background: "var(--surface)" }}>
             {ml.label}
           </span>
         ) : null;
       })()}
-      <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
+      <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
         {TYPE_LABELS[m.match_type] ?? m.match_type}
       </span>
       <span
         className="stat-number text-lg w-16 text-right"
-        style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}
+        style={{ color: hasResult ? "var(--ink)" : "var(--ink-muted)" }}
       >
         {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
       </span>
@@ -232,7 +218,7 @@ function CupCard({
           <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
             {name}{cupGroup ? ` · ${cupGroup}` : ""}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+          <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
             {range} · {matches.length} matcher{groupWithResult.length > 0 ? ` · ${groupWithResult.length} spelade` : ""}
           </p>
         </div>
@@ -249,15 +235,15 @@ function CupCard({
           <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
         )}
         {cupLevel && (
-          <span className="badge level-tag inline-flex" data-level={cupLevel.id} style={{ background: "var(--bg2)" }}>{cupLevel.label}</span>
+          <span className="badge level-tag inline-flex" data-level={cupLevel.id} style={{ background: "var(--surface)" }}>{cupLevel.label}</span>
         )}
-        <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>Cup</span>
+        <span className="badge hidden sm:inline-flex" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>Cup</span>
         {role === "coach" && (
           <Link
             href={editHref}
             title="Redigera cup"
-            className="shrink-0 text-lg leading-none px-1 rounded-lg transition-colors hover:bg-[var(--bg2)]"
-            style={{ color: "var(--ink-faint)" }}
+            className="shrink-0 text-lg leading-none px-1 rounded-lg transition-colors hover:bg-[var(--surface)]"
+            style={{ color: "var(--ink-muted)" }}
           >
             ···
           </Link>
@@ -267,22 +253,22 @@ function CupCard({
       {hasGroupStats && (
         <div
           className="flex items-center gap-4 px-5 py-2.5"
-          style={{ borderTop: "1px solid var(--line)", background: "var(--bg2)" }}
+          style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}
         >
-          <span className="text-xs font-semibold" style={{ color: "var(--ink-soft)" }}>Poäng</span>
-          <span className="stat-number text-base" style={{ color: "var(--primary-fg)" }}>{points}</span>
-          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+          <span className="caption font-semibold" style={{ color: "var(--ink-secondary)" }}>Poäng</span>
+          <span className="stat-number text-base" style={{ color: "var(--primary)" }}>{points}</span>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>
             {wins}V {draws}O {losses}F
           </span>
-          <span className="text-xs ml-auto" style={{ color: "var(--ink-faint)" }}>
+          <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>
             {goalsFor}–{goalsAgainst}
           </span>
         </div>
       )}
       {/* Skyttar i cupen – spelarbidrag summerat över alla matcher */}
       {scorers.length > 0 && (
-        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--line)" }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>
+        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+          <p className="caption font-semibold mb-2" style={{ color: "var(--ink-secondary)" }}>
             Skyttar i cupen
           </p>
           <div className="space-y-1.5">
@@ -292,12 +278,12 @@ function CupCard({
                   {s.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
                 </span>
                 {s.goals > 0 && (
-                  <span className="shrink-0" style={{ color: "var(--ink-soft)" }}>
-                    <span className="stat-number" style={{ color: "var(--primary-fg)" }}>{s.goals}</span> mål
+                  <span className="shrink-0" style={{ color: "var(--ink-secondary)" }}>
+                    <span className="stat-number" style={{ color: "var(--primary)" }}>{s.goals}</span> mål
                   </span>
                 )}
                 {s.assists > 0 && (
-                  <span className="shrink-0 text-xs" style={{ color: "var(--ink-faint)" }}>
+                  <span className="shrink-0 text-xs" style={{ color: "var(--ink-muted)" }}>
                     {s.goals > 0 ? "· " : ""}<span className="stat-number">{s.assists}</span> assist
                   </span>
                 )}
@@ -308,8 +294,8 @@ function CupCard({
       )}
       {/* Bästa form i cupen – störst uppgång i matchbetygens form (nivåjusterat) */}
       {formLeaders.length > 0 && (
-        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--line)" }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>
+        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+          <p className="caption font-semibold mb-2" style={{ color: "var(--ink-secondary)" }}>
             Bästa form i cupen
           </p>
           <div className="space-y-1.5">
@@ -318,8 +304,8 @@ function CupCard({
                 <span className="flex-1 min-w-0 truncate" style={{ color: "var(--ink)" }}>
                   {f.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
                 </span>
-                <span className="shrink-0 text-xs" style={{ color: "var(--ink-faint)" }}>
-                  <span className="stat-number" style={{ color: "var(--primary-fg)" }}>+{f.form_delta}</span> form
+                <span className="shrink-0 text-xs" style={{ color: "var(--ink-muted)" }}>
+                  <span className="stat-number" style={{ color: "var(--primary)" }}>+{f.form_delta}</span> form
                 </span>
               </div>
             ))}
@@ -340,23 +326,23 @@ function CupCard({
               key={m.id}
               href={`/matcher/${m.id}`}
               className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--primary-ghost)]"
-              style={{ borderTop: "1px solid var(--line)", opacity: isMoot ? 0.55 : 1 }}
+              style={{ borderTop: "1px solid var(--border)", opacity: isMoot ? 0.55 : 1 }}
             >
-              <span className="text-sm flex-1 min-w-0">
+              <span className="body-small flex-1 min-w-0">
                 <span className="font-medium" style={isMoot ? { textDecoration: "line-through" } : undefined}>{title}</span>
-                <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
+                <span className="block text-xs" style={{ color: "var(--ink-muted)" }}>
                   {m.date}{m.start_time ? ` · ${m.start_time}` : ""}
                   {showRoundInSub && ` · ${roundLabel}`}
                 </span>
               </span>
               {isMoot ? (
-                <span className="text-xs shrink-0" style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>Spelas ej</span>
+                <span className="caption shrink-0" style={{ color: "var(--ink-muted)", fontStyle: "italic" }}>Spelas ej</span>
               ) : (
                 <>
                   {m.date === today && (
                     <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>I dag</span>
                   )}
-                  <span className="stat-number text-base w-14 text-right" style={{ color: hasResult ? "var(--ink)" : "var(--ink-faint)" }}>
+                  <span className="stat-number text-base w-14 text-right" style={{ color: hasResult ? "var(--ink)" : "var(--ink-muted)" }}>
                     {hasResult ? `${m.our_score}–${m.opponent_score}` : "–"}
                   </span>
                 </>
@@ -426,13 +412,13 @@ function MatchSections({
     <div className="space-y-8">
       <section>
         <div className="flex items-baseline gap-2.5 mb-3">
-          <h2 className="font-semibold text-[1.05rem]">Kommande</h2>
-          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+          <h2 className="font-semibold text-[18px]">Kommande</h2>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>
             {countMatches(upcoming)} matcher
           </span>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-sm card p-5" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small card p-5" style={{ color: "var(--ink-secondary)" }}>
             Inga kommande matcher – hämta från kalendern under Inställningar när nya matcher
             planerats.
           </p>
@@ -448,8 +434,8 @@ function MatchSections({
       {past.length > 0 && (
         <section>
           <div className="flex items-baseline gap-2.5 mb-3">
-            <h2 className="font-semibold text-[1.05rem]">Spelade</h2>
-            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            <h2 className="font-semibold text-[18px]">Spelade</h2>
+            <span className="caption" style={{ color: "var(--ink-muted)" }}>
               {countMatches(past)} matcher
             </span>
           </div>

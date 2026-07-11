@@ -40,8 +40,8 @@ export default async function LoginPage() {
             {settings.team_name}
           </h1>
           <p
-            className="mt-2 text-[0.625rem] uppercase tracking-[0.12em]"
-            style={{ color: "var(--ink-faint)" }}
+            className="mt-2 caption uppercase tracking-[0.12em]"
+            style={{ color: "var(--ink-muted)" }}
           >
             {settings.club_name} · Spelarutveckling &amp; matchstatistik
           </p>
@@ -49,7 +49,7 @@ export default async function LoginPage() {
 
         <div
           className="p-8"
-          style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <Suspense>
             <LoginForm />
@@ -57,12 +57,12 @@ export default async function LoginPage() {
         </div>
 
         <div
-          className="mt-8 flex items-center justify-center gap-3 text-[0.5625rem] tracking-[0.14em] uppercase"
-          style={{ color: "var(--ink-faint)" }}
+          className="mt-8 flex items-center justify-center gap-3 caption tracking-[0.14em] uppercase"
+          style={{ color: "var(--ink-muted)" }}
         >
-          <span className="h-px w-8" style={{ background: "var(--line)" }} />
+          <span className="h-px w-8" style={{ background: "var(--border)" }} />
           Enligt SvFF:s riktlinjer
-          <span className="h-px w-8" style={{ background: "var(--line)" }} />
+          <span className="h-px w-8" style={{ background: "var(--border)" }} />
         </div>
       </div>
     </main>

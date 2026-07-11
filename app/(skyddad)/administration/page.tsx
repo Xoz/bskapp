@@ -62,14 +62,14 @@ export default async function AdministrationPage({
     <div className="space-y-8">
       <header>
         <p className="eyebrow">Åtkomst och organisation</p>
-        <h1 className="text-[1.7rem] font-bold mt-0.5">Administration</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-0.5">Administration</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Roller ger en grundnivå. Därefter kan varje person begränsas per funktion och per lag.
         </p>
       </header>
 
       {showTabs && (
-        <nav className="flex gap-1 p-1 w-fit rounded-xl" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+        <nav className="flex gap-1 p-1 w-fit rounded-xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <TabLink href="/administration?yta=anvandare" active={tab === "anvandare"}>Användare</TabLink>
           <TabLink href="/administration?yta=organisation" active={tab === "organisation"}>Organisation</TabLink>
         </nav>
@@ -83,7 +83,7 @@ export default async function AdministrationPage({
           <div>
             <p className="eyebrow">Användare</p>
             <h2 className="text-xl font-semibold mt-1">Roller och begränsningar</h2>
-            <p className="text-sm mt-1 max-w-2xl" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small mt-1 max-w-2xl" style={{ color: "var(--ink-secondary)" }}>
               Lägg till en person med Google-adressen de loggar in med. Rollen styr vad de ser som
               standard – lägg på funktions- eller lagbegränsningar bara om någon ska se mindre än sin roll.
             </p>
@@ -107,10 +107,10 @@ export default async function AdministrationPage({
                   key={user.id}
                   href={`/administration?anvandare=${user.id}${tab === "organisation" ? "&yta=organisation" : ""}`}
                   className="block rounded-xl px-3 py-2.5 text-sm"
-                  style={{ background: user.id === selectedId ? "var(--primary-soft)" : "transparent", color: user.active ? "var(--ink)" : "var(--ink-faint)" }}
+                  style={{ background: user.id === selectedId ? "var(--primary-soft)" : "transparent", color: user.active ? "var(--ink)" : "var(--ink-muted)" }}
                 >
                   <span className="font-medium block">{user.name || user.email}</span>
-                  <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{user.roles.map((role) => ROLE_LABELS[role]).join(", ") || "Ingen roll"}</span>
+                  <span className="caption" style={{ color: "var(--ink-muted)" }}>{user.roles.map((role) => ROLE_LABELS[role]).join(", ") || "Ingen roll"}</span>
                 </a>
               ))}
             </nav>
@@ -119,7 +119,7 @@ export default async function AdministrationPage({
               <form action={saveUserAccess} className="card p-5 md:p-6 space-y-7">
                 <input type="hidden" name="user_id" value={selected.id} />
                 <div className="flex items-start justify-between gap-4">
-                  <div><h3 className="font-semibold">{selected.name || selected.email}</h3><p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>{selected.email}</p></div>
+                  <div><h3 className="font-semibold">{selected.name || selected.email}</h3><p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{selected.email}</p></div>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" value="1" defaultChecked={!!selected.active} /> Aktiv</label>
                 </div>
 
@@ -136,7 +136,7 @@ export default async function AdministrationPage({
                     <div className="space-y-2">
                       {PERMISSIONS.map((permission) => (
                         <div key={permission} className="grid sm:grid-cols-[1fr_9rem] gap-2 items-center">
-                          <span className="text-sm">{PERMISSION_LABELS[permission]}</span>
+                          <span className="body-small">{PERMISSION_LABELS[permission]}</span>
                           <select name={`permission_${permission}`} className="input py-2" defaultValue={selected.permissions[permission] === true ? "allow" : selected.permissions[permission] === false ? "deny" : "inherit"}>
                             <option value="inherit">Ärvd</option><option value="allow">Tillåt</option><option value="deny">Neka</option>
                           </select>
@@ -199,7 +199,7 @@ function GroupsSection({
         <h2 className="text-xl font-semibold mt-1">Huvudtrupp, undergrupper och matchgrupper</h2>
       </div>
 
-      <div className="card p-5 space-y-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+      <div className="card p-5 space-y-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
         <p><strong style={{ color: "var(--ink)" }}>Huvudtrupp</strong> – hela laget, t.ex. BSK F2014. Alla spelare hör hit.</p>
         <p><strong style={{ color: "var(--ink)" }}>Undergrupp</strong> – ett permanent lag inom truppen, t.ex. Gul eller Grön. Skapa en här och bocka i vilka spelare som hör dit.</p>
         <p><strong style={{ color: "var(--ink)" }}>Matchgrupp</strong> – skapas automatiskt när en cup importeras, för att hålla isär flera egna lag i samma turnering. Du behöver sällan röra dessa själv.</p>
@@ -217,7 +217,7 @@ function GroupsSection({
         {squads.map((squad) => (
           <div key={squad.id} className="space-y-3">
             <GroupCard group={squad} players={players} memberships={memberships} groups={groups} />
-            <div className="pl-4 md:pl-6 space-y-3" style={{ borderLeft: "2px solid var(--line)" }}>
+            <div className="pl-4 md:pl-6 space-y-3" style={{ borderLeft: "2px solid var(--border)" }}>
               {subgroups.filter((sg) => sg.parent_id === squad.id).map((subgroup) => (
                 <div key={subgroup.id} className="space-y-3">
                   <GroupCard group={subgroup} players={players} memberships={memberships} groups={groups} />
@@ -257,7 +257,7 @@ function MatchgroupList({
   if (matchgroups.length === 0) return null;
   return (
     <details className={indent ? "pl-4 md:pl-6" : undefined}>
-      <summary className="text-sm cursor-pointer" style={{ color: "var(--ink-faint)" }}>
+      <summary className="body-small cursor-pointer" style={{ color: "var(--ink-muted)" }}>
         Matchgrupper ({matchgroups.length}) – auto-skapade vid cup-import
       </summary>
       <div className="grid xl:grid-cols-2 gap-5 mt-3">
@@ -289,7 +289,7 @@ function GroupCard({
         <Field label="Tillhör"><select name="parent_id" className="input" defaultValue={group.parent_id ?? ""}><option value="">Ingen</option>{groups.filter((candidate) => candidate.id !== group.id && candidate.group_type !== "matchgroup").map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></Field>
         <Field label="Cup"><input name="cup_name" className="input" defaultValue={group.cup_name} disabled={group.group_type !== "matchgroup"} /></Field>
       </div>
-      <details><summary className="text-sm cursor-pointer">Spelare ({group.member_count})</summary><div className="grid sm:grid-cols-2 gap-2 mt-3">{players.map((player) => <Check key={player.id} name="player_id" value={String(player.id)} label={player.name} checked={memberships.some((membership) => membership.group_id === group.id && membership.player_id === player.id)} />)}</div></details>
+      <details><summary className="body-small cursor-pointer">Spelare ({group.member_count})</summary><div className="grid sm:grid-cols-2 gap-2 mt-3">{players.map((player) => <Check key={player.id} name="player_id" value={String(player.id)} label={player.name} checked={memberships.some((membership) => membership.group_id === group.id && membership.player_id === player.id)} />)}</div></details>
       <button className="btn-secondary" type="submit">Spara grupp</button>
     </form>
   );
@@ -300,7 +300,7 @@ function groupTypeLabel(type: "squad" | "subgroup" | "matchgroup") {
 }
 
 function Notice({ text, warning = false }: { text: string; warning?: boolean }) {
-  return <div className="rounded-xl px-4 py-3 text-sm" style={{ background: warning ? "var(--warn-bg)" : "var(--ok-bg)", color: warning ? "var(--warn)" : "var(--ok)" }}>{text}</div>;
+  return <div className="rounded-xl px-4 py-3 text-sm" style={{ background: warning ? "var(--warn-bg)" : "var(--ok-bg)", color: warning ? "var(--warning)" : "var(--success)" }}>{text}</div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -308,11 +308,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Block({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
-  return <fieldset className="space-y-3"><legend className="font-semibold">{title}</legend><p className="text-xs" style={{ color: "var(--ink-faint)" }}>{hint}</p>{children}</fieldset>;
+  return <fieldset className="space-y-3"><legend className="font-semibold">{title}</legend><p className="caption" style={{ color: "var(--ink-muted)" }}>{hint}</p>{children}</fieldset>;
 }
 
 function Check({ name, value, label, checked, disabled = false }: { name: string; value: string; label: string; checked: boolean; disabled?: boolean }) {
-  return <label className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid var(--line)" }}><input type="checkbox" name={name} value={value} defaultChecked={checked} disabled={disabled} />{label}</label>;
+  return <label className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid var(--border)" }}><input type="checkbox" name={name} value={value} defaultChecked={checked} disabled={disabled} />{label}</label>;
 }
 
 function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
@@ -320,7 +320,7 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
     <Link
       href={href}
       className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-      style={{ background: active ? "var(--primary)" : "transparent", color: active ? "var(--primary-deep)" : "var(--ink-soft)" }}
+      style={{ background: active ? "var(--primary)" : "transparent", color: active ? "var(--primary-deep)" : "var(--ink-secondary)" }}
     >
       {children}
     </Link>

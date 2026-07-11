@@ -5,6 +5,7 @@ import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporter
 import { deleteMatch, resetMatch, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
+import { FEATURES } from "@/lib/features";
 import { suggestOutcome, stepByOutcome } from "@/lib/rating";
 import MatchRatings, { type RatingPlayer } from "@/components/MatchRatings";
 import LiveFeed from "@/components/LiveFeed";
@@ -86,20 +87,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <div>
           <Link
             href="/matcher"
-            className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-            style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+            className="inline-flex items-center gap-1.5 body-small font-medium transition-colors"
+            style={{ color: "var(--ink-secondary)" }}
           >
             <IconArrowLeft width={15} height={15} /> Matcher
           </Link>
-          <h1 className="text-[1.7rem] font-bold mt-2 flex items-center gap-3 flex-wrap">
+          <h1 className="mt-2 flex items-center gap-3 flex-wrap" style={{ fontSize: "32px" }}>
             {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent}
             {mLevel && (
-              <span className="badge level-tag" data-level={mLevel.id} style={{ background: "var(--bg2)", fontSize: "0.7rem" }}>
+              <span className="badge level-tag" data-level={mLevel.id} style={{ background: "var(--elevated)" }}>
                 {mLevel.label}
               </span>
             )}
           </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             {match.date}{match.start_time ? ` · ${match.start_time}` : ""}
             {match.location ? ` · ${match.location}` : ""}
             {match.source === "calendar" && " · hämtad från kalendern"}
@@ -120,7 +121,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               message="Nollställa all statistik och klocka för den här matchen?"
             >
               <input type="hidden" name="id" value={match.id} />
-              <button type="submit" className="text-sm hover:underline cursor-pointer" style={{ color: "var(--ink-faint)" }}>
+              <button type="submit" className="body-small hover:underline cursor-pointer" style={{ color: "var(--ink-muted)" }}>
                 Nollställ match
               </button>
             </ConfirmForm>
@@ -129,7 +130,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               message="Ta bort matchen permanent?"
             >
               <input type="hidden" name="id" value={match.id} />
-              <button type="submit" className="text-sm hover:underline cursor-pointer" style={{ color: "var(--danger)" }}>
+              <button type="submit" className="body-small hover:underline cursor-pointer" style={{ color: "var(--danger)" }}>
                 Ta bort match
               </button>
             </ConfirmForm>
@@ -161,35 +162,37 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         return (
           <details className="card overflow-hidden">
             <summary className="p-5 md:p-6 flex items-center justify-between cursor-pointer list-none select-none">
-              <h2 className="font-semibold">Matchsammanställning</h2>
-              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+              <h2 className="font-semibold body">Matchsammanställning</h2>
+              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
             </summary>
-            <div className="px-5 md:px-6 pb-5 md:pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+            <div className="px-5 md:px-6 pb-5 md:pb-6" style={{ borderTop: "1px solid var(--border)" }}>
               <div className="grid grid-cols-3 sm:grid-cols-7 gap-3 pt-5">
                 {totals.map((f) => (
-                  <div key={f.id} className="text-center rounded-xl py-3 px-2" style={{ background: "var(--bg2)" }}>
-                    <p className="stat-number text-2xl">{f.total}</p>
-                    <p className="text-[0.7rem] mt-1" style={{ color: "var(--ink-faint)" }}>{f.short}</p>
+                  <div key={f.id} className="text-center py-3 px-2" style={{ background: "var(--surface)", borderRadius: "var(--r-button)" }}>
+                    <p className="stat-number" style={{ fontSize: "24px" }}>{f.total}</p>
+                    <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{f.short}</p>
                   </div>
                 ))}
               </div>
               {reporterRanking.length > 0 && (
-                <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink-soft)" }}>Bästa rapportör</p>
+                <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                  <p className="caption font-semibold mb-2" style={{ color: "var(--ink-secondary)" }}>Bästa rapportör</p>
                   <div className="flex flex-wrap gap-2">
                     {reporterRanking.map(([name, count], i) => (
                       <span
                         key={name}
-                        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+                        className="flex items-center gap-1.5 body-small"
                         style={{
-                          background: i === 0 ? "var(--primary-soft)" : "var(--bg2)",
-                          color: i === 0 ? "var(--primary)" : "var(--ink-soft)",
+                          borderRadius: "var(--r-badge)",
+                          padding: "4px 12px",
+                          background: i === 0 ? "var(--primary-soft)" : "var(--surface)",
+                          color: i === 0 ? "var(--primary)" : "var(--ink-secondary)",
                           fontWeight: i === 0 ? 600 : 400,
                         }}
                       >
                         {i === 0 && <span>🏆</span>}
                         {name}
-                        <span className="stat-number text-xs opacity-70">{count}</span>
+                        <span className="stat-number caption opacity-70">{count}</span>
                       </span>
                     ))}
                   </div>
@@ -210,8 +213,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           >
             <span className="text-2xl">📋</span>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold">Laguttagning</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              <p className="font-semibold body">Laguttagning</p>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                 {squadIds.length > 0
                   ? `${squadIds.length} spelare uttagna${mLevel ? ` · nivå ${mLevel.label}` : ""}`
                   : mLevel
@@ -219,12 +222,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                     : "Sätt matchnivå och ta ut truppen"}
               </p>
             </div>
-            <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
+            <span className="badge badge-primary">
               {squadIds.length > 0 ? "Ändra" : "Öppna"}
             </span>
           </Link>
 
-          {/* Liverapportering */}
+          {/* Liverapportering (dold när liveScore är av) */}
+          {FEATURES.liveScore && (
           <Link
             href={`/matcher/${match.id}/live`}
             className="card card-hover p-5 flex items-center gap-4"
@@ -236,8 +240,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           >
             <span className="text-2xl">⏱️</span>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold">Liverapportering</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+              <p className="font-semibold body">Liverapportering</p>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                 {match.finished
                   ? "Matchen är avslutad – öppna för att se eller rätta"
                   : events.length > 0
@@ -245,26 +249,27 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                     : "Starta matchklockan och rapportera mål, skott och byten live"}
               </p>
             </div>
-            <span className="badge" style={{ background: "var(--accent)", color: "var(--primary-deep)" }}>
+            <span className="badge badge-primary">
               {match.finished ? "Visa" : events.length > 0 ? "Fortsätt" : "Starta"}
             </span>
           </Link>
+          )}
 
-          {/* Föräldrarapportering – publik Livescore + tränar-toggle för hjälpare */}
-          {!match.finished && (
+          {/* Föräldrarapportering – publik Livescore + tränar-toggle för hjälpare (dold när liveScore är av) */}
+          {FEATURES.liveScore && !match.finished && (
             <div
               className="card p-5 flex items-center gap-4 flex-wrap"
               style={reportOpen ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
               >
                 <IconLive width={20} height={20} />
               </span>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold">Föräldrarapportering</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                <p className="font-semibold body">Föräldrarapportering</p>
+                <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                   {match.report_open
                     ? "Öppen – föräldrar kan hjälpa till att rapportera. Alla kan följa Livescore."
                     : reportAutoOpen
@@ -296,16 +301,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <details className="card overflow-hidden" open={!isUpcoming && matchRatings.length === 0}>
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
                 <div className="flex items-baseline gap-3">
-                  <h2 className="font-semibold">Betygsätt spelare</h2>
+                  <h2 className="font-semibold body">Betygsätt spelare</h2>
                   {matchRatings.length > 0 && (
-                    <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                    <span className="caption" style={{ color: "var(--ink-muted)" }}>
                       {matchRatings.length} betygsatta
                     </span>
                   )}
                 </div>
-                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
               </summary>
-              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--border)" }}>
                 <div className="pt-4">
                   <MatchRatings matchId={match.id} players={ratingPlayers} />
                 </div>
@@ -313,14 +318,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </details>
           )}
 
-          {events.length > 0 && (
+          {FEATURES.matchStats && events.length > 0 && (
             <details className="card overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
-                <h2 className="font-semibold">Matchflöde</h2>
-                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+                <h2 className="font-semibold body">Matchflöde</h2>
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
               </summary>
-              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
-                <p className="text-xs mt-4 mb-5" style={{ color: "var(--ink-faint)" }}>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--border)" }}>
+                <p className="caption mt-4 mb-5" style={{ color: "var(--ink-muted)" }}>
                   Live-rapporterade händelser – tiderna gör det lätt att hitta rätt i matchvideon.
                 </p>
                 <LiveFeed events={events} opponent={match.opponent} reporters={reporters} />
@@ -328,17 +333,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </details>
           )}
 
-          {events.length > 0 && (
+          {FEATURES.matchStats && events.length > 0 && (
             <details className="card overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
                 <div className="flex items-baseline gap-3">
-                  <h2 className="font-semibold">Rätta statistik</h2>
-                  <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{events.length} händelser</span>
+                  <h2 className="font-semibold body">Rätta statistik</h2>
+                  <span className="caption" style={{ color: "var(--ink-muted)" }}>{events.length} händelser</span>
                 </div>
-                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
               </summary>
-              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--line)" }}>
-                <p className="text-xs mt-4 mb-4" style={{ color: "var(--ink-faint)" }}>
+              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--border)" }}>
+                <p className="caption mt-4 mb-4" style={{ color: "var(--ink-muted)" }}>
                   Ta bort felaktiga rapporteringar – matchflöde och spelarpoäng justeras automatiskt.
                 </p>
                 <EventEditor events={events} matchId={match.id} reporters={reporters} />
@@ -346,18 +351,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </details>
           )}
 
+          {FEATURES.matchStats && (
           <details className="card overflow-hidden">
             <summary className="p-6 md:p-7 flex items-center justify-between cursor-pointer list-none select-none">
-              <h2 className="font-semibold">Lägg till händelse</h2>
-              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-faint)" }} />
+              <h2 className="font-semibold body">Lägg till händelse</h2>
+              <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
             </summary>
-            <div className="px-6 md:px-7 pb-6 md:pb-7" style={{ borderTop: "1px solid var(--line)" }}>
-              <p className="text-xs mt-4 mb-5" style={{ color: "var(--ink-faint)" }}>
+            <div className="px-6 md:px-7 pb-6 md:pb-7" style={{ borderTop: "1px solid var(--border)" }}>
+              <p className="caption mt-4 mb-5" style={{ color: "var(--ink-muted)" }}>
                 Komplettera statistik vid videogenomgång – händelsen sparas i matchflödet.
               </p>
               <ManualEventForm matchId={match.id} players={players} periods={match.periods} />
             </div>
           </details>
+          )}
 
         </>
       )}

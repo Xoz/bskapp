@@ -34,7 +34,7 @@ export default async function PublicReportPage({ params }: { params: Promise<{ i
           <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
             Rapportering är inte öppen
           </p>
-          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
             {match.finished
               ? "Matchen är avslutad."
               : `Rapporteringen öppnar automatiskt 60 minuter före avspark (eller när tränaren öppnar den). Du kan redan nu följa ${settings.team_name} live.`}
@@ -58,12 +58,12 @@ export default async function PublicReportPage({ params }: { params: Promise<{ i
         <Link
           href={`/live/${matchId}`}
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Livescore
         </Link>
         <h1 className="text-[1.5rem] font-bold mt-2">Rapportera</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
           {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent} · {match.date}
         </p>
       </div>

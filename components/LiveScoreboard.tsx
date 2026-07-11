@@ -90,7 +90,7 @@ export default function LiveScoreboard({
               >
                 {formatClock(clockNow)}
               </span>
-              <span className="text-xs uppercase tracking-[0.1em]">
+              <span className="caption uppercase tracking-[0.1em]">
                 Period {live.period} av {live.periods}
               </span>
               {live.clockRunning && (

@@ -25,12 +25,12 @@ export default function NewCupPage() {
         <Link
           href="/matcher"
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Matcher
         </Link>
-        <h1 className="text-[1.7rem] font-bold mt-2">Lägg till cup</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-2">Lägg till cup</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Ange cupens gruppspelsmatcher. Slutspelsomgångar lägger du till i cup-redigeraren efter gruppspelet.
         </p>
       </div>
@@ -58,7 +58,7 @@ export default function NewCupPage() {
         </div>
 
         <div className="card overflow-hidden">
-          <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+          <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
             <h2 className="font-semibold">Gruppspelsmatcher</h2>
           </div>
           <div>
@@ -66,16 +66,16 @@ export default function NewCupPage() {
               <div
                 key={i}
                 className="px-5 md:px-6 py-4 space-y-3"
-                style={{ borderTop: i > 0 ? "1px solid var(--line)" : undefined }}
+                style={{ borderTop: i > 0 ? "1px solid var(--border)" : undefined }}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold" style={{ color: "var(--ink-faint)" }}>Match {i + 1}</p>
+                  <p className="caption font-semibold" style={{ color: "var(--ink-muted)" }}>Match {i + 1}</p>
                   {matches.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeMatch(i)}
-                      className="text-xs px-2 py-0.5 rounded"
-                      style={{ color: "var(--ink-faint)" }}
+                      className="caption px-2 py-0.5 rounded"
+                      style={{ color: "var(--ink-muted)" }}
                     >
                       Ta bort
                     </button>
@@ -120,7 +120,7 @@ export default function NewCupPage() {
               </div>
             ))}
           </div>
-          <div className="px-5 md:px-6 py-3" style={{ borderTop: "1px solid var(--line)" }}>
+          <div className="px-5 md:px-6 py-3" style={{ borderTop: "1px solid var(--border)" }}>
             <button
               type="button"
               onClick={addMatch}

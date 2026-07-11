@@ -16,10 +16,12 @@ import {
   mootMatchIds,
 } from "@/lib/queries";
 import { swedishToday, swedishDate, swedishDateOffset } from "@/lib/dates";
+import { FEATURES } from "@/lib/features";
 import { GAME_FORMAT } from "@/lib/svff";
 import { ratingBand } from "@/lib/rating";
 import Avatar from "@/components/Avatar";
 import PitchLines from "@/components/PitchLines";
+import { Card, Badge, EmptyState } from "@/components/ui";
 import {
   IconClock,
   IconCheck,
@@ -43,7 +45,6 @@ export default async function Dashboard() {
   if (role !== "coach") redirect("/matcher");
   const user = await getCurrentUser();
 
-  // Oberoende queries körs parallellt – annars staplas latensen mot Turso.
   const [settings, players, matches, latestEvals, activity, formRows, canViewInterviews, allInterviews] =
     await Promise.all([
       getAllSettings(),
@@ -57,17 +58,12 @@ export default async function Dashboard() {
     ]);
 
   const todayStr = swedishToday();
-  // Dölj slutspelsmatcher laget inte längre spelar efter utslagning (t.ex. final
-  // efter semifinalförlust).
   const moot = mootMatchIds(matches);
   const upcomingMatches = matches
     .filter((m) => m.date >= todayStr && !m.finished && !moot.has(m.id))
     .sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
     .slice(0, 2);
 
-  // matches är sorterad datum fallande – senaste spelade ligger först. Dölj
-  // slutspelsmatcher som blev överflödiga efter utslagning (t.ex. en inställd
-  // final efter semifinalförlust) precis som i kommande-listan ovan.
   const latestMatch = matches.find(
     (m) => (m.finished || m.our_score !== null) && m.date <= todayStr && !moot.has(m.id)
   );
@@ -77,7 +73,6 @@ export default async function Dashboard() {
     latestMatch ? getMatchScorers(latestMatch.id) : Promise.resolve([]),
   ]);
 
-  // Säsongssiffror – aggregat över alla spelade matcher (serie + cuper).
   const played = matches.filter(
     (m) => m.our_score != null && m.opponent_score != null
   );
@@ -93,12 +88,14 @@ export default async function Dashboard() {
     { w: 0, d: 0, l: 0, gf: 0, ga: 0 }
   );
 
-  // Smart primär-CTA: visar mest akuta åtgärden just nu i prioritetsordning
-  // live → match idag → trupp saknas till nästa → registrera ny match.
-  const liveMatch = matches.find((m) => m.clock_running === 1 && !m.finished);
-  const todayMatch = matches.find(
-    (m) => m.date === todayStr && !m.finished && !moot.has(m.id) && m.our_score == null
-  );
+  const liveMatch = FEATURES.liveScore
+    ? matches.find((m) => m.clock_running === 1 && !m.finished)
+    : undefined;
+  const todayMatch = FEATURES.liveScore
+    ? matches.find(
+        (m) => m.date === todayStr && !m.finished && !moot.has(m.id) && m.our_score == null
+      )
+    : undefined;
   const nextNoSquad = upcomingMatches.find((m) => !matchesWithSquad.has(m.id));
   const nextOpp = nextNoSquad
     ? nextNoSquad.opponent && nextNoSquad.opponent !== "TBD"
@@ -111,13 +108,13 @@ export default async function Dashboard() {
       ? { href: `/matcher/${todayMatch.id}/live`, label: "Rapportera dagens match", live: false, note: null }
       : nextNoSquad
         ? { href: `/matcher/${nextNoSquad.id}/laguttagning`, label: `Ta ut trupp · ${nextOpp}`, live: false, note: "Trupp saknas till nästa match" }
-        : { href: "/matcher/ny", label: "Registrera match", live: false, note: null };
+        : FEATURES.matchStats
+          ? { href: "/matcher/ny", label: "Registrera match", live: false, note: null }
+          : null;
 
   const cutoffStr = swedishDateOffset(-60);
   const needsEval = players.filter((p) => !latestEvals[p.id] || latestEvals[p.id] < cutoffStr);
 
-  // Att göra: samlar tränarlagets akuta åtgärder på ett ställe. Listan byggs av
-  // flera todo-källor – lägg till fler genom att pusha in i todos-arrayen.
   type Todo = {
     key: string;
     href: string;
@@ -131,29 +128,32 @@ export default async function Dashboard() {
     (m) => m.date < todayStr && m.our_score == null && !moot.has(m.id)
   );
 
-  // Nya spelarsamtal senaste två veckorna – något tränaren bör läsa.
   const interviewCutoff = swedishDateOffset(-14);
   const recentInterviews = canViewInterviews
     ? allInterviews.filter((iv) => iv.created_at.slice(0, 10) >= interviewCutoff)
     : [];
 
   const todos: Todo[] = [
-    ...upcomingMatches
-      .filter((m) => !matchesWithSquad.has(m.id))
-      .map((m) => ({
-        key: `squad-${m.id}`,
-        href: `/matcher/${m.id}/laguttagning`,
-        title: "Ta ut trupp",
-        sub: matchTitle(m),
-        icon: <IconWhistle width={16} height={16} />,
-      })),
-    ...pastUnreported.map((m) => ({
-      key: `result-${m.id}`,
-      href: `/matcher/${m.id}/live`,
-      title: "Rapportera resultat",
-      sub: matchTitle(m),
-      icon: <IconBall width={16} height={16} />,
-    })),
+    ...(FEATURES.matchStats
+      ? upcomingMatches
+          .filter((m) => !matchesWithSquad.has(m.id))
+          .map((m) => ({
+            key: `squad-${m.id}`,
+            href: `/matcher/${m.id}/laguttagning`,
+            title: "Ta ut trupp",
+            sub: matchTitle(m),
+            icon: <IconWhistle width={16} height={16} />,
+          }))
+      : []),
+    ...(FEATURES.liveScore
+      ? pastUnreported.map((m) => ({
+          key: `result-${m.id}`,
+          href: `/matcher/${m.id}/live`,
+          title: "Rapportera resultat",
+          sub: matchTitle(m),
+          icon: <IconBall width={16} height={16} />,
+        }))
+      : []),
     ...needsEval.map((p) => ({
       key: `eval-${p.id}`,
       href: `/spelare/${p.id}/utvardera`,
@@ -170,7 +170,6 @@ export default async function Dashboard() {
     })),
   ];
 
-  // Form just nu: hetaste (störst uppgång senast) och de som tappat.
   const rising = formRows
     .filter((f) => (f.last_delta ?? 0) > 0)
     .sort((a, b) => (b.last_delta ?? 0) - (a.last_delta ?? 0))
@@ -180,7 +179,6 @@ export default async function Dashboard() {
     .sort((a, b) => (a.last_delta ?? 0) - (b.last_delta ?? 0))
     .slice(0, 3);
 
-  // Resultatfärg för senaste matchen (vinst/oavgjort/förlust).
   const lm = latestMatch;
   const lmOutcome =
     lm == null || lm.our_score == null || lm.opponent_score == null
@@ -192,24 +190,30 @@ export default async function Dashboard() {
           : "draw";
   const lmTone =
     lmOutcome === "win"
-      ? { bg: "var(--ok-bg)", fg: "var(--ok)" }
+      ? { bg: "var(--ok-bg)", fg: "var(--success)" }
       : lmOutcome === "loss"
         ? { bg: "var(--danger-bg)", fg: "var(--danger)" }
-        : { bg: "var(--warn-bg)", fg: "var(--warn)" };
+        : { bg: "var(--warn-bg)", fg: "var(--warning)" };
 
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="panel-dark p-7 md:p-9">
+      <div
+        className="relative overflow-hidden fade-lift"
+        style={{
+          borderRadius: "var(--r-card)",
+          background: "var(--elevated)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-sm)",
+          padding: "28px 24px",
+        }}
+      >
         <PitchLines className="pointer-events-none absolute -right-14 -top-24 w-56 rotate-12 pitch-watermark" />
         <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
           {/* Vänster: laginfo + säsongssiffror + smart åtgärd */}
           <div>
             <p className="eyebrow">Säsong {settings.season} · {GAME_FORMAT.format}</p>
-            <h1
-              className="mt-1.5 text-3xl md:text-[2.1rem] font-bold tracking-tight"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+            <h1 className="mt-1.5" style={{ fontSize: "32px" }}>
               {settings.team_name}
             </h1>
 
@@ -217,43 +221,48 @@ export default async function Dashboard() {
             <div className="mt-5 flex flex-wrap gap-2.5">
               <KpiChip label="Spelade" value={played.length} />
               <KpiChip label="V–O–F">
-                <span style={{ color: "var(--ok)" }}>{record.w}</span>
-                <span style={{ color: "var(--ink-faint)" }}>–</span>
-                <span style={{ color: "var(--warn)" }}>{record.d}</span>
-                <span style={{ color: "var(--ink-faint)" }}>–</span>
+                <span style={{ color: "var(--success)" }}>{record.w}</span>
+                <span style={{ color: "var(--ink-muted)" }}>–</span>
+                <span style={{ color: "var(--warning)" }}>{record.d}</span>
+                <span style={{ color: "var(--ink-muted)" }}>–</span>
                 <span style={{ color: "var(--danger)" }}>{record.l}</span>
               </KpiChip>
               <KpiChip label="Mål">
                 {record.gf}
-                <span style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}> / {record.ga}</span>
+                <span style={{ color: "var(--ink-muted)", fontSize: "0.9rem" }}> / {record.ga}</span>
               </KpiChip>
               <KpiChip label="Trupp" value={players.length} />
             </div>
 
             {/* Kontextuell primär-åtgärd */}
+            {heroCta && (
             <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
               <Link
                 href={heroCta.href}
-                className="btn-accent"
+                className="btn-primary"
                 style={heroCta.live ? { background: "var(--live)", color: "#fff" } : undefined}
               >
                 {heroCta.label}
               </Link>
               {heroCta.note && (
-                <span className="text-[0.8rem]" style={{ color: "var(--ink-soft)" }}>
+                <span className="body-small" style={{ color: "var(--ink-secondary)" }}>
                   {heroCta.note}
                 </span>
               )}
             </div>
+            )}
           </div>
 
           {/* Höger: kommande matcher */}
           <div className="lg:min-w-[240px] lg:max-w-[280px] shrink-0">
-            <p className="text-[0.65rem] uppercase tracking-[0.12em] mb-3" style={{ color: "var(--ink-faint)" }}>
+            <p
+              className="caption mb-3"
+              style={{ color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}
+            >
               Kommande matcher
             </p>
             {upcomingMatches.length === 0 ? (
-              <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga schemalagda matcher</p>
+              <p className="body-small" style={{ color: "var(--ink-muted)" }}>Inga schemalagda matcher</p>
             ) : (
               <div className="space-y-2">
                 {upcomingMatches.map((m) => {
@@ -265,47 +274,47 @@ export default async function Dashboard() {
                     <Link
                       key={m.id}
                       href={`/matcher/${m.id}/laguttagning`}
-                      className="flex items-center gap-3 rounded-xl px-3.5 py-3 transition-opacity hover:opacity-80"
-                      style={{ background: "var(--bg2)", border: `1px solid ${hasSquad ? "var(--line)" : "color-mix(in srgb, var(--primary), transparent 55%)"}` }}
+                      className="flex items-center gap-3 transition-opacity hover:opacity-80"
+                      style={{
+                        borderRadius: "var(--r-button)",
+                        padding: "12px 14px",
+                        background: "var(--surface)",
+                        border: `1px solid ${hasSquad ? "var(--border)" : "var(--primary-line)"}`,
+                      }}
                     >
                       <div
-                        className="flex flex-col items-center justify-center rounded-lg shrink-0"
-                        style={{ width: 44, height: 44, background: "var(--accent)", color: "var(--accent-ink, #111)" }}
+                        className="flex flex-col items-center justify-center shrink-0"
+                        style={{ width: 44, height: 44, borderRadius: "var(--r-button)", background: "var(--primary)", color: "var(--primary-deep)" }}
                       >
-                        <span className="text-[0.55rem] uppercase font-semibold leading-none opacity-70">{weekday}</span>
-                        <span className="text-base font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+                        <span className="caption leading-none opacity-70" style={{ fontWeight: 600, textTransform: "uppercase" }}>{weekday}</span>
+                        <span className="text-base leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 400 }}>
                           {d.getDate()}
                         </span>
-                        <span className="text-[0.55rem] uppercase opacity-70 leading-none">{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
+                        <span className="caption leading-none opacity-70" style={{ textTransform: "uppercase" }}>{d.toLocaleDateString("sv-SE", { month: "short" })}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
+                        <p className="body-small font-semibold truncate" style={{ color: "var(--ink)" }}>
                           {!m.opponent || m.opponent === "TBD" ? (cupRoundLabel(m) ?? "Motståndare ej klar") : m.opponent}
                         </p>
-                        <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                        <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                           {m.home_away === "home" ? "Hemma" : "Borta"}
                           {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ""}
                           {dayMonth ? ` · ${dayMonth}` : ""}
                         </p>
                       </div>
                       {!hasSquad && (
-                        <span
-                          className="shrink-0 text-[0.6rem] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
-                          style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
-                        >
-                          Trupp saknas
-                        </span>
+                        <Badge tone="primary">Trupp saknas</Badge>
                       )}
                     </Link>
                   );
                 })}
               </div>
             )}
-            {upcomingMatches.length > 0 && (
+            {upcomingMatches.length > 0 && FEATURES.matchStats && (
               <Link
                 href="/matcher"
-                className="mt-3 flex items-center gap-1 text-[0.7rem] transition-colors"
-                style={{ color: "var(--ink-faint)" }}
+                className="mt-3 flex items-center gap-1 caption transition-colors hover:opacity-70"
+                style={{ color: "var(--ink-muted)" }}
               >
                 Alla matcher <IconArrowRight width={11} height={11} />
               </Link>
@@ -314,53 +323,55 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* Senaste matchen + Form just nu */}
+      {/* Senaste matchen + Form just nu (dold när matchStats är av) */}
+      {FEATURES.matchStats && (
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Senaste matchen */}
-        <div className="card p-6">
+        <Card>
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-[1.05rem]">Senaste matchen</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+              <h2 className="font-semibold" style={{ fontSize: "18px" }}>Senaste matchen</h2>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                 Så gick det sist
               </p>
             </div>
             {lm && (
               <Link
                 href={`/matcher/${lm.id}`}
-                className="text-xs font-semibold flex items-center gap-1"
-                style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+                className="caption font-semibold flex items-center gap-1"
+                style={{ color: "var(--primary)" }}
               >
                 Till matchen <IconArrowRight width={13} height={13} />
               </Link>
             )}
           </div>
           {!lm ? (
-            <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
-                <IconBall />
-              </span>
-              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-                Ingen spelad match ännu. När en match rapporterats ser du resultatet här.
-              </p>
-            </div>
+            <EmptyState
+              icon={<IconBall />}
+              title="Ingen spelad match ännu"
+              body="När en match rapporterats ser du resultatet här."
+            />
           ) : (
             <Link href={`/matcher/${lm.id}`} className="block group">
               <div
-                className="flex items-center gap-4 rounded-2xl px-4 py-4 transition-opacity group-hover:opacity-90"
-                style={{ background: lmTone.bg }}
+                className="flex items-center gap-4 transition-opacity group-hover:opacity-90"
+                style={{
+                  borderRadius: "var(--r-card)",
+                  padding: "16px",
+                  background: lmTone.bg,
+                }}
               >
                 <div className="flex flex-col items-center justify-center shrink-0" style={{ minWidth: 78 }}>
-                  <span className="stat-number text-[1.9rem] leading-none" style={{ color: lmTone.fg }}>
+                  <span className="stat-number" style={{ fontSize: "30px", lineHeight: 1, color: lmTone.fg }}>
                     {lm.our_score ?? "–"}–{lm.opponent_score ?? "–"}
                   </span>
-                  <span className="text-[0.6rem] uppercase tracking-wide font-semibold mt-1.5" style={{ color: lmTone.fg }}>
+                  <span className="caption mt-1.5" style={{ fontWeight: 600, textTransform: "uppercase", color: lmTone.fg }}>
                     {lmOutcome === "win" ? "Vinst" : lmOutcome === "loss" ? "Förlust" : "Oavgjort"}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{matchTitle(lm)}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small font-semibold truncate">{matchTitle(lm)}</p>
+                  <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     {lm.home_away === "home" ? "Hemma" : "Borta"} · {swedishDate(new Date(lm.date))}
                   </p>
                 </div>
@@ -368,12 +379,12 @@ export default async function Dashboard() {
               {scorers.length > 0 && (
                 <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                   {scorers.map((s) => (
-                    <li key={s.player_id} className="flex items-center gap-1.5 text-sm">
-                      <IconBall width={13} height={13} style={{ color: "var(--ink-faint)" }} />
+                    <li key={s.player_id} className="flex items-center gap-1.5 body-small">
+                      <IconBall width={13} height={13} style={{ color: "var(--ink-muted)" }} />
                       <span className="font-medium">{s.name.replace(/^Exempel:\s*/, "")}</span>
-                      {s.goals > 1 && <span style={{ color: "var(--ink-soft)" }}>×{s.goals}</span>}
+                      {s.goals > 1 && <span style={{ color: "var(--ink-secondary)" }}>×{s.goals}</span>}
                       {s.assists > 0 && (
-                        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                        <span className="caption" style={{ color: "var(--ink-muted)" }}>
                           ({s.assists} assist)
                         </span>
                       )}
@@ -383,34 +394,31 @@ export default async function Dashboard() {
               )}
             </Link>
           )}
-        </div>
+        </Card>
 
         {/* Form just nu */}
-        <div className="card p-6">
+        <Card>
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-[1.05rem]">Form just nu</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+              <h2 className="font-semibold" style={{ fontSize: "18px" }}>Form just nu</h2>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                 Hur spelarna rört sig senast (matchbetyg)
               </p>
             </div>
             <Link
               href="/statistik"
-              className="text-xs font-semibold flex items-center gap-1"
-              style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+              className="caption font-semibold flex items-center gap-1"
+              style={{ color: "var(--primary)" }}
             >
               Visa allt <IconArrowRight width={13} height={13} />
             </Link>
           </div>
           {rising.length === 0 && falling.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-5 text-center" style={{ borderColor: "var(--line-strong)" }}>
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
-                <IconClock />
-              </span>
-              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
-                Sätt matchbetyg efter en match så ser du vilka som är på väg upp här.
-              </p>
-            </div>
+            <EmptyState
+              icon={<IconClock />}
+              title="Inga formvärden ännu"
+              body="Sätt matchbetyg efter en match så ser du vilka som är på väg upp här."
+            />
           ) : (
             <div className="space-y-4">
               {rising.length > 0 && (
@@ -421,31 +429,48 @@ export default async function Dashboard() {
               )}
             </div>
           )}
-        </div>
+        </Card>
       </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Att göra */}
-        <div className="card p-6">
+        <Card>
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-[1.05rem]">Att göra</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                Trupper, resultat och utvärderingar att ta tag i
+              <h2 className="font-semibold" style={{ fontSize: "18px" }}>Att göra</h2>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
+                {FEATURES.matchStats
+                  ? "Trupper, resultat och utvärderingar att ta tag i"
+                  : "Utvärderingar att ta tag i"}
               </p>
             </div>
             {todos.length > 0 && (
-              <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
-                {todos.length} st
-              </span>
+              <Badge tone="warning">{todos.length} st</Badge>
             )}
           </div>
           {todos.length === 0 ? (
-            <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "var(--ok-bg)" }}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--teal-dim)", color: "var(--ok)" }}>
+            <div
+              className="flex items-center gap-3"
+              style={{
+                borderRadius: "var(--r-card)",
+                padding: "16px",
+                background: "var(--ok-bg)",
+              }}
+            >
+              <span
+                className="flex shrink-0 items-center justify-center"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "var(--r-badge)",
+                  background: "var(--primary-soft)",
+                  color: "var(--success)",
+                }}
+              >
                 <IconCheck width={16} height={16} />
               </span>
-              <p className="text-sm" style={{ color: "var(--ok)" }}>
+              <p className="body-small" style={{ color: "var(--success)" }}>
                 Allt är ikapp – inget att göra just nu. Bra jobbat!
               </p>
             </div>
@@ -455,27 +480,36 @@ export default async function Dashboard() {
                 <li key={t.key}>
                   <Link
                     href={t.href}
-                    className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--primary-ghost)]"
+                    className="group flex items-center gap-3 transition-colors"
+                    style={{ borderRadius: "var(--r-button)", padding: "8px 8px" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-ghost)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     {t.player ? (
                       <Avatar name={t.player.name} jersey={t.player.jersey} size={34} />
                     ) : (
                       <span
-                        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full"
-                        style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+                        className="flex shrink-0 items-center justify-center"
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "var(--r-badge)",
+                          background: "var(--warn-bg)",
+                          color: "var(--warning)",
+                        }}
                       >
                         {t.icon}
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{t.title}</p>
-                      <p className="truncate text-xs" style={{ color: "var(--ink-faint)" }}>
+                      <p className="truncate body-small font-medium">{t.title}</p>
+                      <p className="truncate caption" style={{ color: "var(--ink-muted)" }}>
                         {t.sub}
                       </p>
                     </div>
                     <span
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: "var(--primary-fg)" }}
+                      style={{ color: "var(--primary)" }}
                     >
                       <IconArrowRight width={16} height={16} />
                     </span>
@@ -484,14 +518,18 @@ export default async function Dashboard() {
               ))}
             </ul>
           )}
-        </div>
+        </Card>
 
         {/* Aktivitetslogg */}
-        <div className="card p-6">
-          <p className="eyebrow mb-1">Tränarlaget</p>
-          <h2 className="font-semibold text-[1.05rem] mb-5">Senaste aktivitet</h2>
+        <Card>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="eyebrow mb-1">Tränarlaget</p>
+              <h2 className="font-semibold" style={{ fontSize: "18px" }}>Senaste aktivitet</h2>
+            </div>
+          </div>
           {activity.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+            <p className="body-small" style={{ color: "var(--ink-muted)" }}>
               Ingen aktivitet ännu. Loggen uppdateras när trupper tas ut, matcher sparas eller utvärderingar skapas.
             </p>
           ) : (
@@ -499,20 +537,26 @@ export default async function Dashboard() {
               {activity.map((entry: ActivityEntry) => (
                 <li key={entry.id} className="flex items-start gap-3">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5"
-                    style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                    className="flex shrink-0 items-center justify-center mt-0.5"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "var(--r-badge)",
+                      background: "var(--primary-soft)",
+                      color: "var(--primary)",
+                    }}
                   >
                     <IconClock width={13} height={13} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm" style={{ color: "var(--ink)" }}>
+                    <p className="body-small" style={{ color: "var(--ink)" }}>
                       <span className="font-semibold">{entry.coach_name}</span>{" "}
-                      <span style={{ color: "var(--ink-soft)" }}>{entry.action.toLowerCase()}</span>
+                      <span style={{ color: "var(--ink-secondary)" }}>{entry.action.toLowerCase()}</span>
                       {entry.subject ? (
                         <> &ndash; {entry.subject}</>
                       ) : null}
                     </p>
-                    <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                    <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                       {formatActivityTime(entry.created_at)}
                     </p>
                   </div>
@@ -520,27 +564,34 @@ export default async function Dashboard() {
               ))}
             </ol>
           )}
-        </div>
+        </Card>
       </div>
 
-
-      {/* Länk till grunden – principerna bor i guiden, inte på startsidan */}
-      <Link
-        href="/guide"
-        className="card card-hover flex items-center justify-between gap-3 px-6 py-4"
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}>
-            <IconCheck width={16} height={16} strokeWidth={2.4} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">SvFF:s riktlinjer som appen bygger på</p>
-            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
-              Vår grund – så tänker vi kring speltid, utveckling och glädje
-            </p>
+      {/* Länk till grunden */}
+      <Link href="/guide" className="block">
+        <Card hover className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span
+              className="flex shrink-0 items-center justify-center"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "var(--r-button)",
+                background: "var(--primary-soft)",
+                color: "var(--primary)",
+              }}
+            >
+              <IconCheck width={16} height={16} strokeWidth={2.4} />
+            </span>
+            <div>
+              <p className="body-small font-semibold">SvFF:s riktlinjer som appen bygger på</p>
+              <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                Vår grund – så tänker vi kring speltid, utveckling och glädje
+              </p>
+            </div>
           </div>
-        </div>
-        <IconArrowRight width={16} height={16} style={{ color: "var(--ink-faint)" }} />
+          <IconArrowRight width={16} height={16} style={{ color: "var(--ink-muted)" }} />
+        </Card>
       </Link>
     </div>
   );
@@ -557,14 +608,22 @@ function KpiChip({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl px-3.5 py-2.5" style={{ background: "var(--bg3)" }}>
+    <div
+      style={{
+        borderRadius: "var(--r-button)",
+        padding: "10px 14px",
+        background: "var(--surface)",
+      }}
+    >
       <p
-        className="text-[0.6rem] uppercase tracking-[0.08em]"
-        style={{ color: "var(--ink-soft)" }}
+        className="caption"
+        style={{ color: "var(--ink-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}
       >
         {label}
       </p>
-      <p className="stat-number text-[1.4rem] leading-tight mt-0.5">{children ?? value}</p>
+      <p className="stat-number" style={{ fontSize: "22px", lineHeight: 1.2, marginTop: 2 }}>
+        {children ?? value}
+      </p>
     </div>
   );
 }
@@ -580,10 +639,10 @@ function FormList({
   rows: { id: number; name: string; jersey_number: number | null; form_rating: number; last_delta: number | null }[];
 }) {
   const up = tone === "up";
-  const color = up ? "var(--ok)" : "var(--danger)";
+  const color = up ? "var(--success)" : "var(--danger)";
   return (
     <div>
-      <p className="eyebrow mb-2" style={{ color: "var(--ink-faint)" }}>
+      <p className="eyebrow mb-2" style={{ color: "var(--ink-muted)" }}>
         {title}
       </p>
       <ul className="-mx-2">
@@ -591,16 +650,19 @@ function FormList({
           <li key={f.id}>
             <Link
               href={`/spelare/${f.id}`}
-              className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--primary-ghost)]"
+              className="group flex items-center gap-3 transition-colors"
+              style={{ borderRadius: "var(--r-button)", padding: "8px 8px" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-ghost)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <Avatar name={f.name} jersey={f.jersey_number} size={32} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{f.name.replace(/^Exempel:\s*/, "")}</p>
-                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                <p className="truncate body-small font-medium">{f.name.replace(/^Exempel:\s*/, "")}</p>
+                <p className="caption" style={{ color: "var(--ink-muted)" }}>
                   Form {ratingBand(f.form_rating).label}
                 </p>
               </div>
-              <span className="stat-number text-sm flex items-center gap-0.5" style={{ color }}>
+              <span className="stat-number body-small flex items-center gap-0.5" style={{ color }}>
                 {up ? "▲" : "▼"} {Math.abs(f.last_delta ?? 0)}
               </span>
             </Link>

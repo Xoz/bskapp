@@ -29,7 +29,7 @@ export default function InvitePage({
           >
             Tränarbehörighet
           </h1>
-          <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
             Du har bjudits in som tränare. Klicka nedan för att aktivera åtkomst.
           </p>
         </div>
@@ -38,7 +38,7 @@ export default function InvitePage({
           <InviteTokenField searchParams={searchParams} />
 
           {state?.error && (
-            <p className="text-sm" style={{ color: "var(--warn)" }}>
+            <p className="body-small" style={{ color: "var(--warning)" }}>
               {state.error}
             </p>
           )}
@@ -48,8 +48,8 @@ export default function InvitePage({
           </button>
         </form>
 
-        <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
-          <a href="/" style={{ color: "var(--ink-faint)" }}>← Tillbaka till start</a>
+        <p className="caption" style={{ color: "var(--ink-muted)" }}>
+          <a href="/" style={{ color: "var(--ink-muted)" }}>← Tillbaka till start</a>
         </p>
       </div>
     </main>

@@ -33,7 +33,7 @@ export default function CopyLinkButton({
     <button
       onClick={copy}
       type="button"
-      className="text-xs underline cursor-pointer transition-colors"
+      className="caption underline cursor-pointer transition-colors"
       style={{ color: copied ? "var(--accent)" : "rgba(255,255,255,0.45)" }}
     >
       {copied ? "Länk kopierad!" : label}

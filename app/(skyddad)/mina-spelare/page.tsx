@@ -32,15 +32,15 @@ export default async function MyPlayersPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <header><p className="eyebrow">{user.roles.map((role) => ROLE_LABELS[role]).join(" · ")}</p><h1 className="text-[1.7rem] font-bold mt-0.5">{user.primaryRole === "parent" ? "Mina barn" : "Min profil"}</h1></header>
+      <header><p className="eyebrow">{user.roles.map((role) => ROLE_LABELS[role]).join(" · ")}</p><h1 className="text-[32px] font-bold mt-0.5">{user.primaryRole === "parent" ? "Mina barn" : "Min profil"}</h1></header>
       {players.length === 0 ? (
-        <div className="card p-6"><h2 className="font-semibold">Ingen spelare är kopplad ännu</h2><p className="text-sm mt-2" style={{ color: "var(--ink-soft)" }}>Be en administratör koppla ditt konto till rätt spelare.</p></div>
+        <div className="card p-6"><h2 className="font-semibold">Ingen spelare är kopplad ännu</h2><p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>Be en administratör koppla ditt konto till rätt spelare.</p></div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {players.map((player) => (
             <Link key={`${player.id}-${player.relation}`} href={`/mina-spelare/${player.id}`} className="card p-5 block transition-opacity hover:opacity-85">
-              <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-full font-bold" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>{player.name[0]?.toUpperCase()}</span><div><h2 className="font-semibold">{player.name}</h2><p className="text-xs" style={{ color: "var(--ink-faint)" }}>{player.position || "Spelare"}{player.jersey_number ? ` · #${player.jersey_number}` : ""}</p></div></div>
-              <p className="text-sm mt-4" style={{ color: "var(--ink-soft)" }}>{player.matches_played} matcher registrerade</p>
+              <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-full font-bold" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>{player.name[0]?.toUpperCase()}</span><div><h2 className="font-semibold">{player.name}</h2><p className="caption" style={{ color: "var(--ink-muted)" }}>{player.position || "Spelare"}{player.jersey_number ? ` · #${player.jersey_number}` : ""}</p></div></div>
+              <p className="body-small mt-4" style={{ color: "var(--ink-secondary)" }}>{player.matches_played} matcher registrerade</p>
             </Link>
           ))}
         </div>

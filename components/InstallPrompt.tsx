@@ -61,7 +61,7 @@ export default function InstallPrompt() {
       className="md:hidden fixed left-4 right-4 z-[60] rounded-2xl p-4 flex items-start gap-3 shadow-xl"
       style={{
         bottom: "calc(5rem + env(safe-area-inset-bottom))",
-        background: "var(--bg2)",
+        background: "var(--surface)",
         border: "1px solid var(--primary)",
       }}
     >
@@ -71,13 +71,13 @@ export default function InstallPrompt() {
           Installera appen
         </p>
         {isIOS ? (
-          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+          <p className="caption mt-0.5 leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
             Tryck på <strong>Dela</strong>{" "}
-            <span style={{ color: "var(--primary-fg)" }}>⎙</span> och sedan{" "}
+            <span style={{ color: "var(--primary)" }}>⎙</span> och sedan{" "}
             <strong>Lägg till på hemskärmen</strong>.
           </p>
         ) : (
-          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+          <p className="caption mt-0.5 leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
             Lägg till på hemskärmen för snabb åtkomst.
           </p>
         )}
@@ -93,8 +93,8 @@ export default function InstallPrompt() {
         )}
         <button
           onClick={dismiss}
-          className="text-xs px-3 py-1.5 rounded-lg text-center"
-          style={{ color: "var(--ink-faint)", border: "1px solid var(--line)" }}
+          className="caption px-3 py-1.5 rounded-lg text-center"
+          style={{ color: "var(--ink-muted)", border: "1px solid var(--border)" }}
         >
           Stäng
         </button>

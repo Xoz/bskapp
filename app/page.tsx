@@ -4,6 +4,7 @@ import { getRole, getPlayerSession } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import { getMatches, mootMatchIds } from "@/lib/queries";
 import { swedishToday, swedishMinutesSinceMidnight } from "@/lib/dates";
+import { FEATURES } from "@/lib/features";
 import PitchLines from "@/components/PitchLines";
 import { Logo90Mark } from "@/components/Logo90";
 import { IconWhistle, IconPlayers, IconArrowRight } from "@/components/Icons";
@@ -19,17 +20,20 @@ export default async function LandingPage() {
   const [settings, allMatches] = await Promise.all([getAllSettings(), getMatches()]);
 
   // "Live nu": matcher idag som startat men inte är klara (samma logik som /live).
+  // feature-flag: liveScore — koden finns kvar men körs bara när flaggan är på.
   const today = swedishToday();
   const nowMinutes = swedishMinutesSinceMidnight();
   const moot = mootMatchIds(allMatches);
-  const liveCount = allMatches.filter((m) => {
-    if (m.date !== today || moot.has(m.id)) return false;
-    if (m.our_score != null && m.opponent_score != null) return false;
-    if (!m.start_time) return false;
-    const [h, min] = m.start_time.split(":").map(Number);
-    const start = h * 60 + min;
-    return nowMinutes >= start && nowMinutes < start + 120;
-  }).length;
+  const liveCount = FEATURES.liveScore
+    ? allMatches.filter((m) => {
+        if (m.date !== today || moot.has(m.id)) return false;
+        if (m.our_score != null && m.opponent_score != null) return false;
+        if (!m.start_time) return false;
+        const [h, min] = m.start_time.split(":").map(Number);
+        const start = h * 60 + min;
+        return nowMinutes >= start && nowMinutes < start + 120;
+      }).length
+    : 0;
 
   const clubInitial = (settings.club_name || "B").trim().charAt(0).toUpperCase();
 
@@ -66,18 +70,18 @@ export default async function LandingPage() {
             style={{
               width: "34px",
               height: "34px",
-              border: "1px solid var(--line-2)",
+              border: "1px solid var(--border)",
               fontFamily: "var(--font-display)",
               fontWeight: 700,
               fontSize: "14px",
-              color: "var(--ink-dim)",
+              color: "var(--ink-secondary)",
             }}
           >
             {clubInitial}
           </span>
         </header>
 
-        <p className="mt-3.5 text-[0.625rem] uppercase" style={{ letterSpacing: "0.16em", color: "var(--ink-faint)" }}>
+        <p className="mt-3.5 caption uppercase" style={{ letterSpacing: "0.16em", color: "var(--ink-muted)" }}>
           Spelarutveckling · minut för minut
         </p>
 
@@ -89,12 +93,13 @@ export default async function LandingPage() {
           >
             {settings.team_name}
           </h1>
-          <p className="mt-2 text-xs" style={{ color: "var(--ink-dim)" }}>
+          <p className="mt-2 body-small" style={{ color: "var(--ink-secondary)" }}>
             {settings.club_name}
           </p>
         </div>
 
-        {/* HERO – Livescore, publik */}
+        {/* HERO – Livescore, publik (dold när liveScore-flaggan är av) */}
+        {FEATURES.liveScore && (
         <Link
           href="/live"
           className="relative block overflow-hidden"
@@ -124,13 +129,13 @@ export default async function LandingPage() {
                   style={{ inset: "-3px", border: "1px solid var(--live)", animation: "ring90 1.8s ease-out infinite" }}
                 />
               </span>
-              <span className="text-[0.625rem] uppercase" style={{ letterSpacing: "0.16em", color: "var(--live)" }}>
+              <span className="caption uppercase" style={{ letterSpacing: "0.16em", color: "var(--live)" }}>
                 Live nu · {liveCount} {liveCount === 1 ? "match" : "matcher"}
               </span>
             </div>
           )}
           <div className="relative" style={{ marginTop: liveCount > 0 ? "50px" : "64px" }}>
-            <div className="text-[0.625rem] uppercase" style={{ letterSpacing: "0.18em", color: "var(--ink-dim)" }}>
+            <div className="caption uppercase" style={{ letterSpacing: "0.18em", color: "var(--ink-secondary)" }}>
               Publik · ingen inloggning
             </div>
             <div
@@ -139,7 +144,7 @@ export default async function LandingPage() {
             >
               Livescore
             </div>
-            <div className="mt-2.5 text-[0.78rem]" style={{ color: "var(--ink-dim)", maxWidth: "190px", lineHeight: 1.5 }}>
+            <div className="mt-2.5 text-[0.78rem]" style={{ color: "var(--ink-secondary)", maxWidth: "190px", lineHeight: 1.5 }}>
               Följ alla lagets matcher i realtid.
             </div>
           </div>
@@ -150,7 +155,7 @@ export default async function LandingPage() {
               bottom: "18px",
               width: "54px",
               height: "54px",
-              background: "color-mix(in srgb, var(--primary) 16%, var(--bg2))",
+              background: "color-mix(in srgb, var(--primary) 16%, var(--surface))",
               border: "1.5px solid var(--primary)",
               color: "var(--primary)",
             }}
@@ -158,13 +163,14 @@ export default async function LandingPage() {
             <IconArrowRight width={20} height={20} />
           </span>
         </Link>
+        )}
 
         {/* Rollkort – sekundära */}
         <div className="flex gap-3" style={{ marginTop: "13px" }}>
           <Link
             href="/login"
             className="group flex flex-1 flex-col"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line-2)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
           >
             <div className="flex items-center justify-between">
               <span style={{ color: "var(--primary)" }}>
@@ -174,13 +180,13 @@ export default async function LandingPage() {
                 width={13}
                 height={13}
                 className="transition-transform group-hover:translate-x-0.5"
-                style={{ color: "var(--ink-faint)" }}
+                style={{ color: "var(--ink-muted)" }}
               />
             </div>
             <span className="mt-auto font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "19px", color: "var(--ink)" }}>
               Tränare
             </span>
-            <span className="text-[0.7rem]" style={{ color: "var(--ink-dim)", marginTop: "3px" }}>
+            <span className="caption" style={{ color: "var(--ink-secondary)", marginTop: "3px" }}>
               Trupp, utvärderingar &amp; statistik
             </span>
           </Link>
@@ -188,7 +194,7 @@ export default async function LandingPage() {
           <Link
             href="/spelare/login"
             className="group flex flex-1 flex-col"
-            style={{ background: "var(--bg2)", border: "1px solid var(--line-2)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px", padding: "15px", minHeight: "98px", color: "var(--ink)" }}
           >
             <div className="flex items-center justify-between">
               <span style={{ color: "var(--primary)" }}>
@@ -198,13 +204,13 @@ export default async function LandingPage() {
                 width={13}
                 height={13}
                 className="transition-transform group-hover:translate-x-0.5"
-                style={{ color: "var(--ink-faint)" }}
+                style={{ color: "var(--ink-muted)" }}
               />
             </div>
             <span className="mt-auto font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "19px", color: "var(--ink)" }}>
               Spelare
             </span>
-            <span className="text-[0.7rem]" style={{ color: "var(--ink-dim)", marginTop: "3px" }}>
+            <span className="caption" style={{ color: "var(--ink-secondary)", marginTop: "3px" }}>
               Berätta om din säsong
             </span>
           </Link>
@@ -212,8 +218,8 @@ export default async function LandingPage() {
 
         {/* Footer */}
         <div
-          className="text-center text-[0.625rem]"
-          style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid var(--line)", letterSpacing: "0.07em", color: "var(--ink-faint)" }}
+          className="text-center caption"
+          style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid var(--border)", letterSpacing: "0.07em", color: "var(--ink-muted)" }}
         >
           Enligt SvFF:s riktlinjer för barnfotboll
         </div>

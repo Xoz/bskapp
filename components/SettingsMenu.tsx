@@ -37,24 +37,38 @@ export default function SettingsMenu() {
       <button
         onClick={() => setOpen((o) => !o)}
         title="Inställningar"
-        className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg2)]"
-        style={{ color: open ? "var(--primary)" : "var(--ink-faint)" }}
+        aria-label="Inställningar"
+        className="icon-btn"
+        style={{
+          width: 32,
+          height: 32,
+          color: open ? "var(--primary)" : undefined,
+          borderColor: open ? "var(--primary)" : undefined,
+        }}
       >
         <IconSettings width={17} height={17} />
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-52 rounded-2xl py-1.5 z-50"
+          className="absolute right-0 top-full mt-2 z-50 fade-in"
           style={{
-            background: "var(--bg-nav)",
-            border: "1px solid var(--line)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            width: 208,
+            borderRadius: "var(--r-card)",
+            padding: "6px",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-xl)",
           }}
         >
           <p
-            className="text-[0.6rem] uppercase tracking-[0.1em] px-4 pt-2 pb-1.5"
-            style={{ color: "var(--ink-faint)" }}
+            className="caption px-3 pt-2 pb-1.5"
+            style={{
+              color: "var(--ink-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              fontWeight: 600,
+            }}
           >
             Inställningar
           </p>
@@ -63,10 +77,19 @@ export default function SettingsMenu() {
               key={id}
               href={`/installningar#${id}`}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--bg2)]"
-              style={{ color: "var(--ink)" }}
+              className="flex items-center gap-3 px-3 py-2.5 body-small transition-colors"
+              style={{
+                color: "var(--ink)",
+                borderRadius: "var(--r-button)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--elevated)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
             >
-              <Icon width={15} height={15} style={{ color: "var(--ink-faint)" }} />
+              <Icon width={16} height={16} style={{ color: "var(--ink-muted)" }} />
               {label}
             </Link>
           ))}

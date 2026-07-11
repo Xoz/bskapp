@@ -18,12 +18,12 @@ export default function ImportCupPage() {
         <Link
           href="/matcher"
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Matcher
         </Link>
-        <h1 className="text-[1.7rem] font-bold mt-2">Importera cup</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-2">Importera cup</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Klistra in lagets iCal-länk från cuparrangören (CupManager/Profixio m.fl.) så hämtas
           gruppspelsmatcherna automatiskt. Du får granska dem innan de läggs till.
         </p>
@@ -42,13 +42,13 @@ export default function ImportCupPage() {
             placeholder="https://app.rubic.no/profixio/ical.ashx?component=matches&tournamentID=…&teamID=…"
             className="input"
           />
-          <p className="text-xs mt-1.5" style={{ color: "var(--ink-faint)" }}>
+          <p className="caption mt-1.5" style={{ color: "var(--ink-muted)" }}>
             Hittas oftast på cupens lagsida under &quot;Prenumerera&quot; / &quot;Lägg till i kalender&quot;.
             webcal://-länkar fungerar också.
           </p>
         </div>
         {state && !state.ok && (
-          <p className="text-sm" style={{ color: "var(--warn)" }}>{state.error}</p>
+          <p className="body-small" style={{ color: "var(--warning)" }}>{state.error}</p>
         )}
         <button type="submit" disabled={pending} className="btn-secondary">
           {pending ? "Hämtar…" : state?.ok ? "Hämta igen" : "Hämta matcher"}
@@ -87,10 +87,10 @@ export default function ImportCupPage() {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+            <div className="px-5 md:px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
               <h2 className="font-semibold">
                 Hittade matcher{" "}
-                <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>({state.matches.length})</span>
+                <span style={{ color: "var(--ink-muted)", fontWeight: 400 }}>({state.matches.length})</span>
               </h2>
             </div>
             <div>
@@ -98,7 +98,7 @@ export default function ImportCupPage() {
                 <div
                   key={m.uid}
                   className="px-5 md:px-6 py-3 flex items-center justify-between gap-3"
-                  style={{ borderTop: i > 0 ? "1px solid var(--line)" : undefined }}
+                  style={{ borderTop: i > 0 ? "1px solid var(--border)" : undefined }}
                 >
                   <div className="min-w-0">
                     <p className="font-medium truncate">
@@ -106,12 +106,12 @@ export default function ImportCupPage() {
                       {m.opponent}
                     </p>
                     {m.location && (
-                      <p className="text-xs truncate" style={{ color: "var(--ink-faint)" }}>{m.location}</p>
+                      <p className="caption truncate" style={{ color: "var(--ink-muted)" }}>{m.location}</p>
                     )}
                   </div>
-                  <div className="text-sm text-right shrink-0" style={{ color: "var(--ink-soft)" }}>
+                  <div className="body-small text-right shrink-0" style={{ color: "var(--ink-secondary)" }}>
                     {m.date}
-                    {m.time && <span style={{ color: "var(--ink-faint)" }}> · {m.time}</span>}
+                    {m.time && <span style={{ color: "var(--ink-muted)" }}> · {m.time}</span>}
                   </div>
                 </div>
               ))}

@@ -21,13 +21,13 @@ export default async function NewMatchPage() {
       <div>
         <Link
           href="/matcher"
-          className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          className="inline-flex items-center gap-1.5 body-small font-medium transition-colors"
+          style={{ color: "var(--ink-secondary)" }}
         >
           <IconArrowLeft width={15} height={15} /> Matcher
         </Link>
-        <h1 className="text-[1.7rem] font-bold mt-2">Lägg till match manuellt</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="mt-2" style={{ fontSize: "32px" }}>Lägg till match manuellt</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Tips: koppla lagets kalender från svenskalag.se under Inställningar så hämtas matcherna
           automatiskt.
         </p>

@@ -21,7 +21,7 @@ function matchLabel(m: Match): string {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
+    <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--ink-secondary)" }}>
       {children}
     </h2>
   );
@@ -67,8 +67,8 @@ export default async function LiveLandingPage() {
       </div>
       <div className="text-center mb-8">
         <p className="eyebrow">{settings.team_name}</p>
-        <h1 className="text-[1.7rem] font-bold mt-0.5">Livescore</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-0.5">Livescore</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Följ lagets matcher live – ställning och händelser i realtid.
         </p>
       </div>
@@ -80,7 +80,7 @@ export default async function LiveLandingPage() {
             <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
               Ingen match idag
             </p>
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
               Livescore visas här när det är matchdag.
             </p>
             <Link href="/" className="btn-secondary mt-5 inline-flex">Till startsidan</Link>
@@ -108,12 +108,12 @@ export default async function LiveLandingPage() {
                     <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
                       {matchLabel(m)}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                    <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                       {m.start_time ? `Avspark ${m.start_time}` : "Idag"}
                       {m.report_open || reportingAutoOpen(m.date, m.start_time) ? " · rapportering öppen" : ""}
                     </p>
                   </div>
-                  <span className="stat-number text-lg" style={{ color: "var(--ink-faint)" }}>–</span>
+                  <span className="stat-number text-lg" style={{ color: "var(--ink-muted)" }}>–</span>
                 </Link>
               ))}
             </div>
@@ -128,7 +128,7 @@ export default async function LiveLandingPage() {
               {doneToday.map((m) => {
                 const won = m.our_score! > m.opponent_score!;
                 const lost = m.our_score! < m.opponent_score!;
-                const resultColor = won ? "var(--ok)" : lost ? "var(--danger)" : "var(--ink-soft)";
+                const resultColor = won ? "var(--success)" : lost ? "var(--danger)" : "var(--ink-secondary)";
                 return (
                   <Link
                     key={m.id}
@@ -137,7 +137,7 @@ export default async function LiveLandingPage() {
                   >
                     <span
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                      style={{ background: "var(--bg2)", color: "var(--ink-soft)" }}
+                      style={{ background: "var(--surface)", color: "var(--ink-secondary)" }}
                     >
                       <IconLive width={20} height={20} />
                     </span>
@@ -145,7 +145,7 @@ export default async function LiveLandingPage() {
                       <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)" }}>
                         {matchLabel(m)}
                       </p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                      <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                         {m.start_time ? `Avspark ${m.start_time}` : "Idag"} · Avslutad
                       </p>
                     </div>
@@ -179,7 +179,7 @@ export default async function LiveLandingPage() {
                   <div key={m.id} className="card p-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{matchLabel(m)}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>{sub}</p>
+                      <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>{sub}</p>
                     </div>
                   </div>
                 );

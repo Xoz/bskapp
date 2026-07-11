@@ -24,7 +24,7 @@ export interface RatingPlayer {
 const TONE_COLOR: Record<ExpectationStep["tone"], string> = {
   danger: "var(--danger)",
   warn: "#f59e0b",
-  neutral: "var(--ink-soft)",
+  neutral: "var(--ink-secondary)",
   ok: "#4ade80",
   great: "#22c55e",
 };
@@ -59,8 +59,8 @@ function Segment({
             style={{
               padding: size === "sm" ? "0.3rem 0.5rem" : "0.4rem 0.65rem",
               fontSize: size === "sm" ? "0.72rem" : "0.8rem",
-              background: active ? TONE_COLOR[step.tone] : "var(--bg2)",
-              color: active ? "#0e0f11" : "var(--ink-soft)",
+              background: active ? TONE_COLOR[step.tone] : "var(--surface)",
+              color: active ? "#0e0f11" : "var(--ink-secondary)",
               border: isSuggested ? "1px dashed var(--primary)" : "1px solid transparent",
               fontWeight: active ? 700 : 500,
             }}
@@ -95,7 +95,7 @@ function PlayerRow({ player }: { player: RatingPlayer }) {
   if (player.position === "malvakt" && player.saves) statBits.push(`${player.saves} räddn`);
 
   return (
-    <div className="py-4" style={{ borderTop: "1px solid var(--line)" }}>
+    <div className="py-4" style={{ borderTop: "1px solid var(--border)" }}>
       {/* dolda fält som postas */}
       <input type="hidden" name={`overall_${player.id}`} value={overall} />
       <input type="hidden" name={`suggested_${player.id}`} value={player.suggested} />
@@ -111,13 +111,13 @@ function PlayerRow({ player }: { player: RatingPlayer }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm">{player.name}</span>
             {l && (
-              <span className="badge" style={{ background: "var(--bg2)", color: l.color, fontSize: "0.62rem" }}>
+              <span className="badge" style={{ background: "var(--surface)", color: l.color, fontSize: "0.62rem" }}>
                 {l.short}
               </span>
             )}
           </div>
           {statBits.length > 0 && (
-            <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
               {statBits.join(" · ")}
             </p>
           )}
@@ -125,8 +125,8 @@ function PlayerRow({ player }: { player: RatingPlayer }) {
         <button
           type="button"
           onClick={() => setAdvanced((v) => !v)}
-          className="text-xs hover:underline cursor-pointer shrink-0"
-          style={{ color: advanced ? "var(--primary)" : "var(--ink-faint)" }}
+          className="caption hover:underline cursor-pointer shrink-0"
+          style={{ color: advanced ? "var(--primary)" : "var(--ink-muted)" }}
         >
           {advanced ? "Stäng områden" : hadAdvanced ? "Områden ✓" : "Per område"}
         </button>
@@ -139,7 +139,7 @@ function PlayerRow({ player }: { player: RatingPlayer }) {
           {RATING_AREAS.map((a) => (
             <div key={a.id} className="flex items-center gap-3 flex-wrap">
               <span
-                className="text-xs shrink-0"
+                className="caption shrink-0"
                 style={{ width: 92, color: a.color, fontWeight: 600 }}
               >
                 {a.name}
@@ -151,7 +151,7 @@ function PlayerRow({ player }: { player: RatingPlayer }) {
               />
             </div>
           ))}
-          <p className="text-[0.68rem]" style={{ color: "var(--ink-faint)" }}>
+          <p className="caption" style={{ color: "var(--ink-muted)" }}>
             Helhetsbetyget räknas som snittet av områdena.
           </p>
         </div>
@@ -169,7 +169,7 @@ export default function MatchRatings({
 }) {
   if (players.length === 0) {
     return (
-      <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+      <p className="body-small" style={{ color: "var(--ink-muted)" }}>
         Inga spelare med speltid i matchen att betygsätta ännu.
       </p>
     );
@@ -177,7 +177,7 @@ export default function MatchRatings({
   return (
     <form action={saveMatchRatings}>
       <input type="hidden" name="match_id" value={matchId} />
-      <p className="text-xs mb-1" style={{ color: "var(--ink-faint)" }}>
+      <p className="caption mb-1" style={{ color: "var(--ink-muted)" }}>
         Bedöm hur spelaren presterade <strong>mot förväntan</strong> – förväntan är redan
         justerad efter spelarens nivå och matchens svårighet. Streckad ram = appens förslag.
       </p>

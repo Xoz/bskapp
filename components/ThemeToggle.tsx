@@ -26,10 +26,15 @@ export default function ThemeToggle({ className }: { className?: string }) {
     <button
       onClick={toggle}
       title={theme === "dark" ? "Ljust läge" : "Mörkt läge"}
-      className={className ?? "p-1.5 rounded-lg transition-colors hover:bg-[var(--bg2)]"}
-      style={{ color: "var(--ink-faint)" }}
+      aria-label={theme === "dark" ? "Växla till ljust läge" : "Växla till mörkt läge"}
+      className={className ?? "icon-btn"}
+      style={{ width: 32, height: 32 }}
     >
-      {theme === "dark" ? <IconSun width={17} height={17} /> : <IconMoon width={17} height={17} />}
+      {theme === "dark" ? (
+        <IconSun width={17} height={17} />
+      ) : (
+        <IconMoon width={17} height={17} />
+      )}
     </button>
   );
 }

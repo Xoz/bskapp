@@ -19,7 +19,7 @@ export default function SpelarLoginPage() {
           >
             Spelarprofil
           </h1>
-          <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
             Ange din personliga PIN-kod du fått av tränaren.
           </p>
         </div>
@@ -28,8 +28,8 @@ export default function SpelarLoginPage() {
           <div>
             <label
               htmlFor="pin"
-              className="block text-[0.65rem] uppercase tracking-[0.1em] mb-1.5"
-              style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}
+              className="block caption uppercase tracking-[0.1em] mb-1.5"
+              style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}
             >
               PIN-kod (6 siffror)
             </label>
@@ -49,7 +49,7 @@ export default function SpelarLoginPage() {
           </div>
 
           {state?.error && (
-            <p className="text-sm text-center" style={{ color: "var(--warn)" }}>
+            <p className="body-small text-center" style={{ color: "var(--warning)" }}>
               {state.error}
             </p>
           )}
@@ -59,8 +59,8 @@ export default function SpelarLoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs" style={{ color: "var(--ink-faint)" }}>
-          <a href="/" style={{ color: "var(--ink-faint)" }}>← Tillbaka till start</a>
+        <p className="text-center text-xs" style={{ color: "var(--ink-muted)" }}>
+          <a href="/" style={{ color: "var(--ink-muted)" }}>← Tillbaka till start</a>
         </p>
       </div>
     </main>

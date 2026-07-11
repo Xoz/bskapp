@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { IconArrowLeft, IconCheck } from "@/components/Icons";
+import { FEATURES } from "@/lib/features";
 
 export const metadata = { title: "Manual – BSK F2014" };
+
+const HIDDEN_CHAPTERS = new Set<string>();
+if (!FEATURES.matchStats) HIDDEN_CHAPTERS.add("matcher").add("statistik");
+if (!FEATURES.liveScore) HIDDEN_CHAPTERS.add("live");
 
 const CHAPTERS = [
   { id: "kom-igang", number: "01", label: "Kom igång" },
@@ -20,19 +25,21 @@ const CHAPTERS = [
   { id: "felsokning", number: "14", label: "Felsökning" },
 ] as const;
 
+const VISIBLE_CHAPTERS = CHAPTERS.filter((c) => !HIDDEN_CHAPTERS.has(c.id));
+
 function Toc({ compact = false }: { compact?: boolean }) {
   return (
     <nav aria-label="Manualens innehåll" className={compact ? "grid sm:grid-cols-2 gap-x-4" : "space-y-0.5"}>
-      {CHAPTERS.map((chapter) => (
+      {VISIBLE_CHAPTERS.map((chapter) => (
         <a
           key={chapter.id}
           href={`#${chapter.id}`}
           className="group flex items-center gap-3 py-2 text-sm transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)" }}
+          style={{ color: "var(--ink-secondary)" }}
         >
           <span
-            className="text-[0.6rem] tabular-nums transition-colors group-hover:text-[var(--primary)]"
-            style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}
+            className="caption tabular-nums transition-colors group-hover:text-[var(--primary)]"
+            style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}
           >
             {chapter.number}
           </span>
@@ -57,21 +64,21 @@ function Chapter({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-20 border-t pt-10 md:pt-14" style={{ borderColor: "var(--line)" }}>
+    <section id={id} className="scroll-mt-20 border-t pt-10 md:pt-14" style={{ borderColor: "var(--border)" }}>
       <div className="flex items-baseline gap-3 mb-3">
-        <span className="text-xs" style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>
+        <span className="caption" style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}>
           {number}
         </span>
         <h2 className="text-2xl md:text-[1.75rem] font-bold">{title}</h2>
       </div>
-      <p className="text-[0.95rem] leading-7 mb-8 max-w-2xl" style={{ color: "var(--ink-soft)" }}>
+      <p className="text-[0.95rem] leading-7 mb-8 max-w-2xl" style={{ color: "var(--ink-secondary)" }}>
         {intro}
       </p>
       <div className="space-y-9">{children}</div>
       <a
         href="#manual-top"
         className="inline-flex mt-10 text-xs transition-colors hover:text-[var(--primary)]"
-        style={{ color: "var(--ink-faint)" }}
+        style={{ color: "var(--ink-muted)" }}
       >
         Till innehållet ↑
       </a>
@@ -82,8 +89,8 @@ function Chapter({
 function Topic({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-[1.05rem] font-semibold mb-3">{title}</h3>
-      <div className="space-y-3 text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
+      <h3 className="text-[18px] font-semibold mb-3">{title}</h3>
+      <div className="space-y-3 text-sm leading-6" style={{ color: "var(--ink-secondary)" }}>
         {children}
       </div>
     </div>
@@ -98,7 +105,7 @@ function Step({ title, children }: { title: string; children?: React.ReactNode }
   return (
     <li className="flex gap-3">
       <span
-        className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-[0.65rem] font-bold"
+        className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full caption font-bold"
         style={{ background: "var(--primary-soft)", color: "var(--primary)", fontFamily: "var(--font-display)" }}
       >
         <IconCheck width={12} height={12} strokeWidth={2.5} />
@@ -126,23 +133,23 @@ function Item({ children }: { children: React.ReactNode }) {
 
 function Callout({ title, children, tone = "tip" }: { title: string; children: React.ReactNode; tone?: "tip" | "note" | "warn" }) {
   const colors = tone === "warn"
-    ? { background: "var(--warn-bg)", border: "color-mix(in srgb, var(--warn), transparent 70%)", color: "var(--warn)" }
+    ? { background: "var(--warn-bg)", border: "color-mix(in srgb, var(--warning), transparent 70%)", color: "var(--warning)" }
     : tone === "note"
-      ? { background: "var(--bg2)", border: "var(--line-2)", color: "var(--ink)" }
+      ? { background: "var(--surface)", border: "var(--border)", color: "var(--ink)" }
       : { background: "var(--primary-ghost)", border: "var(--primary-line)", color: "var(--primary)" };
   return (
     <aside className="border-l-2 px-4 py-3.5" style={{ background: colors.background, borderColor: colors.border }}>
-      <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: colors.color }}>{title}</p>
-      <div className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{children}</div>
+      <p className="caption font-semibold uppercase tracking-wider mb-1.5" style={{ color: colors.color }}>{title}</p>
+      <div className="body-small leading-6" style={{ color: "var(--ink-secondary)" }}>{children}</div>
     </aside>
   );
 }
 
 function Term({ name, children }: { name: string; children: React.ReactNode }) {
   return (
-    <div className="grid sm:grid-cols-[150px_1fr] gap-1 sm:gap-5 py-3 border-t" style={{ borderColor: "var(--line)" }}>
+    <div className="grid sm:grid-cols-[150px_1fr] gap-1 sm:gap-5 py-3 border-t" style={{ borderColor: "var(--border)" }}>
       <dt className="font-semibold text-sm" style={{ color: "var(--ink)" }}>{name}</dt>
-      <dd className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{children}</dd>
+      <dd className="body-small leading-6" style={{ color: "var(--ink-secondary)" }}>{children}</dd>
     </div>
   );
 }
@@ -154,7 +161,7 @@ export default function GuidePage() {
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm font-medium mb-7 transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-faint)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-muted)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={14} height={14} /> Tillbaka till appen
         </Link>
@@ -162,7 +169,7 @@ export default function GuidePage() {
         <header className="pb-8 md:pb-12">
           <p className="eyebrow mb-3">BSK F2014 · Hjälpcenter</p>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">Manual</h1>
-          <p className="mt-4 max-w-2xl text-base md:text-lg leading-7" style={{ color: "var(--ink-soft)" }}>
+          <p className="mt-4 max-w-2xl text-base md:text-lg leading-7" style={{ color: "var(--ink-secondary)" }}>
             En komplett guide till laget, spelarna, matcherna och uppföljningen. Börja med Kom igång
             om du är ny, eller använd innehållet för att gå direkt till en funktion.
           </p>
@@ -173,7 +180,7 @@ export default function GuidePage() {
             Innehåll
             <span className="text-lg group-open:rotate-45 transition-transform" style={{ color: "var(--primary)" }}>+</span>
           </summary>
-          <div className="px-5 pb-5 border-t pt-2" style={{ borderColor: "var(--line)" }}>
+          <div className="px-5 pb-5 border-t pt-2" style={{ borderColor: "var(--border)" }}>
             <Toc compact />
           </div>
         </details>
@@ -355,6 +362,7 @@ export default function GuidePage() {
               </Topic>
             </Chapter>
 
+            {FEATURES.matchStats && (
             <Chapter
               id="matcher"
               number="05"
@@ -398,6 +406,7 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
             </Chapter>
+            )}
 
             <Chapter
               id="laguttagning"
@@ -429,6 +438,7 @@ export default function GuidePage() {
               </Topic>
             </Chapter>
 
+            {FEATURES.liveScore && (
             <Chapter
               id="live"
               number="07"
@@ -466,6 +476,7 @@ export default function GuidePage() {
                 </Steps>
               </Topic>
             </Chapter>
+            )}
 
             <Chapter
               id="cuper"
@@ -505,6 +516,7 @@ export default function GuidePage() {
               </Topic>
             </Chapter>
 
+            {FEATURES.matchStats && (
             <Chapter
               id="statistik"
               number="09"
@@ -541,6 +553,7 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
             </Chapter>
+            )}
 
             <Chapter
               id="samtal"

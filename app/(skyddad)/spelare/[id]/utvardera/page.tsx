@@ -29,7 +29,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
       <Link
         href={`/spelare/${player.id}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-        style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+        style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
       >
         <IconArrowLeft width={15} height={15} /> {player.name}
       </Link>
@@ -39,7 +39,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
         <div>
           <p className="eyebrow">Ny utvärdering</p>
           <h1 className="text-[1.5rem] font-bold leading-tight mt-0.5">{player.name}</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             Jämför {firstName} med sig själv – inte med andra.
             {latest && " Förra utvärderingen är förifylld."}
           </p>
@@ -48,7 +48,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
 
       {/* Nivålegend */}
       <div className="card p-5" style={{ background: "var(--primary-ghost)" }}>
-        <p className="eyebrow mb-3" style={{ color: "var(--primary-fg)" }}>
+        <p className="eyebrow mb-3" style={{ color: "var(--primary)" }}>
           Utvecklingsnivåer – inte betyg
         </p>
         <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
@@ -59,11 +59,11 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
                   <i key={i} className={i <= l.value ? "on" : ""} />
                 ))}
               </span>
-              <p className="text-sm leading-snug">
+              <p className="body-small leading-snug">
                 <span className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>
                   {l.label}
                 </span>
-                <span className="block text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                <span className="block text-xs mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                   {l.description}
                 </span>
               </p>
@@ -90,7 +90,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
           <div key={cat.id} className="card overflow-hidden">
             <div
               className="px-6 py-4 flex items-center gap-3"
-              style={{ borderBottom: "1px solid var(--line)", background: `color-mix(in srgb, ${cat.color}, transparent 92%)` }}
+              style={{ borderBottom: "1px solid var(--border)", background: `color-mix(in srgb, ${cat.color}, transparent 92%)` }}
             >
               <span
                 className="stat-number flex h-7 w-7 items-center justify-center rounded-lg text-xs"
@@ -106,7 +106,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
               {cat.skills.map((skill) => (
                 <div key={skill.id}>
                   <p className="font-medium text-sm">{skill.name}</p>
-                  <p className="text-xs mb-2.5" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption mb-2.5" style={{ color: "var(--ink-muted)" }}>
                     {skill.description}
                   </p>
                   <div className="space-y-1.5">
@@ -121,12 +121,12 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
                         />
                         <span className="level-row">
                           <span
-                            className="text-[0.65rem] font-semibold uppercase tracking-wide shrink-0"
-                            style={{ color: "var(--ink-faint)", minWidth: "5rem" }}
+                            className="caption font-semibold uppercase tracking-wide shrink-0"
+                            style={{ color: "var(--ink-muted)", minWidth: "5rem" }}
                           >
                             {level.label}
                           </span>
-                          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+                          <span className="caption" style={{ color: "var(--ink-secondary)" }}>
                             {skill.criteria[level.value]}
                           </span>
                         </span>
@@ -143,7 +143,7 @@ export default async function EvaluatePage({ params }: { params: Promise<{ id: s
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="font-semibold text-sm">Styrkor & fokusområden</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
                 Fyll i nivåerna ovan och tryck AI-förslag för att generera text automatiskt.
               </p>
             </div>

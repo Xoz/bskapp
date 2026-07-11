@@ -29,12 +29,12 @@ export default async function PlayersPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="eyebrow">Truppen</p>
-          <h1 className="text-[1.7rem] font-bold mt-0.5">Spelare</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          <h1 className="mt-1" style={{ fontSize: "40px" }}>Spelare</h1>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             {players.length} spelare · klicka på en spelare för utvecklingsprofil
           </p>
         </div>
-        <Link href="/utveckling" className="btn-secondary shrink-0">
+        <Link href="/utveckling" className="btn-secondary btn-sm shrink-0">
           🪜 Lagets utvecklingsträd
         </Link>
       </div>
@@ -64,28 +64,28 @@ export default async function PlayersPage() {
                     <Link href={canViewPrivate ? `/spelare/${p.id}` : "#"} className="flex items-center gap-3 group">
                       <Avatar name={p.name} jersey={p.jersey_number} size={36} />
                       <span>
-                        <span className="flex items-center gap-2 font-medium group-hover:underline" style={{ color: "var(--ink)" }}>
+                        <span className="flex items-center gap-2 font-medium group-hover:underline body" style={{ color: "var(--ink)" }}>
                           {p.name}
                           {(() => {
                             const pl = levelInfo(p.level);
                             return pl ? (
-                              <span className="badge level-tag" data-level={pl.id} style={{ background: "var(--bg2)", fontSize: "0.6875rem" }}>
+                              <span className="badge level-tag" data-level={pl.id} style={{ background: "var(--elevated)" }}>
                                 {pl.short}
                               </span>
                             ) : null;
                           })()}
                         </span>
-                        <span className="block text-xs" style={{ color: "var(--ink-faint)" }}>
+                        <span className="block caption" style={{ color: "var(--ink-muted)" }}>
                           {p.jersey_number != null ? `Tröja #${p.jersey_number}` : "Inget tröjnummer"}
                         </span>
                       </span>
                     </Link>
                   </td>
-                  <td style={{ color: "var(--ink-soft)" }}>
+                  <td style={{ color: "var(--ink-secondary)" }}>
                     {latestEvals[p.id] ? (
                       daysSinceLabel(latestEvals[p.id])
                     ) : (
-                      <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+                      <span className="badge badge-warning">
                         Aldrig
                       </span>
                     )}
@@ -98,7 +98,7 @@ export default async function PlayersPage() {
                   <td className="hidden lg:table-cell">{s?.passes_completed ?? 0}</td>
                   <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
                   <td className="text-right">
-                    {canEvaluate && <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary text-sm py-1.5 px-3.5">Utvärdera</Link>}
+                    {canEvaluate && <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary btn-sm">Utvärdera</Link>}
                   </td>
                 </tr>
               );

@@ -23,7 +23,7 @@ export default async function MittUtvecklingstradPage() {
       <Link
         href="/min-profil"
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-        style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+        style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
       >
         <IconArrowLeft width={15} height={15} /> Min profil
       </Link>
@@ -31,7 +31,7 @@ export default async function MittUtvecklingstradPage() {
       <div>
         <p className="eyebrow">Utvecklingsträd · 7v7 → 9v9</p>
         <h1 className="text-[1.5rem] font-bold leading-tight mt-0.5">Hej, {firstName}!</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Det här är vad din tränare ser att du redan klarar, vad du tränar på nu och vad nästa steg är.
         </p>
       </div>

@@ -44,7 +44,7 @@ export default function MatchForm({
         <div>
           <label className="label" htmlFor="start_time">Avsparktid <span style={{ fontWeight: 400, opacity: 0.6 }}>(frivilligt)</span></label>
           <input id="start_time" name="start_time" type="time" defaultValue={match?.start_time ?? ""} className="input" />
-          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Rapportering öppnar 15 min innan</p>
+          <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>Rapportering öppnar 15 min innan</p>
         </div>
         <div>
           <label className="label" htmlFor="periods">Antal perioder</label>
@@ -84,7 +84,7 @@ export default function MatchForm({
               <option key={l.id} value={l.id}>{l.label}</option>
             ))}
           </select>
-          <p className="text-[0.72rem] mt-1" style={{ color: "var(--ink-faint)" }}>Styr laguttagningen</p>
+          <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>Styr laguttagningen</p>
         </div>
         <div>
           <label className="label" htmlFor="our_score">Våra mål (frivilligt)</label>
@@ -105,9 +105,9 @@ export default function MatchForm({
       </div>
 
       <div className="card overflow-hidden">
-        <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--line)" }}>
-          <h2 className="font-semibold">Spelarstatistik</h2>
-          <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+        <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h2 className="font-semibold body">Spelarstatistik</h2>
+          <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
             {STAT_FIELDS.map((f) => `${f.short} = ${f.label}`).join(" · ")}
           </p>
         </div>
@@ -115,7 +115,7 @@ export default function MatchForm({
       </div>
 
       <div className="flex gap-3">
-        <button type="submit" className="btn-primary px-6">Spara match</button>
+        <button type="submit" className="btn-primary">Spara match</button>
         <Link href="/matcher" className="btn-secondary">Avbryt</Link>
       </div>
     </form>

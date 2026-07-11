@@ -24,12 +24,12 @@ export default async function LivePage({ params }: { params: Promise<{ id: strin
         <Link
           href={`/matcher/${match.id}`}
           className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+          style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
         >
           <IconArrowLeft width={15} height={15} /> Tillbaka till matchen
         </Link>
-        <h1 className="text-[1.6rem] font-bold mt-2">Liverapportering</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[28px] font-bold mt-2">Liverapportering</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent} · {match.date}
           {match.start_time ? ` · ${match.start_time}` : ""}
         </p>

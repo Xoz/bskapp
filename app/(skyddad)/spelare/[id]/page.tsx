@@ -30,6 +30,7 @@ import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { STAT_FIELDS } from "@/lib/stats";
+import { FEATURES } from "@/lib/features";
 import { IconArrowLeft, IconPlus, IconSpark, IconTarget, IconAlert } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -110,8 +111,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     <div className="space-y-6">
       <Link
         href="/spelare"
-        className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
-        style={{ color: "var(--ink-soft)", fontFamily: "var(--font-display)" }}
+        className="inline-flex items-center gap-1.5 body-small font-medium transition-colors"
+        style={{ color: "var(--ink-secondary)" }}
       >
         <IconArrowLeft width={15} height={15} /> Alla spelare
       </Link>
@@ -121,23 +122,20 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         <Avatar name={player.name} jersey={player.jersey_number} size={64} />
         <div className="flex-1 min-w-40">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-[1.6rem] font-bold leading-tight">{player.name}</h1>
+            <h1 className="leading-tight" style={{ fontSize: "32px" }}>{player.name}</h1>
             {player.jersey_number != null && (
-              <span
-                className="badge"
-                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
-              >
+              <span className="badge badge-primary">
                 #{player.jersey_number}
               </span>
             )}
           </div>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             {evaluations.length === 0
               ? "Ingen utvärdering ännu"
               : `${evaluations.length} ${evaluations.length === 1 ? "utvärdering" : "utvärderingar"} · senast ${latest.date}`}
           </p>
         </div>
-        <Link href={`/spelare/${player.id}/utveckling`} className="btn-secondary">
+        <Link href={`/spelare/${player.id}/utveckling`} className="btn-secondary btn-sm">
           🪜 Utvecklingsträd
         </Link>
         <Link href={`/spelare/${player.id}/utvardera`} className="btn-primary">
@@ -149,17 +147,17 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       <div className="card p-5 space-y-3" style={{ background: "var(--primary-ghost)" }}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-48">
-            <p className="font-semibold text-sm">Spelarsamtal – personlig länk</p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+            <p className="font-semibold body-small">Spelarsamtal – personlig länk</p>
+            <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
               Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling – med en peppande AI-hälsning skriven till henne. Länken gäller i 48 timmar och måste sedan förnyas.
             </p>
           </div>
           {linkActive ? (
-            <span className="badge shrink-0" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+            <span className="badge badge-success shrink-0">
               Aktiv · {hoursLeft} h kvar
             </span>
           ) : (
-            <span className="badge shrink-0" style={{ background: "var(--surface-2, rgba(0,0,0,0.06))", color: "var(--ink-faint)" }}>
+            <span className="badge badge-neutral shrink-0">
               Ingen aktiv länk
             </span>
           )}
@@ -170,20 +168,20 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <Link
               href={`/spelarkort/${player.share_token}`}
               target="_blank"
-              className="text-xs underline"
-              style={{ color: "var(--ink-soft)" }}
+              className="caption underline"
+              style={{ color: "var(--ink-secondary)" }}
             >
               Förhandsgranska
             </Link>
             <form action={generateShareLink}>
               <input type="hidden" name="id" value={player.id} />
-              <button type="submit" className="text-xs underline cursor-pointer" style={{ color: "var(--ink-soft)" }}>
+              <button type="submit" className="caption underline cursor-pointer" style={{ color: "var(--ink-secondary)" }}>
                 Förnya 48 h
               </button>
             </form>
             <form action={revokeShareLink}>
               <input type="hidden" name="id" value={player.id} />
-              <button type="submit" className="text-xs underline cursor-pointer" style={{ color: "var(--danger)" }}>
+              <button type="submit" className="caption underline cursor-pointer" style={{ color: "var(--danger)" }}>
                 Återkalla
               </button>
             </form>
@@ -191,7 +189,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         ) : (
           <form action={generateShareLink}>
             <input type="hidden" name="id" value={player.id} />
-            <button type="submit" className="btn-secondary py-2 px-4 text-sm">
+            <button type="submit" className="btn-secondary btn-sm">
               🔗 Skapa länk (gäller 48 h)
             </button>
           </form>
@@ -202,8 +200,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       {selfEval && (
         <div className="card p-6 space-y-5" style={{ border: "1px solid var(--primary-soft)" }}>
           <div>
-            <p className="eyebrow mb-0.5" style={{ color: "var(--primary-fg)" }}>Egenutvärdering</p>
-            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            <p className="eyebrow mb-0.5" style={{ color: "var(--primary)" }}>Egenutvärdering</p>
+            <p className="caption" style={{ color: "var(--ink-muted)" }}>
               Inlämnad {selfEval.created_at.slice(0, 10)} – läs inför spelarsamtalet
             </p>
           </div>
@@ -215,11 +213,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-xl py-3 px-2 text-center"
-                style={{ background: "var(--primary-ghost)" }}
+                className="py-3 px-2 text-center"
+                style={{ background: "var(--primary-ghost)", borderRadius: "var(--r-button)" }}
               >
                 <p className="text-2xl">{item.emojis[item.value - 1]}</p>
-                <p className="text-[0.65rem] mt-1 leading-tight" style={{ color: "var(--ink-soft)" }}>
+                <p className="caption mt-1 leading-tight" style={{ color: "var(--ink-secondary)" }}>
                   {item.label}
                 </p>
               </div>
@@ -230,7 +228,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               {selfEval.best_at && (
                 <div>
                   <p className="label mb-1">Bra på</p>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
                     {selfEval.best_at}
                   </p>
                 </div>
@@ -238,7 +236,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               {selfEval.want_to_improve && (
                 <div>
                   <p className="label mb-1">Vill bli bättre på</p>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
                     {selfEval.want_to_improve}
                   </p>
                 </div>
@@ -247,8 +245,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <div className="md:col-span-2">
                   <p className="label mb-1">Till tränaren</p>
                   <p
-                    className="text-sm leading-relaxed rounded-lg px-4 py-3"
-                    style={{ background: "var(--bg2)", color: "var(--ink)" }}
+                    className="body-small leading-relaxed rounded-lg px-4 py-3"
+                    style={{ background: "var(--surface)", color: "var(--ink)" }}
                   >
                     {selfEval.note_to_coach}
                   </p>
@@ -264,7 +262,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
             Dags för första utvärderingen
           </p>
-          <p className="text-sm mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-secondary)" }}>
             Gör den första utvärderingen för att börja följa {player.name.split(" ")[0]}s utveckling
             över tid.
           </p>
@@ -277,7 +275,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="card p-6">
             <p className="eyebrow mb-0.5">Profil</p>
             <h2 className="font-semibold mb-1">Styrkeområden just nu</h2>
-            <p className="text-xs mb-2" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>
               {latest.date}
               {previous ? ` jämfört med ${previous.date} (streckad)` : ""}
             </p>
@@ -289,7 +287,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="card p-6">
             <p className="eyebrow mb-0.5">Resan</p>
             <h2 className="font-semibold mb-1">Utveckling över tid</h2>
-            <p className="text-xs mb-2" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>
               Nivå per område vid varje utvärdering
             </p>
             <DevelopmentChart data={development} />
@@ -304,14 +302,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="eyebrow mb-0.5">Form</p>
               <h2 className="font-semibold mb-1">Matchform</h2>
-              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption" style={{ color: "var(--ink-muted)" }}>
                 Bygger på betygen "mot förväntan" – nivåjusterat över matcher
               </p>
             </div>
             <div className="flex items-center gap-2">
               <span
                 className="badge"
-                style={{ background: "var(--bg2)", color: formBand.color, fontSize: "0.78rem", fontWeight: 700 }}
+                style={{ background: "var(--surface)", color: formBand.color, fontSize: "0.78rem", fontWeight: 700 }}
               >
                 {formBand.label}
               </span>
@@ -325,7 +323,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 </span>
               )}
               {lastOutcome && (
-                <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
                   senast: {lastOutcome.label.toLowerCase()}
                 </span>
               )}
@@ -336,7 +334,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               data={formTrend.map((p) => ({ date: p.date, opponent: p.opponent, rating: p.rating, outcome: p.outcome }))}
             />
           ) : (
-            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+            <p className="body-small" style={{ color: "var(--ink-muted)" }}>
               Betygsätt fler matcher för att se en trend.
             </p>
           )}
@@ -344,13 +342,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           {levelSugg && (
             <div
               className="mt-4 flex items-start justify-between gap-4 flex-wrap rounded-lg p-3"
-              style={{ background: "var(--bg2)", border: "1px solid var(--line-2)" }}
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
-              <div className="text-sm">
+              <div className="body-small">
                 <p className="font-semibold mb-0.5">
                   Presterar {levelSugg.direction === "up" ? "över" : "under"} sin nivå
                 </p>
-                <p style={{ color: "var(--ink-soft)" }}>
+                <p style={{ color: "var(--ink-secondary)" }}>
                   Formen har legat i bandet{" "}
                   <strong style={{ color: levelSugg.to.color }}>{levelSugg.to.label}</strong> de
                   senaste {levelSugg.matches} matcherna – satt nivå är {levelSugg.from.label}.
@@ -375,13 +373,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2.5 mb-3">
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+                style={{ background: "var(--ok-bg)", color: "var(--success)" }}
               >
                 <IconSpark width={16} height={16} />
               </span>
               <h2 className="font-semibold">Styrkor</h2>
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
               {latest.strengths || "Inga noteringar i senaste utvärderingen."}
             </p>
           </div>
@@ -389,13 +387,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2.5 mb-3">
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
               >
                 <IconTarget width={16} height={16} />
               </span>
               <h2 className="font-semibold">Utvecklingsmål</h2>
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
               {latest.development_goals || "Inga noteringar i senaste utvärderingen."}
             </p>
           </div>
@@ -408,19 +406,19 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="eyebrow mb-0.5">Närvaro</p>
               <h2 className="font-semibold mb-1">Närvarotrend</h2>
-              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              <p className="caption" style={{ color: "var(--ink-muted)" }}>
                 Bygger på senaste importen från Svenska Lag
               </p>
             </div>
             <div
               className="rounded-xl px-4 py-3"
-              style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+              style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
             >
-              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>Total närvaro</p>
+              <p className="caption" style={{ color: "var(--ink-muted)" }}>Total närvaro</p>
               <p className="text-lg font-semibold">
                 {attendanceOverview.attended_activities}/{attendanceOverview.total_activities}
                 {attendanceOverview.attendance_rate != null ? (
-                  <span className="text-sm ml-2" style={{ color: "var(--ink-soft)" }}>
+                  <span className="body-small ml-2" style={{ color: "var(--ink-secondary)" }}>
                     {attendanceOverview.attendance_rate}%
                   </span>
                 ) : null}
@@ -436,7 +434,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               }))}
             />
           ) : (
-            <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+            <p className="body-small" style={{ color: "var(--ink-muted)" }}>
               Importera fler månader för att se en tydlig trendkurva.
             </p>
           )}
@@ -446,15 +444,15 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <div
                   key={row.category}
                   className="rounded-xl px-4 py-3"
-                  style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                  style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
                     {attendanceCategoryLabels[row.category] ?? row.category}
                   </p>
                   <p className="font-semibold mt-1">
                     {row.attended_activities}/{row.total_activities}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-soft)" }}>
+                  <p className="caption mt-1" style={{ color: "var(--ink-secondary)" }}>
                     {row.attendance_rate != null ? `${row.attendance_rate}% närvaro` : "Saknar procent"}
                   </p>
                 </div>
@@ -474,13 +472,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <div
                   key={ev.id}
                   className="border-b last:border-b-0 pb-7 last:pb-0"
-                  style={{ borderColor: "var(--line)" }}
+                  style={{ borderColor: "var(--border)" }}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>
                       {ev.date}
                       {ev.coach_name && (
-                        <span className="text-sm font-normal ml-2" style={{ color: "var(--ink-faint)", fontFamily: "var(--font-body)" }}>
+                        <span className="body-small font-normal ml-2" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
                           av {ev.coach_name}
                         </span>
                       )}
@@ -489,7 +487,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                       <input type="hidden" name="id" value={ev.id} />
                       <input type="hidden" name="player_id" value={player.id} />
                       <button
-                        className="text-xs hover:underline cursor-pointer"
+                        className="caption hover:underline cursor-pointer"
                         style={{ color: "var(--danger)" }}
                         type="submit"
                       >
@@ -501,7 +499,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                     {CATEGORIES.map((cat) => (
                       <div key={cat.id}>
                         <p
-                          className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] mb-2"
+                          className="caption font-semibold uppercase tracking-[0.1em] mb-2"
                           style={{ color: cat.color, fontFamily: "var(--font-display)" }}
                         >
                           {cat.name}
@@ -511,7 +509,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                           if (level == null) return null;
                           return (
                             <div key={skill.id} className="flex items-center justify-between gap-3 py-1">
-                              <span className="text-sm truncate" style={{ color: "var(--ink-soft)" }}>
+                              <span className="body-small truncate" style={{ color: "var(--ink-secondary)" }}>
                                 {skill.name}
                               </span>
                               <span
@@ -541,14 +539,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="flex items-center justify-between">
             <div>
               <p className="eyebrow">Samtal</p>
-              <h2 className="text-[1.05rem] font-semibold mt-0.5">
+              <h2 className="text-[18px] font-semibold mt-0.5">
                 {interviews.length} {interviews.length === 1 ? "samtal" : "samtal"} med {player.name.split(" ")[0]}
               </h2>
             </div>
             <Link
               href="/spelare/intervjuer"
-              className="text-xs font-semibold"
-              style={{ color: "var(--primary-fg)", fontFamily: "var(--font-display)" }}
+              className="caption font-semibold"
+              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
             >
               Alla samtal
             </Link>
@@ -559,8 +557,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
 
       {/* Matchstatistik. matchStats = en rad per match spelaren deltog i (även
           nollmatcher). Vi visar alla och flaggar matcher utan registrerad
-          statistik så tränaren kan öppna matchen och rätta en glömd rapportering. */}
-      {(() => {
+          statistik så tränaren kan öppna matchen och rätta en glömd rapportering.
+          Dold när matchStats-flaggan är av. */}
+      {FEATURES.matchStats && (() => {
         const hasStats = (m: PlayerMatchRow) =>
           STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0);
         const participated = matchStats.length;
@@ -573,14 +572,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         return (
           <div className="card p-6 md:p-7">
             <h2 className="font-semibold mb-1">Matchstatistik</h2>
-            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption" style={{ color: "var(--ink-muted)" }}>
               {`Spelat ${participated} ${participated === 1 ? "match" : "matcher"}`}
               {missing > 0 && <> · {missing} utan registrerad statistik</>}
             </p>
             {missing > 0 && (
               <p
-                className="text-xs rounded-lg px-3.5 py-2.5 mt-3 mb-1 flex items-start gap-2"
-                style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+                className="caption rounded-lg px-3.5 py-2.5 mt-3 mb-1 flex items-start gap-2"
+                style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
               >
                 <IconAlert width={14} height={14} className="shrink-0 mt-0.5" />
                 <span>
@@ -610,24 +609,24 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                           <Link
                             href={`/matcher/${m.match_id}`}
                             className="hover:underline font-medium whitespace-nowrap inline-flex items-center gap-1.5"
-                            style={{ color: empty ? "var(--warn)" : "var(--primary)" }}
+                            style={{ color: empty ? "var(--warning)" : "var(--primary)" }}
                           >
                             {m.opponent}
                             {empty && <span title="Ingen statistik registrerad"><IconAlert width={12} height={12} /></span>}
                           </Link>
-                          <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
+                          <span className="block caption" style={{ color: "var(--ink-muted)" }}>
                             {empty ? "Saknar statistik – tryck för att rätta" : `${m.date}${hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}`}
                           </span>
                         </td>
                         {STAT_FIELDS.map((f) => (
-                          <td key={f.id} style={empty ? { color: "var(--ink-faint)" } : undefined}>{row[f.id] || 0}</td>
+                          <td key={f.id} style={empty ? { color: "var(--ink-muted)" } : undefined}>{row[f.id] || 0}</td>
                         ))}
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
-                  <tr style={{ borderTop: "2px solid var(--line-strong)", fontWeight: 600 }}>
+                  <tr style={{ borderTop: "2px solid var(--border)", fontWeight: 600 }}>
                     <td>Totalt</td>
                     {STAT_FIELDS.map((f) => (
                       <td key={f.id}>{totals[f.id]}</td>
@@ -670,7 +669,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
-            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
               Hjälper AI:n tolka matchstatistiken rätt – t.ex. att en back inte bedöms på antal mål.
             </p>
           </div>
@@ -682,9 +681,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <option key={l.id} value={l.id}>{l.label}</option>
               ))}
             </select>
-            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
               {suggestedLevel
-                ? <>Förslag från utvärderingen: <strong style={{ color: "var(--ink-soft)" }}>{suggestedLevel.label}</strong>. Styr laguttagningen till matcher.</>
+                ? <>Förslag från utvärderingen: <strong style={{ color: "var(--ink-secondary)" }}>{suggestedLevel.label}</strong>. Styr laguttagningen till matcher.</>
                 : "Gör en utvärdering för att få ett nivåförslag. Styr laguttagningen till matcher."}
             </p>
           </div>
@@ -699,7 +698,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <input type="hidden" name="id" value={player.id} />
           <button
             type="submit"
-            className="text-sm hover:underline cursor-pointer"
+            className="body-small hover:underline cursor-pointer"
             style={{ color: "var(--danger)" }}
           >
             Ta bort spelaren från truppen (historiken sparas)

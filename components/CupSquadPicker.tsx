@@ -53,7 +53,7 @@ export default function CupSquadPicker({
           const f = fit(p.level, cupLevel);
           const pl = levelInfo(p.level);
           const tone =
-            f.tone === "ok" ? "var(--ok)" : f.tone === "warn" ? "var(--warn)" : f.tone === "danger" ? "var(--danger)" : "var(--ink-faint)";
+            f.tone === "ok" ? "var(--success)" : f.tone === "warn" ? "var(--warning)" : f.tone === "danger" ? "var(--danger)" : "var(--ink-muted)";
           return (
             <button
               key={p.id}
@@ -62,17 +62,17 @@ export default function CupSquadPicker({
               title={`${positionLabel(p.position) ?? "Position ej satt"} · ${f.label}`}
               className="flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 text-sm transition-colors"
               style={{
-                background: inSquad ? "var(--primary-soft)" : "var(--bg2)",
-                border: `1px solid ${inSquad ? "var(--primary)" : "var(--line)"}`,
-                color: inSquad ? "var(--primary)" : "var(--ink-soft)",
+                background: inSquad ? "var(--primary-soft)" : "var(--surface)",
+                border: `1px solid ${inSquad ? "var(--primary)" : "var(--border)"}`,
+                color: inSquad ? "var(--primary)" : "var(--ink-secondary)",
                 borderLeft: `4px solid ${tone}`,
               }}
             >
-              <span className="stat-number text-xs" style={{ minWidth: 16, textAlign: "center", color: "var(--ink-faint)" }}>
+              <span className="stat-number text-xs" style={{ minWidth: 16, textAlign: "center", color: "var(--ink-muted)" }}>
                 {p.jersey_number ?? "–"}
               </span>
               {firstName(p.name)}
-              {pl && <span className="text-[0.6rem]" style={{ color: tone }}>{pl.short}</span>}
+              {pl && <span className="caption" style={{ color: tone }}>{pl.short}</span>}
             </button>
           );
         })}
@@ -84,7 +84,7 @@ export default function CupSquadPicker({
 
       <div className="flex items-center gap-3">
         <button type="submit" className="btn-primary px-6">Spara uttagning</button>
-        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>{squad.size} uttagna</span>
+        <span className="caption" style={{ color: "var(--ink-muted)" }}>{squad.size} uttagna</span>
       </div>
     </form>
   );

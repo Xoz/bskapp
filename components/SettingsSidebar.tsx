@@ -34,7 +34,7 @@ export default function SettingsSidebar() {
             href={`#${id}`}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors"
             style={{
-              color: isActive ? "var(--primary)" : "var(--ink-soft)",
+              color: isActive ? "var(--primary)" : "var(--ink-secondary)",
               background: isActive ? "var(--primary-ghost)" : "transparent",
               fontWeight: isActive ? 600 : 400,
             }}

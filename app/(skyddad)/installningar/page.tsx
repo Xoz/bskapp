@@ -103,8 +103,8 @@ export default async function SettingsPage({
     <div>
       <div className="mb-8">
         <p className="eyebrow">Konfiguration</p>
-        <h1 className="text-[1.7rem] font-bold mt-0.5">Inställningar</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+        <h1 className="text-[32px] font-bold mt-0.5">Inställningar</h1>
+        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           Anpassa appen till ditt lag – namn, färger, trupp och åtkomst.
         </p>
       </div>
@@ -115,7 +115,7 @@ export default async function SettingsPage({
           {sparad && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+              style={{ background: "var(--ok-bg)", color: "var(--success)" }}
             >
               <IconCheck width={16} height={16} />
               Inställningarna är sparade.
@@ -124,7 +124,7 @@ export default async function SettingsPage({
           {kalender === "fel" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
             >
               <IconAlert width={16} height={16} />
               Kunde inte hämta kalendern. Kontrollera att länken är rätt och försök igen.
@@ -133,7 +133,7 @@ export default async function SettingsPage({
           {kalender === "saknas" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
             >
               <IconAlert width={16} height={16} />
               Spara en kalenderlänk först, sedan kan du hämta matcher.
@@ -142,7 +142,7 @@ export default async function SettingsPage({
           {kalender != null && kalender !== "fel" && kalender !== "saknas" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+              style={{ background: "var(--ok-bg)", color: "var(--success)" }}
             >
               <IconCheck width={16} height={16} />
               {Number(kalender) === 0
@@ -153,7 +153,7 @@ export default async function SettingsPage({
           {narvaro === "ok" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--ok-bg)", color: "var(--ok)" }}
+              style={{ background: "var(--ok-bg)", color: "var(--success)" }}
             >
               <IconCheck width={16} height={16} />
               {`${narvaro_spelare ?? "0"} spelare och ${narvaro_aktiviteter ?? "0"} tillfällen importerades. ${narvaro_matchade ?? "0"} spelare matchades mot aktiva profiler.`}
@@ -162,7 +162,7 @@ export default async function SettingsPage({
           {narvaro === "fil" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
             >
               <IconAlert width={16} height={16} />
               Välj en Excel-fil från Svenska Lag innan du importerar närvaro.
@@ -171,7 +171,7 @@ export default async function SettingsPage({
           {narvaro === "fel" && (
             <div
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
-              style={{ background: "var(--warn-bg)", color: "var(--warn)" }}
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
             >
               <IconAlert width={16} height={16} />
               Kunde inte läsa närvarofilen. Använd exporten &quot;Närvarotillfällen per aktivitet &amp; person&quot; från Svenska Lag.
@@ -184,8 +184,8 @@ export default async function SettingsPage({
         {/* Sidopanel – sticky, desktop only */}
         <aside className="hidden lg:block w-44 shrink-0 sticky top-20">
           <p
-            className="text-[0.6rem] uppercase tracking-[0.1em] px-3 mb-2"
-            style={{ color: "var(--ink-faint)" }}
+            className="caption uppercase tracking-[0.1em] px-3 mb-2"
+            style={{ color: "var(--ink-muted)" }}
           >
             Sektioner
           </p>
@@ -205,14 +205,14 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconWhistle width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Din profil</h2>
                   {coachEmail && (
-                    <p className="text-sm mt-0.5 font-mono" style={{ color: "var(--ink-faint)" }}>
+                    <p className="body-small mt-0.5 font-mono" style={{ color: "var(--ink-muted)" }}>
                       {coachEmail}
                     </p>
                   )}
@@ -245,13 +245,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconPitch width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Matchkalender</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Klistra in lagets iCal-länk från svenskalag.se (Kalender → Prenumerera/iCal) så
                     hämtas matcherna automatiskt. Händelser som innehåller &quot;match&quot;,
                     &quot;sammandrag&quot; eller &quot;cup&quot; importeras.
@@ -316,7 +316,7 @@ export default async function SettingsPage({
               <div className="card p-6 md:p-7 space-y-5">
                 <div>
                   <h2 className="font-semibold">Klubbfärger</h2>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
                     Primärfärgen bör vara mörk (marinblå, mörkgrön, vinröd) – accentfärgen ljus och varm.
                   </p>
                 </div>
@@ -347,7 +347,7 @@ export default async function SettingsPage({
               <div className="card p-6 md:p-7 space-y-5">
                 <div>
                   <h2 className="font-semibold">Matchtröjor</h2>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
                     Spelaravatarerna visas som lagets matchtröja med tröjnumret. Målvakten (nummer 1) får en egen färg.
                   </p>
                 </div>
@@ -370,7 +370,7 @@ export default async function SettingsPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-4 pt-1">
-                  <span className="text-xs" style={{ color: "var(--ink-faint)" }}>Förhandsvisning:</span>
+                  <span className="caption" style={{ color: "var(--ink-muted)" }}>Förhandsvisning:</span>
                   <JerseyPreview
                     fill={settings.jersey_color || "#ffd23f"}
                     ink={settings.jersey_text_color || "#111111"}
@@ -390,8 +390,8 @@ export default async function SettingsPage({
                   type="submit"
                   formAction={resetColors}
                   formNoValidate
-                  className="text-sm font-semibold underline cursor-pointer"
-                  style={{ color: "var(--ink-faint)" }}
+                  className="body-small font-semibold underline cursor-pointer"
+                  style={{ color: "var(--ink-muted)" }}
                 >
                   Återställ färger till standard
                 </button>
@@ -410,8 +410,8 @@ export default async function SettingsPage({
                 className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm flex-wrap"
                 style={{
                   background: "var(--warn-bg)",
-                  color: "var(--warn)",
-                  border: "1px solid color-mix(in srgb, var(--warn), transparent 75%)",
+                  color: "var(--warning)",
+                  border: "1px solid color-mix(in srgb, var(--warning), transparent 75%)",
                 }}
               >
                 <IconAlert width={17} height={17} />
@@ -430,13 +430,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconPlayers width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Lägg till spelare</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Lägg till spelare en och en, eller klistra in hela truppen från svenskalag.se.
                   </p>
                 </div>
@@ -457,12 +457,12 @@ export default async function SettingsPage({
               <details>
                 <summary
                   className="cursor-pointer font-semibold text-sm select-none"
-                  style={{ fontFamily: "var(--font-display)", color: "var(--primary-fg)" }}
+                  style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
                 >
                   Klistra in hela truppen från svenskalag.se
                 </summary>
                 <form action={addPlayersBulk} className="mt-4 space-y-3">
-                  <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
                     Truppsidan på svenskalag.se kräver inloggning, så kopiera namnlistan därifrån när du är
                     inloggad och klistra in här – ett namn per rad. Tröjnummer före eller efter namnet
                     plockas upp automatiskt (t.ex. &quot;7 Alva Svensson&quot;). Dubbletter hoppas över.
@@ -483,13 +483,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconPlayers width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Närvaro från Svenska Lag</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Importera Excel-filen <strong>Närvarotillfällen per aktivitet &amp; person</strong> för att bygga upp trenddata per spelare och månad.
                   </p>
                 </div>
@@ -497,22 +497,22 @@ export default async function SettingsPage({
               {latestAttendanceImport ? (
                 <div
                   className="rounded-xl px-4 py-3 text-sm"
-                  style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                  style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
                 >
                   <p className="font-medium" style={{ color: "var(--ink)" }}>
                     Senaste import: {latestAttendanceImport.file_name || "Excel-fil"}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
                     {latestAttendanceImport.player_count} spelare · {latestAttendanceImport.activity_count} aktiviteter · {latestAttendanceImport.present_count} närvaromarkeringar
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
                     {latestAttendanceImport.period_label || "Period okänd"}
                     {latestAttendanceImport.team_name ? ` · ${latestAttendanceImport.team_name}` : ""}
                     {latestAttendanceImport.exported_at ? ` · export ${latestAttendanceImport.exported_at}` : ""}
                   </p>
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+                <p className="body-small" style={{ color: "var(--ink-muted)" }}>
                   Ingen närvarofil importerad ännu.
                 </p>
               )}
@@ -528,7 +528,7 @@ export default async function SettingsPage({
                     className="input h-auto cursor-pointer py-3"
                   />
                 </div>
-                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                <p className="caption" style={{ color: "var(--ink-muted)" }}>
                   Varje import sparas som ett nytt underlag. Spelarvyn använder alltid den senaste importen för närvarotrenden.
                 </p>
                 <button type="submit" className="btn-primary">Importera närvaro</button>
@@ -539,13 +539,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconPlayers width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Spelarprofiler</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Generera en 6-siffrig PIN per spelare. Spelaren anger sin PIN på <strong>/spelare/login</strong> och får tillgång till sin profil och intervjun.
                   </p>
                 </div>
@@ -555,24 +555,24 @@ export default async function SettingsPage({
                   <div
                     key={p.id}
                     className="flex items-center gap-3 rounded-xl px-4 py-3"
-                    style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                    style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{p.name}</p>
+                      <p className="body-small font-medium" style={{ color: "var(--ink)" }}>{p.name}</p>
                       {(p as unknown as { pin?: string }).pin ? (
-                        <p className="text-xs mt-0.5 font-mono tracking-widest" style={{ color: "var(--primary-fg)" }}>
+                        <p className="caption mt-0.5 font-mono tracking-widest" style={{ color: "var(--primary)" }}>
                           {(p as unknown as { pin?: string }).pin}
                         </p>
                       ) : (
-                        <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>Ingen PIN</p>
+                        <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>Ingen PIN</p>
                       )}
                     </div>
                     <form action={generatePlayerPin}>
                       <input type="hidden" name="player_id" value={p.id} />
                       <button
                         type="submit"
-                        className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                        style={{ border: "1px solid var(--line)", color: "var(--ink-faint)", background: "transparent" }}
+                        className="caption px-3 py-1.5 rounded-lg transition-colors"
+                        style={{ border: "1px solid var(--border)", color: "var(--ink-muted)", background: "transparent" }}
                       >
                         {(p as unknown as { pin?: string }).pin ? "Ny PIN" : "Generera PIN"}
                       </button>
@@ -580,7 +580,7 @@ export default async function SettingsPage({
                   </div>
                 ))}
                 {players.length === 0 && (
-                  <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga aktiva spelare.</p>
+                  <p className="body-small" style={{ color: "var(--ink-muted)" }}>Inga aktiva spelare.</p>
                 )}
               </div>
             </div>
@@ -596,13 +596,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconChat width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Tränarinloggning med Google</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Lägg till de Gmail-adresser som ska kunna logga in som tränare via Google. Tränaren klickar &ldquo;Logga in med Google&rdquo; på inloggningssidan.
                   </p>
                 </div>
@@ -613,15 +613,15 @@ export default async function SettingsPage({
                     <div
                       key={email}
                       className="flex items-center gap-3 rounded-xl px-4 py-2.5"
-                      style={{ background: "var(--bg3)", border: "1px solid var(--line)" }}
+                      style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
                     >
-                      <p className="text-sm flex-1 font-mono" style={{ color: "var(--ink)" }}>{email}</p>
+                      <p className="body-small flex-1 font-mono" style={{ color: "var(--ink)" }}>{email}</p>
                       <form action={removeCoachEmail}>
                         <input type="hidden" name="email" value={email} />
                         <button
                           type="submit"
-                          className="text-xs px-2.5 py-1 rounded-lg transition-colors"
-                          style={{ border: "1px solid var(--line)", color: "var(--ink-faint)", background: "transparent" }}
+                          className="caption px-2.5 py-1 rounded-lg transition-colors"
+                          style={{ border: "1px solid var(--border)", color: "var(--ink-muted)", background: "transparent" }}
                         >
                           Ta bort
                         </button>
@@ -630,7 +630,7 @@ export default async function SettingsPage({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Inga e-postadresser tillagda.</p>
+                <p className="body-small" style={{ color: "var(--ink-muted)" }}>Inga e-postadresser tillagda.</p>
               )}
               <form action={addCoachEmail} className="flex gap-2.5 items-end flex-wrap">
                 <div className="flex-1 min-w-48">
@@ -651,13 +651,13 @@ export default async function SettingsPage({
               <div className="flex items-start gap-3">
                 <span
                   className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--primary-soft)", color: "var(--primary-fg)" }}
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
                   <IconChat width={17} height={17} />
                 </span>
                 <div>
                   <h2 className="font-semibold">Bjud in tränare</h2>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
                     Generera en inbjudningslänk (giltig 48 timmar, engångslänk) som ger en ny tränare direkt åtkomst till appen.
                   </p>
                 </div>
@@ -666,11 +666,11 @@ export default async function SettingsPage({
                 <div className="space-y-3">
                   <div
                     className="rounded-xl px-4 py-3 text-xs font-mono break-all"
-                    style={{ background: "var(--bg3)", border: "1px solid var(--line)", color: "var(--ink-soft)" }}
+                    style={{ background: "var(--elevated)", border: "1px solid var(--border)", color: "var(--ink-secondary)" }}
                   >
                     {inviteUrl}
                   </div>
-                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
                     Giltig till{" "}
                     {new Date(inviteExpires).toLocaleString("sv-SE", {
                       day: "numeric",

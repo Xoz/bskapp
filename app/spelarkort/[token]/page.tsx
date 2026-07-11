@@ -36,10 +36,10 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           <h1 className="font-semibold text-xl mb-2" style={{ fontFamily: "var(--font-display)" }}>
             Länken har gått ut
           </h1>
-          <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+          <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
             Den här spelarlänken gäller i 48 timmar och har slutat fungera. Be tränaren skapa en ny länk inför nästa spelarsamtal.
           </p>
-          <p className="eyebrow mt-6" style={{ color: "var(--ink-faint)" }}>
+          <p className="eyebrow mt-6" style={{ color: "var(--ink-muted)" }}>
             {settings.team_name} · {settings.club_name}
           </p>
         </div>
@@ -84,7 +84,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
         }}
       >
         {/* Klubbrad */}
-        <p className="eyebrow text-center" style={{ color: "var(--ink-faint)" }}>
+        <p className="eyebrow text-center" style={{ color: "var(--ink-muted)" }}>
           {settings.team_name} · {settings.club_name}
         </p>
 
@@ -93,14 +93,14 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           <Avatar name={player.name} jersey={player.jersey_number} size={64} />
           <div className="flex-1 min-w-40">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[1.6rem] font-bold leading-tight">{player.name}</h1>
+              <h1 className="text-[28px] font-bold leading-tight">{player.name}</h1>
               {player.jersey_number != null && (
                 <span className="badge" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
                   #{player.jersey_number}
                 </span>
               )}
             </div>
-            <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
               {posLabel ?? "Spelarkort"}
               {playedMatches.length > 0 && ` · ${playedMatches.length} ${playedMatches.length === 1 ? "match" : "matcher"}`}
             </p>
@@ -125,7 +125,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
               {STAT_FIELDS.filter((f) => totals[f.id] > 0).map((f) => (
                 <div key={f.id} className="text-center rounded-xl py-3" style={{ background: "var(--surface-2, var(--primary-ghost))" }}>
                   <p className="stat-number text-2xl font-bold" style={{ color: "var(--primary)" }}>{totals[f.id]}</p>
-                  <p className="text-[0.7rem] mt-0.5" style={{ color: "var(--ink-faint)" }}>{f.label}</p>
+                  <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>{f.label}</p>
                 </div>
               ))}
             </div>
@@ -137,7 +137,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           <div className="card p-6">
             <p className="eyebrow mb-0.5">Min profil</p>
             <h2 className="font-semibold mb-1">Vad jag är bra på just nu</h2>
-            <p className="text-xs mb-2" style={{ color: "var(--ink-faint)" }}>
+            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>
               {latest.date}
               {previous ? ` jämfört med ${previous.date} (streckad)` : ""}
             </p>
@@ -166,7 +166,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
                   <span className="text-lg">⭐</span>
                   <h2 className="font-semibold">Mina styrkor</h2>
                 </div>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-soft)" }}>
+                <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
                   {latest.strengths}
                 </p>
               </div>
@@ -177,7 +177,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
                   <span className="text-lg">🎯</span>
                   <h2 className="font-semibold">Vad jag tränar på</h2>
                 </div>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-soft)" }}>
+                <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
                   {latest.development_goals}
                 </p>
               </div>
@@ -207,7 +207,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
                       <tr key={m.match_id}>
                         <td>
                           <span className="font-medium whitespace-nowrap">{m.opponent}</span>
-                          <span className="block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
+                          <span className="block caption" style={{ color: "var(--ink-muted)" }}>
                             {m.date}{hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}
                           </span>
                         </td>
@@ -229,7 +229,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
             <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
               Snart fylls kortet på
             </p>
-            <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small max-w-sm mx-auto" style={{ color: "var(--ink-secondary)" }}>
               Här kommer {firstName} kunna se sin statistik och utveckling när matcher rapporterats och utvärderingar gjorts.
             </p>
           </div>
@@ -239,13 +239,13 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
         {existingSelfEval ? (
           <div
             className="card p-6 text-center"
-            style={{ background: "var(--ok-bg)", border: "1px solid var(--ok-soft, var(--ok))" }}
+            style={{ background: "var(--ok-bg)", border: "1px solid var(--ok-soft, var(--success))" }}
           >
             <p className="text-3xl mb-2">✅</p>
             <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
               Egenutvärdering inlämnad
             </p>
-            <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
               Tränaren ser dina svar inför spelarsamtalet.
             </p>
           </div>
@@ -253,7 +253,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           <SelfEvalForm token={token} firstName={firstName} />
         )}
 
-        <p className="text-center text-[0.7rem] pt-2" style={{ color: "var(--ink-faint)" }}>
+        <p className="text-center caption pt-2" style={{ color: "var(--ink-muted)" }}>
           Den här sidan är personlig för {firstName}. Dela inte länken vidare.
         </p>
       </div>
