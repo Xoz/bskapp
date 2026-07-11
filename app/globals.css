@@ -199,6 +199,10 @@ body {
   box-shadow: var(--shadow-md);
   border-color: var(--primary-line);
 }
+
+.hover-ghost:hover {
+  background: var(--primary-ghost);
+}
 /* Accentlinje överst – synlig vid hover */
 .card-hover::before {
   content: "";

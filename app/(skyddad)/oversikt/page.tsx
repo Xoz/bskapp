@@ -480,10 +480,8 @@ export default async function Dashboard() {
                 <li key={t.key}>
                   <Link
                     href={t.href}
-                    className="group flex items-center gap-3 transition-colors"
+                    className="group flex items-center gap-3 transition-colors hover-ghost"
                     style={{ borderRadius: "var(--r-button)", padding: "8px 8px" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-ghost)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     {t.player ? (
                       <Avatar name={t.player.name} jersey={t.player.jersey} size={34} />
@@ -650,10 +648,8 @@ function FormList({
           <li key={f.id}>
             <Link
               href={`/spelare/${f.id}`}
-              className="group flex items-center gap-3 transition-colors"
+              className="group flex items-center gap-3 transition-colors hover-ghost"
               style={{ borderRadius: "var(--r-button)", padding: "8px 8px" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-ghost)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <Avatar name={f.name} jersey={f.jersey_number} size={32} />
               <div className="min-w-0 flex-1">
