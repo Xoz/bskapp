@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
-import { deleteExercise, deletePlayer, deleteSession, saveDiagram, saveExercise, savePlayer, saveSession } from "@/repositories/postgres";
+import { deleteExercise, deletePeriod, deletePlayer, deleteSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession } from "@/repositories/postgres";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -42,3 +42,14 @@ export async function upsertSession(data: FormData) {
 }
 
 export async function removeSession(data: FormData) { await deleteSession(text(data, "id")); revalidatePath("/traningspass"); }
+
+export async function upsertPeriod(data: FormData) {
+  const input = { id: text(data, "id") || undefined, name: text(data, "name"), theme: text(data, "theme"), startsAt: text(data, "startsOn"), endsAt: text(data, "endsOn") };
+  const startsOn = input.startsAt, endsOn = input.endsAt;
+  if (input.name.length < 2 || input.theme.length < 2 || !Number.isFinite(Date.parse(startsOn)) || !Number.isFinite(Date.parse(endsOn)) || new Date(startsOn) > new Date(endsOn))
+    throw new Error("Kontrollera periodens namn, tema och datum (start ≤ slut).");
+  await savePeriod({ id: input.id, name: input.name, theme: input.theme, startsOn, endsOn });
+  revalidatePath("/planering");
+}
+
+export async function removePeriod(data: FormData) { await deletePeriod(text(data, "id")); revalidatePath("/planering"); }

@@ -218,33 +218,34 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
       const fill = TEAM_COLOR[obj.team ?? "att"];
       return (
         <g key={obj.id} {...common} style={{ cursor: tool === "select" ? "grab" : "pointer" }}>
-          <circle cx={x} cy={y} r={6} fill="transparent" />
-          <circle cx={x} cy={y} r={3.4} fill={fill} stroke="#fff" strokeWidth={1.1} />
-          {obj.label && <text x={x} y={y + 1.3} fontSize={3.4} textAnchor="middle" fill="#fff" fontWeight={800}>{obj.label}</text>}
-          {selected && <circle cx={x} cy={y} r={4.6} fill="none" stroke="#fff" strokeWidth={0.5} />}
+          <circle cx={x} cy={y} r={4} fill="transparent" />
+          <circle cx={x} cy={y} r={2.1} fill={fill} stroke="#fff" strokeWidth={0.6} />
+          {obj.label && <text x={x} y={y + 0.8} fontSize={2.1} textAnchor="middle" fill="#fff" fontWeight={800}>{obj.label}</text>}
+          {selected && <circle cx={x} cy={y} r={2.8} fill="none" stroke="#fff" strokeWidth={0.4} />}
         </g>
       );
     }
     if (obj.type === "ball") {
       return (
         <g key={obj.id} {...common} style={{ cursor: tool === "select" ? "grab" : "pointer" }}>
-          <circle cx={x} cy={y} r={5} fill="transparent" />
-          <circle cx={x} cy={y} r={1.9} fill="#fff" stroke="#111" strokeWidth={0.5} />
+          <circle cx={x} cy={y} r={3.5} fill="transparent" />
+          <circle cx={x} cy={y} r={1.1} fill="#fff" stroke="#111" strokeWidth={0.3} />
         </g>
       );
     }
     if (obj.type === "cone") {
       return (
         <g key={obj.id} {...common} style={{ cursor: tool === "select" ? "grab" : "pointer" }}>
-          <circle cx={x} cy={y} r={5} fill="transparent" />
-          <polygon points={`${x},${y - 2.2} ${x + 2},${y + 1.6} ${x - 2},${y + 1.6}`} fill="#ee8c22" stroke="#a85e10" strokeWidth={0.4} />
+          <circle cx={x} cy={y} r={3.5} fill="transparent" />
+          <polygon points={`${x},${y - 1.3} ${x + 1.2},${y + 0.9} ${x - 1.2},${y + 0.9}`} fill="#ee8c22" stroke="#a85e10" strokeWidth={0.25} />
         </g>
       );
     }
     // goal
     return (
       <g key={obj.id} {...common} style={{ cursor: tool === "select" ? "grab" : "pointer" }}>
-        <rect x={x - 2} y={y - 1.2} width={4} height={2.4} fill="#fff" stroke="#444" strokeWidth={0.4} />
+        <circle cx={x} cy={y} r={3.5} fill="transparent" />
+        <rect x={x - 1.4} y={y - 0.9} width={2.8} height={1.8} fill="#fff" stroke="#444" strokeWidth={0.25} />
       </g>
     );
   };
@@ -258,8 +259,8 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
     const key = `arrow-${arrow.id}`;
     return (
       <g key={key} onPointerDown={(e) => onArrowDown(e, arrow)} style={{ cursor: tool === "erase" ? "pointer" : "default" }}>
-        <line x1={fx} y1={fy} x2={tx} y2={ty} stroke={color} strokeWidth={active ? 1.6 : 1.0} strokeDasharray={ARROW_DASH[arrow.kind]} opacity={shown || seqIndex < 0 ? 0.95 : 0.35} markerEnd={`url(#ah-${arrow.kind})`} />
-        <circle cx={fx} cy={fy} r={1.4} fill={color} opacity={shown || seqIndex < 0 ? 0.95 : 0.35} />
+        <line x1={fx} y1={fy} x2={tx} y2={ty} stroke={color} strokeWidth={active ? 1.0 : 0.7} strokeDasharray={ARROW_DASH[arrow.kind]} opacity={shown || seqIndex < 0 ? 0.95 : 0.35} markerEnd={`url(#ah-${arrow.kind})`} />
+        <circle cx={fx} cy={fy} r={1.0} fill={color} opacity={shown || seqIndex < 0 ? 0.95 : 0.35} />
       </g>
     );
   };
@@ -301,8 +302,8 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
         <svg ref={svgRef} viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${present.widthRatio}` }} onPointerDown={onSvgPointerDown} onPointerMove={onSvgPointerMove} onPointerUp={onSvgPointerUp} onPointerLeave={onSvgPointerUp}>
           <defs>
             {(["pass", "run", "dribble"] as ArrowKind[]).map((k) => (
-              <marker key={k} id={`ah-${k}`} markerWidth={6} markerHeight={6} refX={4} refY={3} orient="auto" markerUnits="userSpaceOnUse">
-                <path d="M0,0 L6,3 L0,6 Z" fill={ARROW_COLOR[k]} />
+              <marker key={k} id={`ah-${k}`} markerWidth={4} markerHeight={4} refX={3} refY={2} orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0,0 L4,2 L0,4 Z" fill={ARROW_COLOR[k]} />
               </marker>
             ))}
           </defs>

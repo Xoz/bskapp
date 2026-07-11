@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import type { Diagram } from "@/domain/diagram";
-import type { Exercise, Player, TrainingSession } from "@/domain/model";
+import type { Exercise, Player, SeasonPeriod, TrainingSession } from "@/domain/model";
 
 const sql = postgres(process.env.DATABASE_URL ?? "postgres://coach:coach@localhost:5434/coach", { max: 5 });
 
@@ -108,4 +108,49 @@ export async function saveSession(input: { id?: string; title: string; theme: st
 export async function deleteSession(id: string) {
   const team = await pilotTeam();
   await sql`DELETE FROM training_sessions WHERE id=${id} AND team_id=${team.id}`;
+}
+
+// --- Säsongsplanering ---
+
+// Säsongen skapas lat om den saknas (seed skapar ingen) så att "+ Ny period" fungerar på en nysådd DB.
+async function ensureSeason(): Promise<string> {
+  const team = await pilotTeam();
+  const existing = await sql`SELECT id FROM seasons WHERE team_id=${team.id} ORDER BY starts_on DESC LIMIT 1`;
+  if (existing[0]) return String(existing[0].id);
+  const [row] = await sql`INSERT INTO seasons (team_id,name,starts_on,ends_on) VALUES (${team.id},'Säsong 2026','2026-04-01','2026-10-31') RETURNING id`;
+  return String(row.id);
+}
+
+// ponytail: bootstrap-läs — vid tom säsong seedas 3 demoperioder en gång så sidan aldrig är öde
+const DEFAULT_PERIODS: { name: string; theme: string; startsOn: string; endsOn: string }[] = [
+  { name: "Trygg med boll", theme: "Första touch och spelbarhet", startsOn: "2026-04-01", endsOn: "2026-05-17" },
+  { name: "Framåt tillsammans", theme: "Passning och en mot en", startsOn: "2026-05-18", endsOn: "2026-07-05" },
+  { name: "Höstens försvar", theme: "Press och omställning", startsOn: "2026-08-10", endsOn: "2026-10-04" },
+];
+
+// ponytail: mappning inline — postgres Row är index-signerad, matchar stil i övriga filen
+export async function listPeriods(): Promise<SeasonPeriod[]> {
+  const seasonId = await ensureSeason();
+  const rows = await sql`SELECT id, name, starts_on, ends_on, theme FROM season_periods WHERE season_id=${seasonId} ORDER BY starts_on`;
+  if (!rows.length) {
+    for (const p of DEFAULT_PERIODS)
+      await sql`INSERT INTO season_periods (season_id,name,theme,starts_on,ends_on) VALUES (${seasonId},${p.name},${p.theme},${p.startsOn},${p.endsOn})`;
+    const fresh = await sql`SELECT id, name, starts_on, ends_on, theme FROM season_periods WHERE season_id=${seasonId} ORDER BY starts_on`;
+    return fresh.map(row => ({ id: String(row.id), name: String(row.name), startsOn: String(row.starts_on), endsOn: String(row.ends_on), theme: String(row.theme), skillIds: [] as string[] }));
+  }
+  return rows.map(row => ({ id: String(row.id), name: String(row.name), startsOn: String(row.starts_on), endsOn: String(row.ends_on), theme: String(row.theme), skillIds: [] as string[] }));
+}
+
+export async function savePeriod(input: { id?: string; name: string; theme: string; startsOn: string; endsOn: string }) {
+  const seasonId = await ensureSeason();
+  if (input.id) {
+    await sql`UPDATE season_periods SET name=${input.name}, theme=${input.theme}, starts_on=${input.startsOn}, ends_on=${input.endsOn} WHERE id=${input.id}`;
+  } else {
+    await sql`INSERT INTO season_periods (season_id,name,theme,starts_on,ends_on) VALUES (${seasonId},${input.name},${input.theme},${input.startsOn},${input.endsOn})`;
+  }
+}
+
+export async function deletePeriod(id: string) {
+  const team = await pilotTeam();
+  await sql`DELETE FROM season_periods WHERE id=${id} AND season_id IN (SELECT id FROM seasons WHERE team_id=${team.id})`;
 }
