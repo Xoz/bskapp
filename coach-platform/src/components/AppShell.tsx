@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-const links = [["/", "Översikt"], ["/planering", "Planering"], ["/traningspass", "Träningspass"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"], ["/matcher", "Matcher"]];
+const links = [["/", "Översikt"], ["/planering", "Planering"], ["/traningspass", "Träningspass"], ["/kalender", "Kalender"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"], ["/matcher", "Matcher"]];
+const mobileLinks = [["/", "Översikt"], ["/traningspass", "Pass"], ["/kalender", "Kalender"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"]];
 
 export function AppShell({ children }: { children: ReactNode }) {
   return <div className="shell">
@@ -11,6 +12,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="team-card"><small>AKTIVT LAG</small><b>F2014 Gul</b><span>7 mot 7 · Säsong 2026</span></div>
     </aside>
     <main><header className="topbar"><div><small>BSK Demo / F2014 Gul</small><strong>Säsong 2026</strong></div><button type="button" aria-label="Byt lag">Byt lag</button></header>{children}</main>
-    <nav className="mobile-nav" aria-label="Mobilnavigation">{links.slice(0, 5).map(([href, label]) => <Link href={href} key={href}>{label}</Link>)}</nav>
+    <nav className="mobile-nav" aria-label="Mobilnavigation">{mobileLinks.map(([href, label]) => <Link href={href} key={href}>{label}</Link>)}</nav>
   </div>;
 }
