@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
-import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, addBlock, updateBlock } from "@/repositories/postgres";
+import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
+import type { AttendanceStatus } from "@/repositories/postgres";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -35,13 +36,37 @@ export async function saveExerciseDiagram(exerciseId: string, diagram: Diagram) 
 }
 
 export async function upsertSession(data: FormData) {
-  const input = { id: text(data, "id") || undefined, title: text(data, "title"), theme: text(data, "theme"), startsAt: text(data, "startsAt"), plannedMinutes: number(data, "plannedMinutes"), status: text(data, "status") === "planned" ? "planned" as const : "draft" as const };
+  const status = text(data, "status");
+  const input = { id: text(data, "id") || undefined, title: text(data, "title"), theme: text(data, "theme"), startsAt: text(data, "startsAt"), plannedMinutes: number(data, "plannedMinutes"), status: (status === "planned" ? "planned" : status === "completed" ? "completed" : "draft") as "draft" | "planned" | "completed" };
   if (input.title.length < 2 || input.theme.length < 2 || !Number.isFinite(Date.parse(input.startsAt)) || input.plannedMinutes < 1) throw new Error("Kontrollera träningspassets uppgifter.");
   await saveSession(input);
   revalidatePath("/traningspass");
 }
 
 export async function removeSession(data: FormData) { await deleteSession(text(data, "id")); revalidatePath("/traningspass"); }
+
+export async function completeSessionAction(data: FormData) {
+  const id = text(data, "id");
+  const status = (text(data, "status") === "planned" ? "planned" : "completed") as "planned" | "completed";
+  await setSessionStatus(id, status);
+  revalidatePath(`/traningspass/${id}`);
+  revalidatePath("/traningspass");
+}
+
+const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "partial", "injured", "trial"];
+
+export async function saveAttendanceAction(data: FormData) {
+  const sessionId = text(data, "sessionId");
+  const entries: { playerId: string; status: AttendanceStatus }[] = [];
+  for (const [key, value] of data.entries()) {
+    if (!key.startsWith("att_")) continue;
+    const playerId = key.slice(4);
+    const status = String(value) as AttendanceStatus;
+    if (playerId && ATTENDANCE_STATUSES.includes(status)) entries.push({ playerId, status });
+  }
+  await saveAttendance(sessionId, entries);
+  revalidatePath(`/traningspass/${sessionId}`);
+}
 
 const coachingPoints = (data: FormData) => text(data, "coachingPoints").split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
 

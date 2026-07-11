@@ -96,7 +96,7 @@ export async function listSessions(): Promise<TrainingSession[]> {
   }));
 }
 
-export async function saveSession(input: { id?: string; title: string; theme: string; startsAt: string; plannedMinutes: number; status: "draft" | "planned" }) {
+export async function saveSession(input: { id?: string; title: string; theme: string; startsAt: string; plannedMinutes: number; status: "draft" | "planned" | "completed" }) {
   const team = await pilotTeam();
   if (input.id) {
     await sql`UPDATE training_sessions SET title=${input.title}, theme=${input.theme}, starts_at=${input.startsAt}, planned_minutes=${input.plannedMinutes}, status=${input.status} WHERE id=${input.id} AND team_id=${team.id}`;
@@ -108,6 +108,11 @@ export async function saveSession(input: { id?: string; title: string; theme: st
 export async function deleteSession(id: string) {
   const team = await pilotTeam();
   await sql`DELETE FROM training_sessions WHERE id=${id} AND team_id=${team.id}`;
+}
+
+export async function setSessionStatus(id: string, status: "draft" | "planned" | "completed") {
+  const team = await pilotTeam();
+  await sql`UPDATE training_sessions SET status=${status} WHERE id=${id} AND team_id=${team.id}`;
 }
 
 // --- Träningsblocksbyggare ---
@@ -154,6 +159,24 @@ export async function moveBlock(id: string, dir: -1 | 1) {
   if (!swap) return;
   await sql`UPDATE training_session_blocks SET sort_order=${rows[idx].sort_order} WHERE id=${String(swap.id)}`;
   await sql`UPDATE training_session_blocks SET sort_order=${swap.sort_order} WHERE id=${id}`;
+}
+
+// --- Närvaro + genomförande ---
+
+export type AttendanceStatus = "present" | "absent" | "late" | "partial" | "injured" | "trial";
+
+export async function listAttendance(sessionId: string): Promise<{ playerId: string; status: AttendanceStatus }[]> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT a.player_id, a.status FROM training_session_attendance a JOIN training_sessions s ON s.id=a.session_id WHERE s.team_id=${team.id} AND a.session_id=${sessionId}`;
+  return rows.map(r => ({ playerId: String(r.player_id), status: String(r.status) as AttendanceStatus }));
+}
+
+export async function saveAttendance(sessionId: string, entries: { playerId: string; status: AttendanceStatus }[]) {
+  const team = await pilotTeam();
+  const guard = await sql`SELECT id FROM training_sessions WHERE id=${sessionId} AND team_id=${team.id}`;
+  if (!guard[0]) throw new Error("Passet tillhör inte pilotlaget.");
+  await sql`DELETE FROM training_session_attendance WHERE session_id=${sessionId}`;
+  for (const e of entries) await sql`INSERT INTO training_session_attendance (session_id,player_id,status) VALUES (${sessionId},${e.playerId},${e.status})`;
 }
 
 // --- Säsongsplanering ---
