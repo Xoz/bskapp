@@ -6,8 +6,12 @@ ALTER TABLE training_session_blocks ADD COLUMN IF NOT EXISTS area text;
 ALTER TABLE training_session_blocks ADD COLUMN IF NOT EXISTS equipment text[] NOT NULL DEFAULT '{}';
 ALTER TABLE training_session_blocks ADD COLUMN IF NOT EXISTS group_name text;
 
-CREATE TYPE IF NOT EXISTS block_difficulty AS ENUM ('too_easy','ok','too_hard');
-CREATE TYPE IF NOT EXISTS block_conduct_status AS ENUM ('completed','skipped');
+DO $$ BEGIN
+  CREATE TYPE block_difficulty AS ENUM ('too_easy','ok','too_hard');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE block_conduct_status AS ENUM ('completed','skipped');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 CREATE TABLE IF NOT EXISTS conducted_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
