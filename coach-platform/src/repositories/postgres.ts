@@ -181,19 +181,64 @@ export async function listPeriods(): Promise<SeasonPeriod[]> {
   if (!rows.length) {
     for (const p of DEFAULT_PERIODS)
       await sql`INSERT INTO season_periods (season_id,name,theme,starts_on,ends_on) VALUES (${seasonId},${p.name},${p.theme},${p.startsOn},${p.endsOn})`;
-    const fresh = await sql`SELECT id, name, starts_on, ends_on, theme FROM season_periods WHERE season_id=${seasonId} ORDER BY starts_on`;
-    return fresh.map(row => ({ id: String(row.id), name: String(row.name), startsOn: String(row.starts_on), endsOn: String(row.ends_on), theme: String(row.theme), skillIds: [] as string[] }));
   }
-  return rows.map(row => ({ id: String(row.id), name: String(row.name), startsOn: String(row.starts_on), endsOn: String(row.ends_on), theme: String(row.theme), skillIds: [] as string[] }));
+  const periodRows = await sql`SELECT id, name, starts_on, ends_on, theme FROM season_periods WHERE season_id=${seasonId} ORDER BY starts_on`;
+  const skillRows = await sql`SELECT period_id, skill_id FROM season_period_skills WHERE period_id IN (SELECT id FROM season_periods WHERE season_id=${seasonId})`;
+  const skillsByPeriod = new Map<string, string[]>();
+  for (const sr of skillRows) {
+    const pid = String(sr.period_id);
+    if (!skillsByPeriod.has(pid)) skillsByPeriod.set(pid, []);
+    skillsByPeriod.get(pid)!.push(String(sr.skill_id));
+  }
+  return periodRows.map(row => ({ id: String(row.id), name: String(row.name), startsOn: String(row.starts_on), endsOn: String(row.ends_on), theme: String(row.theme), skillIds: skillsByPeriod.get(String(row.id)) ?? [] as string[] }));
 }
 
-export async function savePeriod(input: { id?: string; name: string; theme: string; startsOn: string; endsOn: string }) {
+export async function savePeriod(input: { id?: string; name: string; theme: string; startsOn: string; endsOn: string; skillIds: string[] }) {
   const seasonId = await ensureSeason();
+  let periodId: string;
   if (input.id) {
+    periodId = input.id;
     await sql`UPDATE season_periods SET name=${input.name}, theme=${input.theme}, starts_on=${input.startsOn}, ends_on=${input.endsOn} WHERE id=${input.id}`;
   } else {
-    await sql`INSERT INTO season_periods (season_id,name,theme,starts_on,ends_on) VALUES (${seasonId},${input.name},${input.theme},${input.startsOn},${input.endsOn})`;
+    const [row] = await sql`INSERT INTO season_periods (season_id,name,theme,starts_on,ends_on) VALUES (${seasonId},${input.name},${input.theme},${input.startsOn},${input.endsOn}) RETURNING id`;
+    periodId = String(row.id);
   }
+  await sql`DELETE FROM season_period_skills WHERE period_id=${periodId}`;
+  for (const skillId of input.skillIds) await sql`INSERT INTO season_period_skills (period_id,skill_id) VALUES (${periodId},${skillId})`;
+}
+
+// --- Färdigheter ---
+
+// Bootstrap — vid tom skills-tabell (för pilotorg) seedas kategorier + demofärdigheter
+const DEFAULT_SKILLS: { category: string; name: string }[] = [
+  { category: "Passning och mottagning", name: "Första touch" },
+  { category: "Spelförståelse", name: "Scanning" },
+  { category: "Spelförståelse", name: "Spelbarhet" },
+  { category: "Passning och mottagning", name: "Passningsprecision" },
+  { category: "Dribbling och en mot en", name: "En mot en offensivt" },
+  { category: "Försvarsspel", name: "Press" },
+  { category: "Avslut", name: "Avslut i fart" },
+  { category: "Omställningar", name: "Reaktion efter bollförlust" },
+];
+
+async function ensureSkills(): Promise<void> {
+  const team = await pilotTeam();
+  const existing = await sql`SELECT s.id FROM skills s JOIN skill_categories c ON c.id=s.category_id WHERE c.organization_id=${team.organizationId} LIMIT 1`;
+  if (existing[0]) return;
+  const categories = [...new Set(DEFAULT_SKILLS.map(s => s.category))];
+  const catId: Record<string, string> = {};
+  for (const name of categories) {
+    const [r] = await sql`INSERT INTO skill_categories (organization_id,name) VALUES (${team.organizationId},${name}) RETURNING id`;
+    catId[name] = String(r.id);
+  }
+  for (const s of DEFAULT_SKILLS) await sql`INSERT INTO skills (category_id,name,description) VALUES (${catId[s.category]},${s.name},${s.name + " i matchnära situationer."})`;
+}
+
+export async function listSkills(): Promise<{ id: string; name: string; category: string }[]> {
+  await ensureSkills();
+  const team = await pilotTeam();
+  const rows = await sql`SELECT s.id, s.name, c.name AS category FROM skills s JOIN skill_categories c ON c.id=s.category_id WHERE c.organization_id=${team.organizationId} ORDER BY c.name, s.name`;
+  return rows.map(r => ({ id: String(r.id), name: String(r.name), category: String(r.category) }));
 }
 
 export async function deletePeriod(id: string) {

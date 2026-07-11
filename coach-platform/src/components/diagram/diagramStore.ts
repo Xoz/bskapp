@@ -18,6 +18,7 @@ interface DiagramState {
   moveObject: (id: string, x: number, y: number) => void;
   moveObjectLive: (id: string, x: number, y: number) => void; // drag: ingen ny historikpost
   snapshot: () => void; // pusha nuvarande present till past (start av drag)
+  setObjectTeam: (id: string, team: Team) => void;
   deleteObject: (id: string) => void;
   addArrow: (kind: ArrowKind, from: ArrowEndpoint, to: ArrowEndpoint) => void;
   deleteArrow: (id: string) => void;
@@ -83,6 +84,12 @@ export const useDiagram = create<DiagramState>((set, get) => {
         const past = [...s.past, s.present];
         if (past.length > HISTORY_CAP) past.shift();
         return { past, future: [] };
+      }),
+    setObjectTeam: (id, team) =>
+      update((d) => {
+        const o = d.objects.find((o) => o.id === id);
+        if (o && o.type === "player") o.team = team;
+        return d;
       }),
 
     deleteObject: (id) =>

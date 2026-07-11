@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, PageHeader } from "@/components/ui";
+import { ExerciseGrid } from "@/components/ExerciseGrid";
 import { removeExercise, upsertExercise } from "@/app/actions";
 import { listExercises } from "@/repositories/postgres";
 
@@ -14,7 +15,6 @@ function ExerciseForm({ exercise }: { exercise?: Awaited<ReturnType<typeof listE
 export default async function ExercisesPage() {
   const exercises = await listExercises();
   return <div className="page"><PageHeader eyebrow="BIBLIOTEK" title={`Övningar (${exercises.length})`}><details className="create-panel"><summary className="button primary">+ Ny övning</summary><ExerciseForm/></details></PageHeader>
-    <div className="filters"><input aria-label="Sök övning" placeholder="Sök namn eller tema…"/><select aria-label="Spelform"><option>Alla spelformer</option><option>7 mot 7</option></select></div>
-    <div className="exercise-grid">{exercises.map((exercise, index) => <article className="exercise-card" key={exercise.id}><div className={`pitch pitch-${index % 3}`}><span>↗</span><i/><i/><i/></div><div><div className="badge-row"><Badge tone={index % 3 === 0 ? "blue" : "green"}>7v7</Badge><small>{exercise.durationMinutes} min</small></div><h2>{exercise.name}</h2><p>{exercise.summary}</p><footer><span>{exercise.players[0]}–{exercise.players[1]} spelare</span><Link href={`/ovningar/${exercise.id}/ritare`} className="button" style={{ padding:"6px 12px" }}>Rita</Link></footer><details><summary>Redigera</summary><ExerciseForm exercise={exercise}/><form action={removeExercise}><input name="id" type="hidden" value={exercise.id}/><button className="delete-button">Ta bort</button></form></details></div></article>)}</div>
+    <ExerciseGrid exercises={exercises}>{(exercise, index) => <article className="exercise-card" key={exercise.id}><div className={`pitch pitch-${index % 3}`}><span>↗</span><i/><i/><i/></div><div><div className="badge-row"><Badge tone={index % 3 === 0 ? "blue" : "green"}>7v7</Badge><small>{exercise.durationMinutes} min</small></div><h2>{exercise.name}</h2><p>{exercise.summary}</p><footer><span>{exercise.players[0]}–{exercise.players[1]} spelare</span><Link href={`/ovningar/${exercise.id}/ritare`} className="button" style={{ padding:"6px 12px" }}>Rita</Link></footer><details><summary>Redigera</summary><ExerciseForm exercise={exercise}/><form action={removeExercise}><input name="id" type="hidden" value={exercise.id}/><button className="delete-button">Ta bort</button></form></details></div></article>}</ExerciseGrid>
   </div>;
 }

@@ -72,11 +72,15 @@ export async function moveBlockAction(data: FormData) {
 }
 
 export async function upsertPeriod(data: FormData) {
-  const input = { id: text(data, "id") || undefined, name: text(data, "name"), theme: text(data, "theme"), startsAt: text(data, "startsOn"), endsAt: text(data, "endsOn") };
-  const startsOn = input.startsAt, endsOn = input.endsAt;
-  if (input.name.length < 2 || input.theme.length < 2 || !Number.isFinite(Date.parse(startsOn)) || !Number.isFinite(Date.parse(endsOn)) || new Date(startsOn) > new Date(endsOn))
+  const id = text(data, "id") || undefined;
+  const name = text(data, "name");
+  const theme = text(data, "theme");
+  const startsOn = text(data, "startsOn");
+  const endsOn = text(data, "endsOn");
+  const skillIds = (data.getAll("skillIds") as string[]).filter(Boolean);
+  if (name.length < 2 || theme.length < 2 || !Number.isFinite(Date.parse(startsOn)) || !Number.isFinite(Date.parse(endsOn)) || new Date(startsOn) > new Date(endsOn))
     throw new Error("Kontrollera periodens namn, tema och datum (start ≤ slut).");
-  await savePeriod({ id: input.id, name: input.name, theme: input.theme, startsOn, endsOn });
+  await savePeriod({ id, name, theme, startsOn, endsOn, skillIds });
   revalidatePath("/planering");
 }
 

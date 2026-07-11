@@ -39,6 +39,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   const deleteArrow = useDiagram((s) => s.deleteArrow);
   const setWidth = useDiagram((s) => s.setWidth);
   const select = useDiagram((s) => s.select);
+  const setObjectTeam = useDiagram((s) => s.setObjectTeam);
   const snapshot = useDiagram((s) => s.snapshot);
   const undo = useDiagram((s) => s.undo);
   const redo = useDiagram((s) => s.redo);
@@ -46,6 +47,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   const stepSeq = useDiagram((s) => s.stepSeq);
 
   const [tool, setTool] = useState<Tool>("select");
+  const [playerTeam, setPlayerTeam] = useState<Team>("att");
   const [pending, setPending] = useState<ArrowEndpoint | null>(null);
   const [cursor, setCursor] = useState<[number, number] | null>(null);
   const [status, setStatus] = useState<string>("");
@@ -86,7 +88,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
     }
     if (tool.startsWith("place:")) {
       const type = tool.split(":")[1] as ObjectType;
-      addObject(type, nx, ny, type === "player" ? "att" : undefined);
+      addObject(type, nx, ny, type === "player" ? playerTeam : undefined);
       return;
     }
     if (tool === "select") select(null);
@@ -118,8 +120,12 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
         addArrow(tool.split(":")[1] as ArrowKind, pending, ep);
         setPending(null);
       } else setPending(ep);
+    } else if (tool === "place:player" && obj.type === "player") {
+      // klicka befintlig spelare med Spelare-verktyget → byt team
+      snapshot();
+      setObjectTeam(obj.id, playerTeam);
     } else if (tool.startsWith("place:")) {
-      addObject(tool.split(":")[1] as ObjectType, nx, ny, tool === "place:player" ? "att" : undefined);
+      addObject(tool.split(":")[1] as ObjectType, nx, ny, tool === "place:player" ? playerTeam : undefined);
     }
   };
 
@@ -288,6 +294,15 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
           {tools.map((x) => (
             <button key={x.t} className={`button ${tool === x.t ? "active" : ""}`} onClick={() => { setTool(x.t); setPending(null); }}>{x.label}</button>
           ))}
+          {tool === "place:player" && (
+            <span className="editor-toolbar" style={{ marginLeft: 4 }}>
+              {(["att", "def", "gk"] as Team[]).map((t) => (
+                <button key={t} type="button" className={`button ${playerTeam === t ? "active" : ""}`} style={{ borderColor: playerTeam === t ? TEAM_COLOR[t] : undefined, color: playerTeam === t ? TEAM_COLOR[t] : undefined }} onClick={() => setPlayerTeam(t)} aria-label={`Team ${t}`}>
+                  {t === "att" ? "A" : t === "def" ? "D" : "Målv."}
+                </button>
+              ))}
+            </span>
+          )}
         </div>
         <div className="editor-toolbar">
           <button className="button" disabled={!past.length} onClick={undo}>↺ Ångra</button>
@@ -330,7 +345,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
         <span className="editor-saving">{status}</span>
       </div>
       <p className="editor-help">
-        {tool === "select" ? "Dra objekt för att flytta." : tool.startsWith("arrow:") ? (pending ? "Klicka pilens mål." : "Klicka pilens start.") : tool === "erase" ? "Klicka ett objekt eller en pil för att radera." : "Klicka på planen för att placera."}
+        {tool === "select" ? "Dra objekt för att flytta." : tool.startsWith("arrow:") ? (pending ? "Klicka pilens mål." : "Klicka pilens start.") : tool === "erase" ? "Klicka ett objekt eller en pil för att radera." : tool === "place:player" ? "Klicka på planen för att placera spelare (valt team). Klicka en befintlig spelare för att byta team." : "Klicka på planen för att placera."}
       </p>
     </div>
   );
