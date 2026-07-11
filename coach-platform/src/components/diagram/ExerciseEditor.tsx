@@ -5,25 +5,11 @@ import type { Arrow, ArrowEndpoint, ArrowKind, Diagram, DiagramObject, ObjectTyp
 import { serialize } from "@/domain/diagram";
 import { saveExerciseDiagram } from "@/app/actions";
 import { arrowsSorted, useDiagram } from "./diagramStore";
+import { ARROW_COLOR, ARROW_DASH, H, arrowMarkers, pitchMarkings, resolve, TEAM_COLOR } from "./diagramRender";
 
 type Tool = "select" | "erase" | `place:${ObjectType}` | `arrow:${ArrowKind}`;
 
-const TEAM_COLOR: Record<Team, string> = { att: "#3278b7", def: "#d89521", gk: "#20a56b" };
-const ARROW_COLOR: Record<ArrowKind, string> = { pass: "#ffd54a", run: "#ffffff", dribble: "#ff7f7f" };
-const ARROW_DASH: Record<ArrowKind, string | undefined> = { pass: undefined, run: "5 4", dribble: "1 4" };
-
-const H = (ratio: number) => 100 * ratio;
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-
-// Endpoint → punkt i SVG-userenheter (100 × H)
-function resolve(ep: ArrowEndpoint, objects: DiagramObject[], H: number): [number, number] {
-  if (ep.objectId) {
-    const o = objects.find((o) => o.id === ep.objectId);
-    if (o) return [o.x * 100, o.y * H];
-  }
-  if (ep.point) return [ep.point[0] * 100, ep.point[1] * H];
-  return [50, H / 2];
-}
 
 export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseId: string; name: string; initialDiagram: Diagram }) {
   const present = useDiagram((s) => s.present);
@@ -203,18 +189,6 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   };
 
   // --- render helpers ---
-  const pitchMarkings = (
-    <g stroke="#ffffff55" strokeWidth={0.4} fill="none">
-      <rect x={0} y={0} width={100} height={h} />
-      <line x1={50} y1={0} x2={50} y2={h} />
-      <circle cx={50} cy={h / 2} r={h * 0.12} />
-      <rect x={0} y={h * 0.25} width={16} height={h * 0.5} />
-      <rect x={84} y={h * 0.25} width={16} height={h * 0.5} />
-      <rect x={0} y={h * 0.37} width={6} height={h * 0.26} />
-      <rect x={94} y={h * 0.37} width={6} height={h * 0.26} />
-    </g>
-  );
-
   const renderObject = (obj: DiagramObject) => {
     const x = obj.type === "ball" && ballOverride ? ballOverride[0] : obj.x * 100;
     const y = obj.type === "ball" && ballOverride ? ballOverride[1] : obj.y * h;
@@ -316,13 +290,9 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
       <div className="editor-stage">
         <svg ref={svgRef} viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${present.widthRatio}` }} onPointerDown={onSvgPointerDown} onPointerMove={onSvgPointerMove} onPointerUp={onSvgPointerUp} onPointerLeave={onSvgPointerUp}>
           <defs>
-            {(["pass", "run", "dribble"] as ArrowKind[]).map((k) => (
-              <marker key={k} id={`ah-${k}`} markerWidth={4} markerHeight={4} refX={3} refY={2} orient="auto" markerUnits="userSpaceOnUse">
-                <path d="M0,0 L4,2 L0,4 Z" fill={ARROW_COLOR[k]} />
-              </marker>
-            ))}
+            {arrowMarkers()}
           </defs>
-          {pitchMarkings}
+          {pitchMarkings(h)}
           {sorted.map(renderArrow)}
           {present.objects.map(renderObject)}
           {pendingPreview}

@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
-import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
-import type { AttendanceStatus } from "@/repositories/postgres";
+import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveConductedSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
+import type { AttendanceStatus, BlockConductStatus, BlockDifficulty } from "@/repositories/postgres";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -68,7 +68,43 @@ export async function saveAttendanceAction(data: FormData) {
   revalidatePath(`/traningspass/${sessionId}`);
 }
 
+const CONDUCT_STATUSES: BlockConductStatus[] = ["completed", "skipped"];
+const DIFFICULTIES: BlockDifficulty[] = ["too_easy", "ok", "too_hard"];
+
+export async function saveConductAction(data: FormData) {
+  const sessionId = text(data, "sessionId");
+  const blockIds = (data.getAll("blockId") as string[]).filter(Boolean);
+  const blocks: { blockId: string; status: BlockConductStatus; actualMinutes: number; note?: string; difficulty?: BlockDifficulty; replacedExerciseId?: string }[] = [];
+  for (const blockId of blockIds) {
+    const status = String(data.get(`status_${blockId}`));
+    if (!CONDUCT_STATUSES.includes(status as BlockConductStatus)) continue;
+    const difficulty = String(data.get(`difficulty_${blockId}`) ?? "");
+    blocks.push({
+      blockId,
+      status: status as BlockConductStatus,
+      actualMinutes: Number(data.get(`actualMinutes_${blockId}`) ?? 0) || 0,
+      note: text(data, `note_${blockId}`) || undefined,
+      difficulty: DIFFICULTIES.includes(difficulty as BlockDifficulty) ? difficulty as BlockDifficulty : undefined,
+      replacedExerciseId: text(data, `replaced_${blockId}`) || undefined,
+    });
+  }
+  await saveConductedSession({ sessionId, overallNote: text(data, "overallNote"), levelFeedback: text(data, "levelFeedback"), followup: text(data, "followup"), blocks });
+  // Spara även närvaro om den skickades med (att_-fält), så allt sparas i ett steg vid avslut
+  const attEntries: { playerId: string; status: AttendanceStatus }[] = [];
+  for (const [key, value] of data.entries()) {
+    if (!key.startsWith("att_")) continue;
+    const playerId = key.slice(4);
+    const status = String(value) as AttendanceStatus;
+    if (playerId && ATTENDANCE_STATUSES.includes(status)) attEntries.push({ playerId, status });
+  }
+  if (attEntries.length) await saveAttendance(sessionId, attEntries);
+  await setSessionStatus(sessionId, "completed");
+  revalidatePath(`/traningspass/${sessionId}`);
+  revalidatePath("/traningspass");
+}
+
 const coachingPoints = (data: FormData) => text(data, "coachingPoints").split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
+const splitList = (data: FormData, key: string) => text(data, key).split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
 
 export async function upsertBlock(data: FormData) {
   const id = text(data, "id") || undefined;
@@ -79,8 +115,9 @@ export async function upsertBlock(data: FormData) {
   if (!exercise) throw new Error("Övningen finns inte i pilotorganisationen.");
   if (!sessionId || minutes < 1) throw new Error("Kontrollera blocket (minuter).");
   const points = coachingPoints(data);
-  if (id) await updateBlock({ id, exerciseId, title: exercise.name, minutes, coachingPoints: points });
-  else await addBlock({ sessionId, exerciseId, title: exercise.name, minutes, coachingPoints: points });
+  const meta = { coach: text(data, "coach") || undefined, area: text(data, "area") || undefined, equipment: splitList(data, "equipment"), groupName: text(data, "groupName") || undefined };
+  if (id) await updateBlock({ id, exerciseId, title: exercise.name, minutes, coachingPoints: points, ...meta });
+  else await addBlock({ sessionId, exerciseId, title: exercise.name, minutes, coachingPoints: points, ...meta });
   revalidatePath(`/traningspass/${sessionId}`);
 }
 

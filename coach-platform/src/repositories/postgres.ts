@@ -118,31 +118,31 @@ export async function setSessionStatus(id: string, status: "draft" | "planned" |
 // --- Träningsblocksbyggare ---
 
 // Verifierar att passet tillhör pilotlaget och returnerar det
-export async function getSession(id: string): Promise<{ id: string; teamId: string; title: string; theme: string; startsAt: string; plannedMinutes: number; status: string; blocks: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }[] } | null> {
+export async function getSession(id: string): Promise<{ id: string; teamId: string; title: string; theme: string; startsAt: string; plannedMinutes: number; status: string; blocks: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[]; coach: string | null; area: string | null; equipment: string[]; groupName: string | null }[] } | null> {
   const team = await pilotTeam();
   const rows = await sql`SELECT id, team_id, title, theme, starts_at, planned_minutes, status FROM training_sessions WHERE id=${id} AND team_id=${team.id}`;
   if (!rows[0]) return null;
   const s = rows[0];
-  const blocks = await sql`SELECT id, exercise_id, title, minutes, coaching_points FROM training_session_blocks WHERE session_id=${id} ORDER BY sort_order`;
+  const blocks = await sql`SELECT id, exercise_id, title, minutes, coaching_points, coach, area, equipment, group_name FROM training_session_blocks WHERE session_id=${id} ORDER BY sort_order`;
   return {
     id: String(s.id), teamId: String(s.team_id), title: String(s.title), theme: String(s.theme),
     startsAt: new Date(s.starts_at as string).toISOString(), plannedMinutes: Number(s.planned_minutes),
     status: String(s.status),
-    blocks: blocks.map(b => ({ id: String(b.id), exerciseId: b.exercise_id ? String(b.exercise_id) : "", title: String(b.title), minutes: Number(b.minutes), coachingPoints: (b.coaching_points ?? []) as string[] })),
+    blocks: blocks.map(b => ({ id: String(b.id), exerciseId: b.exercise_id ? String(b.exercise_id) : "", title: String(b.title), minutes: Number(b.minutes), coachingPoints: (b.coaching_points ?? []) as string[], coach: b.coach ? String(b.coach) : null, area: b.area ? String(b.area) : null, equipment: (b.equipment ?? []) as string[], groupName: b.group_name ? String(b.group_name) : null })),
   };
 }
 
-export async function addBlock(input: { sessionId: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }) {
+export async function addBlock(input: { sessionId: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[]; coach?: string; area?: string; equipment?: string[]; groupName?: string }) {
   const team = await pilotTeam();
   const guard = await sql`SELECT id FROM training_sessions WHERE id=${input.sessionId} AND team_id=${team.id}`;
   if (!guard[0]) throw new Error("Passet tillhör inte pilotlaget.");
   const max = await sql`SELECT COALESCE(MAX(sort_order),-1) AS m FROM training_session_blocks WHERE session_id=${input.sessionId}`;
-  await sql`INSERT INTO training_session_blocks (session_id,exercise_id,title,minutes,sort_order,coaching_points) VALUES (${input.sessionId},${input.exerciseId},${input.title},${input.minutes},${Number(max[0].m) + 1},${input.coachingPoints})`;
+  await sql`INSERT INTO training_session_blocks (session_id,exercise_id,title,minutes,sort_order,coaching_points,coach,area,equipment,group_name) VALUES (${input.sessionId},${input.exerciseId},${input.title},${input.minutes},${Number(max[0].m) + 1},${input.coachingPoints},${input.coach ?? null},${input.area ?? null},${input.equipment ?? []},${input.groupName ?? null})`;
 }
 
-export async function updateBlock(input: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }) {
+export async function updateBlock(input: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[]; coach?: string; area?: string; equipment?: string[]; groupName?: string }) {
   const team = await pilotTeam();
-  await sql`UPDATE training_session_blocks SET exercise_id=${input.exerciseId}, title=${input.title}, minutes=${input.minutes}, coaching_points=${input.coachingPoints} WHERE id=${input.id} AND session_id IN (SELECT id FROM training_sessions WHERE team_id=${team.id})`;
+  await sql`UPDATE training_session_blocks SET exercise_id=${input.exerciseId}, title=${input.title}, minutes=${input.minutes}, coaching_points=${input.coachingPoints}, coach=${input.coach ?? null}, area=${input.area ?? null}, equipment=${input.equipment ?? []}, group_name=${input.groupName ?? null} WHERE id=${input.id} AND session_id IN (SELECT id FROM training_sessions WHERE team_id=${team.id})`;
 }
 
 export async function deleteBlock(id: string) {
@@ -177,6 +177,28 @@ export async function saveAttendance(sessionId: string, entries: { playerId: str
   if (!guard[0]) throw new Error("Passet tillhör inte pilotlaget.");
   await sql`DELETE FROM training_session_attendance WHERE session_id=${sessionId}`;
   for (const e of entries) await sql`INSERT INTO training_session_attendance (session_id,player_id,status) VALUES (${sessionId},${e.playerId},${e.status})`;
+}
+
+export type BlockDifficulty = "too_easy" | "ok" | "too_hard";
+export type BlockConductStatus = "completed" | "skipped";
+
+// Genomfört pass sparas separat från planerat — speglar blocken med faktiska avvikelser.
+export async function saveConductedSession(input: {
+  sessionId: string;
+  overallNote: string;
+  levelFeedback: string;
+  followup: string;
+  blocks: { blockId: string; status: BlockConductStatus; actualMinutes: number; note?: string; difficulty?: BlockDifficulty; replacedExerciseId?: string }[];
+}) {
+  const team = await pilotTeam();
+  const guard = await sql`SELECT id FROM training_sessions WHERE id=${input.sessionId} AND team_id=${team.id}`;
+  if (!guard[0]) throw new Error("Passet tillhör inte pilotlaget.");
+  const [row] = await sql`INSERT INTO conducted_sessions (session_id,overall_note,level_feedback,followup) VALUES (${input.sessionId},${input.overallNote},${input.levelFeedback},${input.followup}) RETURNING id`;
+  const conductedId = String(row.id);
+  for (let i = 0; i < input.blocks.length; i++) {
+    const b = input.blocks[i];
+    await sql`INSERT INTO conducted_session_blocks (conducted_session_id,block_id,sort_order,status,actual_minutes,note,difficulty,replaced_exercise_id) VALUES (${conductedId},${b.blockId},${i},${b.status},${b.actualMinutes},${b.note ?? ""},${b.difficulty ?? null},${b.replacedExerciseId ?? null})`;
+  }
 }
 
 // --- Säsongsplanering ---

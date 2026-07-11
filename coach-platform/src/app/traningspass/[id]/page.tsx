@@ -29,6 +29,10 @@ function BlockForm({ sessionId, block, exercises }: { sessionId: string; block?:
       {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
     </select>
     <input name="minutes" type="number" defaultValue={block?.minutes ?? 15} aria-label="Minuter" min={1} required/>
+    <input name="coach" defaultValue={block?.coach ?? ""} placeholder="Ansvarig tränare" aria-label="Ansvarig tränare"/>
+    <input name="groupName" defaultValue={block?.groupName ?? ""} placeholder="Grupp" aria-label="Grupp"/>
+    <input name="area" defaultValue={block?.area ?? ""} placeholder="Yta (t.ex. 15×15)" aria-label="Yta"/>
+    <input name="equipment" defaultValue={block?.equipment.join(", ")} placeholder="Material (kommasep.)" aria-label="Material"/>
     <input name="coachingPoints" defaultValue={block?.coachingPoints.join(", ")} placeholder="Coachsteg (kommaseparerade)" style={{ gridColumn: "1 / -1" }}/>
     <button className="button primary" style={{ gridColumn: "1 / -1" }}>{block ? "Spara block" : "Lägg till block"}</button>
   </form>;
@@ -45,6 +49,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   return <div className="page">
     <PageHeader eyebrow={new Date(session.startsAt).toLocaleDateString("sv-SE")} title={session.title}>
       <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
+      <Link className="button primary" href={`/traningspass/${session.id}/kor`}>▶ Starta träningsläge</Link>
       <Link className="button" href="/traningspass">← Pass</Link>
     </PageHeader>
     <Card title="Övningsblocks" meta={`${session.blocks.length} block · ${total} min · planerat ${session.plannedMinutes} min`}>
@@ -58,6 +63,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
           <div>
             <Badge tone="blue">{block.minutes} min</Badge>
             <h3 style={{ margin: "6px 0 4px", fontSize: "17px" }}>{exercise?.name ?? block.title}</h3>
+            {(block.groupName || block.coach || block.area || block.equipment.length) ? <p style={{ margin: "0 0 2px", color: "var(--muted)", fontSize: "12px" }}>{[block.groupName && `Grupp: ${block.groupName}`, block.coach && `Tränare: ${block.coach}`, block.area && `Yta: ${block.area}`, block.equipment.length && `Material: ${block.equipment.join(", ")}`].filter(Boolean).join(" · ")}</p> : null}
             {block.coachingPoints.length ? <p style={{ margin: 0, color: "var(--muted)", fontSize: "13px" }}>{block.coachingPoints.join(" · ")}</p> : null}
             <details><summary className="button" style={{ padding: "4px 10px" }}>Redigera</summary><BlockForm sessionId={session.id} block={block} exercises={exercises}/><form action={removeBlock}><input name="id" type="hidden" value={block.id}/><input name="sessionId" type="hidden" value={session.id}/><button className="delete-button">Ta bort block</button></form></details>
           </div>
