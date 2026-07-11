@@ -110,6 +110,52 @@ export async function deleteSession(id: string) {
   await sql`DELETE FROM training_sessions WHERE id=${id} AND team_id=${team.id}`;
 }
 
+// --- Träningsblocksbyggare ---
+
+// Verifierar att passet tillhör pilotlaget och returnerar det
+export async function getSession(id: string): Promise<{ id: string; teamId: string; title: string; theme: string; startsAt: string; plannedMinutes: number; status: string; blocks: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }[] } | null> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT id, team_id, title, theme, starts_at, planned_minutes, status FROM training_sessions WHERE id=${id} AND team_id=${team.id}`;
+  if (!rows[0]) return null;
+  const s = rows[0];
+  const blocks = await sql`SELECT id, exercise_id, title, minutes, coaching_points FROM training_session_blocks WHERE session_id=${id} ORDER BY sort_order`;
+  return {
+    id: String(s.id), teamId: String(s.team_id), title: String(s.title), theme: String(s.theme),
+    startsAt: new Date(s.starts_at as string).toISOString(), plannedMinutes: Number(s.planned_minutes),
+    status: String(s.status),
+    blocks: blocks.map(b => ({ id: String(b.id), exerciseId: b.exercise_id ? String(b.exercise_id) : "", title: String(b.title), minutes: Number(b.minutes), coachingPoints: (b.coaching_points ?? []) as string[] })),
+  };
+}
+
+export async function addBlock(input: { sessionId: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }) {
+  const team = await pilotTeam();
+  const guard = await sql`SELECT id FROM training_sessions WHERE id=${input.sessionId} AND team_id=${team.id}`;
+  if (!guard[0]) throw new Error("Passet tillhör inte pilotlaget.");
+  const max = await sql`SELECT COALESCE(MAX(sort_order),-1) AS m FROM training_session_blocks WHERE session_id=${input.sessionId}`;
+  await sql`INSERT INTO training_session_blocks (session_id,exercise_id,title,minutes,sort_order,coaching_points) VALUES (${input.sessionId},${input.exerciseId},${input.title},${input.minutes},${Number(max[0].m) + 1},${input.coachingPoints})`;
+}
+
+export async function updateBlock(input: { id: string; exerciseId: string; title: string; minutes: number; coachingPoints: string[] }) {
+  const team = await pilotTeam();
+  await sql`UPDATE training_session_blocks SET exercise_id=${input.exerciseId}, title=${input.title}, minutes=${input.minutes}, coaching_points=${input.coachingPoints} WHERE id=${input.id} AND session_id IN (SELECT id FROM training_sessions WHERE team_id=${team.id})`;
+}
+
+export async function deleteBlock(id: string) {
+  const team = await pilotTeam();
+  await sql`DELETE FROM training_session_blocks WHERE id=${id} AND session_id IN (SELECT id FROM training_sessions WHERE team_id=${team.id})`;
+}
+
+// Flytta block upp/ner — byt sort_order med granne
+export async function moveBlock(id: string, dir: -1 | 1) {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT b.id, b.sort_order, b.session_id FROM training_session_blocks b JOIN training_sessions s ON s.id=b.session_id WHERE s.team_id=${team.id} AND b.session_id=(SELECT session_id FROM training_session_blocks WHERE id=${id}) ORDER BY b.sort_order`;
+  const idx = rows.findIndex(r => String(r.id) === id);
+  const swap = rows[idx + dir];
+  if (!swap) return;
+  await sql`UPDATE training_session_blocks SET sort_order=${rows[idx].sort_order} WHERE id=${String(swap.id)}`;
+  await sql`UPDATE training_session_blocks SET sort_order=${swap.sort_order} WHERE id=${id}`;
+}
+
 // --- Säsongsplanering ---
 
 // Säsongen skapas lat om den saknas (seed skapar ingen) så att "+ Ny period" fungerar på en nysådd DB.

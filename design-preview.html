@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="sv" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BSK F2014 — Design Preview (NFL-inspirerad)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN PREVIEW — NFL.com-inspirerad redesign för BSK F2014
+   Detta är en mockup med samma tokens/komponenter som skulle
+   användas i globals.css. Theme-knappen växlar dark/light.
+   ============================================================ */
+
+:root {
+  /* Klubbaccent – dynamisk per klubb (sätts på body i riktiga appen) */
+  --primary: #ffd23f;
+  --accent: #ffd23f;
+
+  /* Härledda accentnyanser */
+  --primary-light: color-mix(in srgb, var(--primary), #ffffff 18%);
+  --primary-dark: color-mix(in srgb, var(--primary), #000000 35%);
+  --primary-deep: #0a0b0d;
+  --primary-soft: color-mix(in srgb, var(--primary), transparent 87%);
+  --primary-ghost: color-mix(in srgb, var(--primary), transparent 93%);
+  --primary-fg: var(--primary);
+  --primary-wash: color-mix(in srgb, var(--primary) 13%, var(--bg2));
+  --primary-line: color-mix(in srgb, var(--primary) 55%, transparent);
+
+  /* Bakgrunder – NFL: vit med blå nav */
+  --bg: #FFFFFF;
+  --bg2: #F5F7FA;
+  --bg3: #EDF1F6;
+  --bg-nav: #013369;       /* NFL navy navbar */
+  --card: var(--bg2);
+
+  /* Linjer */
+  --line: rgba(1,51,105,0.10);
+  --line-2: rgba(1,51,105,0.16);
+  --line-strong: rgba(1,51,105,0.25);
+
+  /* Text – mörk på ljus yta */
+  --ink: #0A1929;
+  --ink-soft: #4A5C6E;
+  --ink-faint: #8FA3B8;
+
+  --live: #C8102E;         /* NFL red */
+
+  /* Status */
+  --ok: #1B8E3F;
+  --ok-bg: rgba(27,142,63,0.10);
+  --warn: #D97706;
+  --warn-bg: rgba(217,119,6,0.10);
+  --danger: #C8102E;
+  --danger-bg: rgba(200,16,46,0.10);
+
+  /* Typsnitt */
+  --font-display: 'Oswald', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg: #0A1929;
+  --bg2: #0E2238;
+  --bg3: #143055;
+  --bg-nav: #013369;
+  --card: var(--bg2);
+
+  --line: rgba(255,255,255,0.08);
+  --line-2: rgba(255,255,255,0.14);
+  --line-strong: rgba(255,255,255,0.22);
+
+  --ink: #EAF0F6;
+  --ink-soft: #8FA3B8;
+  --ink-faint: #5A6B7E;
+
+  --live: #E03A2F;
+
+  --ok: #22C55E;
+  --ok-bg: rgba(34,197,94,0.12);
+  --warn: #FBBF24;
+  --warn-bg: rgba(251,191,36,0.12);
+  --danger: #EF4444;
+  --danger-bg: rgba(239,68,68,0.12);
+}
+
+[data-theme="light"] {
+  --bg: #FFFFFF;
+  --bg2: #F5F7FA;
+  --bg3: #EDF1F6;
+  --bg-nav: #013369;
+  --card: var(--bg2);
+
+  --line: rgba(1,51,105,0.10);
+  --line-2: rgba(1,51,105,0.16);
+  --line-strong: rgba(1,51,105,0.25);
+
+  --ink: #0A1929;
+  --ink-soft: #4A5C6E;
+  --ink-faint: #8FA3B8;
+
+  --primary-deep: #0A1929;
+  --primary-fg: #B45309;
+  --primary-soft: color-mix(in srgb, var(--primary), transparent 82%);
+  --primary-ghost: color-mix(in srgb, var(--primary), transparent 90%);
+
+  --live: #C8102E;
+
+  --ok-bg: rgba(27,142,63,0.10);
+  --warn-bg: rgba(217,119,6,0.10);
+  --danger-bg: rgba(200,16,46,0.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- NAVBAR ---------- */
+.navbar {
+  background: var(--bg-nav);
+  border-bottom: 2px solid var(--primary);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.navbar-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+  color: #FFFFFF;
+  text-transform: uppercase;
+}
+.navbar-brand span { color: var(--primary); }
+
+.nav-links {
+  display: flex;
+  gap: 0.25rem;
+  list-style: none;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.65);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.nav-link:hover {
+  background: rgba(255,255,255,0.10);
+  color: #FFFFFF;
+}
+.nav-link.active {
+  background: rgba(255,255,255,0.15);
+  color: #FFFFFF;
+}
+[data-theme="dark"] .nav-link { color: rgba(255,255,255,0.65); }
+[data-theme="dark"] .nav-link:hover { background: rgba(255,255,255,0.10); color: #FFFFFF; }
+[data-theme="dark"] .nav-link.active { background: rgba(255,255,255,0.15); color: #FFFFFF; }
+
+.theme-toggle {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.75);
+  padding: 0.5rem 0.875rem;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.theme-toggle:hover { border-color: #FFFFFF; color: #FFFFFF; }
+
+/* ---------- LAYOUT ---------- */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.page-subtitle {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+/* ---------- SECTION ---------- */
+.section { margin-bottom: 2.5rem; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- CARD ---------- */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  position: relative;
+  transition: all 0.15s;
+}
+.card-hover:hover {
+  background: var(--bg3);
+  border-color: var(--line-2);
+}
+.card-hover:hover::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 8px 8px 0 0;
+}
+
+/* ---------- PLAYER GRID ---------- */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.player-card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: center;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.player-card:hover {
+  background: var(--bg3);
+  border-color: var(--primary-line);
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-deep);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.player-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.25rem;
+}
+.player-meta {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- STAT NUMBER ---------- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-block {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.stat-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.25rem;
+}
+.stat-number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.stat-number.accent { color: var(--primary); }
+
+/* ---------- BUTTONS ---------- */
+.btn-primary, .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.625rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-deep);
+}
+.btn-primary:hover { background: var(--primary-light); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.btn-secondary:active { transform: translateY(1px); }
+
+/* ---------- BADGE ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.badge-accent { background: var(--primary-soft); color: var(--primary); }
+.badge-ok { background: var(--ok-bg); color: var(--ok); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-neutral { background: rgba(255,255,255,0.06); color: var(--ink-soft); }
+[data-theme="light"] .badge-neutral { background: rgba(0,0,0,0.06); }
+
+/* ---------- LEVEL PILLS (utvärdering) ---------- */
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.625rem;
+  margin-top: 0.75rem;
+}
+.level-pill {
+  display: block;
+  text-align: center;
+  padding: 0.625rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.level-pill:hover { border-color: var(--line-strong); color: var(--ink); }
+.level-pill.selected {
+  background: var(--primary);
+  border-color: transparent;
+  color: var(--primary-deep);
+  font-weight: 700;
+}
+
+/* ---------- LEVEL TAGS (matchnivå) ---------- */
+.level-tag {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.level-tag[data-level="latt"] { background: rgba(34,197,94,0.15); color: var(--ok); }
+.level-tag[data-level="medel"] { background: rgba(251,191,36,0.15); color: var(--warn); }
+.level-tag[data-level="svar"] { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+/* ---------- DATA TABLE ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.data-table th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  padding: 0.75rem 1rem;
+  background: var(--bg-nav);
+  border-bottom: 2px solid var(--primary);
+}
+.data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.data-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+[data-theme="light"] .data-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.data-table tbody tr:hover { background: var(--bg3); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table .num { text-align: right; font-weight: 600; }
+
+/* ---------- LEVEL METER ---------- */
+.level-meter {
+  display: inline-flex;
+  gap: 3px;
+}
+.level-meter i {
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.10);
+}
+[data-theme="light"] .level-meter i { background: rgba(0,0,0,0.10); }
+.level-meter i.on { background: var(--primary); }
+
+/* ---------- CHART MOCKUP (radar bars) ---------- */
+.chart-mockup {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  height: 160px;
+  padding: 1rem 0;
+}
+.chart-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.chart-bar {
+  width: 100%;
+  max-width: 48px;
+  border-radius: 4px 4px 0 0;
+  background: var(--primary);
+  transition: opacity 0.15s;
+}
+.chart-bar.dim { background: var(--primary-soft); border: 1px solid var(--primary-line); }
+.chart-bar-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ---------- INPUT/FORM ---------- */
+.input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input::placeholder { color: var(--ink-faint); }
+.input:focus { border-color: var(--primary); }
+.label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- DIVIDER ---------- */
+.divider {
+  height: 1px;
+  background: var(--line);
+  border: none;
+  margin: 1.5rem 0;
+}
+
+/* ---------- COMPARISON ---------- */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.compare-col h3 {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- UTILS ---------- */
+.flex { display: flex; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.text-soft { color: var(--ink-soft); }
+.text-faint { color: var(--ink-faint); }
+.text-accent { color: var(--primary); }
+.font-display { font-family: var(--font-display); }
+.uppercase { text-transform: uppercase; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .container { padding: 1rem; }
+  .page-title { font-size: 1.5rem; }
+  .nav-links { display: none; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .level-grid { grid-template-columns: repeat(3, 1fr); }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAVBAR ============ -->
+<nav class="navbar">
+  <div class="navbar-brand">BSK <span>F2014</span></div>
+  <ul class="nav-links">
+    <li><a class="nav-link active">Översikt</a></li>
+    <li><a class="nav-link">Spelare</a></li>
+    <li><a class="nav-link">Matcher</a></li>
+    <li><a class="nav-link">Statistik</a></li>
+    <li><a class="nav-link">Utveckling</a></li>
+  </ul>
+  <button class="theme-toggle" onclick="toggleTheme()">⚡ Tema</button>
+</nav>
+
+<div class="container">
+
+  <!-- ============ PAGE HEADER ============ -->
+  <div class="page-header">
+    <div class="eyebrow">Säsong 2026</div>
+    <h1 class="page-title">Spelaröversikt</h1>
+    <p class="page-subtitle">Bollstanäs SK F2014 — Utveckling och statistik</p>
+  </div>
+
+  <!-- ============ STATS ============ -->
+  <div class="section">
+    <div class="stat-row">
+      <div class="stat-block">
+        <div class="stat-label">Spelare</div>
+        <div class="stat-number accent">18</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Matcher</div>
+        <div class="stat-number">24</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Mål</div>
+        <div class="stat-number">47</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Assist</div>
+        <div class="stat-number">31</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Närvaro</div>
+        <div class="stat-number accent">87%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PLAYER CARDS ============ -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Spelare</h2>
+      <button class="btn-secondary">Alla spelare →</button>
+    </div>
+    <div class="player-grid">
+      <div class="player-card">
+        <div class="avatar">AK</div>
+        <div class="player-name">Alex Karlsson</div>
+        <div class="player-meta">Anfallare · #9</div>
+        <div class="mt-1 flex gap-sm" style="justify-content:center;">
+          <span class="badge badge-accent">Nyckelspelare</span>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="avatar">JE</div>
+        <div class="player-name">Johan Eriksson</div>
+        <div class="player-meta">Mittfältare · #8</div>
+        <div class="mt-1 flex gap-sm" style="justify-content:center;">
+          <span class="badge badge-ok">Utvecklas bra</span>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="avatar">ML</div>
+        <div class="player-name">Maja Lindberg</div>
+        <div class="player-meta">Försvarare · #4</div>
+        <div class="mt-1 flex gap-sm" style="justify-content:center;">
+          <span class="badge badge-warn">Tränar extra</span>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="avatar">RB</div>
+        <div class="player-name">Robin Berg</div>
+        <div class="player-meta">Målvakt · #1</div>
+        <div class="mt-1 flex gap-sm" style="justify-content:center;">
+          <span class="badge badge-neutral">Stabilt</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DATA TABLE ============ -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Matchstatistik</h2>
+      <button class="btn-secondary">Exportera</button>
+    </div>
+    <div class="card" style="padding: 0; overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Motståndare</th>
+            <th>Nivå</th>
+            <th class="num">Mål</th>
+            <th class="num">Assist</th>
+            <th class="num">Närvaro</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-09-14</td>
+            <td>IFK Stocksund</td>
+            <td><span class="level-tag" data-level="latt">Lätt</span></td>
+            <td class="num">5</td>
+            <td class="num">4</td>
+            <td class="num">94%</td>
+            <td><span class="badge badge-ok">Vinst 5–0</span></td>
+          </tr>
+          <tr>
+            <td>2026-09-07</td>
+            <td>Värmdö IF</td>
+            <td><span class="level-tag" data-level="medel">Medel</span></td>
+            <td class="num">3</td>
+            <td class="num">2</td>
+            <td class="num">88%</td>
+            <td><span class="badge badge-ok">Vinst 3–1</span></td>
+          </tr>
+          <tr>
+            <td>2026-08-31</td>
+            <td>Täby FK</td>
+            <td><span class="level-tag" data-level="svar">Svår</span></td>
+            <td class="num">1</td>
+            <td class="num">0</td>
+            <td class="num">76%</td>
+            <td><span class="badge badge-danger">Förlust 1–3</span></td>
+          </tr>
+          <tr>
+            <td>2026-08-24</td>
+            <td>Djurgårdens IF</td>
+            <td><span class="level-tag" data-level="svar">Svår</span></td>
+            <td class="num">2</td>
+            <td class="num">1</td>
+            <td class="num">82%</td>
+            <td><span class="badge badge-warn">Oavgjort 2–2</span></td>
+          </tr>
+          <tr>
+            <td>2026-08-17</td>
+            <td>Hammarby IF</td>
+            <td><span class="level-tag" data-level="medel">Medel</span></td>
+            <td class="num">4</td>
+            <td class="num">3</td>
+            <td class="num">91%</td>
+            <td><span class="badge badge-ok">Vinst 4–2</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ EVALUATION + CHART ============ -->
+  <div class="section">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+      <!-- Evaluation -->
+      <div class="card">
+        <h2 class="section-title" style="margin-bottom: 0.75rem;">Utvärdering — Anfall boll</h2>
+        <p class="text-soft" style="font-size: 0.875rem; margin-bottom: 0.75rem;">
+          Bedöm spelarens nivå i kategorin. Välj en nivå.
+        </p>
+        <div class="level-grid">
+          <div class="level-pill">1</div>
+          <div class="level-pill selected">2</div>
+          <div class="level-pill">3</div>
+          <div class="level-pill">4</div>
+          <div class="level-pill">5</div>
+        </div>
+        <hr class="divider">
+        <div class="flex-between mb-1">
+          <span class="label" style="margin:0;">Dribbling</span>
+          <div class="level-meter">
+            <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="flex-between mb-1">
+          <span class="label" style="margin:0;">Mottagning</span>
+          <div class="level-meter">
+            <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i>
+          </div>
+        </div>
+        <div class="flex-between">
+          <span class="label" style="margin:0;">Avslut</span>
+          <div class="level-meter">
+            <i class="on"></i><i class="on"></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart mockup -->
+      <div class="card">
+        <h2 class="section-title" style="margin-bottom: 0.5rem;">Utveckling över tid</h2>
+        <p class="text-soft" style="font-size: 0.8125rem; margin-bottom: 0.5rem;">Snittbetyg per månad</p>
+        <div class="chart-mockup">
+          <div class="chart-bar-group">
+            <div class="chart-bar dim" style="height: 40%;"></div>
+            <div class="chart-bar-label">Mar</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar dim" style="height: 55%;"></div>
+            <div class="chart-bar-label">Apr</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar" style="height: 50%;"></div>
+            <div class="chart-bar-label">Maj</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar" style="height: 65%;"></div>
+            <div class="chart-bar-label">Jun</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar" style="height: 70%;"></div>
+            <div class="chart-bar-label">Jul</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar" style="height: 85%;"></div>
+            <div class="chart-bar-label">Aug</div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar" style="height: 92%;"></div>
+            <div class="chart-bar-label">Sep</div>
+          </div>
+        </div>
+        <div class="flex gap-md mt-2">
+          <span class="badge badge-accent">Aktuell säsong</span>
+          <span class="badge badge-neutral">Förra säsongen</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FORM EXAMPLE ============ -->
+  <div class="section">
+    <div class="card" style="max-width: 480px;">
+      <h2 class="section-title" style="margin-bottom: 1rem;">Registrera match</h2>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label class="label">Motståndare</label>
+          <input class="input" type="text" placeholder="t.ex. IFK Stocksund">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label class="label">Datum</label>
+            <input class="input" type="date">
+          </div>
+          <div>
+            <label class="label">Nivå</label>
+            <select class="input">
+              <option>Lätt</option>
+              <option>Medel</option>
+              <option>Svår</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-md mt-1">
+          <button class="btn-primary">Spara match</button>
+          <button class="btn-secondary">Avbryt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLOR PALETTE ============ -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Färgpalett</h2>
+    </div>
+    <div class="card">
+      <p class="text-soft mb-1" style="font-size: 0.875rem;">
+        Navy-bakgrund + klubbfärg (gul default) + 3 statusfärger. Alla tidigare
+        kategorifärger (teal, blue, purple, coral, green, slate) är borttagna.
+      </p>
+      <div class="flex gap-md mt-2" style="flex-wrap: wrap;">
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--primary);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">Accent</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--bg);border:1px solid var(--line);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">Navy bg</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">Kort</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--ok);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">OK (grön)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--warn);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">Varn (gul)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;border-radius:8px;background:var(--danger);margin-bottom:0.375rem;"></div>
+          <div class="text-faint" style="font-size:0.75rem;">Farlig (röd)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TYPOGRAPHY SAMPLE ============ -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Typografi</h2>
+    </div>
+    <div class="card">
+      <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">DISPLAY H1 — Oswald 700</h1>
+      <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Rubrik H2 — Oswald 600</h2>
+      <h3 style="font-size: 1.125rem; margin-bottom: 0.5rem;">Underrubrik H3 — Oswald 500</h3>
+      <p style="font-size: 0.875rem; margin-bottom: 0.5rem;">
+        Body-text — Inter 400, 14px. Det här är den vanliga texten som används överallt
+        i appen. Tillräckligt stor för att vara lättläst, även på mobil.
+      </p>
+      <p class="text-soft" style="font-size: 0.875rem; margin-bottom: 0.5rem;">
+        Mjuk text — Inter 400, 14px, ink-soft färg.
+      </p>
+      <p class="text-faint" style="font-size: 0.75rem; margin-bottom: 0.5rem;">
+        Metatext — Inter 400, 12px, ink-faint. Minsta tillåtna storlek.
+      </p>
+      <div class="eyebrow" style="margin-top: 0.5rem;">EYEBROW — Oswald 600, 12px, accent</div>
+      <div class="stat-number accent" style="margin-top: 0.5rem;">42 tabular nummer</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+</script>
+
+</body>
+</html>

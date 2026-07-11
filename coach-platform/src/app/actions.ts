@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
-import { deleteExercise, deletePeriod, deletePlayer, deleteSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession } from "@/repositories/postgres";
+import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, addBlock, updateBlock } from "@/repositories/postgres";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -42,6 +42,34 @@ export async function upsertSession(data: FormData) {
 }
 
 export async function removeSession(data: FormData) { await deleteSession(text(data, "id")); revalidatePath("/traningspass"); }
+
+const coachingPoints = (data: FormData) => text(data, "coachingPoints").split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
+
+export async function upsertBlock(data: FormData) {
+  const id = text(data, "id") || undefined;
+  const sessionId = text(data, "sessionId");
+  const exerciseId = text(data, "exerciseId");
+  const minutes = number(data, "minutes");
+  const exercise = await getExercise(exerciseId);
+  if (!exercise) throw new Error("Övningen finns inte i pilotorganisationen.");
+  if (!sessionId || minutes < 1) throw new Error("Kontrollera blocket (minuter).");
+  const points = coachingPoints(data);
+  if (id) await updateBlock({ id, exerciseId, title: exercise.name, minutes, coachingPoints: points });
+  else await addBlock({ sessionId, exerciseId, title: exercise.name, minutes, coachingPoints: points });
+  revalidatePath(`/traningspass/${sessionId}`);
+}
+
+export async function removeBlock(data: FormData) {
+  const sessionId = text(data, "sessionId");
+  await deleteBlock(text(data, "id"));
+  if (sessionId) revalidatePath(`/traningspass/${sessionId}`);
+}
+
+export async function moveBlockAction(data: FormData) {
+  const sessionId = text(data, "sessionId");
+  await moveBlock(text(data, "id"), text(data, "dir") === "up" ? -1 : 1);
+  if (sessionId) revalidatePath(`/traningspass/${sessionId}`);
+}
 
 export async function upsertPeriod(data: FormData) {
   const input = { id: text(data, "id") || undefined, name: text(data, "name"), theme: text(data, "theme"), startsAt: text(data, "startsOn"), endsAt: text(data, "endsOn") };
