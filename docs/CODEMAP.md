@@ -7,7 +7,7 @@
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Anthropic SDK, Recharts, Tailwind v4.
 OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/next/dist/docs/`.
 
-Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQL-produkt med egen README, domänmodell, demovertikal och migrationsschema. Genomförandeplanen finns i `IMPLEMENTATION_PLAN.md`.
+Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQL-produkt med egen README, domänmodell, demovertikal och migrationsschema. `coach-platform/src/repositories/postgres.ts` avgränsar databasfrågor till pilotlaget och `coach-platform/src/app/actions.ts` innehåller server-side CRUD för spelare, övningar och träningspass. Genomförandeplanen finns i `IMPLEMENTATION_PLAN.md`.
 
 ---
 

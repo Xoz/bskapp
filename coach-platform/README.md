@@ -20,11 +20,11 @@ Appen öppnas på `http://localhost:3100`.
 - `src/domain`: ramverksoberoende domäntyper och regler.
 - `src/repositories`: gränsen mellan UI/domän och persistens.
 - `src/schemas`: Zod-validering vid tillitsgränser.
-- `src/data/demo.ts`: realistisk läsmodell för den första körbara produktvertikalen.
+- `src/data/demo.ts`: kvarvarande demodata för dashboard, planering och matcher.
 - `db/migrations`: normaliserat PostgreSQL-schema. JSONB används bara för diagramobjekt/actions.
 - `src/app`: fristående Next.js-skal och produktvyer.
 
-Nuvarande vertikal visar dashboard, 14 fiktiva spelare, 25 övningar, 10 träningspass, säsongsperioder och matchobservation→träningsfokus. Skrivande UI använder ännu demo-läsmodellen; nästa milstolpe kopplar repositories till PostgreSQL och inför riktig auth/RBAC.
+Spelare, övningar och träningspass läses och skrivs nu i PostgreSQL via server actions. Pilotlaget väljs server-side med `PILOT_TEAM_ID`, eller det första laget i den lokala pilotdatabasen. Dashboard, planering och matcher använder fortfarande demo-läsmodellen. BSK-sessionen kopplas in först när plattformen integreras med ordinarie BSK-app; separat auth och generell flerlag-RBAC ingår inte i MVP:n.
 
 ## Integrationsstrategi
 
