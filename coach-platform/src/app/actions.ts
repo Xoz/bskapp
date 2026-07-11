@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
 import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveConductedSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
@@ -101,6 +102,7 @@ export async function saveConductAction(data: FormData) {
   await setSessionStatus(sessionId, "completed");
   revalidatePath(`/traningspass/${sessionId}`);
   revalidatePath("/traningspass");
+  redirect(`/traningspass/${sessionId}`);
 }
 
 const coachingPoints = (data: FormData) => text(data, "coachingPoints").split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
