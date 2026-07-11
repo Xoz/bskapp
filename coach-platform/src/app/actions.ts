@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { deleteExercise, deletePlayer, deleteSession, saveExercise, savePlayer, saveSession } from "@/repositories/postgres";
+import { diagramSchema } from "@/domain/diagram";
+import type { Diagram } from "@/domain/diagram";
+import { deleteExercise, deletePlayer, deleteSession, saveDiagram, saveExercise, savePlayer, saveSession } from "@/repositories/postgres";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -25,6 +27,12 @@ export async function upsertExercise(data: FormData) {
 }
 
 export async function removeExercise(data: FormData) { await deleteExercise(text(data, "id")); revalidatePath("/ovningar"); }
+
+export async function saveExerciseDiagram(exerciseId: string, diagram: Diagram) {
+  const parsed = diagramSchema.parse(diagram);
+  await saveDiagram(exerciseId, parsed);
+  revalidatePath(`/ovningar/${exerciseId}/ritare`);
+}
 
 export async function upsertSession(data: FormData) {
   const input = { id: text(data, "id") || undefined, title: text(data, "title"), theme: text(data, "theme"), startsAt: text(data, "startsAt"), plannedMinutes: number(data, "plannedMinutes"), status: text(data, "status") === "planned" ? "planned" as const : "draft" as const };

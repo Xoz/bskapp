@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import type { Diagram } from "@/domain/diagram";
 import type { Exercise, Player, TrainingSession } from "@/domain/model";
 
 const sql = postgres(process.env.DATABASE_URL ?? "postgres://coach:coach@localhost:5434/coach", { max: 5 });
@@ -50,6 +51,39 @@ export async function saveExercise(input: { id?: string; name: string; summary: 
 export async function deleteExercise(id: string) {
   const team = await pilotTeam();
   await sql`DELETE FROM exercises WHERE id=${id} AND organization_id=${team.organizationId}`;
+}
+
+export async function getExercise(id: string): Promise<{ id: string; name: string } | null> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT id, name FROM exercises WHERE id=${id} AND organization_id=${team.organizationId}`;
+  return rows[0] ? { id: String(rows[0].id), name: String(rows[0].name) } : null;
+}
+
+export async function getDiagram(exerciseId: string): Promise<Diagram | null> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT objects, actions, width_ratio FROM exercise_diagrams d JOIN exercises e ON e.id=d.exercise_id WHERE d.exercise_id=${exerciseId} AND e.organization_id=${team.organizationId} ORDER BY d.version DESC LIMIT 1`;
+  if (!rows[0]) return null;
+  const r = rows[0];
+  const widthRatio = Number(r.width_ratio);
+  const objects = (r.objects ?? []) as Diagram["objects"];
+  const arrows = (r.actions ?? []) as Diagram["arrows"];
+  return { widthRatio, objects, arrows };
+}
+
+// ponytail: SELECT-then-upsert utan unique-constraint; sällsynt race för pilot-MVP,
+// lägg UNIQUE(exercise_id) om flera tränare skriver samtidigt
+export async function saveDiagram(exerciseId: string, diagram: Diagram) {
+  const team = await pilotTeam();
+  const guard = await sql`SELECT id FROM exercises WHERE id=${exerciseId} AND organization_id=${team.organizationId}`;
+  if (!guard[0]) throw new Error("Övningen finns inte i pilotorganisationen.");
+  const existing = await sql`SELECT id FROM exercise_diagrams WHERE exercise_id=${exerciseId} ORDER BY version DESC LIMIT 1`;
+  const obj = JSON.stringify(diagram.objects);
+  const act = JSON.stringify(diagram.arrows);
+  if (existing[0]) {
+    await sql`UPDATE exercise_diagrams SET objects=${obj}::jsonb, actions=${act}::jsonb, width_ratio=${diagram.widthRatio} WHERE id=${existing[0].id}`;
+  } else {
+    await sql`INSERT INTO exercise_diagrams (exercise_id, version, width_ratio, objects, actions) VALUES (${exerciseId}, 1, ${diagram.widthRatio}, ${obj}::jsonb, ${act}::jsonb)`;
+  }
 }
 
 export async function listSessions(): Promise<TrainingSession[]> {

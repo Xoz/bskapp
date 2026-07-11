@@ -20,6 +20,7 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 
 ## Nasta steg
 
+- Milstolpe 4 i tranarplattformen (ovningsritare) byggd 2026-07-11: objektbaserad SVG-ritare med animerade pil-sekvenser, undo/redo (Zustand), SVG/PNG-export och persistence mot `exercise_diagrams`. Route `/ovningar/[id]/ritare`. Se `coach-platform/docs/exercise-format.md` och `IMPLEMENTATION_PLAN.md`. Ej testad mot VPS-anvandare an.
 - Hall denna fil och `docs/CODEMAP.md` i sync nar projektets viktiga orienteringspunkter andras
 - Spelarens read-only "spelarvy" pa utvecklingstrappan byggd 2026-07-10: `/mitt-utvecklingstrad` (egen route, gated via getPlayerSession, `UtvecklingChecklist` har fatt en `readOnly`-prop). Idé fran anvandaren: eventuellt aterananda samma checklistemonster for sjalva utvarderingen (`utvardera`/SvFF) - inte byggt, endast diskuterat.
 - Fraga om att ta bort/flytta pass-/skottstatistik fran spelarniva till lagniva ar medvetet uppskjuten, ror inte utan att anvandaren tar upp det igen
