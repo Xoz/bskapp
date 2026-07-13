@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: coach
       POSTGRES_PASSWORD: coach
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - coach_data:/var/lib/postgresql/data
     healthcheck:
