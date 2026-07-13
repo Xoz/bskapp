@@ -1,60 +1,40 @@
 import type { Arrow, Diagram, DiagramObject } from "@/domain/diagram";
 import { arrowsSorted } from "./diagramStore";
-import { ARROW_COLOR, ARROW_DASH, H, arrowMarkers, pitchMarkings, resolve, TEAM_COLOR } from "./diagramRender";
+import { ARROW_COLOR, ARROW_DASH, H, TEAM_COLOR, arrowMarkers, arrowPath, pitchMarkings, resolve } from "./diagramRender";
 
-// Läs-bara rendering av ett Diagram — stor, statisk SVG för träningsläget.
-// Ingen "use client" — serverkomponent. seqIndex/ballOverride valfritt för framtida uppspelning.
+function StaticObject({ object, h }: { object: DiagramObject; h: number }) {
+  const x = object.x * 100;
+  const y = object.y * h;
+  const rotation = object.rotation ?? 0;
+  if (object.type === "zone") {
+    const width = (object.width ?? 0.24) * 100;
+    const height = (object.height ?? 0.22) * h;
+    return <rect x={x - width / 2} y={y - height / 2} width={width} height={height} rx={1} fill="#f7d15422" stroke="#ffe066" strokeWidth={0.45} strokeDasharray="2 1.5" />;
+  }
+  if (object.type === "text") return <text x={x} y={y} textAnchor="middle" fill="#fff" fontSize={3.1} fontWeight={800} paintOrder="stroke" stroke="#173b2a" strokeWidth={0.8}>{object.label || "Text"}</text>;
+  if (object.type === "player") return <><circle cx={x} cy={y} r={2.4} fill={TEAM_COLOR[object.team ?? "att"]} stroke="#fff" strokeWidth={0.65} />{object.label && <text x={x} y={y + 0.85} fontSize={2.2} textAnchor="middle" fill="#fff" fontWeight={900}>{object.label}</text>}</>;
+  if (object.type === "ball") return <><circle cx={x} cy={y} r={1.25} fill="#fff" stroke="#17211d" strokeWidth={0.35} /><path d={`M ${x - 0.5} ${y} l 0.5 -0.45 0.5 0.45 -0.2 0.55 -0.6 0 z`} fill="#17211d" /></>;
+  if (object.type === "cone") return <polygon points={`${x},${y - 1.5} ${x + 1.35},${y + 1} ${x - 1.35},${y + 1}`} fill="#ff8b32" stroke="#9a4510" strokeWidth={0.3} />;
+  if (object.type === "pole") return <g transform={`rotate(${rotation} ${x} ${y})`}><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#ffd84d" strokeWidth={1.1} /><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#e44" strokeWidth={0.35} strokeDasharray="1.5 1.5" /></g>;
+  const width = object.type === "goal" ? 10 : 6;
+  const depth = object.type === "goal" ? 3 : 2.5;
+  return <g transform={`rotate(${rotation} ${x} ${y})`} stroke="#fff" strokeWidth={0.55} fill="#ffffff18"><path d={`M ${x - width / 2} ${y + depth / 2} V ${y - depth / 2} H ${x + width / 2} V ${y + depth / 2}`} /><path d={`M ${x - width / 2} ${y - depth / 2} l 1.3 ${depth} h ${width - 2.6} l 1.3 -${depth}`} opacity={0.7} /></g>;
+}
 
-export function DiagramView({ diagram, seqIndex = -1, className, style }: { diagram: Diagram; seqIndex?: number; className?: string; style?: React.CSSProperties }) {
+export function DiagramView({ diagram, className, style }: { diagram: Diagram; className?: string; style?: React.CSSProperties }) {
   const h = H(diagram.widthRatio);
-  const sorted = arrowsSorted(diagram);
-  const ballOverride = (() => {
-    if (seqIndex < 0) return null;
-    const a = sorted[seqIndex];
-    if (!a) return null;
-    return resolve(a.to, diagram.objects, h);
-  })();
-
-  const renderObject = (obj: DiagramObject) => {
-    const x = obj.type === "ball" && ballOverride ? ballOverride[0] : obj.x * 100;
-    const y = obj.type === "ball" && ballOverride ? ballOverride[1] : obj.y * h;
-    if (obj.type === "player") {
-      const fill = TEAM_COLOR[obj.team ?? "att"];
-      return (
-        <g key={obj.id}>
-          <circle cx={x} cy={y} r={2.1} fill={fill} stroke="#fff" strokeWidth={0.6} />
-          {obj.label && <text x={x} y={y + 0.8} fontSize={2.1} textAnchor="middle" fill="#fff" fontWeight={800}>{obj.label}</text>}
-        </g>
-      );
-    }
-    if (obj.type === "ball") {
-      return <circle key={obj.id} cx={x} cy={y} r={1.1} fill="#fff" stroke="#111" strokeWidth={0.3} />;
-    }
-    if (obj.type === "cone") {
-      return <polygon key={obj.id} points={`${x},${y - 1.3} ${x + 1.2},${y + 0.9} ${x - 1.2},${y + 0.9}`} fill="#ee8c22" stroke="#a85e10" strokeWidth={0.25} />;
-    }
-    return <rect key={obj.id} x={x - 1.4} y={y - 0.9} width={2.8} height={1.8} fill="#fff" stroke="#444" strokeWidth={0.25} />;
+  const renderArrow = (arrow: Arrow) => {
+    const from = resolve(arrow.from, diagram.objects, h);
+    const to = resolve(arrow.to, diagram.objects, h);
+    return <path key={arrow.id} d={arrowPath(arrow.kind, from, to)} fill="none" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.75} strokeDasharray={ARROW_DASH[arrow.kind]} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#ah-${arrow.kind})`} />;
   };
-
-  const renderArrow = (arrow: Arrow, idx: number) => {
-    const [fx, fy] = resolve(arrow.from, diagram.objects, h);
-    const [tx, ty] = resolve(arrow.to, diagram.objects, h);
-    const shown = idx <= seqIndex;
-    const color = ARROW_COLOR[arrow.kind];
-    return (
-      <g key={`arrow-${arrow.id}`}>
-        <line x1={fx} y1={fy} x2={tx} y2={ty} stroke={color} strokeWidth={0.7} strokeDasharray={ARROW_DASH[arrow.kind]} opacity={shown || seqIndex < 0 ? 0.95 : 0.4} markerEnd={`url(#ah-${arrow.kind})`} />
-        <circle cx={fx} cy={fy} r={1.0} fill={color} opacity={shown || seqIndex < 0 ? 0.95 : 0.4} />
-      </g>
-    );
-  };
-
   return (
     <svg viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${diagram.widthRatio}`, display: "block", width: "100%", touchAction: "none", ...style }} className={className}>
       <defs>{arrowMarkers()}</defs>
       {pitchMarkings(h)}
-      {sorted.map(renderArrow)}
-      {diagram.objects.map(renderObject)}
+      {diagram.objects.filter((object) => object.type === "zone").map((object) => <StaticObject key={object.id} object={object} h={h} />)}
+      {arrowsSorted(diagram).map(renderArrow)}
+      {diagram.objects.filter((object) => object.type !== "zone").map((object) => <StaticObject key={object.id} object={object} h={h} />)}
     </svg>
   );
 }

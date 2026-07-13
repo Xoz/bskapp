@@ -1,20 +1,22 @@
 # Övningsformat
 
-Planpositioner ska vara normaliserade 0–1. Diagrammet består av versionshanterade objekt och actions med stabila id:n. Pilar refererar objekt-id eller fri punkt. JSON importeras först efter Zod-validering; SVG/PNG är exportformat, aldrig datakälla.
+Planpositioner ska vara normaliserade 0–1. Diagrammet är statiskt och består av objekt och rörelselinjer med stabila id:n. Pilar refererar objekt-id eller fri punkt. JSON importeras först efter Zod-validering; SVG/PNG är exportformat, aldrig datakälla.
 
 ## Konkret format (`src/domain/diagram.ts`)
 
 ```ts
-DiagramObject { id, type: "player"|"ball"|"cone"|"goal", x: 0..1, y: 0..1, label?, team?: "att"|"def"|"gk" }
+DiagramObject { id, type: "player"|"ball"|"cone"|"pole"|"goal"|"miniGoal"|"zone"|"text", x: 0..1, y: 0..1, label?, team?, width?, height?, rotation? }
 Arrow         { id, kind: "pass"|"run"|"dribble", from: {objectId?}|{point:[x,y]}, to: {objectId?}|{point:[x,y]}, order }
 Diagram       { widthRatio: number, objects: DiagramObject[], arrows: Arrow[] }
 ```
 
-- `widthRatio` tolkas som planens höjd/bredd (0.65 ≈ 7v7, ~1.5:1); SVG `aspect-ratio: 1 / widthRatio`.
-- `order` styr uppspelningssekvensen — pilarna spelas i ordning, bollen flyttas till aktuella pilens `to`.
+- `widthRatio` tolkas som planens höjd/bredd och väljer samtidigt planmall: träningsyta `0.72`, halvplan `0.8`, helplan `0.65`, kvadrat `1.0`.
+- `order` bevaras för bakåtkompatibilitet men diagrammet har ingen uppspelning eller animation.
 - `objectId`-referenser följer objektet när det flyttas; fri `point` ligger fast.
+- Passning visas streckad, löpning rak och dribbling sicksackad.
+- Zoner renderas bakom övriga objekt och kan ändra bredd/höjd. Spelare och text kan få etikett; mål och pinnar kan roteras.
 - Validering: `diagramSchema` (Zod). `serialize`/`parse` garanterar round-trip.
 
 ## Persistens
 
-`exercise_diagrams` (objects+actions jsonb, width_ratio, version). En aktiv diagramrad per övning i pilot-MVP; `saveDiagram` gör SELECT-then-upsert (ingen unique-constraint ännu).
+`exercise_diagrams` (objects+actions jsonb, width_ratio, version). En aktiv diagramrad per övning i pilot-MVP; `saveDiagram` gör SELECT-then-upsert (ingen unique-constraint ännu). JSON skrivs med postgres.js `sql.json` så kolumnernas array-constraints bevaras.

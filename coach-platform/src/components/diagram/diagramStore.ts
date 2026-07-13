@@ -10,7 +10,6 @@ interface DiagramState {
   past: Diagram[];
   future: Diagram[];
   selectedId: string | null;
-  seqIndex: number; // index in arrows sorted by order; -1 = startläge
   // mutations
   load: (d: Diagram) => void;
   reset: () => void;
@@ -19,6 +18,8 @@ interface DiagramState {
   moveObjectLive: (id: string, x: number, y: number) => void; // drag: ingen ny historikpost
   snapshot: () => void; // pusha nuvarande present till past (start av drag)
   setObjectTeam: (id: string, team: Team) => void;
+  updateObject: (id: string, patch: Partial<DiagramObject>) => void;
+  duplicateObject: (id: string) => void;
   deleteObject: (id: string) => void;
   addArrow: (kind: ArrowKind, from: ArrowEndpoint, to: ArrowEndpoint) => void;
   deleteArrow: (id: string) => void;
@@ -26,8 +27,6 @@ interface DiagramState {
   select: (id: string | null) => void;
   undo: () => void;
   redo: () => void;
-  setSeq: (i: number) => void;
-  stepSeq: (delta: number) => void;
 }
 
 // ponytail: full-state snapshots kap 50; byt till patch-baserat om diagram växer stort
@@ -38,7 +37,7 @@ export const useDiagram = create<DiagramState>((set, get) => {
     set((s) => {
       const past = [...s.past, s.present];
       if (past.length > HISTORY_CAP) past.shift();
-      return { present: next, past, future: [], seqIndex: -1 };
+      return { present: next, past, future: [] };
     });
   const update = (fn: (d: Diagram) => Diagram) => commit(fn(clone(get().present)));
 
@@ -47,16 +46,16 @@ export const useDiagram = create<DiagramState>((set, get) => {
     past: [],
     future: [],
     selectedId: null,
-    seqIndex: -1,
-
-    load: (d) => set({ present: clone(d), past: [], future: [], selectedId: null, seqIndex: -1 }),
-    reset: () => set({ present: emptyDiagram(), past: [], future: [], selectedId: null, seqIndex: -1 }),
+    load: (d) => set({ present: clone(d), past: [], future: [], selectedId: null }),
+    reset: () => set({ present: emptyDiagram(), past: [], future: [], selectedId: null }),
 
     addObject: (type, x, y, team, label) =>
       update((d) => {
         const obj: DiagramObject = { id: uid(type), type, x, y };
         if (team) obj.team = team;
         if (label) obj.label = label;
+        if (type === "zone") Object.assign(obj, { width: 0.24, height: 0.22 });
+        if (type === "text" && !label) obj.label = "Text";
         d.objects.push(obj);
         return d;
       }),
@@ -91,6 +90,18 @@ export const useDiagram = create<DiagramState>((set, get) => {
         if (o && o.type === "player") o.team = team;
         return d;
       }),
+    updateObject: (id, patch) =>
+      update((d) => {
+        const object = d.objects.find((item) => item.id === id);
+        if (object) Object.assign(object, patch);
+        return d;
+      }),
+    duplicateObject: (id) =>
+      update((d) => {
+        const object = d.objects.find((item) => item.id === id);
+        if (object) d.objects.push({ ...object, id: uid(object.type), x: Math.min(0.97, object.x + 0.04), y: Math.min(0.97, object.y + 0.04) });
+        return d;
+      }),
 
     deleteObject: (id) =>
       update((d) => {
@@ -121,20 +132,13 @@ export const useDiagram = create<DiagramState>((set, get) => {
         if (!s.past.length) return s;
         const past = [...s.past];
         const present = past.pop()!;
-        return { present, past, future: [s.present, ...s.future], seqIndex: -1 };
+        return { present, past, future: [s.present, ...s.future], selectedId: null };
       }),
     redo: () =>
       set((s) => {
         if (!s.future.length) return s;
         const [present, ...future] = s.future;
-        return { present, past: [...s.past, s.present], future, seqIndex: -1 };
-      }),
-
-    setSeq: (i) => set((s) => ({ seqIndex: Math.min(s.present.arrows.length - 1, Math.max(-1, i)) })),
-    stepSeq: (delta) =>
-      set((s) => {
-        const max = s.present.arrows.length - 1;
-        return { seqIndex: Math.min(max, Math.max(-1, s.seqIndex + delta)) };
+        return { present, past: [...s.past, s.present], future, selectedId: null };
       }),
   };
 });

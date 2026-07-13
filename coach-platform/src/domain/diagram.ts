@@ -3,7 +3,7 @@ import { z } from "zod";
 // Serialiserbart övningsdiagram. Positioner normaliserade 0–1 (se docs/exercise-format.md).
 // Ren domän — får inte importera Next.js (leveransprincip i IMPLEMENTATION_PLAN.md).
 
-export type ObjectType = "player" | "ball" | "cone" | "goal";
+export type ObjectType = "player" | "ball" | "cone" | "pole" | "goal" | "miniGoal" | "zone" | "text";
 export type Team = "att" | "def" | "gk";
 export type ArrowKind = "pass" | "run" | "dribble";
 
@@ -14,6 +14,9 @@ export interface DiagramObject {
   y: number; // 0..1
   label?: string;
   team?: Team; // endast för player
+  width?: number; // normaliserad bredd, endast zon
+  height?: number; // normaliserad höjd, endast zon
+  rotation?: number; // grader, utrustning
 }
 
 export interface ArrowEndpoint {
@@ -45,11 +48,14 @@ export const diagramSchema = z.object({
   objects: z.array(
     z.object({
       id: z.string(),
-      type: z.enum(["player", "ball", "cone", "goal"]),
+      type: z.enum(["player", "ball", "cone", "pole", "goal", "miniGoal", "zone", "text"]),
       x: z.number().min(0).max(1),
       y: z.number().min(0).max(1),
       label: z.string().optional(),
       team: z.enum(["att", "def", "gk"]).optional(),
+      width: z.number().min(0.02).max(1).optional(),
+      height: z.number().min(0.02).max(1).optional(),
+      rotation: z.number().optional(),
     }),
   ),
   arrows: z.array(
@@ -57,7 +63,7 @@ export const diagramSchema = z.object({
   ),
 });
 
-export const emptyDiagram = (): Diagram => ({ widthRatio: 0.65, objects: [], arrows: [] });
+export const emptyDiagram = (): Diagram => ({ widthRatio: 0.72, objects: [], arrows: [] });
 
 export const serialize = (d: Diagram): unknown => diagramSchema.parse(d);
 export const parse = (input: unknown): Diagram => diagramSchema.parse(input) as Diagram;

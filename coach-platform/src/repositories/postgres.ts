@@ -77,12 +77,12 @@ export async function saveDiagram(exerciseId: string, diagram: Diagram) {
   const guard = await sql`SELECT id FROM exercises WHERE id=${exerciseId} AND organization_id=${team.organizationId}`;
   if (!guard[0]) throw new Error("Övningen finns inte i pilotorganisationen.");
   const existing = await sql`SELECT id FROM exercise_diagrams WHERE exercise_id=${exerciseId} ORDER BY version DESC LIMIT 1`;
-  const obj = JSON.stringify(diagram.objects);
-  const act = JSON.stringify(diagram.arrows);
+  const obj = sql.json(diagram.objects as unknown as postgres.JSONValue);
+  const act = sql.json(diagram.arrows as unknown as postgres.JSONValue);
   if (existing[0]) {
-    await sql`UPDATE exercise_diagrams SET objects=${obj}::jsonb, actions=${act}::jsonb, width_ratio=${diagram.widthRatio} WHERE id=${existing[0].id}`;
+    await sql`UPDATE exercise_diagrams SET objects=${obj}, actions=${act}, width_ratio=${diagram.widthRatio} WHERE id=${existing[0].id}`;
   } else {
-    await sql`INSERT INTO exercise_diagrams (exercise_id, version, width_ratio, objects, actions) VALUES (${exerciseId}, 1, ${diagram.widthRatio}, ${obj}::jsonb, ${act}::jsonb)`;
+    await sql`INSERT INTO exercise_diagrams (exercise_id, version, width_ratio, objects, actions) VALUES (${exerciseId}, 1, ${diagram.widthRatio}, ${obj}, ${act})`;
   }
 }
 

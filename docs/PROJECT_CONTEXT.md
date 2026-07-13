@@ -20,7 +20,7 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 
 ## Nasta steg
 
-- Milstolpe 4 i tranarplattformen (ovningsritare) byggd 2026-07-11: objektbaserad SVG-ritare med animerade pil-sekvenser, undo/redo (Zustand), SVG/PNG-export och persistence mot `exercise_diagrams`. Route `/ovningar/[id]/ritare`. Se `coach-platform/docs/exercise-format.md` och `IMPLEMENTATION_PLAN.md`. Ej testad mot VPS-anvandare an.
+- Milstolpe 4 i tranarplattformen (ovningsritare) ombyggd 2026-07-13 efter jämförelse med riktiga fotbollsövningar: statisk objektbaserad SVG-ritare med planmallar, spelare/lagfärger, boll, koner, pinnar, stora mål/minimål, zoner, text, tydliga linjetyper, egenskapspanel, undo/redo och SVG/PNG-export. Animation/sekvensspelare borttagen. Persistence mot `exercise_diagrams` verifierad lokalt efter rättning till `sql.json`. Route `/ovningar/[id]/ritare`. Se `coach-platform/docs/exercise-format.md`. Ej testad mot VPS-anvandare an.
 - Säsongsplanering + traningsblockbyggare pa borjan av milstolpe 5 byggda 2026-07-11: `/planering` ar nu DB-backad (period-CRUD) och `/traningspass/[id]` let tranaen bygga/ordna ovningsblock per pass. Kalender, narvaro, traningslage och genomforande i milstolpe 5 ar kvar.
 - Hall denna fil och `docs/CODEMAP.md` i sync nar projektets viktiga orienteringspunkter andras
 - Spelarens read-only "spelarvy" pa utvecklingstrappan byggd 2026-07-10: `/mitt-utvecklingstrad` (egen route, gated via getPlayerSession, `UtvecklingChecklist` har fatt en `readOnly`-prop). Idé fran anvandaren: eventuellt aterananda samma checklistemonster for sjalva utvarderingen (`utvardera`/SvFF) - inte byggt, endast diskuterat.
