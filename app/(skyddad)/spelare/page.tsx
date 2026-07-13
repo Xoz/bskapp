@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getRole, hasPermission } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
+import { FEATURES } from "@/lib/features";
 import Avatar from "@/components/Avatar";
 import SpelareTabs from "@/components/SpelareTabs";
 import { level as levelInfo } from "@/lib/levels";
@@ -45,13 +46,15 @@ export default async function PlayersPage() {
             <tr>
               <th>Spelare</th>
               <th>Senast utvärderad</th>
-              <th>Matcher</th>
-              <th>Mål</th>
-              <th>Assist</th>
-              <th className="hidden md:table-cell">Skott</th>
-              <th className="hidden md:table-cell">Skott på mål</th>
-              <th className="hidden lg:table-cell">Passningar</th>
-              <th className="hidden lg:table-cell">Brytningar</th>
+              {FEATURES.matchStats && (<>
+                <th>Matcher</th>
+                <th>Mål</th>
+                <th>Assist</th>
+                <th className="hidden md:table-cell">Skott</th>
+                <th className="hidden md:table-cell">Skott på mål</th>
+                <th className="hidden lg:table-cell">Passningar</th>
+                <th className="hidden lg:table-cell">Brytningar</th>
+              </>)}
               <th></th>
             </tr>
           </thead>
@@ -90,13 +93,15 @@ export default async function PlayersPage() {
                       </span>
                     )}
                   </td>
-                  <td>{s?.matches_played ?? 0}</td>
-                  <td>{s?.goals ?? 0}</td>
-                  <td>{s?.assists ?? 0}</td>
-                  <td className="hidden md:table-cell">{s?.shots ?? 0}</td>
-                  <td className="hidden md:table-cell">{s?.shots_on_target ?? 0}</td>
-                  <td className="hidden lg:table-cell">{s?.passes_completed ?? 0}</td>
-                  <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
+                  {FEATURES.matchStats && (<>
+                    <td>{s?.matches_played ?? 0}</td>
+                    <td>{s?.goals ?? 0}</td>
+                    <td>{s?.assists ?? 0}</td>
+                    <td className="hidden md:table-cell">{s?.shots ?? 0}</td>
+                    <td className="hidden md:table-cell">{s?.shots_on_target ?? 0}</td>
+                    <td className="hidden lg:table-cell">{s?.passes_completed ?? 0}</td>
+                    <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
+                  </>)}
                   <td className="text-right">
                     {canEvaluate && <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary btn-sm">Utvärdera</Link>}
                   </td>

@@ -3,6 +3,7 @@ import { getPlayerByShareToken, shareLinkActive, getEvaluations, getScores, getP
 import { getAllSettings } from "@/lib/db";
 import { CATEGORIES } from "@/lib/svff";
 import { STAT_FIELDS } from "@/lib/stats";
+import { FEATURES } from "@/lib/features";
 import { positionLabel } from "@/lib/positions";
 import SkillRadar from "@/components/SkillRadar";
 import DevelopmentChart from "@/components/DevelopmentChart";
@@ -102,7 +103,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
             </div>
             <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
               {posLabel ?? "Spelarkort"}
-              {playedMatches.length > 0 && ` · ${playedMatches.length} ${playedMatches.length === 1 ? "match" : "matcher"}`}
+              {FEATURES.matchStats && playedMatches.length > 0 && ` · ${playedMatches.length} ${playedMatches.length === 1 ? "match" : "matcher"}`}
             </p>
           </div>
         </div>
@@ -117,8 +118,8 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           </div>
         )}
 
-        {/* Säsongssiffror */}
-        {playedMatches.length > 0 && (
+        {/* Säsongssiffror (dold när matchStats är av) */}
+        {FEATURES.matchStats && playedMatches.length > 0 && (
           <div className="card p-6">
             <p className="eyebrow mb-3">Säsongen i siffror</p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -185,8 +186,8 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           </div>
         )}
 
-        {/* Match för match */}
-        {playedMatches.length > 0 && (
+        {/* Match för match (dold när matchStats är av) */}
+        {FEATURES.matchStats && playedMatches.length > 0 && (
           <div className="card p-6">
             <p className="eyebrow mb-3">Match för match</p>
             <div className="overflow-x-auto -mx-2">
@@ -223,7 +224,7 @@ export default async function PlayerCardPage({ params }: { params: Promise<{ tok
           </div>
         )}
 
-        {!latest && playedMatches.length === 0 && (
+        {!latest && (FEATURES.matchStats ? playedMatches.length === 0 : true) && (
           <div className="card p-10 text-center">
             <p className="text-4xl mb-3">⚽</p>
             <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>

@@ -295,8 +295,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Matchform – ELO-baserat form-tal från matchbetygen */}
-      {formBand && (
+      {/* Matchform – ELO-baserat form-tal från matchbetygen (dold när matchStats är av) */}
+      {FEATURES.matchStats && formBand && (
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
             <div>
