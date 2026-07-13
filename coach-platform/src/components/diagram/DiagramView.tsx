@@ -12,8 +12,8 @@ function StaticObject({ object, h }: { object: DiagramObject; h: number }) {
     return <rect x={x - width / 2} y={y - height / 2} width={width} height={height} rx={1} fill="#f7d15422" stroke="#ffe066" strokeWidth={0.45} strokeDasharray="2 1.5" />;
   }
   if (object.type === "text") return <text x={x} y={y} textAnchor="middle" fill="#fff" fontSize={3.1} fontWeight={800} paintOrder="stroke" stroke="#173b2a" strokeWidth={0.8}>{object.label || "Text"}</text>;
-  if (object.type === "player") return <><circle cx={x} cy={y} r={2.4} fill={TEAM_COLOR[object.team ?? "att"]} stroke="#fff" strokeWidth={0.65} />{object.label && <text x={x} y={y + 0.85} fontSize={2.2} textAnchor="middle" fill="#fff" fontWeight={900}>{object.label}</text>}</>;
-  if (object.type === "ball") return <><circle cx={x} cy={y} r={1.25} fill="#fff" stroke="#17211d" strokeWidth={0.35} /><path d={`M ${x - 0.5} ${y} l 0.5 -0.45 0.5 0.45 -0.2 0.55 -0.6 0 z`} fill="#17211d" /></>;
+  if (object.type === "player") return <><circle cx={x} cy={y} r={1.5} fill={TEAM_COLOR[object.team ?? "att"]} stroke="#fff" strokeWidth={0.45} />{object.label && <text x={x} y={y + 0.5} fontSize={1.35} textAnchor="middle" fill="#fff" fontWeight={900}>{object.label}</text>}</>;
+  if (object.type === "ball") return <><circle cx={x} cy={y} r={1.5} fill="#fff" stroke="#17211d" strokeWidth={0.35} /><path d={`M ${x - 0.55} ${y} l 0.55 -0.5 0.55 0.5 -0.22 0.6 -0.66 0 z`} fill="#17211d" /></>;
   if (object.type === "cone") return <polygon points={`${x},${y - 1.5} ${x + 1.35},${y + 1} ${x - 1.35},${y + 1}`} fill="#ff8b32" stroke="#9a4510" strokeWidth={0.3} />;
   if (object.type === "pole") return <g transform={`rotate(${rotation} ${x} ${y})`}><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#ffd84d" strokeWidth={1.1} /><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#e44" strokeWidth={0.35} strokeDasharray="1.5 1.5" /></g>;
   const width = object.type === "goal" ? 10 : 6;

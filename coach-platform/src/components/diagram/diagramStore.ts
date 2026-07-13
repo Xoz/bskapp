@@ -17,11 +17,11 @@ interface DiagramState {
   moveObject: (id: string, x: number, y: number) => void;
   moveObjectLive: (id: string, x: number, y: number) => void; // drag: ingen ny historikpost
   snapshot: () => void; // pusha nuvarande present till past (start av drag)
-  setObjectTeam: (id: string, team: Team) => void;
   updateObject: (id: string, patch: Partial<DiagramObject>) => void;
   duplicateObject: (id: string) => void;
   deleteObject: (id: string) => void;
   addArrow: (kind: ArrowKind, from: ArrowEndpoint, to: ArrowEndpoint) => void;
+  updateArrow: (id: string, patch: Partial<Arrow>) => void;
   deleteArrow: (id: string) => void;
   setWidth: (ratio: number) => void;
   select: (id: string | null) => void;
@@ -84,12 +84,6 @@ export const useDiagram = create<DiagramState>((set, get) => {
         if (past.length > HISTORY_CAP) past.shift();
         return { past, future: [] };
       }),
-    setObjectTeam: (id, team) =>
-      update((d) => {
-        const o = d.objects.find((o) => o.id === id);
-        if (o && o.type === "player") o.team = team;
-        return d;
-      }),
     updateObject: (id, patch) =>
       update((d) => {
         const object = d.objects.find((item) => item.id === id);
@@ -114,6 +108,13 @@ export const useDiagram = create<DiagramState>((set, get) => {
       update((d) => {
         const arrow: Arrow = { id: uid("arrow"), kind, from, to, order: d.arrows.length };
         d.arrows.push(arrow);
+        return d;
+      }),
+
+    updateArrow: (id, patch) =>
+      update((d) => {
+        const arrow = d.arrows.find((item) => item.id === id);
+        if (arrow) Object.assign(arrow, patch);
         return d;
       }),
 

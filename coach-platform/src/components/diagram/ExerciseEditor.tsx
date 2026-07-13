@@ -18,7 +18,6 @@ const pitchPresets: PitchPreset[] = [
   { label: "Helplan", ratio: 0.65 },
 ];
 const objectTools: { type: ObjectType; icon: string; label: string }[] = [
-  { type: "player", icon: "●", label: "Spelare" },
   { type: "ball", icon: "⚽", label: "Boll" },
   { type: "cone", icon: "▲", label: "Kon" },
   { type: "pole", icon: "┃", label: "Pinne" },
@@ -45,9 +44,9 @@ function ObjectShape({ object, h, selected = false }: { object: DiagramObject; h
   if (object.type === "text") return <text x={x} y={y} textAnchor="middle" fill="#fff" fontSize={3.1} fontWeight={800} paintOrder="stroke" stroke="#173b2a" strokeWidth={0.8}>{object.label || "Text"}</text>;
   if (object.type === "player") {
     const fill = TEAM_COLOR[object.team ?? "att"];
-    return <><circle cx={x} cy={y} r={2.4} fill={fill} stroke="#fff" strokeWidth={0.65} />{object.label && <text x={x} y={y + 0.85} fontSize={2.2} textAnchor="middle" fill="#fff" fontWeight={900}>{object.label}</text>}</>;
+    return <><circle cx={x} cy={y} r={1.5} fill={fill} stroke="#fff" strokeWidth={0.45} />{object.label && <text x={x} y={y + 0.5} fontSize={1.35} textAnchor="middle" fill="#fff" fontWeight={900}>{object.label}</text>}</>;
   }
-  if (object.type === "ball") return <><circle cx={x} cy={y} r={1.25} fill="#fff" stroke="#17211d" strokeWidth={0.35} /><path d={`M ${x - 0.5} ${y} l 0.5 -0.45 0.5 0.45 -0.2 0.55 -0.6 0 z`} fill="#17211d" /></>;
+  if (object.type === "ball") return <><circle cx={x} cy={y} r={1.5} fill="#fff" stroke="#17211d" strokeWidth={0.35} /><path d={`M ${x - 0.55} ${y} l 0.55 -0.5 0.55 0.5 -0.22 0.6 -0.66 0 z`} fill="#17211d" /></>;
   if (object.type === "cone") return <polygon points={`${x},${y - 1.5} ${x + 1.35},${y + 1} ${x - 1.35},${y + 1}`} fill="#ff8b32" stroke="#9a4510" strokeWidth={0.3} />;
   if (object.type === "pole") return <g transform={`rotate(${rotation} ${x} ${y})`}><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#ffd84d" strokeWidth={1.1} /><line x1={x} y1={y - 3} x2={x} y2={y + 3} stroke="#e44" strokeWidth={0.35} strokeDasharray="1.5 1.5" /></g>;
   const width = object.type === "goal" ? 10 : 6;
@@ -60,7 +59,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   const past = useDiagram((state) => state.past);
   const future = useDiagram((state) => state.future);
   const selectedId = useDiagram((state) => state.selectedId);
-  const { load, addObject, moveObjectLive, deleteObject, addArrow, deleteArrow, setWidth, select, setObjectTeam, updateObject, duplicateObject, snapshot, undo, redo } = useDiagram.getState();
+  const { load, addObject, moveObjectLive, deleteObject, addArrow, updateArrow, deleteArrow, setWidth, select, updateObject, duplicateObject, snapshot, undo, redo } = useDiagram.getState();
   const [tool, setTool] = useState<Tool>("select");
   const [playerTeam, setPlayerTeam] = useState<Team>("att");
   const [arrowStart, setArrowStart] = useState<ArrowEndpoint | null>(null);
@@ -68,39 +67,62 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   const [status, setStatus] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
   const dragId = useRef<string | null>(null);
+  const arrowStartRef = useRef<ArrowEndpoint | null>(null);
+  const finishedOnPointerDown = useRef(false);
 
   useEffect(() => load(initialDiagram), [initialDiagram, load]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); }
-      if ((event.key === "Backspace" || event.key === "Delete") && selectedId) { event.preventDefault(); deleteObject(selectedId); select(null); }
+      if (event.key === "Escape") { arrowStartRef.current = null; setArrowStart(null); setCursor(null); }
+      if ((event.key === "Backspace" || event.key === "Delete") && selectedId) {
+        event.preventDefault();
+        if (present.arrows.some((arrow) => arrow.id === selectedId)) deleteArrow(selectedId); else deleteObject(selectedId);
+        select(null);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [deleteObject, redo, select, selectedId, undo]);
+  }, [deleteArrow, deleteObject, present.arrows, redo, select, selectedId, undo]);
 
   const h = H(present.widthRatio);
   const selected = present.objects.find((object) => object.id === selectedId) ?? null;
+  const selectedArrow = present.arrows.find((arrow) => arrow.id === selectedId) ?? null;
   const sorted = arrowsSorted(present);
   const toUnit = (event: React.PointerEvent): [number, number] => {
     const bounds = svgRef.current!.getBoundingClientRect();
     return [clamp01((event.clientX - bounds.left) / bounds.width), clamp01((event.clientY - bounds.top) / bounds.height)];
   };
   const endpointAt = (point: [number, number]): ArrowEndpoint => {
-    const nearby = present.objects.find((object) => object.type !== "zone" && object.type !== "text" && Math.hypot(object.x * 100 - point[0] * 100, object.y * h - point[1] * h) < 3.5);
+    const nearby = present.objects.find((object) => object.type !== "zone" && object.type !== "text" && Math.hypot(object.x * 100 - point[0] * 100, object.y * h - point[1] * h) < 5);
     return nearby ? { objectId: nearby.id } : { point };
   };
-  const beginArrow = (event: React.PointerEvent, endpoint: ArrowEndpoint) => {
+  const clearArrow = () => {
+    arrowStartRef.current = null;
+    setArrowStart(null);
+    setCursor(null);
+  };
+  const beginOrFinishArrow = (event: React.PointerEvent, endpoint: ArrowEndpoint) => {
+    const current = arrowStartRef.current;
+    if (current) {
+      const from = resolve(current, present.objects, h);
+      const to = resolve(endpoint, present.objects, h);
+      if (Math.hypot(to[0] - from[0], to[1] - from[1]) > 1.5) addArrow(tool.slice(6) as ArrowKind, current, endpoint);
+      finishedOnPointerDown.current = true;
+      clearArrow();
+      return;
+    }
     svgRef.current?.setPointerCapture?.(event.pointerId);
+    arrowStartRef.current = endpoint;
     setArrowStart(endpoint);
     setCursor(toUnit(event));
   };
-  const chooseTool = (next: Tool) => { setTool(next); setArrowStart(null); setCursor(null); };
+  const chooseTool = (next: Tool) => { setTool(next); clearArrow(); select(null); };
 
   const onSvgPointerDown = (event: React.PointerEvent) => {
     const point = toUnit(event);
-    if (tool.startsWith("arrow:")) return beginArrow(event, endpointAt(point));
+    if (tool.startsWith("arrow:")) return beginOrFinishArrow(event, endpointAt(point));
     if (tool.startsWith("place:")) {
       const type = tool.slice(6) as ObjectType;
       addObject(type, point[0], point[1], type === "player" ? playerTeam : undefined);
@@ -110,31 +132,36 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   };
   const onSvgPointerMove = (event: React.PointerEvent) => {
     const point = toUnit(event);
-    if (tool.startsWith("arrow:") && arrowStart) setCursor(point);
+    if (tool.startsWith("arrow:") && arrowStartRef.current) setCursor(point);
     if (dragId.current) moveObjectLive(dragId.current, point[0], point[1]);
   };
   const onSvgPointerUp = (event: React.PointerEvent) => {
-    if (tool.startsWith("arrow:") && arrowStart) {
+    if (finishedOnPointerDown.current) { finishedOnPointerDown.current = false; return; }
+    const current = arrowStartRef.current;
+    if (tool.startsWith("arrow:") && current) {
       const end = toUnit(event);
-      const start = resolve(arrowStart, present.objects, h);
-      if (Math.hypot(end[0] * 100 - start[0], end[1] * h - start[1]) > 1.5) addArrow(tool.slice(6) as ArrowKind, arrowStart, endpointAt(end));
-      setArrowStart(null);
-      setCursor(null);
+      const start = resolve(current, present.objects, h);
+      if (Math.hypot(end[0] * 100 - start[0], end[1] * h - start[1]) > 2.5) {
+        addArrow(tool.slice(6) as ArrowKind, current, endpointAt(end));
+        clearArrow();
+      }
     }
     dragId.current = null;
   };
   const onObjectDown = (event: React.PointerEvent, object: DiagramObject) => {
     event.stopPropagation();
     if (tool === "erase") return deleteObject(object.id);
-    if (tool.startsWith("arrow:")) return beginArrow(event, { objectId: object.id });
-    if (tool === "place:player" && object.type === "player") return setObjectTeam(object.id, playerTeam);
+    if (tool.startsWith("arrow:")) return beginOrFinishArrow(event, { objectId: object.id });
     if (tool !== "select") return;
     snapshot();
     dragId.current = object.id;
     select(object.id);
     svgRef.current?.setPointerCapture?.(event.pointerId);
   };
-  const onArrowDown = (event: React.PointerEvent, arrow: Arrow) => { event.stopPropagation(); if (tool === "erase") deleteArrow(arrow.id); };
+  const onArrowDown = (event: React.PointerEvent, arrow: Arrow) => {
+    if (tool === "erase") { event.stopPropagation(); deleteArrow(arrow.id); }
+    if (tool === "select") { event.stopPropagation(); select(arrow.id); }
+  };
 
   const download = (href: string, filename: string) => { const anchor = document.createElement("a"); anchor.href = href; anchor.download = filename; anchor.click(); };
   const svgBlob = () => {
@@ -168,9 +195,11 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
   const renderArrow = (arrow: Arrow) => {
     const from = resolve(arrow.from, present.objects, h);
     const to = resolve(arrow.to, present.objects, h);
-    return <path key={arrow.id} d={arrowPath(arrow.kind, from, to)} fill="none" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.75} strokeDasharray={ARROW_DASH[arrow.kind]} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#ah-${arrow.kind})`} onPointerDown={(event) => onArrowDown(event, arrow)} style={{ cursor: tool === "erase" ? "pointer" : "default" }} />;
+    const path = arrowPath(arrow.kind, from, to);
+    const active = arrow.id === selectedId;
+    return <g key={arrow.id} onPointerDown={(event) => onArrowDown(event, arrow)} style={{ cursor: tool === "select" || tool === "erase" ? "pointer" : "crosshair" }}><path d={path} fill="none" stroke="transparent" strokeWidth={5} pointerEvents="stroke" /><path d={path} fill="none" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={active ? 1.25 : 0.8} strokeDasharray={ARROW_DASH[arrow.kind]} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#ah-${arrow.kind})`} pointerEvents="none" />{active && <><circle cx={from[0]} cy={from[1]} r={1.6} fill="#fff" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.6} /><circle cx={to[0]} cy={to[1]} r={1.6} fill="#fff" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.6} /></>}</g>;
   };
-  const preview = arrowStart && cursor ? <path d={arrowPath(tool.slice(6) as ArrowKind, resolve(arrowStart, present.objects, h), [cursor[0] * 100, cursor[1] * h])} fill="none" stroke={ARROW_COLOR[tool.slice(6) as ArrowKind]} strokeWidth={0.8} strokeDasharray={ARROW_DASH[tool.slice(6) as ArrowKind]} markerEnd={`url(#ah-${tool.slice(6)})`} opacity={0.85} /> : null;
+  const preview = arrowStart && cursor ? <g pointerEvents="none"><path d={arrowPath(tool.slice(6) as ArrowKind, resolve(arrowStart, present.objects, h), [cursor[0] * 100, cursor[1] * h])} fill="none" stroke={ARROW_COLOR[tool.slice(6) as ArrowKind]} strokeWidth={1} strokeDasharray={ARROW_DASH[tool.slice(6) as ArrowKind]} markerEnd={`url(#ah-${tool.slice(6)})`} opacity={0.9} /><circle cx={resolve(arrowStart, present.objects, h)[0]} cy={resolve(arrowStart, present.objects, h)[1]} r={1.8} fill="#fff" stroke={ARROW_COLOR[tool.slice(6) as ArrowKind]} strokeWidth={0.7} /></g> : null;
 
   return (
     <div className="editor">
@@ -196,9 +225,11 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
           <div>
             <span className="editor-kicker">Objekt</span>
             <div className="editor-tool-grid">
+              <button className={`editor-tool team-tool ${tool === "place:player" && playerTeam === "att" ? "active" : ""}`} style={{ "--team": TEAM_COLOR.att } as React.CSSProperties} onClick={() => { setPlayerTeam("att"); chooseTool("place:player"); }}><b>●</b><span>Spelare</span></button>
+              <button className={`editor-tool team-tool ${tool === "place:player" && playerTeam === "def" ? "active" : ""}`} style={{ "--team": TEAM_COLOR.def } as React.CSSProperties} onClick={() => { setPlayerTeam("def"); chooseTool("place:player"); }}><b>●</b><span>Motståndare</span></button>
+              <button className={`editor-tool team-tool ${tool === "place:player" && playerTeam === "gk" ? "active" : ""}`} style={{ "--team": TEAM_COLOR.gk } as React.CSSProperties} onClick={() => { setPlayerTeam("gk"); chooseTool("place:player"); }}><b>●</b><span>Målvakt</span></button>
               {objectTools.map(({ type, icon, label }) => <button key={type} className={`editor-tool ${tool === `place:${type}` ? "active" : ""}`} onClick={() => chooseTool(`place:${type}`)}><b>{icon}</b><span>{label}</span></button>)}
             </div>
-            {tool === "place:player" && <div className="palette-team-picker" aria-label="Färg för nya spelare">{(["att", "def", "gk"] as Team[]).map((team) => <button key={team} className={playerTeam === team ? "active" : ""} style={{ "--team": TEAM_COLOR[team] } as React.CSSProperties} onClick={() => setPlayerTeam(team)}>{team === "att" ? "Anfall" : team === "def" ? "Försvar" : "MV"}</button>)}</div>}
           </div>
           <div>
             <span className="editor-kicker">Rörelse</span>
@@ -209,7 +240,7 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
 
         <div className="editor-canvas-column">
           <div className="editor-stage">
-            <svg ref={svgRef} viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${present.widthRatio}` }} onPointerDown={onSvgPointerDown} onPointerMove={onSvgPointerMove} onPointerUp={onSvgPointerUp} onPointerLeave={onSvgPointerUp} aria-label="Övningsyta">
+            <svg ref={svgRef} viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${present.widthRatio}` }} onPointerDown={onSvgPointerDown} onPointerMove={onSvgPointerMove} onPointerUp={onSvgPointerUp} onPointerCancel={clearArrow} aria-label="Övningsyta">
               <defs>{arrowMarkers()}</defs>
               {pitchMarkings(h)}
               {present.objects.filter((object) => object.type === "zone").map((object) => <g key={object.id} onPointerDown={(event) => onObjectDown(event, object)} style={{ cursor: tool === "select" ? "grab" : "pointer" }}><ObjectShape object={object} h={h} selected={object.id === selectedId} /></g>)}
@@ -218,14 +249,15 @@ export function ExerciseEditor({ exerciseId, name, initialDiagram }: { exerciseI
               {preview}
             </svg>
           </div>
-          <div className="editor-legend"><span><i className="pass" /> Passning</span><span><i className="run" /> Löpning</span><span><i className="dribble" /> Dribbling</span><small>{tool === "select" ? "Dra ett objekt för att flytta det." : tool.startsWith("arrow:") ? "Dra från start till mål. Linjen följer objekt som flyttas." : tool === "erase" ? "Klicka på det som ska bort." : "Klicka på planen för att placera."}</small></div>
+          <div className="editor-legend"><span><i className="pass" /> Passning</span><span><i className="run" /> Löpning</span><span><i className="dribble" /> Dribbling</span><small>{tool === "select" ? "Klicka en pil eller dra ett objekt." : tool.startsWith("arrow:") ? arrowStart ? "Klicka på pilens slutpunkt · Esc avbryter." : "Klicka start och slut – eller dra direkt." : tool === "erase" ? "Klicka på det som ska bort." : "Klicka på planen för att placera."}</small></div>
         </div>
 
         <aside className="editor-properties">
           <span className="editor-kicker">Egenskaper</span>
-          {!selected && <p className="editor-empty">Markera ett objekt på planen för att ändra det.</p>}
+          {!selected && !selectedArrow && <p className="editor-empty">Markera ett objekt eller en pil på planen för att ändra det.</p>}
+          {selectedArrow && <><strong>{arrowTools.find((item) => item.kind === selectedArrow.kind)?.label}</strong><label>Linjetyp</label><div className="arrow-kind-picker">{arrowTools.map(({ kind, label }) => <button key={kind} className={selectedArrow.kind === kind ? "active" : ""} onClick={() => updateArrow(selectedArrow.id, { kind })}>{label}</button>)}</div><button className="button danger" onClick={() => { deleteArrow(selectedArrow.id); select(null); }}>Ta bort pil</button></>}
           {selected && <>
-            <strong>{objectTools.find((item) => item.type === selected.type)?.label ?? "Objekt"}</strong>
+            <strong>{selected.type === "player" ? selected.team === "def" ? "Motståndare" : selected.team === "gk" ? "Målvakt" : "Spelare" : objectTools.find((item) => item.type === selected.type)?.label ?? "Objekt"}</strong>
             {(selected.type === "player" || selected.type === "text") && <label>Etikett<input value={selected.label ?? ""} maxLength={16} placeholder={selected.type === "player" ? "T.ex. 8 eller A" : "Skriv text"} onChange={(event) => updateObject(selected.id, { label: event.target.value })} /></label>}
             {selected.type === "player" && <div><label>Lag / roll</label><div className="team-picker">{(["att", "def", "gk"] as Team[]).map((team) => <button key={team} className={selected.team === team ? "active" : ""} style={{ "--team": TEAM_COLOR[team] } as React.CSSProperties} onClick={() => updateObject(selected.id, { team })}>{team === "att" ? "Anfall" : team === "def" ? "Försvar" : "Målvakt"}</button>)}</div></div>}
             {selected.type === "zone" && <><label>Bredd<input type="range" min={0.08} max={0.8} step={0.02} value={selected.width ?? 0.24} onChange={(event) => updateObject(selected.id, { width: Number(event.target.value) })} /></label><label>Höjd<input type="range" min={0.08} max={0.8} step={0.02} value={selected.height ?? 0.22} onChange={(event) => updateObject(selected.id, { height: Number(event.target.value) })} /></label></>}
