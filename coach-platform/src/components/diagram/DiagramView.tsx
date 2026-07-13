@@ -26,7 +26,7 @@ export function DiagramView({ diagram, className, style }: { diagram: Diagram; c
   const renderArrow = (arrow: Arrow) => {
     const from = resolve(arrow.from, diagram.objects, h);
     const to = resolve(arrow.to, diagram.objects, h);
-    return <path key={arrow.id} d={arrowPath(arrow.kind, from, to)} fill="none" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.75} strokeDasharray={ARROW_DASH[arrow.kind]} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#ah-${arrow.kind})`} />;
+    return <path key={arrow.id} d={arrowPath(arrow.kind, from, to)} fill="none" stroke={ARROW_COLOR[arrow.kind]} strokeWidth={0.4} strokeDasharray={ARROW_DASH[arrow.kind]} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#ah-${arrow.kind})`} />;
   };
   return (
     <svg viewBox={`0 0 100 ${h}`} preserveAspectRatio="xMidYMid meet" style={{ aspectRatio: `1 / ${diagram.widthRatio}`, display: "block", width: "100%", touchAction: "none", ...style }} className={className}>

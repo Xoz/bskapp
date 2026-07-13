@@ -77,8 +77,8 @@ export function pitchMarkings(h: number) {
 
 export function arrowMarkers() {
   return (["pass", "run", "dribble"] as ArrowKind[]).map((k) => (
-    <marker key={k} id={`ah-${k}`} markerWidth={5} markerHeight={5} refX={4.5} refY={2.5} orient="auto">
-      <path d="M0,0 L5,2.5 L0,5 Z" fill={ARROW_COLOR[k]} />
+    <marker key={k} id={`ah-${k}`} markerUnits="userSpaceOnUse" markerWidth={2.2} markerHeight={2.2} refX={3.8} refY={2} viewBox="0 0 4 4" orient="auto">
+      <path d="M0,0 L4,2 L0,4 Z" fill={ARROW_COLOR[k]} />
     </marker>
   ));
 }
