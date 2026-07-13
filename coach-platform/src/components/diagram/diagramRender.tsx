@@ -19,6 +19,11 @@ export function resolve(ep: ArrowEndpoint, objects: DiagramObject[], h: number):
   return [50, h / 2];
 }
 
+export function interpolate(from: [number, number], to: [number, number], progress: number): [number, number] {
+  const t = Math.min(1, Math.max(0, progress));
+  return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+}
+
 export function pitchMarkings(h: number) {
   return (
     <g stroke="#ffffff55" strokeWidth={0.4} fill="none">
@@ -35,8 +40,8 @@ export function pitchMarkings(h: number) {
 
 export function arrowMarkers() {
   return (["pass", "run", "dribble"] as ArrowKind[]).map((k) => (
-    <marker key={k} id={`ah-${k}`} markerWidth={4} markerHeight={4} refX={3} refY={2} orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0,0 L4,2 L0,4 Z" fill={ARROW_COLOR[k]} />
+    <marker key={k} id={`ah-${k}`} markerWidth={5} markerHeight={5} refX={4.5} refY={2.5} orient="auto">
+      <path d="M0,0 L5,2.5 L0,5 Z" fill={ARROW_COLOR[k]} />
     </marker>
   ));
 }

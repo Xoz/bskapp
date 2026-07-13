@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diagramSchema, emptyDiagram, parse, serialize } from "./diagram";
+import { interpolate } from "../components/diagram/diagramRender";
 
 const sample = () => ({
   widthRatio: 0.65,
@@ -22,4 +23,9 @@ describe("diagram format", () => {
     expect(() => diagramSchema.parse({ widthRatio: 0.65, objects: [], arrows: [{ id: "a", kind: "pass", from: {}, to: {}, order: 0 }] })).toThrow();
   });
   it("emptyDiagram validerar", () => { expect(parse(serialize(emptyDiagram()))).toEqual(emptyDiagram()); });
+  it("interpolerar bollens position genom hela pilen", () => {
+    expect(interpolate([10, 20], [30, 60], 0)).toEqual([10, 20]);
+    expect(interpolate([10, 20], [30, 60], 0.5)).toEqual([20, 40]);
+    expect(interpolate([10, 20], [30, 60], 2)).toEqual([30, 60]);
+  });
 });
