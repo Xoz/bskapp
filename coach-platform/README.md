@@ -18,7 +18,7 @@ Appen öppnas på `http://localhost:3100`.
 ## Tillfällig VPS-miljö
 
 För en sökvägsmonterad testmiljö byggs appen med `NEXT_BASE_PATH=/coach` och
-proxas som `https://klvr.se/coach`. Variabeln måste finnas både när `next
+proxas som `https://klvr.se/coach/`. Variabeln måste finnas både när `next
 build` körs och när appen startas; utan den används roten som vanligt.
 
 ## Arkitektur
