@@ -129,7 +129,7 @@ export default async function MinProfilPage() {
           className="btn-primary w-full flex items-center justify-center gap-2"
           style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
         >
-          🌱 Mitt utvecklingsträd
+          🌱 Min utveckling
         </a>
 
         <a

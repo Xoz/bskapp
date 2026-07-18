@@ -990,6 +990,60 @@ export async function getPlayerSkillNote(playerId: number): Promise<string> {
   return row?.note ?? "";
 }
 
+export interface DevelopmentCheckpoint {
+  id: string;
+  player_id: number;
+  date: string;
+  coach_name: string;
+  strengths: string;
+  focus_note: string;
+  wellbeing_note: string;
+  changed_count: number;
+  created_at: string;
+}
+
+export interface DevelopmentCheckpointSkill {
+  checkpoint_id: string;
+  skill_id: string;
+  status: StatusMap[string];
+  previous_status: StatusMap[string];
+  is_focus: number;
+}
+
+export async function getDevelopmentCheckpoints(playerId: number): Promise<DevelopmentCheckpoint[]> {
+  return all<DevelopmentCheckpoint>(
+    `SELECT dc.*,
+       COUNT(dcs.skill_id) FILTER (WHERE dcs.status <> dcs.previous_status)::int AS changed_count
+     FROM development_checkpoints dc
+     LEFT JOIN development_checkpoint_skills dcs ON dcs.checkpoint_id = dc.id
+     WHERE dc.player_id = ?
+     GROUP BY dc.id
+     ORDER BY dc.date DESC, dc.created_at DESC`,
+    [playerId]
+  );
+}
+
+export async function getDevelopmentCheckpointSkills(
+  checkpointId: string
+): Promise<DevelopmentCheckpointSkill[]> {
+  return all<DevelopmentCheckpointSkill>(
+    `SELECT checkpoint_id, skill_id, status, previous_status, is_focus
+     FROM development_checkpoint_skills
+     WHERE checkpoint_id = ?
+     ORDER BY skill_id`,
+    [checkpointId]
+  );
+}
+
+export async function getLatestDevelopmentCheckpoint(
+  playerId: number
+): Promise<(DevelopmentCheckpoint & { skills: DevelopmentCheckpointSkill[] }) | null> {
+  const checkpoints = await getDevelopmentCheckpoints(playerId);
+  const latest = checkpoints[0];
+  if (!latest) return null;
+  return { ...latest, skills: await getDevelopmentCheckpointSkills(latest.id) };
+}
+
 export interface TeamSkillOverviewRow {
   category: string;
   avgPercent: number;

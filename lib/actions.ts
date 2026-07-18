@@ -20,7 +20,7 @@ import {
   getCoachName,
 } from "./auth";
 import { ALL_SKILLS } from "./svff";
-import { STATUS_ORDER, type SkillStatus } from "./skillTrappan";
+import { SKILLS, STATUS_ORDER, type SkillStatus, type StatusMap } from "./skillTrappan";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
@@ -1536,7 +1536,7 @@ export async function submitSelfEval(
 // vara rimligt att slå in dem i formulär var för sig.
 
 export async function setSkillStatus(playerId: number, skillId: string, status: SkillStatus): Promise<void> {
-  if (!STATUS_ORDER.includes(status)) return;
+  if (!STATUS_ORDER.includes(status) || !SKILLS.some((skill) => skill.id === skillId)) return;
   await requirePlayerPermission("manage_evaluations", playerId);
   await run(
     `INSERT INTO player_skill_status (player_id, skill_id, status, updated_at)
@@ -1546,6 +1546,7 @@ export async function setSkillStatus(playerId: number, skillId: string, status: 
   );
   revalidatePath(`/spelare/${playerId}/utveckling`);
   revalidatePath("/utveckling");
+  revalidatePath("/mitt-utvecklingstrad");
 }
 
 export async function setSkillNote(playerId: number, note: string): Promise<void> {
@@ -1558,4 +1559,80 @@ export async function setSkillNote(playerId: number, note: string): Promise<void
     [playerId, trimmed]
   );
   revalidatePath(`/spelare/${playerId}/utveckling`);
+}
+
+// En avstämning sparar både det nya aktuella läget och en oföränderlig snapshot.
+// UUID:t skapas i applikationen så samtliga skrivningar kan göras i en transaktion.
+export async function createDevelopmentCheckpoint(formData: FormData): Promise<void> {
+  const playerId = Number(formData.get("player_id"));
+  if (!playerId) return;
+  await requirePlayerPermission("manage_evaluations", playerId);
+
+  const dateRaw = String(formData.get("date") ?? "").slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : swedishToday();
+  const enteredCoach = String(formData.get("coach_name") ?? "").trim().slice(0, 120);
+  const coachName = enteredCoach || (await getCoachName()) || "Tränare";
+  const strengths = String(formData.get("strengths") ?? "").trim().slice(0, 2000);
+  const focusNote = String(formData.get("focus_note") ?? "").trim().slice(0, 2000);
+  const wellbeingNote = String(formData.get("wellbeing_note") ?? "").trim().slice(0, 2000);
+
+  const currentRows = await all<{ skill_id: string; status: SkillStatus }>(
+    "SELECT skill_id, status FROM player_skill_status WHERE player_id = ?",
+    [playerId]
+  );
+  const current: StatusMap = Object.fromEntries(currentRows.map((row) => [row.skill_id, row.status]));
+
+  const next: StatusMap = {};
+  for (const skill of SKILLS) {
+    const submitted = String(formData.get(`skill_${skill.id}`) ?? current[skill.id] ?? "not_started") as SkillStatus;
+    next[skill.id] = STATUS_ORDER.includes(submitted) ? submitted : (current[skill.id] ?? "not_started");
+  }
+
+  const validIds = new Set(SKILLS.map((skill) => skill.id));
+  const focusIds = [...new Set(formData.getAll("focus_skill").map(String))]
+    .filter((id) => validIds.has(id))
+    .slice(0, 2);
+  const checkpointId = crypto.randomUUID();
+  const snapshotArgs = SKILLS.flatMap((skill) => [
+    checkpointId,
+    skill.id,
+    next[skill.id],
+    current[skill.id] ?? "not_started",
+    focusIds.includes(skill.id) ? 1 : 0,
+  ]);
+  const statusArgs = SKILLS.flatMap((skill) => [playerId, skill.id, next[skill.id]]);
+
+  await batch([
+    {
+      sql: `INSERT INTO development_checkpoints
+        (id, player_id, date, coach_name, strengths, focus_note, wellbeing_note)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [checkpointId, playerId, date, coachName, strengths, focusNote, wellbeingNote],
+    },
+    {
+      sql: `INSERT INTO development_checkpoint_skills
+        (checkpoint_id, skill_id, status, previous_status, is_focus)
+        VALUES ${SKILLS.map(() => "(?, ?, ?, ?, ?)").join(", ")}`,
+      args: snapshotArgs,
+    },
+    {
+      sql: `INSERT INTO player_skill_status (player_id, skill_id, status, updated_at)
+        SELECT incoming.player_id, incoming.skill_id, incoming.status,
+          to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+        FROM (VALUES ${SKILLS.map(() => "(?, ?, ?)").join(", ")})
+          AS incoming(player_id, skill_id, status)
+        ON CONFLICT (player_id, skill_id)
+        DO UPDATE SET status = EXCLUDED.status, updated_at = EXCLUDED.updated_at`,
+      args: statusArgs,
+    },
+  ]);
+
+  const player = await get<{ name: string }>("SELECT name FROM players WHERE id = ?", [playerId]);
+  if (player) await logActivity(coachName, "Gjorde utvecklingsavstämning", player.name);
+
+  revalidatePath(`/spelare/${playerId}`);
+  revalidatePath(`/spelare/${playerId}/utveckling`);
+  revalidatePath("/utveckling");
+  revalidatePath("/mitt-utvecklingstrad");
+  redirect(`/spelare/${playerId}/utveckling?sparad=1`);
 }

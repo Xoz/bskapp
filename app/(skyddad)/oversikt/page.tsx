@@ -152,7 +152,7 @@ export default async function Dashboard() {
       : []),
     ...needsEval.map((p) => ({
       key: `eval-${p.id}`,
-      href: `/spelare/${p.id}/utvardera`,
+      href: `/spelare/${p.id}/utveckling`,
       title: `Utvärdera ${p.name}`,
       sub: latestEvals[p.id] ? `Senast ${latestEvals[p.id]}` : "Aldrig utvärderad",
       player: { name: p.name, jersey: p.jersey_number },

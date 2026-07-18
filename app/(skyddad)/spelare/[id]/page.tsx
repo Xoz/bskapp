@@ -14,6 +14,7 @@ import {
   getPlayerAttendanceTrend,
   shareLinkActive,
   getLatestSelfEval,
+  getDevelopmentCheckpoints,
   SHARE_TTL_MS,
   type PlayerMatchRow,
 } from "@/lib/queries";
@@ -31,7 +32,7 @@ import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { STAT_FIELDS } from "@/lib/stats";
 import { FEATURES } from "@/lib/features";
-import { IconArrowLeft, IconPlus, IconSpark, IconTarget, IconAlert } from "@/components/Icons";
+import { IconArrowLeft, IconSpark, IconTarget, IconAlert } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
   const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
 
-  const [evaluations, development, matchStats, selfEval, formTrend, interviews, attendanceOverview, attendanceByCategory, attendanceTrend] = await Promise.all([
+  const [evaluations, development, matchStats, selfEval, formTrend, interviews, attendanceOverview, attendanceByCategory, attendanceTrend, developmentCheckpoints] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
@@ -69,6 +70,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     getPlayerAttendanceOverview(player.id),
     getPlayerAttendanceByCategory(player.id),
     getPlayerAttendanceTrend(player.id),
+    getDevelopmentCheckpoints(player.id),
   ]);
   const linkActive = shareLinkActive(player);
   const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
@@ -130,16 +132,15 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             )}
           </div>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            {evaluations.length === 0
-              ? "Ingen utvärdering ännu"
-              : `${evaluations.length} ${evaluations.length === 1 ? "utvärdering" : "utvärderingar"} · senast ${latest.date}`}
+            {developmentCheckpoints[0]
+              ? `Senaste utvecklingsavstämning ${developmentCheckpoints[0].date}`
+              : evaluations.length === 0
+                ? "Ingen utvecklingsavstämning ännu"
+                : `${evaluations.length} äldre ${evaluations.length === 1 ? "utvärdering" : "utvärderingar"} · senast ${latest.date}`}
           </p>
         </div>
-        <Link href={`/spelare/${player.id}/utveckling`} className="btn-secondary btn-sm">
-          🪜 Utvecklingsträd
-        </Link>
-        <Link href={`/spelare/${player.id}/utvardera`} className="btn-primary">
-          <IconPlus width={15} height={15} /> Ny utvärdering
+        <Link href={`/spelare/${player.id}/utveckling`} className="btn-primary">
+          Öppna utveckling
         </Link>
       </div>
 
@@ -257,20 +258,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {evaluations.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-display)" }}>
-            Dags för första utvärderingen
-          </p>
-          <p className="body-small mb-5 max-w-sm mx-auto" style={{ color: "var(--ink-secondary)" }}>
-            Gör den första utvärderingen för att börja följa {player.name.split(" ")[0]}s utveckling
-            över tid.
-          </p>
-          <Link href={`/spelare/${player.id}/utvardera`} className="btn-primary">
-            Utvärdera nu
-          </Link>
-        </div>
-      ) : (
+      {evaluations.length > 0 && (
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="card p-6">
             <p className="eyebrow mb-0.5">Profil</p>
@@ -463,8 +451,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       )}
 
       {evaluations.length > 0 && (
-        <div className="card p-6 md:p-7">
-          <h2 className="font-semibold mb-5">Alla utvärderingar</h2>
+        <div id="aldre-utvarderingar" className="card p-6 md:p-7 scroll-mt-6">
+          <p className="eyebrow mb-1">Äldre modell</p>
+          <h2 className="font-semibold mb-5">Tidigare utvärderingar</h2>
           <div className="space-y-7">
             {evaluations.map((ev) => {
               const scores = scoresByEval.get(ev.id) ?? {};
