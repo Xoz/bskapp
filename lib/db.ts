@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-07-09-skill-trappan";
+const SCHEMA_VERSION = "2026-07-18-development-checkpoints";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -287,6 +287,26 @@ async function init(): Promise<void> {
       note TEXT NOT NULL DEFAULT '',
       updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
+    // Daterade avstämningar är historiska ögonblicksbilder av utvecklingsträdet.
+    // Det aktuella läget ligger fortsatt i player_skill_status för snabba ändringar.
+    `CREATE TABLE IF NOT EXISTS development_checkpoints (
+      id TEXT PRIMARY KEY,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      coach_name TEXT NOT NULL DEFAULT '',
+      strengths TEXT NOT NULL DEFAULT '',
+      focus_note TEXT NOT NULL DEFAULT '',
+      wellbeing_note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_checkpoint_skills (
+      checkpoint_id TEXT NOT NULL REFERENCES development_checkpoints(id) ON DELETE CASCADE,
+      skill_id TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('not_started', 'training', 'almost', 'done')),
+      previous_status TEXT NOT NULL CHECK (previous_status IN ('not_started', 'training', 'almost', 'done')),
+      is_focus INTEGER NOT NULL DEFAULT 0 CHECK (is_focus IN (0, 1)),
+      PRIMARY KEY (checkpoint_id, skill_id)
+    )`,
   ];
   for (const sql of tables) await getClient().unsafe(sql);
 
@@ -372,6 +392,7 @@ async function init(): Promise<void> {
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_attendance_events_import_player ON attendance_events(import_id, player_id)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_attendance_events_import_name ON attendance_events(import_id, lower(player_name))`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_attendance_events_import_date ON attendance_events(import_id, activity_date)`);
+  await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_checkpoints_player_date ON development_checkpoints(player_id, date DESC, created_at DESC)`);
 
   // Seed – inställningar
   const settingsCount = await getClient().unsafe("SELECT COUNT(*) AS c FROM settings");

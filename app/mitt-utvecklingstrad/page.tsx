@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlayerSession } from "@/lib/auth";
-import { getPlayer, getPlayerSkillStatuses } from "@/lib/queries";
+import { getLatestDevelopmentCheckpoint, getPlayer, getPlayerSkillStatuses } from "@/lib/queries";
+import { skill as skillById } from "@/lib/skillTrappan";
 import UtvecklingChecklist from "@/components/UtvecklingChecklist";
 import { IconArrowLeft } from "@/components/Icons";
 
@@ -15,8 +16,12 @@ export default async function MittUtvecklingstradPage() {
   const player = await getPlayer(playerId);
   if (!player || !player.active) redirect("/spelare/login");
 
-  const statuses = await getPlayerSkillStatuses(playerId);
+  const [statuses, latest] = await Promise.all([
+    getPlayerSkillStatuses(playerId),
+    getLatestDevelopmentCheckpoint(playerId),
+  ]);
   const firstName = player.name.split(" ")[0];
+  const focusIds = latest?.skills.filter((skill) => skill.is_focus).map((skill) => skill.skill_id) ?? [];
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto px-5 py-8">
@@ -36,7 +41,30 @@ export default async function MittUtvecklingstradPage() {
         </p>
       </div>
 
-      <UtvecklingChecklist playerId={player.id} firstName={firstName} initialStatuses={statuses} readOnly />
+      {latest && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="card p-5">
+            <p className="eyebrow mb-2">Det här gör du bra</p>
+            <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
+              {latest.strengths || "Din tränare har inte skrivit någon sammanfattning ännu."}
+            </p>
+          </div>
+          <div className="card p-5">
+            <p className="eyebrow mb-2">Det här tränar du på nu</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {focusIds.map((id) => {
+                const skill = skillById(id);
+                return skill ? <span key={id} className="badge badge-primary">{skill.title}</span> : null;
+              })}
+            </div>
+            <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
+              {latest.focus_note || "Fortsätt träna och våga prova – din tränare fyller på med nästa fokus."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <UtvecklingChecklist playerId={player.id} firstName={firstName} initialStatuses={statuses} focusSkillIds={focusIds} readOnly />
     </div>
   );
 }

@@ -103,7 +103,7 @@ export default async function PlayersPage() {
                     <td className="hidden lg:table-cell">{s?.interceptions ?? 0}</td>
                   </>)}
                   <td className="text-right">
-                    {canEvaluate && <Link href={`/spelare/${p.id}/utvardera`} className="btn-secondary btn-sm">Utvärdera</Link>}
+                    {canEvaluate && <Link href={`/spelare/${p.id}/utveckling`} className="btn-secondary btn-sm">Utveckling</Link>}
                   </td>
                 </tr>
               );

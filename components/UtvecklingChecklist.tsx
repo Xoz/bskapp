@@ -8,7 +8,7 @@ import {
   filterSkills,
   isUnlocked,
   nextRecommendedSkill,
-  priorityAreas,
+  skill as skillById,
   statusOf,
   totalProgress,
   STATUS_COLOR,
@@ -21,10 +21,13 @@ import {
 import { setSkillStatus, setSkillNote } from "@/lib/actions";
 
 const FILTERS: { mode: FilterMode; label: string }[] = [
-  { mode: "all", label: "Alla" },
+  { mode: "next", label: "Aktuellt" },
+  { mode: "all", label: "Hela trädet" },
   { mode: "level1", label: "Nivå 1" },
   { mode: "level2", label: "Nivå 2" },
-  { mode: "next", label: "Nästa steg" },
+  { mode: "level3", label: "Nivå 3" },
+  { mode: "level4", label: "Nivå 4" },
+  { mode: "level5", label: "Nivå 5" },
 ];
 
 const STATUS_SEQUENCE: SkillStatus[] = ["not_started", "training", "almost", "done"];
@@ -34,18 +37,19 @@ export default function UtvecklingChecklist({
   firstName,
   initialStatuses,
   initialNote = "",
+  focusSkillIds = [],
   readOnly = false,
 }: {
   playerId: number;
   firstName: string;
   initialStatuses: StatusMap;
   initialNote?: string;
+  focusSkillIds?: string[];
   readOnly?: boolean;
 }) {
   const [statuses, setStatuses] = useState(initialStatuses);
   const [note, setNote] = useState(initialNote);
-  const [role, setRole] = useState<"coach" | "player">("coach");
-  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [filterMode, setFilterMode] = useState<FilterMode>("next");
   const [categoryFilter, setCategoryFilter] = useState<CategoryId | "all">("all");
   const [, startTransition] = useTransition();
 
@@ -63,47 +67,36 @@ export default function UtvecklingChecklist({
   }
 
   const total = totalProgress(statuses);
-  const priorities = priorityAreas(statuses);
   const next = nextRecommendedSkill(statuses);
   const catProgress = allCategoryProgress(statuses);
+  const hasAssessment = Object.keys(statuses).length > 0;
+  const focusSkills = focusSkillIds
+    .map((id) => skillById(id))
+    .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill));
   const categoriesToShow = categoryFilter === "all" ? CATEGORIES : CATEGORIES.filter((c) => c.id === categoryFilter);
 
   return (
     <div className="space-y-6">
-      {!readOnly && (
-        <div className="flex items-center justify-end">
-          <div className="inline-flex rounded-full p-0.5 gap-0.5 text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            {(["coach", "player"] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRole(r)}
-                className="px-3 py-1.5 rounded-full font-medium transition-colors"
-                style={
-                  role === r
-                    ? { background: "var(--primary)", color: "var(--primary-deep)" }
-                    : { color: "var(--ink-muted)" }
-                }
-              >
-                {r === "coach" ? "Tränarvy" : "Spelarvy"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="card p-5">
-          <p className="eyebrow mb-2">Total utvecklingsnivå</p>
-          <div className="flex items-center justify-between mb-2">
-            <span className="stat-number text-2xl">{total.percent}%</span>
-            <span className="caption" style={{ color: "var(--ink-muted)" }}>
-              {total.done}/{total.total} klara
-            </span>
-          </div>
-          <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--elevated)" }}>
-            <div className="h-full rounded-full" style={{ width: `${total.percent}%`, background: "var(--primary)" }} />
-          </div>
+          <p className="eyebrow mb-2">Färdighetsresan</p>
+          {hasAssessment ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="stat-number text-2xl">{total.done}</span>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  av {total.total} steg behärskade
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--elevated)" }}>
+                <div className="h-full rounded-full" style={{ width: `${total.percent}%`, background: "var(--primary)" }} />
+              </div>
+            </>
+          ) : (
+            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
+              Ingen avstämning ännu. Börja med att beskriva nuläget, inte med en procentsiffra.
+            </p>
+          )}
         </div>
         <div className="card p-5">
           <p className="eyebrow mb-2">Nästa rekommenderade färdighet</p>
@@ -118,25 +111,27 @@ export default function UtvecklingChecklist({
         </div>
       </div>
 
-      <div>
-        <p className="eyebrow mb-2">3 prioriterade träningsområden</p>
-        <div className="flex flex-wrap gap-2">
-          {priorities.map((p) => {
-            const cat = CATEGORIES.find((c) => c.id === p.category)!;
-            return (
-              <button
-                key={p.category}
-                type="button"
-                onClick={() => setCategoryFilter(p.category)}
-                className="badge"
-                style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
-              >
-                {cat.icon} {cat.name} <span style={{ color: "var(--ink-muted)" }}>{p.percent}%</span>
-              </button>
-            );
-          })}
+      {focusSkills.length > 0 && (
+        <div>
+          <p className="eyebrow mb-2">Valda fokus just nu</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {focusSkills.map((skill) => {
+              const cat = CATEGORIES.find((item) => item.id === skill.category)!;
+              return (
+                <button
+                  key={skill.id}
+                  type="button"
+                  onClick={() => setCategoryFilter(skill.category)}
+                  className="card p-3 text-left"
+                >
+                  <span className="caption" style={{ color: cat.color }}>{cat.icon} {cat.name}</span>
+                  <span className="block font-medium text-sm mt-1">{skill.title}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {catProgress.map((p) => {
@@ -226,12 +221,18 @@ export default function UtvecklingChecklist({
                               disabled={readOnly || !unlocked}
                               title={STATUS_LABEL[opt]}
                               onClick={() => updateStatus(s.id, opt)}
-                              className="w-6 h-6 rounded-full border transition disabled:opacity-30 disabled:cursor-not-allowed"
+                              aria-label={`${s.title}: ${STATUS_LABEL[opt]}`}
+                              aria-pressed={st === opt}
+                              className="rounded-full border px-2 py-1 transition disabled:opacity-30 disabled:cursor-not-allowed"
                               style={{
                                 background: st === opt ? STATUS_COLOR[opt] : "transparent",
                                 borderColor: STATUS_COLOR[opt],
+                                color: st === opt ? "#111" : "var(--ink-muted)",
+                                fontSize: "0.65rem",
                               }}
-                            />
+                            >
+                              {opt === "not_started" ? "Inte än" : opt === "training" ? "Övar" : opt === "almost" ? "Nära" : "Klar"}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -267,7 +268,7 @@ export default function UtvecklingChecklist({
         })}
       </div>
 
-      {!readOnly && role === "coach" && (
+      {!readOnly && (
         <div className="card p-5">
           <label className="label mb-2" htmlFor="skill_note">
             Tränaranteckningar

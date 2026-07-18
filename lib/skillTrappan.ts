@@ -333,7 +333,7 @@ export function nextRecommendedSkill(statuses: StatusMap): Skill | null {
   return null;
 }
 
-export type FilterMode = "all" | "level1" | "level2" | "next";
+export type FilterMode = "all" | "level1" | "level2" | "level3" | "level4" | "level5" | "next";
 
 export function filterSkills(skills: Skill[], statuses: StatusMap, mode: FilterMode): Skill[] {
   switch (mode) {
@@ -341,6 +341,12 @@ export function filterSkills(skills: Skill[], statuses: StatusMap, mode: FilterM
       return skills.filter((s) => s.level === 1);
     case "level2":
       return skills.filter((s) => s.level === 2);
+    case "level3":
+      return skills.filter((s) => s.level === 3);
+    case "level4":
+      return skills.filter((s) => s.level === 4);
+    case "level5":
+      return skills.filter((s) => s.level === 5);
     case "next":
       return skills.filter((s) => statusOf(statuses, s.id) !== "done" && isUnlocked(s, statuses));
     default:

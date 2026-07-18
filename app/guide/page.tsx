@@ -329,32 +329,31 @@ export default function GuidePage() {
             <Chapter
               id="utvarderingar"
               number="04"
-              title="Utvärderingar"
-              intro="Utvärderingen dokumenterar spelarens utveckling över tid. Spelaren ska jämföras med sig själv, inte med lagkamraterna."
+              title="Spelarutveckling"
+              intro="Utvecklingssidan samlar nuläge, färdighetsträd och daterade avstämningar. Spelaren ska jämföras med sig själv, inte med lagkamraterna."
             >
-              <Topic title="Utvecklingsnivåer – inte skolbetyg">
-                <p>Varje färdighet bedöms på fyra utvecklingsnivåer. Förra utvärderingen är förifylld så att tränaren kan utgå från senaste observationen och justera där det finns nytt underlag.</p>
+              <Topic title="Färdighetssteg – inte skolbetyg">
+                <p>Varje konkret färdighetssteg markeras som ej påbörjat, tränar på, nästan klart eller klart. Svårighetsnivå 1–5 beskriver själva steget; statusen beskriver var spelaren befinner sig just nu.</p>
                 <Callout title="Bra bedömningsprincip">
                   Bedöm det spelaren visar återkommande i relevanta situationer. Ett enskilt lyckat eller misslyckat moment bör normalt inte flytta en nivå.
                 </Callout>
               </Topic>
 
-              <Topic title="Gör en utvärdering">
+              <Topic title="Gör en utvecklingsavstämning">
                 <Steps>
-                  <Step title="Öppna spelaren och välj Utvärdera" />
+                  <Step title="Öppna spelaren och välj Öppna utveckling" />
+                  <Step title="Välj Ny avstämning" />
                   <Step title="Kontrollera datum och tränarnamn" />
-                  <Step title="Gå igenom samtliga färdigheter">Läs beskrivningen under varje färdighet och välj den nivå som bäst motsvarar nuläget.</Step>
+                  <Step title="Uppdatera observerade färdigheter">Kategorierna är hopfällda. Ändra bara det du faktiskt har sett sedan förra avstämningen.</Step>
                   <Step title="Skriv styrkor">Lyft fram konkreta beteenden som spelaren kan känna igen.</Step>
-                  <Step title="Sätt ett eller två utvecklingsmål">Målen bör vara möjliga att träna på och följa upp.</Step>
-                  <Step title="Spara utvärderingen">Kontrollera därefter spelarprofilen och diagrammen.</Step>
+                  <Step title="Välj högst två fokusfärdigheter">Beskriv hur laget och spelaren ska träna på dem.</Step>
+                  <Step title="Notera mående separat">Glädje, trygghet och lagkänsla är viktiga signaler men räknas inte som färdigheter som ska bli klara.</Step>
+                  <Step title="Spara avstämningen">Nuläget uppdateras och en historisk ögonblicksbild skapas.</Step>
                 </Steps>
               </Topic>
 
-              <Topic title="AI-förslag">
-                <p>När nivåerna är ifyllda kan AI-förslaget hjälpa till att formulera styrkor och fokusområden. Förslaget är ett utkast: tränaren ansvarar för att texten är korrekt, vänlig och användbar för just den spelaren.</p>
-                <Callout title="Använd aldrig texten okritiskt" tone="warn">
-                  Läs igenom, förenkla och ta bort sådant du inte själv har observerat. Skriv inte känsliga personuppgifter i fritextfälten.
-                </Callout>
+              <Topic title="Historik och äldre utvärderingar">
+                <p>Avstämningshistoriken visar vilka färdigheter som ändrades, valda fokus och tränarens sammanfattning. Äldre fyrgradiga SvFF-utvärderingar finns kvar på spelarprofilen men ändrar inte automatiskt det nya trädet.</p>
               </Topic>
 
               <Topic title="Jämför tränarens och spelarens bild">
