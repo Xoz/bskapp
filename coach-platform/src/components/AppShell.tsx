@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-const links = [["/", "Översikt"], ["/planering", "Planering"], ["/traningspass", "Träningspass"], ["/kalender", "Kalender"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"], ["/matcher", "Matcher"]];
+const links = [["/", "Översikt"], ["/planering", "Planering"], ["/traningspass", "Träningspass"], ["/kalender", "Kalender"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"], ["/matcher", "Matcher"], ["/analys", "Analys"]];
 const mobileLinks = [["/", "Översikt"], ["/traningspass", "Pass"], ["/kalender", "Kalender"], ["/ovningar", "Övningar"], ["/spelare", "Spelare"]];
 
 export function AppShell({ children }: { children: ReactNode }) {

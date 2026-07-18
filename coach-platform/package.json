@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "psql \"$DATABASE_URL\" -f db/migrations/001_initial.sql -f db/migrations/002_conducted.sql",
+    "db:migrate": "psql \"$DATABASE_URL\" -f db/migrations/001_initial.sql -f db/migrations/002_conducted.sql -f db/migrations/003_coach_workflow.sql",
     "db:seed": "tsx db/seed.ts"
   },
   "dependencies": {

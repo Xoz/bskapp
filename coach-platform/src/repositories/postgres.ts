@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import type { Diagram } from "@/domain/diagram";
-import type { Exercise, Player, SeasonPeriod, TrainingSession } from "@/domain/model";
+import type { CoachMatch, DevelopmentGoal, Exercise, Player, SeasonPeriod, TrainingSession } from "@/domain/model";
 
 const sql = postgres(process.env.DATABASE_URL ?? "postgres://coach:coach@localhost:5434/coach", { max: 5 });
 
@@ -11,6 +11,11 @@ async function pilotTeam() {
     : await sql`SELECT id, organization_id FROM teams ORDER BY created_at LIMIT 1`;
   if (!rows[0]) throw new Error("Pilotlaget saknas. Kör npm run db:seed.");
   return { id: String(rows[0].id), organizationId: String(rows[0].organization_id) };
+}
+
+async function audit(action: string, entityType: string, entityId?: string, metadata: Record<string, unknown> = {}) {
+  const team = await pilotTeam();
+  await sql`INSERT INTO activity_logs (organization_id,action,entity_type,entity_id,metadata) VALUES (${team.organizationId},${action},${entityType},${entityId ?? null},${sql.json(metadata as postgres.JSONValue)})`;
 }
 
 export async function listPlayers(): Promise<Player[]> {
@@ -289,4 +294,66 @@ export async function listSkills(): Promise<{ id: string; name: string; category
 export async function deletePeriod(id: string) {
   const team = await pilotTeam();
   await sql`DELETE FROM season_periods WHERE id=${id} AND season_id IN (SELECT id FROM seasons WHERE team_id=${team.id})`;
+}
+
+// --- Match → träning och individuell utveckling ---
+export async function listMatches(): Promise<CoachMatch[]> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT id,opponent,starts_at,COALESCE(location,'') location,game_format,result FROM matches WHERE team_id=${team.id} ORDER BY starts_at DESC`;
+  return rows.map(r => ({ id: String(r.id), opponent: String(r.opponent), startsAt: new Date(r.starts_at as string).toISOString(), location: String(r.location), gameFormat: String(r.game_format) as CoachMatch["gameFormat"], result: r.result ? String(r.result) : null }));
+}
+
+export async function saveMatch(input: Omit<CoachMatch, "id"> & { id?: string }) {
+  const team = await pilotTeam();
+  if (input.id) await sql`UPDATE matches SET opponent=${input.opponent},starts_at=${input.startsAt},location=${input.location || null},game_format=${input.gameFormat},result=${input.result || null} WHERE id=${input.id} AND team_id=${team.id}`;
+  else { const [r] = await sql`INSERT INTO matches (team_id,opponent,starts_at,location,game_format,result) VALUES (${team.id},${input.opponent},${input.startsAt},${input.location || null},${input.gameFormat},${input.result || null}) RETURNING id`; await audit("match.created", "match", String(r.id), { opponent: input.opponent }); }
+}
+
+export async function listObservations() {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT o.id,o.match_id,o.summary,o.sentiment,o.priority,o.player_id,o.created_at,m.opponent,m.starts_at,COALESCE(array_agg(os.skill_id) FILTER (WHERE os.skill_id IS NOT NULL),'{}') skills FROM match_observations o JOIN matches m ON m.id=o.match_id LEFT JOIN match_observation_skills os ON os.observation_id=o.id WHERE m.team_id=${team.id} GROUP BY o.id,m.opponent,m.starts_at ORDER BY o.priority DESC,o.created_at DESC`;
+  return rows.map(r => ({ id: String(r.id), matchId: String(r.match_id), match: `${String(r.opponent)} · ${new Date(r.starts_at as string).toLocaleDateString("sv-SE")}`, summary: String(r.summary), sentiment: String(r.sentiment) as "positive" | "develop" | "neutral", priority: Boolean(r.priority), playerId: r.player_id ? String(r.player_id) : null, skillIds: r.skills as string[], createdAt: new Date(r.created_at as string).toISOString() }));
+}
+
+export async function saveObservation(input: { matchId: string; summary: string; sentiment: "positive" | "develop" | "neutral"; priority: boolean; playerId?: string; skillIds: string[] }) {
+  const team = await pilotTeam();
+  const guard = await sql`SELECT id FROM matches WHERE id=${input.matchId} AND team_id=${team.id}`;
+  if (!guard[0]) throw new Error("Matchen tillhör inte pilotlaget.");
+  const [r] = await sql`INSERT INTO match_observations (match_id,summary,sentiment,priority,player_id) VALUES (${input.matchId},${input.summary},${input.sentiment},${input.priority},${input.playerId || null}) RETURNING id`;
+  for (const skillId of input.skillIds) await sql`INSERT INTO match_observation_skills (observation_id,skill_id) SELECT ${r.id},s.id FROM skills s JOIN skill_categories c ON c.id=s.category_id WHERE s.id=${skillId} AND c.organization_id=${team.organizationId}`;
+  await audit("observation.created", "match_observation", String(r.id), { matchId: input.matchId, priority: input.priority });
+}
+
+export async function listGoals(playerId?: string): Promise<(DevelopmentGoal & { playerName: string; description: string; skills: string[] })[]> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT g.id,g.player_id,g.title,g.description,g.starts_on,g.ends_on,g.status,p.name player_name,COALESCE(array_agg(s.name) FILTER (WHERE s.name IS NOT NULL),'{}') skills FROM development_goals g JOIN players p ON p.id=g.player_id LEFT JOIN development_goal_skills gs ON gs.goal_id=g.id LEFT JOIN skills s ON s.id=gs.skill_id WHERE p.team_id=${team.id} AND (${playerId ?? null}::uuid IS NULL OR p.id=${playerId ?? null}::uuid) GROUP BY g.id,p.name ORDER BY CASE g.status WHEN 'active' THEN 0 WHEN 'planned' THEN 1 ELSE 2 END,g.ends_on`;
+  return rows.map(r => ({ id: String(r.id), playerId: String(r.player_id), title: String(r.title), description: String(r.description), startsOn: String(r.starts_on), endsOn: String(r.ends_on), status: String(r.status) as DevelopmentGoal["status"], skillIds: [], skills: r.skills as string[], playerName: String(r.player_name) }));
+}
+
+export async function saveGoal(input: { playerId: string; title: string; description: string; startsOn: string; endsOn: string; status: DevelopmentGoal["status"]; skillIds: string[] }) {
+  const team = await pilotTeam();
+  const player = await sql`SELECT id FROM players WHERE id=${input.playerId} AND team_id=${team.id}`;
+  if (!player[0]) throw new Error("Spelaren tillhör inte pilotlaget.");
+  const [r] = await sql`INSERT INTO development_goals (player_id,title,description,starts_on,ends_on,status) VALUES (${input.playerId},${input.title},${input.description},${input.startsOn},${input.endsOn},${input.status}) RETURNING id`;
+  for (const skillId of input.skillIds) await sql`INSERT INTO development_goal_skills (goal_id,skill_id) SELECT ${r.id},s.id FROM skills s JOIN skill_categories c ON c.id=s.category_id WHERE s.id=${skillId} AND c.organization_id=${team.organizationId}`;
+  await audit("development_goal.created", "development_goal", String(r.id), { playerId: input.playerId });
+}
+
+export async function getAnalytics() {
+  const team = await pilotTeam();
+  const [sessions, attendance, goals, observations, activity] = await Promise.all([
+    sql`SELECT status,COUNT(*) count FROM training_sessions WHERE team_id=${team.id} GROUP BY status`,
+    sql`SELECT a.status,COUNT(*) count FROM training_session_attendance a JOIN training_sessions s ON s.id=a.session_id WHERE s.team_id=${team.id} GROUP BY a.status`,
+    sql`SELECT status,COUNT(*) count FROM development_goals g JOIN players p ON p.id=g.player_id WHERE p.team_id=${team.id} GROUP BY status`,
+    sql`SELECT sentiment,COUNT(*) count FROM match_observations o JOIN matches m ON m.id=o.match_id WHERE m.team_id=${team.id} GROUP BY sentiment`,
+    sql`SELECT action,entity_type,created_at FROM activity_logs WHERE organization_id=${team.organizationId} ORDER BY created_at DESC LIMIT 12`,
+  ]);
+  return { sessions: sessions.map(r => ({ label: String(r.status), count: Number(r.count) })), attendance: attendance.map(r => ({ label: String(r.status), count: Number(r.count) })), goals: goals.map(r => ({ label: String(r.status), count: Number(r.count) })), observations: observations.map(r => ({ label: String(r.sentiment), count: Number(r.count) })), activity: activity.map(r => ({ action: String(r.action), entityType: String(r.entity_type), createdAt: new Date(r.created_at as string).toISOString() })) };
+}
+
+export async function exportPilotData() {
+  const team = await pilotTeam();
+  const [players, sessions, matches, observations, goals] = await Promise.all([listPlayers(), listSessions(), listMatches(), listObservations(), listGoals()]);
+  await audit("data.exported", "team", team.id, { version: 1 });
+  return { schemaVersion: 1, exportedAt: new Date().toISOString(), teamId: team.id, players, sessions, matches, observations, goals };
 }

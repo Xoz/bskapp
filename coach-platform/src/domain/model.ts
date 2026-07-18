@@ -12,3 +12,4 @@ export interface TrainingSession { id: Id; teamId: Id; title: string; startsAt: 
 export interface SeasonPeriod { id: Id; name: string; startsOn: string; endsOn: string; theme: string; skillIds: Id[] }
 export interface MatchObservation { id: Id; match: string; occurredOn: string; sentiment: "positive" | "develop" | "neutral"; summary: string; skillIds: Id[]; priority: boolean }
 export interface DevelopmentGoal { id: Id; playerId: Id; title: string; startsOn: string; endsOn: string; skillIds: Id[]; status: "planned" | "active" | "completed" }
+export interface CoachMatch { id: Id; opponent: string; startsAt: string; location: string; gameFormat: GameFormat; result: string | null }

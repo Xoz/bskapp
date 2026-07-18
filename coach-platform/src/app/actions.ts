@@ -6,11 +6,15 @@ import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
 import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveConductedSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
 import type { AttendanceStatus, BlockConductStatus, BlockDifficulty } from "@/repositories/postgres";
+import { saveGoal, saveMatch, saveObservation } from "@/repositories/postgres";
+import { developmentGoalSchema, matchSchema, observationSchema } from "@/schemas/domain";
+import { requireCoachIdentity } from "@/lib/coach-session";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
 
 export async function upsertPlayer(data: FormData) {
+  await requireCoachIdentity();
   const name = text(data, "name");
   const birthYear = number(data, "birthYear");
   const shirtNumber = number(data, "number");
@@ -22,6 +26,7 @@ export async function upsertPlayer(data: FormData) {
 export async function removePlayer(data: FormData) { await deletePlayer(text(data, "id")); revalidatePath("/spelare"); }
 
 export async function upsertExercise(data: FormData) {
+  await requireCoachIdentity();
   const input = { id: text(data, "id") || undefined, name: text(data, "name"), summary: text(data, "summary"), durationMinutes: number(data, "durationMinutes"), minPlayers: number(data, "minPlayers"), maxPlayers: number(data, "maxPlayers") };
   if (input.name.length < 2 || input.summary.length < 2 || input.durationMinutes < 1 || input.minPlayers < 1 || input.maxPlayers < input.minPlayers) throw new Error("Kontrollera övningens uppgifter.");
   await saveExercise(input);
@@ -37,6 +42,7 @@ export async function saveExerciseDiagram(exerciseId: string, diagram: Diagram) 
 }
 
 export async function upsertSession(data: FormData) {
+  await requireCoachIdentity();
   const status = text(data, "status");
   const input = { id: text(data, "id") || undefined, title: text(data, "title"), theme: text(data, "theme"), startsAt: text(data, "startsAt"), plannedMinutes: number(data, "plannedMinutes"), status: (status === "planned" ? "planned" : status === "completed" ? "completed" : "draft") as "draft" | "planned" | "completed" };
   if (input.title.length < 2 || input.theme.length < 2 || !Number.isFinite(Date.parse(input.startsAt)) || input.plannedMinutes < 1) throw new Error("Kontrollera träningspassets uppgifter.");
@@ -73,6 +79,7 @@ const CONDUCT_STATUSES: BlockConductStatus[] = ["completed", "skipped"];
 const DIFFICULTIES: BlockDifficulty[] = ["too_easy", "ok", "too_hard"];
 
 export async function saveConductAction(data: FormData) {
+  await requireCoachIdentity();
   const sessionId = text(data, "sessionId");
   const blockIds = (data.getAll("blockId") as string[]).filter(Boolean);
   const blocks: { blockId: string; status: BlockConductStatus; actualMinutes: number; note?: string; difficulty?: BlockDifficulty; replacedExerciseId?: string }[] = [];
@@ -136,6 +143,7 @@ export async function moveBlockAction(data: FormData) {
 }
 
 export async function upsertPeriod(data: FormData) {
+  await requireCoachIdentity();
   const id = text(data, "id") || undefined;
   const name = text(data, "name");
   const theme = text(data, "theme");
@@ -149,3 +157,21 @@ export async function upsertPeriod(data: FormData) {
 }
 
 export async function removePeriod(data: FormData) { await deletePeriod(text(data, "id")); revalidatePath("/planering"); }
+
+export async function createMatchAction(data: FormData) {
+  await requireCoachIdentity();
+  const parsed = matchSchema.parse({ opponent: text(data, "opponent"), startsAt: new Date(text(data, "startsAt")).toISOString(), location: text(data, "location"), gameFormat: text(data, "gameFormat"), result: text(data, "result") });
+  await saveMatch(parsed); revalidatePath("/matcher");
+}
+
+export async function createObservationAction(data: FormData) {
+  await requireCoachIdentity();
+  const parsed = observationSchema.parse({ matchId: text(data, "matchId"), summary: text(data, "summary"), sentiment: text(data, "sentiment"), playerId: text(data, "playerId") || undefined, skillIds: (data.getAll("skillIds") as string[]).filter(Boolean), priority: data.get("priority") === "on" });
+  await saveObservation(parsed); revalidatePath("/matcher"); revalidatePath("/");
+}
+
+export async function createGoalAction(data: FormData) {
+  await requireCoachIdentity();
+  const parsed = developmentGoalSchema.parse({ playerId: text(data, "playerId"), title: text(data, "title"), description: text(data, "description"), startsOn: text(data, "startsOn"), endsOn: text(data, "endsOn"), status: text(data, "status"), skillIds: (data.getAll("skillIds") as string[]).filter(Boolean) });
+  await saveGoal(parsed); revalidatePath("/spelare"); revalidatePath("/analys");
+}
