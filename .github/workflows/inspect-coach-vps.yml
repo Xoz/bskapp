@@ -30,11 +30,11 @@ jobs:
             echo "[service metadata]"
             for service in $(systemctl list-unit-files --type=service --no-legend | awk "{print \$1}" | grep -E "^(bsk|coach|planlinjen).*\\.service$" || true); do
               echo "SERVICE=$service"
-              systemctl show "$service" --property=LoadState,ActiveState,FragmentPath,WorkingDirectory,ExecStart,EnvironmentFiles --no-pager
+              systemctl show "$service" --property=LoadState,ActiveState,SubState,Result,MainPID,FragmentPath,WorkingDirectory,ExecStart,EnvironmentFiles --no-pager
             done
 
             echo "[listening application ports]"
-            ss -ltn | awk "NR == 1 || \$4 ~ /:(3001|3100)$/"
+            ss -ltn | awk "NR == 1 || \$4 ~ /:(3001|3100|3101)$/"
 
             echo "[application directories]"
             find /opt/bsk -mindepth 1 -maxdepth 3 -type d -printf "%p\\n" 2>/dev/null | sort
@@ -47,12 +47,17 @@ jobs:
               git -C "$worktree" rev-parse HEAD
             done
 
-            echo "[environment file names and modes only]"
-            find /etc/bsk -mindepth 1 -maxdepth 1 -type f -printf "%f mode=%m owner=%u:%g\\n" 2>/dev/null | sort
+            echo "[environment file paths, modes and variable names only]"
+            for envfile in /etc/bsk/bsk.env /etc/bsk-coach/coach.env; do
+              if [ -f "$envfile" ]; then
+                stat --printf="%n mode=%a owner=%U:%G\\n" "$envfile"
+                sed -n "s/^\\([A-Za-z_][A-Za-z0-9_]*\\)=.*/  \\1/p" "$envfile" | sort
+              fi
+            done
 
             echo "[coach nginx routing directives]"
-            grep -RIl "location /coach" /etc/nginx/sites-enabled 2>/dev/null | while IFS= read -r file; do
+            grep -RIlE "coach|3101" /etc/nginx/sites-enabled 2>/dev/null | while IFS= read -r file; do
               echo "FILE=$file"
-              grep -E "server_name|location /coach|proxy_pass|auth_request" "$file" || true
+              grep -E "server_name|location|proxy_pass|auth_request|error_page" "$file" || true
             done
           '
