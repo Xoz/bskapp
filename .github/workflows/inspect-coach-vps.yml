@@ -67,4 +67,9 @@ jobs:
             else
               echo "MISSING=/etc/nginx/snippets/coach-platform.conf"
             fi
+
+            echo "[bsk vhost structure]"
+            if [ -f /etc/nginx/sites-enabled/bsk2014.se ]; then
+              grep -nE "^[[:space:]]*(server[[:space:]]*\{|server_name|listen|include)" /etc/nginx/sites-enabled/bsk2014.se || true
+            fi
           '
