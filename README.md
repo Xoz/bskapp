@@ -1,62 +1,68 @@
-# BSK F2014 – Spelarutveckling
+# BSK F2014 – tränar- och utvecklingsplattform
 
-Webbapp för tränare och föräldrar i BSK F2014 (Bollstanäs SK). Byggd enligt SvFF:s
-riktlinjer för barn- och ungdomsfotboll, med fokus på utveckling i stället för resultat.
+Webbapp för Bollstanäs SK F2014 med spelarutveckling, träningsplanering,
+matcher, live-rapportering, laguttagning, statistik och administration.
+Generativa AI-funktioner är pausade; regelbaserad produktlogik är kvar.
 
 ## Funktioner
 
-- **Tränarutvärderingar** enligt SvFF:s spelarutbildningsplan (16 färdigheter i 5 områden,
-  fyra utvecklingsnivåer – inga betyg eller rankningar)
-- **Utveckling över tid** – radar- och linjediagram per spelare, jämförelse med föregående utvärdering
-- **Matchstatistik** – speltid, mål och assist per spelare; föräldrar kan hjälpa till att registrera
-- **Jämn speltid** – automatisk varning när spelare ligger under 75 % av lagets snitt (SvFF: alla spelar lika mycket)
-- **Roller** – tränarkod ger full åtkomst, föräldrakod ger enbart åtkomst till matchdelen
-- **White label** – klubbnamn, lagnamn, färger och koder byts under Inställningar, så appen
-  kan säljas in till andra klubbar och lag
+- Daterade utvecklingsavstämningar, färdighetsträd och läsvy för spelaren.
+- Matcher, cuper, laguttagning, matchobservationer och matchspecifik form.
+- Publik Livescore samt capability-skyddad liverapportering.
+- Grupp- och spelaravgränsade roller för admin, huvudtränare, tränare,
+  lagledare, föräldrar och spelare.
+- Versionsmärkt spelarutdrag och behörighetsstyrd permanent radering.
+- Separat Planlinjen-app för övningar, träningspass, säsongsplanering,
+  genomförande, matcher och analys.
 
-## Kom igång
+## Lokal utveckling
+
+Huvudappen använder en separat lokal Postgres-databas; använd aldrig
+produktionsdatabasen för utveckling.
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
+npm ci
+# Sätt lokal DATABASE_URL och övriga värden enligt .env.example
+npm run dev
 ```
 
-Standardkoder (byt under Inställningar):
+`scripts/seed-dev.mjs` skapar lokal testdata och vägrar köra mot en icke-lokal
+databas. Planlinjen har egna instruktioner i `coach-platform/README.md`.
 
-| Roll | Kod |
-| --- | --- |
-| Tränare | `TRANARE2014` |
-| Förälder | `BSK2014` |
+## Teknik och verifiering
 
-Truppen innehåller exempelspelare vid första start – byt namn eller ta bort dem under **Spelare**.
+- Next.js 16, React 19, TypeScript strict och Tailwind CSS.
+- Postgres via `postgres` (postgres.js).
+- Google OAuth och signerad HTTP-only-session; utvecklingsinloggning finns bara
+  utanför produktion.
+- Vitest, ett 36-stegs liveprotokoll och Planlinjens Playwright-flöden.
 
-OBS: lokal utveckling pekar mot samma `DATABASE_URL` som produktionen (se
-nedan) – det finns ännu ingen separat dev-databas.
+```bash
+npx tsc --noEmit
+npm test
+npm run build
+npm audit
+```
 
-## Teknik
+## Produktion och staging
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- Databas via `postgres` (postgres.js): **Supabase** (Postgres), både produktion och lokal utveckling
-- Recharts för diagram
-- Sessioner via signerad HTTP-only-cookie
-- Design: "Dark Mono Dashboard" – Syne + DM Mono, mörk palett, grain-textur
+`main` deployas av GitHub Actions till VPS:en. Huvudappen kör på port 3001 och
+Planlinjen på port 3101 bakom den signerade sessionsbryggan på
+`https://bsk2014.se/coach/`. Workflowen bygger båda apparna, migrerar
+Planlinjens databas och hälsotestar tjänsterna och auth-grinden.
 
-## Produktion (Vercel + Supabase)
-
-Sätt följande miljövariabler i Vercel:
-
-| Variabel | Värde |
-| --- | --- |
-| `DATABASE_URL` | Supabase connection string (Transaction pooler, port 6543) |
-| `SESSION_SECRET` | Lång slumpsträng, t.ex. `openssl rand -hex 32` |
-
-Schemat skapas och migreras automatiskt vid första anropet (`lib/db.ts`).
+Vercel är reserverat för Preview/staging. Automatiska Vercel-deployer från
+`main` är avstängda i `vercel.json`; se `docs/STAGING.md` för den separata
+stagingdatabas som måste skapas innan Preview kan användas.
 
 ## Integritet
 
-Appen lagrar barns namn och utvecklingsdata. Tänk på att:
+Apparna behandlar personuppgifter om barn. Tekniska auth-, scope-, utdrags-,
+raderings- och återställningsgrindar finns, men Planlinjen får endast använda
+syntetisk pilotdata tills föreningen har protokollfört ändamål, rättslig grund,
+lagringstid, skadefält, biträden och integritetskontakt. Samtycke ska inte antas
+vara en universell rättslig grund. Se `docs/GDPR-GRIND.md` och
+`docs/DRIFT-OCH-BITRADEN.md`.
 
-- Bara dela tränarkoden med tränarteamet
-- Byta koderna om de sprids
-- Köra appen bakom HTTPS i produktion
-- Inhämta vårdnadshavares samtycke enligt GDPR innan spelare läggs in
+Kodens orienteringskarta och aktuellt projektläge finns i `docs/CODEMAP.md` och
+`docs/PROJECT_CONTEXT.md`.

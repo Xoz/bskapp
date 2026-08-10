@@ -67,6 +67,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   utfasade `ANTHROPIC_API_KEY`. `https://bsk2014.se/coach/` använder strippande
   nginx-`auth_request`; den tidigare öppna `https://klvr.se/coach/` omdirigeras
   dit. Actions `31381324085` och en extern HTTP-kontroll verifierade grinden.
+- ~~Rensa utfasade AI-/Turso-hemligheter och felaktiga Vercel-prodbyggen~~ –
+  **KLART 2026-08-10.** Vercel innehåller inte längre Anthropic-, Moonshot-
+  eller Turso-variabler. `main` deployas enbart till VPS; `vercel.json` stänger
+  av automatiska Vercel-byggen för `main` men lämnar Preview-grenar aktiva.
 - Föreningen måste utse integritetskontakt och fatta besluten i
   [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
   lagringstid.

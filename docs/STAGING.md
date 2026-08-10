@@ -1,16 +1,13 @@
 # Staging-miljö
 
-> **Läge just nu (sedan Supabase-flytten, 2026-06-20):** produktionen kör
-> Supabase/Postgres (`DATABASE_URL`). Det finns ännu ingen Supabase-databas
-> för staging – free-tier tillåter bara 2 projekt och det andra är redan
-> upptaget av ett annat projekt. Vercel Preview pekar tills vidare fortfarande
-> mot den gamla `bsk-staging`-databasen i Turso (separat `TURSO_DATABASE_URL`/
-> `TURSO_AUTH_TOKEN`, bara satta i Preview-scope) – appen stödjer numera bara
-> en databasmotor (Postgres) i runtime-koden, så Preview-deployen fungerar
-> inte mot Turso längre förrän en Supabase-staging finns. Lägg till ett tredje
-> Supabase-projekt (`bsk-staging`) när det finns plats, och peka Preview-scope
-> i Vercel mot dess `DATABASE_URL` – resten av det här dokumentet beskriver
-> målbilden.
+> **Läge 2026-08-10:** produktionen kör på VPS med dess lokala Postgres och
+> deployas av GitHub Actions. Vercel är endast avsett för Preview/staging;
+> automatiska Vercel-deployer från `main` är avstängda i `vercel.json` så att
+> VPS och Vercel inte konkurrerar som produktionsmål. Preview saknar fortfarande
+> en separat Postgres-`DATABASE_URL`. De oanvända AI- och Turso-hemligheterna är
+> borttagna från Vercel. Ett separat Supabase/Postgres-projekt (`bsk-staging`)
+> och Google OAuth-redirect kräver fortfarande kontoägarens budget- och
+> administratörsbeslut.
 
 Staging låter dig testa nya funktioner mot en driftsatt app **utan** att röra
 produktionsdata. Stacken är byggd för det: databasen väljs via
@@ -18,8 +15,8 @@ miljövariabler, så staging = en egen branch + Vercels Preview-miljö pekad mot
 en separat Supabase-databas.
 
 ```
-main      → Vercel Production → Supabase: bsk-prod (produktion)
-staging   → Vercel Preview    → Supabase: bsk-staging (testdata, ej skapad än)
+main      → GitHub Actions → VPS/Postgres (produktion)
+staging   → Vercel Preview → separat Postgres: bsk-staging (ej skapad än)
 ```
 
 Ingen kodändring behövs — `lib/db.ts` läser `DATABASE_URL` och `init()`
@@ -62,10 +59,10 @@ git checkout staging
 git merge main           # eller utveckla direkt på staging
 git push                 # → Vercel bygger preview-deploy automatiskt
 
-# Befordra till produktion när det är testat
+# Befordra till VPS-produktion när det är testat
 git checkout main
 git merge staging
-git push                 # → Vercel deployar produktion
+git push                 # → GitHub Actions deployar VPS-produktion
 ```
 
 Branchen `staging` får en **stabil** preview-URL (`...-git-staging-...`) som du

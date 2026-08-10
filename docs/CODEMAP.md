@@ -6,6 +6,10 @@
 
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
+Drift: `main` deployas till VPS av `.github/workflows/deploy.yml`. `vercel.json`
+stänger av Vercels automatiska `main`-byggen; Vercel är reserverat för Preview
+när en separat staging-Postgres finns. Se `docs/STAGING.md`.
+
 Coach-plattform, milstolpe 6–8: `/matcher` sparar matcher och observationer med färdighetsfokus, `/spelare` hanterar individuella utvecklingsmål och `/analys` visar sammanställning plus audit-händelser. Team- och spelarutdrag finns under `coach-platform/src/app/api/export/`; spelarvyn har separat begränsning, återaktivering och namnverifierad permanent radering. `app/api/auth/coach-bridge/route.ts` signerar en kortlivad BSK-identitet via `lib/coachBridge.ts`; `coach-platform/src/lib/bridge-auth.ts` validerar den och `coach-platform/src/proxy.ts` avvisar osignerade produktionsanrop tidigt. Nginx-mall finns i `coach-platform/deploy/`. Root layout och alla server actions verifierar identiteten igen. `coach-platform/db/migrate.ts` versionshanterar migrationer och `db/verify-restore.ts` provar backup/restore. Playwright-flöden finns i `coach-platform/e2e/`.
 OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/next/dist/docs/`.
 
