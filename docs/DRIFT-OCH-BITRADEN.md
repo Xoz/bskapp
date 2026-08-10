@@ -28,6 +28,11 @@ administratörskonto och länka till föreningens avtal utan att lägga hemlighe
   Endast operativsystemets paketdatabastimer fanns. Detta är en öppen
   produktionsrisk tills backupfrekvens, kryptering, mål, retention och extern
   lagringsplats är beslutade och implementerade.
+- Fail-closed backupverktyg finns i `scripts/backup-vps-databases.sh` och
+  `deploy/backup/`. Det kräver en separat `/mnt/bsk-backup`-mount, rootägd
+  AES-nyckel samt explicit intervall och retention. Varje snapshot återställs
+  till isolerade testdatabaser och tabellantal jämförs innan den publiceras.
+  Tjänsten är inte aktiverad eftersom mount, policy och biträde inte är valda.
 - UFW rapporterar `inactive`. Databaserna skyddas av loopback-bindning, men
   leverantörens externa brandvägg och övriga publika VPS-tjänster är inte
   verifierade i den här inventeringen. Aktivera inte hostbrandvägg utan en
@@ -40,7 +45,8 @@ administratörskonto och länka till föreningens avtal utan att lägga hemlighe
 - Backupfrekvens, kryptering, lagringstid, återställningsmål (RPO/RTO) och region.
 - Register över underbiträden och godkända överföringsmekanismer utanför EU/EES.
 - Retentiontabell per behandling; först därefter får ett gallringsjobb aktiveras.
-- Schemalagd och krypterad backup i den verkliga driftmiljön med beslutad
+- Aktivera den byggda schemalagda och krypterade backupen i den verkliga
+  driftmiljön med beslutad
   retention. Planlinjens faktiska VPS-återställningsprov är grönt via
   `npm run db:verify-restore` med `PG_DOCKER_SERVICE=db`, men kontrollens
   temporära dump är inte en beständig backup.

@@ -77,7 +77,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
   lagringstid. VPS-inventeringen visar dessutom att beständig, schemalagd och
   extern backup saknas; frekvens, kryptering, retention och RPO/RTO måste
-  beslutas innan den kan införas. Själva återställningsprovet mot Planlinjens
+  beslutas innan den kan aktiveras. Fail-closed verktyg och systemd-enheter är
+  byggda i `scripts/backup-vps-databases.sh` och `deploy/backup/`: de kräver en
+  separat mount och återställer varje krypterad snapshot till isolerade
+  testdatabaser innan publicering. Själva återställningsprovet mot Planlinjens
   verkliga VPS-databas är grönt för 27 tabeller.
 
 ### Säkerhetshärdning 2026-08-10

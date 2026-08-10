@@ -1,0 +1,17 @@
+[Unit]
+Description=Encrypted verified backup of BSK databases
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/bsk-backup/backup.env
+ExecStart=/opt/bsk/bsk-f2014/scripts/backup-vps-databases.sh
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/mnt/bsk-backup /run/lock

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check whether a scheduled BSK database backup is due
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=10m
+Unit=bsk-database-backup.service
+
+[Install]
+WantedBy=timers.target

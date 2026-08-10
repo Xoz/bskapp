@@ -51,6 +51,10 @@ Planlinjen på port 3101 bakom den signerade sessionsbryggan på
 `https://bsk2014.se/coach/`. Workflowen bygger båda apparna, migrerar
 Planlinjens databas och hälsotestar tjänsterna och auth-grinden.
 
+Fail-closed verktyg för krypterad och återställningsverifierad backup av båda
+databaserna finns i `deploy/backup/`. Det aktiveras först när föreningen har
+valt en separat lagringsmount och beslutat intervall, retention och RPO/RTO.
+
 Vercel är reserverat för Preview/staging. Automatiska Vercel-deployer från
 `main` är avstängda i `vercel.json`; se `docs/STAGING.md` för den separata
 stagingdatabas som måste skapas innan Preview kan användas.
