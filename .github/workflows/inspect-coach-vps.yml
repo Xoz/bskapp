@@ -1,0 +1,58 @@
+name: Inspect Coach VPS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Setup SSH
+        env:
+          BSK_VPS_SSH_KEY: ${{ secrets.BSK_VPS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$BSK_VPS_SSH_KEY" > ~/.ssh/bsk_vps_key
+          chmod 600 ~/.ssh/bsk_vps_key
+          ssh-keyscan -H 217.160.55.151 >> ~/.ssh/known_hosts
+
+      - name: Read non-secret coach deployment metadata
+        run: |
+          ssh -i ~/.ssh/bsk_vps_key root@217.160.55.151 '
+            set -eu
+            echo "[service candidates]"
+            systemctl list-unit-files --type=service --no-legend | awk "{print \$1}" | grep -E "^(bsk|coach|planlinjen).*\\.service$" || true
+
+            echo "[service metadata]"
+            for service in $(systemctl list-unit-files --type=service --no-legend | awk "{print \$1}" | grep -E "^(bsk|coach|planlinjen).*\\.service$" || true); do
+              echo "SERVICE=$service"
+              systemctl show "$service" --property=LoadState,ActiveState,FragmentPath,WorkingDirectory,ExecStart,EnvironmentFiles --no-pager
+            done
+
+            echo "[listening application ports]"
+            ss -ltn | awk "NR == 1 || \$4 ~ /:(3001|3100)$/"
+
+            echo "[application directories]"
+            find /opt/bsk -mindepth 1 -maxdepth 3 -type d -printf "%p\\n" 2>/dev/null | sort
+
+            echo "[git checkouts]"
+            find /opt/bsk -mindepth 1 -maxdepth 4 -type d -name .git -print0 2>/dev/null | while IFS= read -r -d "" gitdir; do
+              worktree=${gitdir%/.git}
+              printf "%s " "$worktree"
+              git -C "$worktree" rev-parse --abbrev-ref HEAD
+              git -C "$worktree" rev-parse HEAD
+            done
+
+            echo "[environment file names and modes only]"
+            find /etc/bsk -mindepth 1 -maxdepth 1 -type f -printf "%f mode=%m owner=%u:%g\\n" 2>/dev/null | sort
+
+            echo "[coach nginx routing directives]"
+            grep -RIl "location /coach" /etc/nginx/sites-enabled 2>/dev/null | while IFS= read -r file; do
+              echo "FILE=$file"
+              grep -E "server_name|location /coach|proxy_pass|auth_request" "$file" || true
+            done
+          '
