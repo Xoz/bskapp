@@ -15,7 +15,7 @@ Den fristaende produkten byggs i `coach-platform/`. Den delar inte runtime, data
   - [x] Signerad BSK-identitet i Proxy, root layout, export och samtliga server actions.
   - [x] HMAC-, action-auth- och Playwright-regressionstester.
   - [x] Versionssäker migrationsrunner, spelarutdrag/radering och verifierat återställningsprov (27 tabeller).
-  - [ ] Konfigurera `BSK_SESSION_BRIDGE_SECRET` och signerade headers i VPS-proxyn.
+  - [ ] Driftsätt den byggda `/api/auth/coach-bridge`-routen, sätt `BSK_SESSION_BRIDGE_SECRET` i båda processerna och aktivera `deploy/nginx-coach.conf.example` i VPS-proxyn.
   - [ ] Föreningen genomför återstående juridiska GDPR-beslut före riktiga barnuppgifter.
 
 ## MVP-avgransning

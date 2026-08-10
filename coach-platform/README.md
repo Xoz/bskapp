@@ -20,6 +20,10 @@ Appen öppnas på `http://localhost:3100`.
 För en sökvägsmonterad testmiljö byggs appen med `NEXT_BASE_PATH=/coach` och
 proxas som `https://klvr.se/coach/`. Variabeln måste finnas både när `next
 build` körs och när appen startas; utan den används roten som vanligt.
+`deploy/nginx-coach.conf.example` visar den obligatoriska `auth_request`-bryggan.
+Samma `BSK_SESSION_BRIDGE_SECRET` ska finnas i BSK- och Planlinjen-processerna;
+nginx ska alltid nollställa klientens identitetsheaders och bara vidarebefordra
+de kortlivade headers som BSK-routen returnerar.
 
 ## Arkitektur
 

@@ -23,11 +23,11 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 
 ### Övriga granskningsfynd
 
-- ~~**Testskydd**~~ – **KLART FÖR NUVARANDE MVP.** Huvudappen har 9 gröna
+- ~~**Testskydd**~~ – **KLART FÖR NUVARANDE MVP.** Huvudappen har 10 gröna
   Vitest-tester för roller, permissions, grupp-/spelarscope och
   säkerhetskontrakt. Liveprotokollet verifierar 36/36 steg inklusive capability,
   coach/förälder, atomisk rate-limit, ångra, offline-replay och två samtidiga
-  rapportörer. `coach-platform` har 12 Vitest-tester och tre gröna
+  rapportörer. `coach-platform` har 13 Vitest-tester och tre gröna
   Playwright-flöden, inklusive spelarutdrag, begränsning och permanent radering.
 
 - **GDPR – föreningsbeslut kvar.** Appen lagrar personuppgifter om **minderåriga** (spelare 11–12 år):
@@ -62,8 +62,9 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 - Skapa separat Supabase-staging, sätt Vercel Preview-hemligheter och registrera
   Google OAuth-redirect. Kräver konto-/budgetbeslut utanför repot.
 - Sätt samma `BSK_SESSION_BRIDGE_SECRET` i coach-processen och den betrodda
-  BSK/VPS-bryggan samt låt proxyn skriva signerade `x-bsk-coach`-headers. Ingen
-  proxy-/deploykonfiguration eller VPS-åtkomst finns i repot.
+  BSK/VPS-bryggan samt aktivera nginx-konfigurationen. Bryggrouten och en
+  strippande `auth_request`-mall finns nu i repot, men VPS-env/service/nginx kan
+  inte ändras med den tillgängliga deployworkflowen.
 - Föreningen måste utse integritetskontakt och fatta besluten i
   [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
   lagringstid.
