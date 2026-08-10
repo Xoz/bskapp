@@ -39,8 +39,20 @@ jobs:
             . /etc/bsk/bsk.env
             set +a
             npm run build
-            systemctl restart bsk.service
+
+            cd /opt/bsk/bsk-f2014/coach-platform
+            npm ci
+            set -a
+            . /etc/bsk-coach/coach.env
+            set +a
+            npm run build
+            npm run db:migrate
+
+            cd /opt/bsk/bsk-f2014
+            ./coach-platform/deploy/configure-vps.sh
+            systemctl restart bsk.service bsk-coach.service
             systemctl is-active --quiet bsk.service
+            systemctl is-active --quiet bsk-coach.service
           '
 
       - name: Verify app
@@ -56,4 +68,30 @@ jobs:
             echo "App did not become healthy on 127.0.0.1:3001/login" >&2
             systemctl status --no-pager bsk.service >&2 || true
             exit 1
+          '
+
+      - name: Verify coach authentication bridge
+        run: |
+          ssh -i ~/.ssh/bsk_vps_key root@217.160.55.151 '
+            set -e
+            set -a
+            . /etc/bsk-coach/coach.env
+            set +a
+
+            unsigned_status=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:3101/coach/)
+            test "$unsigned_status" = 401
+
+            bridge_payload=$(node -e '\''process.stdout.write(Buffer.from(JSON.stringify({id:"deploy-health",name:"Deploy health",role:"head_coach",issuedAt:Date.now()})).toString("base64url"))'\'')
+            bridge_signature=$(BRIDGE_PAYLOAD="$bridge_payload" node -e '\''const crypto=require("node:crypto");process.stdout.write(crypto.createHmac("sha256",process.env.BSK_SESSION_BRIDGE_SECRET).update(process.env.BRIDGE_PAYLOAD).digest("hex"))'\'')
+            curl -fsS \
+              -H "X-BSK-Coach: $bridge_payload" \
+              -H "X-BSK-Coach-Signature: $bridge_signature" \
+              http://127.0.0.1:3101/coach/ > /dev/null
+
+            producer_status=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:3001/api/auth/coach-bridge)
+            test "$producer_status" = 401
+            public_status=$(curl -sS -o /dev/null -w "%{http_code}" https://bsk2014.se/coach/)
+            test "$public_status" = 302
+            legacy_status=$(curl -sS -o /dev/null -w "%{http_code}" https://klvr.se/coach/)
+            test "$legacy_status" = 308
           '

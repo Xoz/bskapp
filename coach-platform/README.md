@@ -15,12 +15,14 @@ npm run dev
 
 Appen öppnas på `http://localhost:3100`.
 
-## Tillfällig VPS-miljö
+## VPS-miljö
 
-För en sökvägsmonterad testmiljö byggs appen med `NEXT_BASE_PATH=/coach` och
-proxas som `https://klvr.se/coach/`. Variabeln måste finnas både när `next
-build` körs och när appen startas; utan den används roten som vanligt.
-`deploy/nginx-coach.conf.example` visar den obligatoriska `auth_request`-bryggan.
+Appen byggs med `NEXT_BASE_PATH=/coach` och proxas som
+`https://bsk2014.se/coach/`, på samma domän som BSK-sessionen. Variabeln måste
+finnas både när `next build` körs och när appen startas; utan den används roten
+som vanligt. `deploy/nginx-bsk2014.conf` innehåller den obligatoriska
+`auth_request`-bryggan. Den äldre adressen `https://klvr.se/coach/` omdirigeras
+till den sessionsskyddade plattformen.
 Samma `BSK_SESSION_BRIDGE_SECRET` ska finnas i BSK- och Planlinjen-processerna;
 nginx ska alltid nollställa klientens identitetsheaders och bara vidarebefordra
 de kortlivade headers som BSK-routen returnerar.
