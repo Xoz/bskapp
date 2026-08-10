@@ -33,6 +33,11 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
   avstängda i `vercel.json`; oanvända Anthropic-, Moonshot- och Turso-hemligheter
   är borttagna därifrån. Vercel Preview väntar på en separat staging-Postgres
   och Google OAuth-redirect och får inte återanvända VPS-produktionsdatabasen.
+- VPS-databaserna är loopback-bundna på port 5433/5434 och Planlinjens
+  återställningsprov passerade mot den verkliga driftdatauppsättningen (27
+  tabeller). Ingen schemalagd eller extern BSK-/Planlinjen-backup hittades och
+  UFW är inaktiv; backupmål/retention/RPO/RTO samt leverantörens brandvägg är
+  kvar som uttryckliga förenings-/driftbeslut i `docs/DRIFT-OCH-BITRADEN.md`.
 
 - Milstolpe 4 i tranarplattformen (ovningsritare) ombyggd och deployad 2026-07-13 efter jämförelse med riktiga fotbollsövningar: statisk objektbaserad SVG-ritare med planmallar, separata färgverktyg för spelare/motståndare/målvakt, boll, koner, pinnar, mål, zoner, text och tydliga linjetyper. Spelare och boll har samma storlek. Pilar kan göras med två klick eller genom att dra och har större träffyta vid markering. Animation/sekvensspelare borttagen. Persistence mot `exercise_diagrams` verifierad efter rättning till `sql.json`. Route `/ovningar/[id]/ritare`. Se `coach-platform/docs/exercise-format.md`.
 - Tränarplattformens milstolpar 1–7 och den tekniska delen av milstolpe 8 är

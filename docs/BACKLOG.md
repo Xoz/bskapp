@@ -73,7 +73,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   av automatiska Vercel-byggen för `main` men lämnar Preview-grenar aktiva.
 - Föreningen måste utse integritetskontakt och fatta besluten i
   [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
-  lagringstid.
+  lagringstid. VPS-inventeringen visar dessutom att beständig, schemalagd och
+  extern backup saknas; frekvens, kryptering, retention och RPO/RTO måste
+  beslutas innan den kan införas. Själva återställningsprovet mot Planlinjens
+  verkliga VPS-databas är grönt för 27 tabeller.
 
 ### Säkerhetshärdning 2026-08-10
 

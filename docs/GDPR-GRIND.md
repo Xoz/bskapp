@@ -68,7 +68,9 @@ händer med redan insamlade uppgifter vid återkallelse ska beslutas innan kod.
 - Export och radering auditloggas med internt spelar-id, utan barnets namn eller
   fritext i auditposten.
 - Planlinjens backup återställdes i en isolerad temporär databas; 27 tabellers
-  radantal matchade och testdatabasen togs bort efter verifieringen.
+  radantal matchade och testdatabasen togs bort efter verifieringen. Samma prov
+  passerade därefter mot den verkliga VPS-databasen. Ingen beständig,
+  schemalagd eller extern BSK-/Planlinjen-backup är ännu konfigurerad.
 - Dependency-audit är ren i båda apparna.
 - Gallring är medvetet inte schemalagd: retentionvärden saknar ännu ett
   protokollfört föreningsbeslut.
