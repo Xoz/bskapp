@@ -80,7 +80,9 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   beslutas innan den kan aktiveras. Fail-closed verktyg och systemd-enheter är
   byggda i `scripts/backup-vps-databases.sh` och `deploy/backup/`: de kräver en
   separat mount och återställer varje krypterad snapshot till isolerade
-  testdatabaser innan publicering. Själva återställningsprovet mot Planlinjens
+  testdatabaser innan publicering. Ett fullständigt VPS-integrationstest mot
+  båda drift-databaserna är grönt och lämnade inga testartefakter. Själva
+  återställningsprovet mot Planlinjens
   verkliga VPS-databas är grönt för 27 tabeller.
 
 ### Säkerhetshärdning 2026-08-10

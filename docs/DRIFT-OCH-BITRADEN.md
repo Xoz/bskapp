@@ -32,7 +32,10 @@ administratörskonto och länka till föreningens avtal utan att lägga hemlighe
   `deploy/backup/`. Det kräver en separat `/mnt/bsk-backup`-mount, rootägd
   AES-nyckel samt explicit intervall och retention. Varje snapshot återställs
   till isolerade testdatabaser och tabellantal jämförs innan den publiceras.
-  Tjänsten är inte aktiverad eftersom mount, policy och biträde inte är valda.
+  Hela flödet är integrationstestat på VPS med temporär separat `tmpfs` för
+  båda drift-databaserna: checksummor och fulla återställningar passerade och
+  snapshot, testdatabaser, nyckel, config och mount städades efteråt. Tjänsten
+  är inte aktiverad eftersom permanent mount, policy och biträde inte är valda.
 - UFW rapporterar `inactive`. Databaserna skyddas av loopback-bindning, men
   leverantörens externa brandvägg och övriga publika VPS-tjänster är inte
   verifierade i den här inventeringen. Aktivera inte hostbrandvägg utan en

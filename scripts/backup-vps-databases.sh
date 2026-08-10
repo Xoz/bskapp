@@ -130,7 +130,7 @@ read_database_identity() {
     const user = decodeURIComponent(value.username);
     const database = decodeURIComponent(value.pathname.slice(1));
     if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(user) || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(database)) process.exit(1);
-    process.stdout.write(`${user} ${database}`);
+    process.stdout.write(`${user} ${database}\n`);
   '
 }
 
