@@ -13,7 +13,7 @@ minst ange:
 - personuppgiftsansvarig förening och kontaktväg;
 - varje behandlings tydliga ändamål och rättsliga grund;
 - vilka uppgifter som behandlas, inklusive fritext, självskattningar,
-  matchbetyg, närvaro och eventuell skade-/hälsouppgift;
+  matchbetyg och närvaro; skadeorsak eller hälsostatus samlas inte in;
 - mottagare, personuppgiftsbiträden, underbiträden och relevanta regioner;
 - beslutad lagringstid per behandling och hur gallring sker;
 - åtkomstgrupper och vilka delar som kan visas publikt;

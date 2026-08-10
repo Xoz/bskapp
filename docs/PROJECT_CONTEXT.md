@@ -38,6 +38,10 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
   tabeller). Ingen schemalagd eller extern BSK-/Planlinjen-backup hittades och
   UFW är inaktiv; backupmål/retention/RPO/RTO samt leverantörens brandvägg är
   kvar som uttryckliga förenings-/driftbeslut i `docs/DRIFT-OCH-BITRADEN.md`.
+- Planlinjens skade-/hälsostatus är borttagen genom dataminimering. UI,
+  TypeScript, Zod och server-action-allowlist accepterar inte längre `injured`;
+  migration 004 konverterar äldre pilotvärden till vanlig frånvaro och bygger
+  om databas-enumen utan hälsostatus.
 
 - Milstolpe 4 i tranarplattformen (ovningsritare) ombyggd och deployad 2026-07-13 efter jämförelse med riktiga fotbollsövningar: statisk objektbaserad SVG-ritare med planmallar, separata färgverktyg för spelare/motståndare/målvakt, boll, koner, pinnar, mål, zoner, text och tydliga linjetyper. Spelare och boll har samma storlek. Pilar kan göras med två klick eller genom att dra och har större träffyta vid markering. Animation/sekvensspelare borttagen. Persistence mot `exercise_diagrams` verifierad efter rättning till `sql.json`. Route `/ovningar/[id]/ritare`. Se `coach-platform/docs/exercise-format.md`.
 - Tränarplattformens milstolpar 1–7 och den tekniska delen av milstolpe 8 är

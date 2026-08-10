@@ -14,7 +14,6 @@ const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string }[] = [
   { value: "late", label: "Sent" },
   { value: "partial", label: "Delvis" },
   { value: "absent", label: "Frånvarande" },
-  { value: "injured", label: "Skadad" },
   { value: "trial", label: "Provpass" },
 ];
 

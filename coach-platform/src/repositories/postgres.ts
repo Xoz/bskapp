@@ -207,7 +207,7 @@ export async function moveBlock(id: string, dir: -1 | 1) {
 
 // --- Närvaro + genomförande ---
 
-export type AttendanceStatus = "present" | "absent" | "late" | "partial" | "injured" | "trial";
+export type AttendanceStatus = "present" | "absent" | "late" | "partial" | "trial";
 
 export async function listAttendance(sessionId: string): Promise<{ playerId: string; status: AttendanceStatus }[]> {
   const team = await pilotTeam();

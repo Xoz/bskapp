@@ -81,7 +81,7 @@ export async function completeSessionAction(data: FormData) {
   revalidatePath("/traningspass");
 }
 
-const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "partial", "injured", "trial"];
+const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "partial", "trial"];
 
 export async function saveAttendanceAction(data: FormData) {
   await requireCoachIdentity();

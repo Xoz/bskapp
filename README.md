@@ -60,7 +60,8 @@ stagingdatabas som måste skapas innan Preview kan användas.
 Apparna behandlar personuppgifter om barn. Tekniska auth-, scope-, utdrags-,
 raderings- och återställningsgrindar finns, men Planlinjen får endast använda
 syntetisk pilotdata tills föreningen har protokollfört ändamål, rättslig grund,
-lagringstid, skadefält, biträden och integritetskontakt. Samtycke ska inte antas
+lagringstid, biträden och integritetskontakt. Skade-/hälsostatus är bortvald
+genom dataminimering. Samtycke ska inte antas
 vara en universell rättslig grund. Se `docs/GDPR-GRIND.md` och
 `docs/DRIFT-OCH-BITRADEN.md`.
 

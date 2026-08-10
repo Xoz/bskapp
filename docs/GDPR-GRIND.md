@@ -31,7 +31,7 @@ tränarplattformen.
 | Utvecklingsmål och tränaranteckningar | Individuellt träningsstöd | Dokumenterad nödvändighet, grund och åtkomst |
 | Matchbetyg och form | Tränarens planeringsstöd | Om funktionen ska användas alls för barn |
 | Självskattning och fritext | Spelarens återkoppling till tränare | Grund, frivillighet och särskild gallring |
-| `injured`/skadeuppgift | Anpassa deltagande | Bedömning av känslig hälsouppgift eller ta bort fältet |
+| Skade-/hälsouppgift | Anpassa deltagande | **Bortvald.** Planlinjen samlar inte in skadeorsak eller hälsostatus; vanlig `Frånvarande` används. |
 | Publik Livescore | Informera följare om match | Exakt vilken persondata som får vara publik |
 
 Samtycke ska inte användas som universell reservgrund. Om föreningen väljer
@@ -72,6 +72,10 @@ händer med redan insamlade uppgifter vid återkallelse ska beslutas innan kod.
   passerade därefter mot den verkliga VPS-databasen. Ingen beständig,
   schemalagd eller extern BSK-/Planlinjen-backup är ännu konfigurerad.
 - Dependency-audit är ren i båda apparna.
+- Planlinjens `injured`-status är borttagen från schema, servervalidering och UI.
+  Migration `004_remove_injury_status.sql` omklassar äldre pilotvärden till
+  vanlig frånvaro och tar bort enumvärdet, så närvaroflödet inte behandlar
+  skade-/hälsostatus.
 - Gallring är medvetet inte schemalagd: retentionvärden saknar ännu ett
   protokollfört föreningsbeslut.
 

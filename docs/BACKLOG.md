@@ -44,8 +44,10 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   behörighetskontrolleras samt auditloggas utan barnets namn. Coachdatabasens
   återställningsprov är grönt mot 27 tabeller. Kvar före verkliga barnuppgifter:
   protokollför ändamål/rättslig grund/lagringstid, fyll i
-  [DRIFT-OCH-BITRADEN.md](DRIFT-OCH-BITRADEN.md), besluta skadefältet och bygg
-  gallring först efter fastställd retentiontabell.
+  [DRIFT-OCH-BITRADEN.md](DRIFT-OCH-BITRADEN.md) och bygg gallring först efter
+  fastställd retentiontabell. Skadefältet är stängt genom dataminimering:
+  Planlinjen samlar inte längre in `injured`/hälsostatus och migrerar äldre
+  pilotvärden till vanlig frånvaro.
 
 - ~~**Matchbetyg – Fas 2**~~ – **KLART.** Formlistan visas på Översikt och
   cupkorten visar bästa form i cupen. Nivåförslag och regelbaserade förslag från

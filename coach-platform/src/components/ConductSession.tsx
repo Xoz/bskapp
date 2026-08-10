@@ -12,9 +12,9 @@ type Session = { id: string; title: string; blocks: Block[] };
 
 type BlockState = { status: "pending" | BlockConductStatus; note: string; difficulty: "" | BlockDifficulty; replacedExerciseId: string; extraSeconds: number };
 
-const ATT_CYCLE: AttendanceStatus[] = ["present", "late", "partial", "absent", "injured", "trial"];
-const ATT_LABEL: Record<AttendanceStatus, string> = { present: "Närvarande", late: "Sent", partial: "Delvis", absent: "Frånvarande", injured: "Skadad", trial: "Provpass" };
-const ATT_COLOR: Record<AttendanceStatus, string> = { present: "var(--green)", late: "var(--amber)", partial: "var(--blue)", absent: "#b33b35", injured: "#7a8c99", trial: "#8a6dbf" };
+const ATT_CYCLE: AttendanceStatus[] = ["present", "late", "partial", "absent", "trial"];
+const ATT_LABEL: Record<AttendanceStatus, string> = { present: "Närvarande", late: "Sent", partial: "Delvis", absent: "Frånvarande", trial: "Provpass" };
+const ATT_COLOR: Record<AttendanceStatus, string> = { present: "var(--green)", late: "var(--amber)", partial: "var(--blue)", absent: "#b33b35", trial: "#8a6dbf" };
 const DIFF_LABEL: Record<BlockDifficulty, string> = { too_easy: "För lätt", ok: "Lagom", too_hard: "För svår" };
 
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;

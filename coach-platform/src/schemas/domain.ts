@@ -8,7 +8,7 @@ export const seasonPeriodSchema = z.object({
 
 export const attendanceSchema = z.object({
   playerId: z.string().min(1),
-  status: z.enum(["present", "absent", "late", "partial", "injured", "trial"]),
+  status: z.enum(["present", "absent", "late", "partial", "trial"]),
 });
 
 export const matchSchema = z.object({ opponent: z.string().min(2).max(100), startsAt: z.string().datetime(), location: z.string().max(120), gameFormat: z.enum(["5v5", "7v7", "9v9", "11v11"]), result: z.string().max(30) });
