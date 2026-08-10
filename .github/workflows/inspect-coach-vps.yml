@@ -56,8 +56,8 @@ jobs:
             done
 
             echo "[coach nginx routing directives]"
-            grep -RIlE "coach|3101" /etc/nginx/sites-enabled 2>/dev/null | while IFS= read -r file; do
+            grep -RIlE "coach|3101|3001" /etc/nginx/sites-enabled 2>/dev/null | while IFS= read -r file; do
               echo "FILE=$file"
-              grep -E "server_name|location|proxy_pass|auth_request|error_page" "$file" || true
+              grep -n -C 6 -E "coach|3101|3001" "$file" || true
             done
           '
