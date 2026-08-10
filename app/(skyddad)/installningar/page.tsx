@@ -546,7 +546,7 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="font-semibold">Spelarprofiler</h2>
                   <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                    Generera en 6-siffrig PIN per spelare. Spelaren anger sin PIN på <strong>/spelare/login</strong> och får tillgång till sin profil och intervjun.
+                    Generera en 6-siffrig PIN per spelare. Spelaren anger sin PIN på <strong>/spelare/login</strong> och får tillgång till sin profil och utveckling.
                   </p>
                 </div>
               </div>

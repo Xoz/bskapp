@@ -38,14 +38,26 @@ import("postgres").then(async ({default: postgres}) => {
 })
 ' 2>/dev/null)
 echo "Testmatch id: $MID"
+TOKEN=$(DATABASE_URL="$DEVDB" node -e '
+import("postgres").then(async ({default: postgres}) => {
+  const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+  const r = await sql`SELECT report_token FROM matches WHERE id = ${process.argv[1]}`;
+  console.log(r[0].report_token); await sql.end();
+})
+' "$MID" 2>/dev/null)
+if [ -z "$TOKEN" ]; then echo "Testmatchen saknar report_token"; exit 1; fi
+PUBLIC_URL="$BASE/$MID?token=$TOKEN"
 CK=$(mktemp)
 curl -s -c "$CK" -L "http://localhost:3000/api/auth/dev?role=coach" -o /dev/null
 post(){ curl -s -b "$CK" -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "$1"; }
 get(){ curl -s -b "$CK" "$BASE/$MID$1"; }
-# Tre spelare: p1,p2 = startare, P3 = bänkspelare (starters 1-7 → id 8 är bänk)
-IDS=$(get "?reporter=1" | val "','.join(str(p['id']) for p in d['players'][:3])")
-P1=$(echo "$IDS"|cut -d, -f1); P2=$(echo "$IDS"|cut -d, -f2)
-BENCH=$(get "?reporter=1" | val "str(d['players'][7]['id'])")
+# Välj två faktiska startare och en faktisk bänkspelare oberoende av namn/id-sortering.
+INITIAL=$(get "?reporter=1")
+P1=$(echo "$INITIAL" | val "str(d['onField'][0])")
+P2=$(echo "$INITIAL" | val "str(d['onField'][1])")
+BENCH=$(echo "$INITIAL" | val "str(next(p['id'] for p in d['players'] if p['id'] not in d['onField']))")
+SQUAD_COUNT=$(echo "$INITIAL" | val "str(len(d['players']))")
+PLAYER_IDS=($(echo "$INITIAL" | python3 -c "import sys,json; print(' '.join(str(p['id']) for p in json.load(sys.stdin)['players'][:5]))"))
 echo "Spelare: p1=$P1 p2=$P2 bänk=$BENCH"
 echo ""
 
@@ -53,10 +65,12 @@ echo "=== A) Publik GET (ingen cookie): livescore JA, reporting-detaljer NEJ ===
 P=$(curl -s "$BASE/$MID")
 check "$(echo "$P"|val "len(d['players'])")" "0" "publik GET avslöjar ej trupp"
 check "$(echo "$P"|val "d['finished']")" "False" "matchen inte avslutad"
+NO_TOKEN=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/$MID?reporter=1")
+check "$NO_TOKEN" "401" "rapporteringsdetaljer kräver matchspecifik länk"
 
 echo "=== B) Coach GET ?reporter=1: trupp + startelva syns ==="
 C=$(get "?reporter=1")
-check "$(echo "$C"|val "len(d['players'])")" "10" "coach ser hela truppen (10)"
+check "$(echo "$C"|val "len(d['players'])")" "$SQUAD_COUNT" "coach ser hela truppen ($SQUAD_COUNT)"
 check "$(echo "$C"|val "d['hasLineup']")" "True" "coach ser startelva"
 check "$(echo "$C"|val "len(d['onField'])")" "7" "7 på plan från start"
 check "$(echo "$C"|val "d['reportOpen']")" "True" "rapportering öppen"
@@ -107,17 +121,17 @@ echo "=== L) Säkerhet: föräldrarapportör (ingen cookie) nekas tränaråtgär
 # Körs INNAN finish_match — annars är rapporteringen stängd och föräldern
 # nekas redan vid "Rapportering ej öppen" i stället för vid behörighetskontrollen.
 RID="test-reporter-AAAAAAAA-0001"
-R1=$(curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"clock\",\"op\":\"pause\",\"reporterId\":\"$RID\"}")
-R2=$(curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"finish_match\",\"reporterId\":\"$RID\"}")
-R3=$(curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"sub\",\"offId\":$P1,\"onId\":$BENCH,\"reporterId\":\"$RID\"}")
+R1=$(curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"clock\",\"op\":\"pause\",\"reporterId\":\"$RID\"}")
+R2=$(curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"finish_match\",\"reporterId\":\"$RID\"}")
+R3=$(curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"sub\",\"offId\":$P1,\"onId\":$BENCH,\"reporterId\":\"$RID\"}")
 check "$(echo "$R1"|val "d.get('error','ok')")" "Åtgärden kräver tränarbehörighet" "parent nekad clock-pause"
 check "$(echo "$R2"|val "d.get('error','ok')")" "Åtgärden kräver tränarbehörighet" "parent nekad finish_match"
 check "$(echo "$R3"|val "d.get('error','ok')")" "Åtgärden kräver tränarbehörighet" "parent nekad sub"
 
 echo "=== M) Föräldrarapportör: kan registrera + ångra EGEN händelse (ingen cookie) ==="
-curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"event\",\"playerId\":$P1,\"statId\":\"goals\",\"reporterId\":\"$RID\",\"reporter\":\"Förälder 1\"}" >/dev/null
+curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"event\",\"playerId\":$P1,\"statId\":\"goals\",\"reporterId\":\"$RID\",\"reporter\":\"Förälder 1\"}" >/dev/null
 check "$(get "?reporter=1"|val "d['ourScore']")" "2" "förälder la till mål (ourScore=2)"
-curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"undo\",\"reporterId\":\"$RID\"}" >/dev/null
+curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"undo\",\"reporterId\":\"$RID\"}" >/dev/null
 check "$(get "?reporter=1"|val "d['ourScore']")" "1" "förälder ångrade sitt eget mål"
 
 echo "=== N) Rate-limit: max 30 händelser per rapportör per 10s ==="
@@ -128,7 +142,7 @@ STATS=("shots" "shots_on_target" "passes_completed" "interceptions" "saves" "goa
 OK=0; BL=0
 for i in $(seq 1 40); do
   pid=$(( (i % 10) + 1 )); stat=${STATS[$((i % 7))]}
-  c=$(curl -s -X POST "$BASE/$MID" -H "Content-Type: application/json" -d "{\"type\":\"event\",\"playerId\":$pid,\"statId\":\"$stat\",\"reporterId\":\"$RID2\",\"reporter\":\"Rate Test\"}" -o /dev/null -w "%{http_code}")
+  c=$(curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" -d "{\"type\":\"event\",\"playerId\":$pid,\"statId\":\"$stat\",\"reporterId\":\"$RID2\",\"reporter\":\"Rate Test\"}" -o /dev/null -w "%{http_code}")
   [ "$c" = "200" ] && OK=$((OK+1)) || BL=$((BL+1))
 done
 echo "  40 distinkta händelser → 200: $OK   429: $BL"
@@ -174,6 +188,27 @@ import("postgres").then(async ({default: postgres}) => {
   console.log(r[0].n); await sql.end();
 })' "$MID" "$SUBKEY" 2>/dev/null)
 check "$NSUBS" "1" "replay av byte med samma nyckel → bara 1 sub-rad"
+
+echo "=== P) Samtidighet: två rapportörer skriver parallellt utan tappade räknare ==="
+DATABASE_URL="$DEVDB" node scripts/reset-dev-match.mjs >/dev/null 2>&1
+for rid in parallel-reporter-AAAA parallel-reporter-BBBB; do
+  for pid in "${PLAYER_IDS[@]}"; do
+    for stat in shots shots_on_target; do
+      curl -s -X POST "$PUBLIC_URL" -H "Content-Type: application/json" \
+        -d "{\"type\":\"event\",\"playerId\":$pid,\"statId\":\"$stat\",\"reporterId\":\"$rid\",\"idempotencyKey\":\"parallel-$rid-$pid-$stat\"}" \
+        -o /dev/null &
+    done
+  done
+done
+wait
+PARALLEL=$(DATABASE_URL="$DEVDB" node -e '
+import("postgres").then(async ({default: postgres}) => {
+  const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+  const r = await sql`SELECT COALESCE(SUM(shots),0)::int shots, COALESCE(SUM(shots_on_target),0)::int shots_on_target FROM match_players WHERE match_id = ${process.argv[1]}`;
+  console.log(`${r[0].shots} ${r[0].shots_on_target}`); await sql.end();
+})' "$MID" 2>/dev/null)
+check "${PARALLEL% *}" "10" "två parallella rapportörer: alla 10 skott sparade"
+check "${PARALLEL#* }" "10" "två parallella rapportörer: alla 10 skott på mål sparade"
 
 echo "=== K) Coach: avsluta matchen ==="
 post '{"type":"finish_match"}' >/dev/null

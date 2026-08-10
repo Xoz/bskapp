@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { diagramSchema } from "@/domain/diagram";
 import type { Diagram } from "@/domain/diagram";
-import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, moveBlock, saveAttendance, saveConductedSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
+import { deleteExercise, deletePeriod, deletePlayer, deleteBlock, deleteSession, getExercise, getPlayerName, moveBlock, saveAttendance, saveConductedSession, saveDiagram, saveExercise, savePeriod, savePlayer, saveSession, setPlayerStatus, setSessionStatus, addBlock, updateBlock } from "@/repositories/postgres";
 import type { AttendanceStatus, BlockConductStatus, BlockDifficulty } from "@/repositories/postgres";
 import { saveGoal, saveMatch, saveObservation } from "@/repositories/postgres";
 import { developmentGoalSchema, matchSchema, observationSchema } from "@/schemas/domain";
-import { requireCoachIdentity } from "@/lib/coach-session";
+import { requireCoachIdentity, requireHeadCoachIdentity } from "@/lib/coach-session";
 
 const text = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const number = (data: FormData, key: string) => Number(data.get(key));
@@ -23,7 +23,26 @@ export async function upsertPlayer(data: FormData) {
   revalidatePath("/spelare");
 }
 
-export async function removePlayer(data: FormData) { await deletePlayer(text(data, "id")); revalidatePath("/spelare"); }
+export async function restrictPlayer(data: FormData) {
+  await requireCoachIdentity();
+  await setPlayerStatus(text(data, "id"), "paused");
+  revalidatePath("/spelare");
+}
+
+export async function reactivatePlayer(data: FormData) {
+  await requireCoachIdentity();
+  await setPlayerStatus(text(data, "id"), "active");
+  revalidatePath("/spelare");
+}
+
+export async function removePlayer(data: FormData) {
+  await requireHeadCoachIdentity();
+  const id = text(data, "id");
+  const expectedName = await getPlayerName(id);
+  if (!expectedName || text(data, "confirmation") !== expectedName) throw new Error("Skriv spelarens fullständiga namn för att bekräfta permanent radering.");
+  await deletePlayer(id);
+  revalidatePath("/spelare");
+}
 
 export async function upsertExercise(data: FormData) {
   await requireCoachIdentity();
@@ -33,9 +52,10 @@ export async function upsertExercise(data: FormData) {
   revalidatePath("/ovningar");
 }
 
-export async function removeExercise(data: FormData) { await deleteExercise(text(data, "id")); revalidatePath("/ovningar"); }
+export async function removeExercise(data: FormData) { await requireCoachIdentity(); await deleteExercise(text(data, "id")); revalidatePath("/ovningar"); }
 
 export async function saveExerciseDiagram(exerciseId: string, diagram: Diagram) {
+  await requireCoachIdentity();
   const parsed = diagramSchema.parse(diagram);
   await saveDiagram(exerciseId, parsed);
   revalidatePath(`/ovningar/${exerciseId}/ritare`);
@@ -50,9 +70,10 @@ export async function upsertSession(data: FormData) {
   revalidatePath("/traningspass");
 }
 
-export async function removeSession(data: FormData) { await deleteSession(text(data, "id")); revalidatePath("/traningspass"); }
+export async function removeSession(data: FormData) { await requireCoachIdentity(); await deleteSession(text(data, "id")); revalidatePath("/traningspass"); }
 
 export async function completeSessionAction(data: FormData) {
+  await requireCoachIdentity();
   const id = text(data, "id");
   const status = (text(data, "status") === "planned" ? "planned" : "completed") as "planned" | "completed";
   await setSessionStatus(id, status);
@@ -63,6 +84,7 @@ export async function completeSessionAction(data: FormData) {
 const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "absent", "late", "partial", "injured", "trial"];
 
 export async function saveAttendanceAction(data: FormData) {
+  await requireCoachIdentity();
   const sessionId = text(data, "sessionId");
   const entries: { playerId: string; status: AttendanceStatus }[] = [];
   for (const [key, value] of data.entries()) {
@@ -116,6 +138,7 @@ const coachingPoints = (data: FormData) => text(data, "coachingPoints").split(/[
 const splitList = (data: FormData, key: string) => text(data, key).split(/[,;]|\n/).map(s => s.trim()).filter(Boolean);
 
 export async function upsertBlock(data: FormData) {
+  await requireCoachIdentity();
   const id = text(data, "id") || undefined;
   const sessionId = text(data, "sessionId");
   const exerciseId = text(data, "exerciseId");
@@ -131,12 +154,14 @@ export async function upsertBlock(data: FormData) {
 }
 
 export async function removeBlock(data: FormData) {
+  await requireCoachIdentity();
   const sessionId = text(data, "sessionId");
   await deleteBlock(text(data, "id"));
   if (sessionId) revalidatePath(`/traningspass/${sessionId}`);
 }
 
 export async function moveBlockAction(data: FormData) {
+  await requireCoachIdentity();
   const sessionId = text(data, "sessionId");
   await moveBlock(text(data, "id"), text(data, "dir") === "up" ? -1 : 1);
   if (sessionId) revalidatePath(`/traningspass/${sessionId}`);
@@ -156,7 +181,7 @@ export async function upsertPeriod(data: FormData) {
   revalidatePath("/planering");
 }
 
-export async function removePeriod(data: FormData) { await deletePeriod(text(data, "id")); revalidatePath("/planering"); }
+export async function removePeriod(data: FormData) { await requireCoachIdentity(); await deletePeriod(text(data, "id")); revalidatePath("/planering"); }
 
 export async function createMatchAction(data: FormData) {
   await requireCoachIdentity();

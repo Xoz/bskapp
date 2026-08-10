@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { canAccessGroup, hasPermission } from "@/lib/auth";
 import { get } from "@/lib/db";
 import { reportingAutoOpen } from "@/lib/dates";
+import { hasReportingCapability } from "@/lib/liveAccess";
+import { consumePublicReportRate } from "@/lib/liveRateLimit";
 import {
   getLiveState,
   recordEvent,
@@ -31,8 +33,9 @@ async function matchFromId(id: string) {
     date: string;
     start_time: string | null;
     finished: number;
+    report_token: string;
   }>(
-    "SELECT id, report_open, group_id, date, start_time, finished FROM matches WHERE id = ?",
+    "SELECT id, report_open, report_token, group_id, date, start_time, finished FROM matches WHERE id = ?",
     [n]
   );
 }
@@ -68,7 +71,11 @@ export async function GET(
       (!!match.report_open || reportingAutoOpen(match.date, match.start_time));
     const isCoach =
       (await hasPermission("report_matches")) && (await canAccessGroup(match.group_id));
-    includeReportingDetails = reportOpen || isCoach;
+    const hasCapability = hasReportingCapability(req.nextUrl.searchParams.get("token"), match.report_token);
+    includeReportingDetails = isCoach || (reportOpen && hasCapability);
+    if (!includeReportingDetails) {
+      return NextResponse.json({ error: "Rapporteringslänken är ogiltig" }, { status: 401 });
+    }
   }
   return NextResponse.json(await getLiveState(match.id, includeReportingDetails));
 }
@@ -92,10 +99,14 @@ export async function POST(
   const reportOpen =
     !match.finished &&
     (!!match.report_open || reportingAutoOpen(match.date, match.start_time));
+  const hasCapability = hasReportingCapability(req.nextUrl.searchParams.get("token"), match.report_token);
 
   if (!isCoach) {
     if (!reportOpen) {
       return NextResponse.json({ error: "Rapportering ej öppen" }, { status: 401 });
+    }
+    if (!hasCapability) {
+      return NextResponse.json({ error: "Rapporteringslänken är ogiltig" }, { status: 401 });
     }
     if (!PUBLIC_REPORTER_ACTIONS.has(action.type)) {
       return NextResponse.json({ error: "Åtgärden kräver tränarbehörighet" }, { status: 403 });
@@ -107,12 +118,7 @@ export async function POST(
       return NextResponse.json({ error: "Rapportör saknas" }, { status: 400 });
     }
     if (action.type === "event" || action.type === "opponent_goal") {
-      const rate = await get<{ count: number }>(
-        `SELECT COUNT(*) AS count FROM match_events
-         WHERE match_id = ? AND reporter_key = ? AND created_at > ?`,
-        [match.id, action.reporterId!, Math.floor(Date.now() / 1000) - 10]
-      );
-      if (Number(rate?.count ?? 0) >= 30) {
+      if (!(await consumePublicReportRate(match.id, action.reporterId!))) {
         return NextResponse.json({ error: "För många händelser – vänta några sekunder" }, { status: 429 });
       }
     }

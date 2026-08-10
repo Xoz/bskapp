@@ -32,6 +32,7 @@ try {
   await sql`DELETE FROM match_players WHERE match_id = ${id}`;
   await sql`DELETE FROM match_subs WHERE match_id = ${id}`;
   await sql`DELETE FROM match_reporters WHERE match_id = ${id}`;
+  await sql`DELETE FROM live_rate_limits WHERE match_id = ${id}`;
   await sql`UPDATE matches SET our_score = NULL, opponent_score = NULL, clock_running = 0, clock_offset = 0, clock_started_at = NULL, clock_period = 1, finished = 0, report_open = 1 WHERE id = ${id}`;
   console.log(`Återställde testmatch #${id} (trupp + startelva behölls).`);
 } finally {

@@ -1,51 +1,24 @@
-# Så hanterar vi personuppgifter
+# Integritetsinformation – utkast, får inte publiceras ännu
 
-Den här texten är klubbens integritetspolicy för appen, formaterad efter Svenskalags
-upplägg (korta sektioner, rakt språk) men anpassad till vad appen faktiskt lagrar.
-Inget personnummer, ingen hälsodata, inga adresser.
+Det tidigare utkastet angav samtycke som universell rättslig grund, lovade att
+inga tredje parter behandlade data och påstod en automatisk tvåsäsongsgallring
+som inte fanns i koden. Dessa påståenden är borttagna eftersom de inte var
+verifierade.
 
-Visas i appen (t.ex. på en `/integritetspolicy`-sida och länkad från samtyckesskärmen).
-Kortversionen som föräldern klickar på finns i [SPEC-samtycke.md](SPEC-samtycke.md).
+Föreningen ska färdigställa informationen efter besluten i
+[GDPR-GRIND.md](GDPR-GRIND.md) och inventeringen i
+[DRIFT-OCH-BITRADEN.md](DRIFT-OCH-BITRADEN.md). Den publicerade versionen måste
+minst ange:
 
----
+- personuppgiftsansvarig förening och kontaktväg;
+- varje behandlings tydliga ändamål och rättsliga grund;
+- vilka uppgifter som behandlas, inklusive fritext, självskattningar,
+  matchbetyg, närvaro och eventuell skade-/hälsouppgift;
+- mottagare, personuppgiftsbiträden, underbiträden och relevanta regioner;
+- beslutad lagringstid per behandling och hur gallring sker;
+- åtkomstgrupper och vilka delar som kan visas publikt;
+- rätt till information, utdrag, rättelse, begränsning, invändning och radering,
+  samt kontaktväg till Integritetsskyddsmyndigheten;
+- versionsdatum och hur väsentliga ändringar kommuniceras.
 
-**Vad är en personuppgift?**
-All information som kan kopplas till en levande person – till exempel ett namn, en bild
-eller statistik om en enskild spelare.
-
-**Vilka uppgifter behandlar vi?**
-Om spelaren: namn, tröjnummer, position, närvaro och matchstatistik, tränarnas
-utvärderingar och utvecklingsmål, spelarens egna självskattningar samt matchbetyg och
-form. Om vårdnadshavaren: namn och e-postadress.
-Vi samlar **inte** in personnummer, hälsouppgifter, adresser eller andra känsliga
-uppgifter.
-
-**Varför behandlar vi uppgifterna?**
-Enbart för att följa barnens utveckling över tid och som ett hjälpmedel för tränarna att
-hitta utvecklingsområden – för hela laget och för den enskilda spelaren.
-
-**Vad är den lagliga grunden?**
-Samtycke från vårdnadshavaren. Innan vi för statistik om ett barn frågar vi dig som
-förälder om det är okej. Du kan när som helst ändra ditt svar.
-
-**Vem kan se uppgifterna?**
-Endast lagets tränare och ledare, samt du som förälder för ditt eget barn. Ingen
-utomstående har åtkomst.
-
-**Lämnar ni ut uppgifter till tredje part?**
-Nej. Uppgifterna lämnas, säljs eller delas **aldrig** med någon tredje part. De används
-bara inom den här plattformen.
-
-**Hur länge sparas uppgifterna?**
-Personuppgifter raderas automatiskt säsongen efter att en spelare slutat i laget. Ingen
-data sparas längre än **två säsonger**, oavsett spelarens status – äldre uppgifter anses
-inaktuella och tas bort. Säger en vårdnadshavare nej kopplas barnets namn bort direkt och
-statistiken visas bara med tröjnummer. På begäran tar vi bort uppgifterna tidigare.
-
-**Dina rättigheter**
-Du har rätt att få veta vilka uppgifter vi har om ditt barn, rätta felaktiga uppgifter,
-få dem raderade och att återkalla ditt samtycke. Hör av dig till laget så hjälper vi dig.
-
-**Säkerhet**
-Uppgifterna lagras hos vår databasleverantör inom **EU/EES**, med kryptering och
-begränsad åtkomst.
+Tills texten är godkänd får Planlinjen endast innehålla syntetisk pilotdata.

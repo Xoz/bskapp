@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getMatch } from "@/lib/queries";
 import { getLiveState } from "@/lib/live";
 import { reportingAutoOpen } from "@/lib/dates";
+import { hasReportingCapability } from "@/lib/liveAccess";
 import { getAllSettings } from "@/lib/db";
 import LiveTracker from "@/components/LiveTracker";
 import LiveClock from "@/components/LiveClock";
@@ -11,13 +12,15 @@ import { IconArrowLeft } from "@/components/Icons";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Rapportera" };
 
-export default async function PublicReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PublicReportPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ token?: string }> }) {
   const { id } = await params;
   const matchId = Number(id);
   if (!Number.isInteger(matchId) || matchId <= 0) notFound();
 
   const match = await getMatch(matchId);
   if (!match) notFound();
+  const { token } = await searchParams;
+  if (!hasReportingCapability(token, match.report_token)) notFound();
 
   // Rapportering måste vara öppen (manuellt eller automatiskt 60 min före avspark)
   // och matchen får inte vara avslutad.
@@ -68,7 +71,7 @@ export default async function PublicReportPage({ params }: { params: Promise<{ i
         </p>
       </div>
 
-      <LiveTracker code={String(matchId)} initial={initial} isCoach={false} />
+      <LiveTracker code={String(matchId)} initial={initial} isCoach={false} reporterToken={token} />
     </main>
   );
 }

@@ -16,7 +16,6 @@ export interface Player {
   position: string;
   share_token: string | null;
   share_expires: number | null;
-  share_summary: string | null;
   level: string;
   form_rating: number | null;
 }
@@ -56,6 +55,7 @@ export interface Match {
   cup_round: string | null; // 'qf' | 'sf' | 'bronze' | 'f'
   cup_group: string; // t.ex. "Grupp A", fritext, tom = ej satt
   report_open: number; // 1 = föräldrar/hjälpare får liverapportera
+  report_token: string;
   location: string;
   group_id: number | null;
 }
@@ -310,10 +310,7 @@ export async function renewShareToken(playerId: number): Promise<string> {
 
 // Återkallar länken direkt (t.ex. efter avslutat samtal)
 export async function revokeShareToken(playerId: number): Promise<void> {
-  await run(
-    "UPDATE players SET share_token = NULL, share_expires = NULL, share_summary = NULL WHERE id = ?",
-    [playerId]
-  );
+  await run("UPDATE players SET share_token = NULL, share_expires = NULL WHERE id = ?", [playerId]);
 }
 
 export function shareLinkActive(player: Pick<Player, "share_token" | "share_expires">): boolean {
@@ -888,91 +885,6 @@ export async function getLatestSelfEval(playerId: number, sinceIso?: string): Pr
     : "SELECT * FROM player_self_evals WHERE player_id = ? ORDER BY created_at DESC LIMIT 1";
   const args = sinceIso ? [playerId, sinceIso] : [playerId];
   return (await get<PlayerSelfEval>(sql, args)) ?? null;
-}
-
-export interface PlayerInterview {
-  id: number;
-  player_name: string;
-  position: string;
-  interview_type: string;
-  summary: string;
-  scores: string;
-  messages: string;
-  created_at: string;
-}
-
-export async function saveIntervju(
-  playerName: string,
-  position: string,
-  summary: string,
-  messages: string,
-  interviewType = "spelarsamtal",
-  scores = "{}"
-): Promise<void> {
-  await run(
-    `INSERT INTO player_interviews (player_name, position, summary, messages, interview_type, scores) VALUES (?, ?, ?, ?, ?, ?)`,
-    [playerName, position, summary, messages, interviewType, scores]
-  );
-}
-
-export async function getIntervjuer(): Promise<PlayerInterview[]> {
-  return all<PlayerInterview>(
-    `SELECT id, player_name, position, interview_type, summary, scores, messages, created_at FROM player_interviews ORDER BY created_at DESC`
-  );
-}
-
-// Samtal/intervjuer för en enskild spelare. Intervjuerna lagrar fritt `player_name`
-// (spelaren skriver själv) så vi matchar på fullt namn eller förnamn, ASCII-okänsligt.
-export async function getPlayerInterviews(playerName: string): Promise<PlayerInterview[]> {
-  const clean = playerName.trim();
-  return all<PlayerInterview>(
-    `SELECT id, player_name, position, interview_type, summary, scores, messages, created_at
-       FROM player_interviews
-      WHERE LOWER(player_name) = LOWER(?) OR LOWER(?) LIKE LOWER(player_name) || ' %'
-      ORDER BY created_at DESC`,
-    [clean, clean]
-  );
-}
-
-// Kategorisnitt från tränarens senaste utvärdering – för jämförelse med kvartalsutvärdering
-export async function getCoachCategoryScores(
-  playerId: number
-): Promise<Record<string, number> | null> {
-  const evals = await getEvaluations(playerId);
-  if (evals.length === 0) return null;
-  const scores = await getScores(evals[0].id);
-  if (Object.keys(scores).length === 0) return null;
-
-  // Gruppera skill_id → category_id enligt SvFF-strukturen
-  const categorySkills: Record<string, string[]> = {
-    anfall_boll: ["driva", "utmana", "passa", "mottagning", "avslut"],
-    anfall_utan_boll: ["spelbarhet", "speldjup_bredd"],
-    forsvar: ["press", "positionering", "omstallning"],
-    fysik: ["motorik", "snabbhet"],
-    psykosocialt: ["traningsvilja", "lagkansla", "mod", "gladje"],
-  };
-
-  const result: Record<string, number> = {};
-  for (const [cat, skillIds] of Object.entries(categorySkills)) {
-    const vals = skillIds.map((s) => scores[s]).filter((v) => v != null);
-    if (vals.length > 0) result[cat] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
-  }
-  return Object.keys(result).length > 0 ? result : null;
-}
-
-// Hitta spelare på förnamn eller fullständigt namn (case-insensitiv ASCII)
-export async function findPlayerForIntervju(name: string): Promise<Player | undefined> {
-  const clean = name.trim();
-  return (
-    (await get<Player>(
-      `SELECT * FROM players WHERE active = 1 AND (name = ? OR name LIKE ? || ' %') LIMIT 1`,
-      [clean, clean]
-    )) ??
-    (await get<Player>(
-      `SELECT * FROM players WHERE active = 1 AND LOWER(name) = LOWER(?) OR (active = 1 AND LOWER(name) LIKE LOWER(?) || ' %') LIMIT 1`,
-      [clean, clean]
-    ))
-  );
 }
 
 // ---------- Utvecklingsträdet (skillTrappan) ----------

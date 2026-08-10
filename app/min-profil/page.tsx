@@ -122,7 +122,6 @@ export default async function MinProfilPage() {
         </div>
       )}
 
-      {/* Intervju-knapp */}
       <div className="space-y-3">
         <a
           href="/mitt-utvecklingstrad"
@@ -130,14 +129,6 @@ export default async function MinProfilPage() {
           style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
         >
           🌱 Min utveckling
-        </a>
-
-        <a
-          href="/intervju"
-          className="btn-secondary w-full flex items-center justify-center gap-2"
-          style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
-        >
-          💬 Starta intervju
         </a>
 
         {/* Logga ut */}

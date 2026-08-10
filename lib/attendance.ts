@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { readSheet } from "read-excel-file/node";
 
 export type AttendanceCategory =
   | "training"
@@ -123,16 +123,8 @@ function parseActivityHeader(label: string, fallbackYear: string | null): Attend
   };
 }
 
-export function parseAttendanceWorkbook(buffer: ArrayBuffer): AttendanceWorkbook {
-  const workbook = XLSX.read(buffer, { type: "array" });
-  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!firstSheet) throw new Error("Excel-filen saknar blad.");
-
-  const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(firstSheet, {
-    header: 1,
-    raw: true,
-    defval: null,
-  });
+export async function parseAttendanceWorkbook(buffer: ArrayBuffer): Promise<AttendanceWorkbook> {
+  const rows = await readSheet(Buffer.from(buffer));
   if (rows.length < 8) throw new Error("Excel-filen har inte det förväntade Svenska Lag-formatet.");
 
   const exportedAt = cleanCell(rows[2]?.[1]) || null;

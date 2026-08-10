@@ -30,7 +30,7 @@ build` körs och när appen startas; utan den används roten som vanligt.
 - `db/migrations`: normaliserat PostgreSQL-schema. JSONB används bara för diagramobjekt/actions.
 - `src/app`: fristående Next.js-skal och produktvyer.
 
-Spelare, övningar och träningspass läses och skrivs nu i PostgreSQL via server actions. Pilotlaget väljs server-side med `PILOT_TEAM_ID`, eller det första laget i den lokala pilotdatabasen. Dashboard, planering och matcher använder fortfarande demo-läsmodellen. BSK-sessionen kopplas in först när plattformen integreras med ordinarie BSK-app; separat auth och generell flerlag-RBAC ingår inte i MVP:n.
+Spelare, övningar, träningspass, planering, matcher och analys läses och skrivs i PostgreSQL via server actions/repositories. Pilotlaget väljs server-side med `PILOT_TEAM_ID`, eller det första laget i den lokala pilotdatabasen. I produktion kräver plattformen HMAC-signerade `x-bsk-coach`-headers och `BSK_SESSION_BRIDGE_SECRET`; lokal demoidentitet finns bara utanför produktion. Separat auth och generell flerlag-RBAC ingår inte i MVP:n.
 
 ## Integrationsstrategi
 
@@ -38,7 +38,7 @@ Rekommendation: flytta båda apparna till ett gemensamt monorepo när kärnflöd
 
 ## Säkerhet och integritet
 
-Minsta möjliga persondata, lagbaserad åtkomst och privata anteckningar är obligatoriska innan produktion. Barnprofiler ska inte vara publika. Full GDPR-bedömning, gallringspolicy, registerutdrag och personuppgiftsbiträdesbedömning återstår innan verkliga personuppgifter används.
+Minsta möjliga persondata, lagbaserad åtkomst och privata anteckningar är obligatoriska innan produktion. Barnprofiler ska inte vara publika. Versionsmärkt spelarutdrag, begränsning, permanent radering och återställningsprov är byggda. Föreningens rättsliga beslut, retentiontabell och personuppgiftsbiträdesbedömning återstår innan verkliga personuppgifter används; se `../docs/GDPR-GRIND.md`.
 
 ## Verifiering
 
@@ -46,5 +46,10 @@ Minsta möjliga persondata, lagbaserad åtkomst och privata anteckningar är obl
 npm run lint
 npm run typecheck
 npm run test
+npm run test:e2e
 npm run build
+npm audit
+
+# Lokal Docker-pilot
+DATABASE_URL=postgres://coach:coach@localhost:5434/coach PG_DOCKER_SERVICE=db npm run db:verify-restore
 ```

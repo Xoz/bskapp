@@ -105,9 +105,8 @@ export function levelSuggestion(
 }
 
 // ---- Statistik → förslag på "mot förväntan"-steg ----
-// Heuristik (AI kan ersätta senare). Väger spelarens matchstatistik mot position
-// och hur väl matchnivån passar spelaren: en svår match sänker förväntan, en lätt
-// höjer den. Tränaren bekräftar/justerar alltid förslaget.
+// Heuristik som väger spelarens matchstatistik mot position och hur väl
+// matchnivån passar spelaren. Tränaren bekräftar/justerar alltid förslaget.
 export interface SuggestInput {
   position: string | null | undefined;
   goals: number;

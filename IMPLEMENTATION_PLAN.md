@@ -12,6 +12,11 @@ Den fristaende produkten byggs i `coach-platform/`. Den delar inte runtime, data
 - [x] 6. Matchflode, regelbaserade rekommendationer och individuell utvecklingsplan.
 - [x] 7. Analys, samarbete, audit, export och BSK-sessionsbrygga. Återställningsimport och generell flerlagssynk hör till fas 2.
 - [ ] 8. Playwright-floden, sakerhetsgranskning och produktionshardning.
+  - [x] Signerad BSK-identitet i Proxy, root layout, export och samtliga server actions.
+  - [x] HMAC-, action-auth- och Playwright-regressionstester.
+  - [x] Versionssäker migrationsrunner, spelarutdrag/radering och verifierat återställningsprov (27 tabeller).
+  - [ ] Konfigurera `BSK_SESSION_BRIDGE_SECRET` och signerade headers i VPS-proxyn.
+  - [ ] Föreningen genomför återstående juridiska GDPR-beslut före riktiga barnuppgifter.
 
 ## MVP-avgransning
 

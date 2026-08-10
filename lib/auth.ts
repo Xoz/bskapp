@@ -43,7 +43,6 @@ export const PERMISSIONS = [
   "manage_squads",
   "report_matches",
   "view_statistics",
-  "view_interviews",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -60,7 +59,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_squads: "Hantera kallelser och laguttagningar",
   report_matches: "Rapportera live och matchstatistik",
   view_statistics: "Se lagstatistik",
-  view_interviews: "Se spelarintervjuer",
 };
 
 const DEFAULT_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -69,7 +67,7 @@ const DEFAULT_PERMISSIONS: Record<Role, readonly Permission[]> = {
   coach: [
     "view_players", "manage_players", "view_private_player_data", "manage_evaluations",
     "view_matches", "manage_matches", "manage_squads", "report_matches",
-    "view_statistics", "view_interviews",
+    "view_statistics",
   ],
   leader: ["view_players", "view_matches", "manage_squads", "report_matches"],
   player: [],

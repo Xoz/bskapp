@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getRole, hasPermission } from "@/lib/auth";
 import {
   getPlayer,
   getEvaluations,
@@ -8,7 +8,6 @@ import {
   getPlayerDevelopment,
   getPlayerMatchStats,
   getPlayerFormTrend,
-  getPlayerInterviews,
   getPlayerAttendanceOverview,
   getPlayerAttendanceByCategory,
   getPlayerAttendanceTrend,
@@ -22,11 +21,10 @@ import { CATEGORIES, LEVELS } from "@/lib/svff";
 import { POSITIONS } from "@/lib/positions";
 import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
 import { ratingBand, EXPECTATION_STEPS, levelSuggestion } from "@/lib/rating";
-import { updatePlayer, removePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
+import { updatePlayer, removePlayer, erasePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
 import DevelopmentChart from "@/components/DevelopmentChart";
 import AttendanceTrendChart from "@/components/AttendanceTrendChart";
 import FormTrendChart from "@/components/FormTrendChart";
-import IntervjuCard from "@/components/IntervjuCard";
 import SkillRadar from "@/components/SkillRadar";
 import Avatar from "@/components/Avatar";
 import CopyLinkButton from "@/components/CopyLinkButton";
@@ -52,6 +50,7 @@ function categoryAverages(scores: Record<string, number>) {
 export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
+  const canManagePrivacy = await hasPermission("manage_users");
 
   const { id } = await params;
   const player = await getPlayer(Number(id));
@@ -60,13 +59,12 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
   const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
 
-  const [evaluations, development, matchStats, selfEval, formTrend, interviews, attendanceOverview, attendanceByCategory, attendanceTrend, developmentCheckpoints] = await Promise.all([
+  const [evaluations, development, matchStats, selfEval, formTrend, attendanceOverview, attendanceByCategory, attendanceTrend, developmentCheckpoints] = await Promise.all([
     getEvaluations(player.id),
     getPlayerDevelopment(player.id),
     getPlayerMatchStats(player.id),
     getLatestSelfEval(player.id, shareSinceIso),
     getPlayerFormTrend(player.id),
-    getPlayerInterviews(player.name),
     getPlayerAttendanceOverview(player.id),
     getPlayerAttendanceByCategory(player.id),
     getPlayerAttendanceTrend(player.id),
@@ -150,7 +148,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           <div className="min-w-48">
             <p className="font-semibold body-small">Spelarsamtal – personlig länk</p>
             <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling – med en peppande AI-hälsning skriven till henne. Länken gäller i 48 timmar och måste sedan förnyas.
+              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Länken gäller i 48 timmar och måste sedan förnyas.
             </p>
           </div>
           {linkActive ? (
@@ -522,28 +520,6 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Samtal – spelarens egna AI-intervjuer (matchas på namn). */}
-      {interviews.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="eyebrow">Samtal</p>
-              <h2 className="text-[18px] font-semibold mt-0.5">
-                {interviews.length} {interviews.length === 1 ? "samtal" : "samtal"} med {player.name.split(" ")[0]}
-              </h2>
-            </div>
-            <Link
-              href="/spelare/intervjuer"
-              className="caption font-semibold"
-              style={{ color: "var(--primary)", fontFamily: "var(--font-display)" }}
-            >
-              Alla samtal
-            </Link>
-          </div>
-          {await Promise.all(interviews.map(async (iv) => <IntervjuCard key={iv.id} intervju={iv} showName={false} />))}
-        </div>
-      )}
-
       {/* Matchstatistik. matchStats = en rad per match spelaren deltog i (även
           nollmatcher). Vi visar alla och flaggar matcher utan registrerad
           statistik så tränaren kan öppna matchen och rätta en glömd rapportering.
@@ -659,7 +635,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               ))}
             </select>
             <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
-              Hjälper AI:n tolka matchstatistiken rätt – t.ex. att en back inte bedöms på antal mål.
+              Används i planering, laguttagning och spelarens profil.
             </p>
           </div>
           <div>
@@ -693,6 +669,21 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             Ta bort spelaren från truppen (historiken sparas)
           </button>
         </form>
+        {canManagePrivacy && (
+          <div className="mt-5 space-y-3">
+            <a className="btn-secondary inline-flex" href={`/api/export/player/${player.id}`}>Ladda ner spelarutdrag (JSON)</a>
+            <details>
+              <summary className="body-small cursor-pointer" style={{ color: "var(--danger)" }}>Permanent radering</summary>
+              <form action={erasePlayer} className="space-y-3 mt-3">
+                <input type="hidden" name="id" value={player.id} />
+                <p className="caption" style={{ color: "var(--ink-secondary)" }}>Raderar profilen och alla direkt kopplade bedömningar, närvarorader, matchdata, utvecklingsavstämningar och kontokopplingar. Åtgärden kan inte ångras i appen.</p>
+                <label className="label" htmlFor="erase-confirmation">Skriv {player.name} för att bekräfta</label>
+                <input id="erase-confirmation" name="confirmation" className="input" required autoComplete="off" />
+                <button type="submit" className="body-small cursor-pointer" style={{ color: "var(--danger)" }}>Radera alla spelaruppgifter permanent</button>
+              </form>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );

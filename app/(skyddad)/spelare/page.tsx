@@ -4,7 +4,6 @@ import { getCurrentUser, getRole, hasPermission } from "@/lib/auth";
 import { getPlayers, getLatestEvaluationDates, getSeasonStats } from "@/lib/queries";
 import { FEATURES } from "@/lib/features";
 import Avatar from "@/components/Avatar";
-import SpelareTabs from "@/components/SpelareTabs";
 import { level as levelInfo } from "@/lib/levels";
 import { daysSinceLabel } from "@/lib/dates";
 
@@ -14,19 +13,17 @@ export default async function PlayersPage() {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
 
-  const [players, latestEvals, stats, canEvaluate, canViewPrivate, canViewInterviews, user] = await Promise.all([
+  const [players, latestEvals, stats, canEvaluate, canViewPrivate, user] = await Promise.all([
     getPlayers(),
     getLatestEvaluationDates(),
     getSeasonStats(),
     hasPermission("manage_evaluations"),
     hasPermission("view_private_player_data"),
-    hasPermission("view_interviews"),
     getCurrentUser(),
   ]);
   const statsById = Object.fromEntries(stats.map((s) => [s.id, s]));
   return (
     <div className="space-y-6">
-      <SpelareTabs canViewInterviews={canViewInterviews} />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="eyebrow">Truppen</p>

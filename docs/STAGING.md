@@ -42,7 +42,6 @@ produktionen är orörd:
 |---|---|
 | `DATABASE_URL` | staging-projektets connection string från steg 1 |
 | `SESSION_SECRET` | **egen** hemlighet för staging (`openssl rand -hex 32`) |
-| `ANTHROPIC_API_KEY` | samma som prod, eller en separat nyckel |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | samma som prod |
 
 ### 3. Vitlista staging-domänen för Google-login

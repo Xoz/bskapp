@@ -42,7 +42,7 @@ function newIdempotencyKey(): string {
   return `idem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export default function LiveTracker({ code, initial, isCoach = false, coachName = "" }: { code: string; initial: LiveState; isCoach?: boolean; coachName?: string }) {
+export default function LiveTracker({ code, initial, isCoach = false, coachName = "", reporterToken }: { code: string; initial: LiveState; isCoach?: boolean; coachName?: string; reporterToken?: string }) {
   const [live, setLive] = useState<LiveState>(initial);
   const [fetchedAt, setFetchedAt] = useState(() => Date.now());
   const [, setTick] = useState(0);
@@ -169,7 +169,8 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
       setPending((p) => p + 1);
       queue.current = queue.current
         .then(async () => {
-          const res = await fetch(`/api/live/${code}`, {
+          const tokenQuery = reporterToken ? `?token=${encodeURIComponent(reporterToken)}` : "";
+          const res = await fetch(`/api/live/${code}${tokenQuery}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(a),
@@ -186,7 +187,7 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
         .finally(() => setPending((p) => p - 1));
       return queue.current;
     },
-    [code, applyState, saveOfflineQueue]
+    [code, reporterToken, applyState, saveOfflineQueue]
   );
 
   const flushOfflineQueue = useCallback(() => {
@@ -235,12 +236,13 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
     const t = setInterval(async () => {
       if (pending > 0 || document.hidden) return;
       try {
-        const res = await fetch(`/api/live/${code}?reporter=1`);
+        const tokenQuery = reporterToken ? `&token=${encodeURIComponent(reporterToken)}` : "";
+        const res = await fetch(`/api/live/${code}?reporter=1${tokenQuery}`);
         if (res.ok) applyState((await res.json()) as LiveState);
       } catch {}
     }, 10000);
     return () => clearInterval(t);
-  }, [code, pending, applyState]);
+  }, [code, reporterToken, pending, applyState]);
 
   const clockNow =
     live.clockSeconds + (live.clockRunning ? (Date.now() - fetchedAt) / 1000 : 0);

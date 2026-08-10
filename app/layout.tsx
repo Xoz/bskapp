@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, Inter, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -14,32 +13,6 @@ export const viewport: Viewport = {
   themeColor: "#0B0F14",
   colorScheme: "dark light",
 };
-
-// Designsystem: Bebas Neue (display), Inter (body/UI), IBM Plex Sans (stats),
-// JetBrains Mono (kod). Premium sportplattform-känsla.
-const display = Bebas_Neue({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-const body = Inter({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const stat = IBM_Plex_Sans({
-  variable: "--font-stat",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const code = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getAllSettings();
@@ -69,7 +42,7 @@ export default async function RootLayout({
 }>) {
   const settings = await getAllSettings();
   return (
-    <html lang="sv" className={`${display.variable} ${body.variable} ${stat.variable} ${code.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="sv" className="h-full antialiased" suppressHydrationWarning>
       <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}` }} />
       <body
         className="min-h-full flex flex-col"

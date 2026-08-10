@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { all, get, run, batch, getSetting, setSetting, logActivity, DEFAULT_COLORS } from "./db";
 import { renewShareToken, revokeShareToken } from "./queries";
-import { generatePlayerCardText } from "./ai";
 import {
   playerSessionToken,
   getCurrentUser,
@@ -25,6 +24,7 @@ import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
 import { normalizePersonName, parseAttendanceWorkbook } from "./attendance";
+import { erasePlayerData } from "./playerPrivacy";
 import { swedishToday } from "./dates";
 import {
   stepByKey,
@@ -502,14 +502,11 @@ export async function setPlayerLevel(formData: FormData) {
 }
 
 // Skapa/förnya spelarens delningslänk (gäller 48h) inför ett spelarsamtal.
-// Genererar samtidigt en peppande AI-text riktad till spelaren.
 export async function generateShareLink(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await requirePlayerPermission("manage_players", id);
   await renewShareToken(id);
-  const summary = await generatePlayerCardText(id);
-  await run("UPDATE players SET share_summary = ? WHERE id = ?", [summary, id]);
   revalidatePath(`/spelare/${id}`);
 }
 
@@ -530,6 +527,20 @@ export async function removePlayer(formData: FormData) {
   await run("UPDATE players SET active = 0 WHERE id = ?", [id]);
   revalidatePath("/spelare");
   redirect("/spelare");
+}
+
+export async function erasePlayer(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id) || id < 1) return;
+  if (!(await hasPermission("manage_users")) || !(await canAccessPlayer(id))) redirect("/oversikt?behorighet=saknas");
+  const player = await get<{ name: string }>("SELECT name FROM players WHERE id = ?", [id]);
+  if (!player || String(formData.get("confirmation") ?? "").trim() !== player.name) {
+    redirect(`/spelare/${id}?radering=bekraftelse`);
+  }
+  const actor = (await getCoachName()) ?? "Behörig tränare";
+  await erasePlayerData(id, actor);
+  revalidatePath("/spelare");
+  redirect("/spelare?raderad=1");
 }
 
 // ---- Utvärderingar ----
@@ -909,7 +920,11 @@ export async function saveMatchRatings(formData: FormData) {
   if (!match) return;
 
   const players = await all<{ id: number; level: string; form_rating: number | null }>(
-    "SELECT id, level, form_rating FROM players WHERE active = 1"
+    `SELECT p.id, p.level, p.form_rating
+       FROM players p
+       JOIN match_players mp ON mp.player_id = p.id
+      WHERE mp.match_id = ? AND p.active = 1`,
+    [matchId]
   );
   const prevRatings = await all<{ player_id: number; delta: number }>(
     "SELECT player_id, delta FROM match_ratings WHERE match_id = ?",
@@ -1432,7 +1447,7 @@ export async function importAttendanceWorkbook(formData: FormData) {
 
   let parsed;
   try {
-    parsed = parseAttendanceWorkbook(await file.arrayBuffer());
+    parsed = await parseAttendanceWorkbook(await file.arrayBuffer());
   } catch {
     redirect("/installningar?narvaro=fel");
   }

@@ -4,9 +4,9 @@
 > Öppna **inte** hela `lib/` eller `components/` för att leta. Uppdatera kartan när du
 > lägger till en fil, route, tabell eller exportfunktion.
 
-Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Anthropic SDK, Recharts, Tailwind v4.
+Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
-Coach-plattform, milstolpe 6–7: `/matcher` sparar matcher och observationer med färdighetsfokus, `/spelare` hanterar individuella utvecklingsmål och `/analys` visar sammanställning plus audit-händelser. `coach-platform/src/app/api/export/route.ts` levererar behörighetskontrollerad JSON-export. `coach-platform/src/lib/coach-session.ts` verifierar HMAC-signerad identitet från BSK/proxyn (lokal demoidentitet endast utanför produktion).
+Coach-plattform, milstolpe 6–8: `/matcher` sparar matcher och observationer med färdighetsfokus, `/spelare` hanterar individuella utvecklingsmål och `/analys` visar sammanställning plus audit-händelser. Team- och spelarutdrag finns under `coach-platform/src/app/api/export/`; spelarvyn har separat begränsning, återaktivering och namnverifierad permanent radering. `coach-platform/src/lib/bridge-auth.ts` validerar HMAC-signaturen, `coach-session.ts` läser identiteten och `coach-platform/src/proxy.ts` avvisar osignerade produktionsanrop tidigt. Root layout och alla server actions verifierar identiteten igen. `coach-platform/db/migrate.ts` versionshanterar migrationer och `db/verify-restore.ts` provar backup/restore. Playwright-flöden finns i `coach-platform/e2e/`.
 OBS: Next.js-versionen har breaking changes — se `AGENTS.md` / `node_modules/next/dist/docs/`.
 
 Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQL-produkt med egen README, domänmodell, demovertikal och migrationsschema. `coach-platform/src/repositories/postgres.ts` avgränsar databasfrågor till pilotlaget och `coach-platform/src/app/actions.ts` innehåller server-side CRUD för spelare, övningar, träningspass, övningsdiagram, säsongsperioder och träningsblock. `coach-platform/next.config.ts` kan montera appen under en sökväg med `NEXT_BASE_PATH` (temporärt `/coach` på klvr.se). Genomförandeplanen finns i `IMPLEMENTATION_PLAN.md`. Övningsritare (milstolpe 4): serialiserbart diagramformat i `coach-platform/src/domain/diagram.ts` (Zod-validerat), Zustand-store med undo/redo i `coach-platform/src/components/diagram/diagramStore.ts`, klientredigerare i `coach-platform/src/components/diagram/ExerciseEditor.tsx`, route `coach-platform/src/app/ovningar/[id]/ritare/`. Pilar skapas med tryck–dra–släpp och snäpper mot objekt; `diagramRender.tsx` delar SVG-rendering och bollinterpolering för uppspelning med `DiagramView.tsx`. Persistence mot `exercise_diagrams` (objects+actions jsonb, width_ratio) — ingen migration. Säsongsplanering (`/planering`): DB-backade perioder i `coach-platform/src/app/planering/page.tsx` mot `season_periods`; säsong skapas lat och 3 demoperioder bootstrappas vid tom säsong. Perioder länkas till riktiga färdigheter via `season_period_skills` (checkbox-multi-select i formuläret, chips per period); skills bootstrap:as lat i `coach-platform/src/repositories/postgres.ts` (`ensureSkills`/`listSkills`) mot `skill_categories`+`skills` när tabellen är tom. Träningsbyggare (del av milstolpe 5): `coach-platform/src/app/traningspass/[id]/page.tsx` — lägg till/redigera/ta bort/ordna övningsblock (minuter + coachsteg) per pass mot `training_session_blocks`; listan på `/traningspass` länkar varje pass hit. Närvaro + genomförande (del av milstolpe 5): samma sida — närvarosektion med en `<select>` per spelare mot `training_session_attendance` (`attendance_status`-enum: present/absent/late/partial/injured/trial), "Markera genomfört"-knapp som sätter `training_sessions.status='completed'` via `completeSessionAction`; status-badge i header (utkast/planerat/genomfört). Repo: `listAttendance`/`saveAttendance`/`setSessionStatus` i `coach-platform/src/repositories/postgres.ts`; actions `saveAttendanceAction`/`completeSessionAction` i `coach-platform/src/app/actions.ts`. Kalender (del av milstolpe 5): `coach-platform/src/app/kalender/page.tsx` — månadsvy (måndag-start, 42 celler) med träningspass inhängade och färgade efter status, förra/nästa/idag-navigation via `?m=YYYY-MM`; svensk tid via `toLocaleDateString("sv-SE",{timeZone:"Europe/Stockholm"})`. Länkad från nav (`AppShell.tsx`). Träningsläge (sista delen av milstolpe 5): `coach-platform/src/app/traningspass/[id]/kor/page.tsx` — förenklat genomförandegränssnitt ute på planen; server-komponent laddar pass + block-meta + övningsbibliotek + spelare + närvaro + alla blockens diagram (via `getDiagram`), renderar klientkomponenten `coach-platform/src/components/ConductSession.tsx` (nedräknande timer, stora snabbknappar, svårighetsbedömning, byt övning, närvaropanel, reflektionsformulär). Läs-bara rendering av diagram delas i `coach-platform/src/components/diagram/diagramRender.tsx` (TEAM_COLOR/ARROW_COLOR/ARROW_DASH/resolve/H/pitchMarkings/arrowMarkers — används även av `ExerciseEditor.tsx`) + `coach-platform/src/components/diagram/DiagramView.tsx` (ren serverkomponent, statisk SVG). "Starta träningsläge"-knapp på `/traningspass/[id]`. Genomfört pass sparas separat via `saveConductAction` i `coach-platform/src/app/actions.ts` → `saveConductedSession` i `coach-platform/src/repositories/postgres.ts` mot `conducted_sessions`+`conducted_session_blocks` (migration `002_conducted.sql`); sätter sessionens status till `completed`. Block-meta (coach/area/equipment/group_name) lagras på `training_session_blocks` och editeras i blockbyggaren. Övningsbibliotek (`/ovningar`): klientkomponent `coach-platform/src/components/ExerciseGrid.tsx` filtrerar övningar efter namn/tema. Övningsritarens spelarverktyg har team-väljare (att/def/gk) — klicka befintlig spelare för att byta team (`setObjectTeam` i diagramStore).
@@ -20,6 +20,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | Vill ändra | Läs dessa filer |
 | --- | --- |
 | **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `app/api/live/[id]/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx` |
+| **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
 | **Match: skapa/redigera/ta bort, cup, nivå** | `lib/actions.ts` (save/delete/updateCup/setMatchLevel…), `components/MatchForm.tsx`, `app/(skyddad)/matcher/` |
 | **Laguttagning / trupp / formation** | `components/SquadBoard.tsx`, `lib/formations.ts`, `lib/positions.ts`, `lib/actions.ts` (saveSquad/saveLineup) |
@@ -29,13 +30,12 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | **Matchbetyg / form (ELO)** | `lib/rating.ts`, `lib/actions.ts` (saveMatchRatings), `lib/queries.ts` (getMatchRatings/getPlayerFormTrend), `components/MatchRatings.tsx`, `components/FormTrendChart.tsx`, monteras i `app/(skyddad)/matcher/[id]/page.tsx` + `app/(skyddad)/spelare/[id]/page.tsx` |
 | **Utveckling över tid / diagram** | `components/DevelopmentChart.tsx`, `components/ParticipationChart.tsx`, `lib/queries.ts` (getPlayerDevelopment) |
 | **Närvaroimport / närvarotrend** | `lib/attendance.ts`, `lib/actions.ts` (importAttendanceWorkbook), `lib/queries.ts` (getLatestAttendanceImportSummary/getPlayerAttendance*), `components/AttendanceTrendChart.tsx`, `app/(skyddad)/installningar/page.tsx`, `app/(skyddad)/spelare/[id]/page.tsx` |
+| **Spelarutdrag och permanent radering** | `lib/playerPrivacy.ts`, `app/api/export/player/[id]/route.ts`, `lib/actions.ts` (erasePlayer), `app/(skyddad)/spelare/[id]/page.tsx`, `docs/GDPR-GRIND.md` |
 | **Statistik (säsong/spelare/lag)** | `lib/stats.ts`, `lib/queries.ts` (getSeasonStats/getPlayerMatchStats/getTeamMatchStats), `components/StatsFields.tsx`, `app/(skyddad)/statistik/` |
 | **Nivåer / matchning spelare↔match** | `lib/levels.ts`, `lib/queries.ts` (getPlayersLevelInfo) |
 | **Kalender / SvFF-import** | `lib/ical.ts`, `lib/svff.ts`, `lib/actions.ts` (importCalendarMatches) |
 | **Cup-import via iCal-länk** | `app/(skyddad)/matcher/importera-cup/page.tsx`, `lib/actions.ts` (previewCupImport/importCupMatches), `lib/ical.ts` (calendarName) |
 | **Spelarkort (delningslänk)** | `app/spelarkort/[token]/`, `lib/queries.ts` (getPlayerByShareToken/share*), `lib/actions.ts` (generateShareLink) |
-| **AI: spelarkortstext, förslag, intervju** | `lib/ai.ts`, `app/api/ai/`, `components/InterviewChat.tsx`, `components/AISuggestButton.tsx` |
-| **Spelarsamtal (intervjuer) – tränarvy** | `app/(skyddad)/spelare/intervjuer/page.tsx` (samlad lista, flik under Spelare), `components/IntervjuCard.tsx` (delat kort), `components/SpelareTabs.tsx` (flikrad Spelare\|Samtal), `lib/queries.ts` (getIntervjuer/getPlayerInterviews), monteras även på `app/(skyddad)/spelare/[id]/page.tsx` + i Att-göra på `oversikt`. Gammal `/intervjuer` → redirect i `next.config.ts` |
 | **Inloggning / roller / inbjudan** | `lib/auth.ts`, `lib/organization.ts`, `lib/actions.ts` (playerLogin/acceptInvite/setViewAs + administration), `app/login/`, `app/invite/`, `app/(skyddad)/administration/`, `components/RoleSwitcher.tsx` |
 | **Lag, undergrupper och matchgrupper** | `lib/organization.ts`, `lib/db.ts`, `lib/actions.ts` (createGroup/saveGroup), `app/(skyddad)/administration/`, `docs/SPEC-roller-och-grupper.md` |
 | **Inställningar / white label** | `lib/actions.ts` (updateSettings), `lib/db.ts` (getSetting/setSetting), `components/Settings*.tsx`, `app/(skyddad)/installningar/` |
@@ -48,11 +48,14 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 ## lib/ — exports per fil
 
 - **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, inställningar, delningslänkar och administration.
-- **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvaro-/intervjuhelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
+- **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvarohelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
 - **attendance.ts**: parser för Svenska Lag-filen `Närvarotillfällen per aktivitet & person`, inklusive datumtolkning, kategorisering och namnnormalisering.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
 - **live.ts**: getLiveState (publik eller rapporteringsdetaljer), recordEvent/undoLastEvent (egen ångra via reporter_key), recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
+- **liveAccess.ts**: validerar den matchspecifika capability-token som krävs för publik rapporteringsläsning och skrivning.
+- **liveRateLimit.ts**: atomisk databasräknare för publik liverapportering, max per match och rapportör.
+- **playerPrivacy.ts**: versionsmärkt spelarutdrag och transaktionell permanent radering med audit utan barnets namn.
 - **auth.ts**: sex roller, funktionsrättigheter, användarsession, grupp-/spelarscope och kompatibilitetslagret getRole.
 - **organization.ts**: läsmodeller för användare, roller, grupper och medlemskap till administrationsvyn.
 - **svff.ts**: SvFF-färdigheter — `CATEGORIES`/`ALL_SKILLS`/`SVFF_PRINCIPLES`, skillById/categoryById.
@@ -61,7 +64,6 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **levels.ts**: `LEVELS`, level/levelByRank/suggestLevel, fit() (matchar spelarnivå mot matchnivå).
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
-- **ai.ts**: callAnthropic/callAnthropicChat, generatePlayerCardText.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
 - **rating.ts**: matchbetyg/ELO-form — `EXPECTATION_STEPS`/`RATING_AREAS`, seedRating/kFactor/computeDelta, ratingBand, levelSuggestion (form vs satt nivå → nivåförslag), suggestOutcome (stats→förslag), outcomeFromAreas, stepByKey/stepByOutcome.
 
@@ -69,9 +71,9 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## DB-tabeller (definieras i lib/db.ts)
 
-`settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`), `match_players`,
-`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
-`player_self_evals`, `player_interviews`, `activity_log`, `login_throttle`, `users`, `user_roles`,
+`settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
+`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
+`player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
 `player_skill_status` (aktuellt utvecklingsträd, PK player_id+skill_id), `player_skill_notes`, `development_checkpoints` (daterad avstämning), `development_checkpoint_skills` (snapshot + föregående status + fokus per färdighet).
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
@@ -80,9 +82,9 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## Routes (app/)
 
-Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, utveckling, intervjuer), utveckling (lagets snitt), statistik, installningar, administration och mina-spelare.
-Publika: `/login`, `/invite`, `/guide`, `/intervju`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
-API: `app/api/ai/{intervju,intervju/spara,suggest}`, `app/api/auth/{google,callback/google,dev}`, `app/api/live/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
+Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, utveckling), utveckling (lagets snitt), statistik, installningar, administration och mina-spelare.
+Publika: `/login`, `/invite`, `/guide`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
+API: `app/api/auth/{google,callback/google,dev}`, `app/api/live/[id]`, `app/api/export/player/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 
 Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). `scripts/reset-dev-match.mjs` återställer testmatchen till rent pågående tillstånd (behåller trupp/startelva). `scripts/test-live.sh` kör hela end-to-end-testprotokollet för liverapportering (se `docs/TESTPROTOKOLL-live.md`). Alla tre vägrar köra mot icke-lokal DB. Se `projects/bsk-app` i GBrain för uppsättning.
 
@@ -94,7 +96,7 @@ Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Pos
 - **Svensk tid**: använd `lib/dates.ts`. Vercel kör UTC — aldrig råa `toISOString`-datum.
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
 - **Git**: `git push` direkt efter commit.
-- Öppna punkter samlas i `docs/BACKLOG.md`. Större detaljspec finns i `docs/SPEC-matchbetyg.md` (Fas 1 byggd – Fas 2-integrationer kvar), `docs/SPEC-matchgrupper.md` (flera lag/grupper med delad pool – ej byggd) och `docs/STAGING.md`.
+- Öppna punkter samlas i `docs/BACKLOG.md`. GDPR-produktionsgrinden finns i `docs/GDPR-GRIND.md`. Större detaljspec finns i `docs/SPEC-matchbetyg.md`, `docs/SPEC-matchgrupper.md` (ersatt av den byggda gruppmodellen) och `docs/STAGING.md`.
 
 ---
 

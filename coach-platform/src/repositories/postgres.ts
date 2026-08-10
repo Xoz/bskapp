@@ -35,7 +35,46 @@ export async function savePlayer(input: { id?: string; name: string; birthYear: 
 
 export async function deletePlayer(id: string) {
   const team = await pilotTeam();
-  await sql`DELETE FROM players WHERE id=${id} AND team_id=${team.id}`;
+  const players = await sql`SELECT id FROM players WHERE id=${id} AND team_id=${team.id}`;
+  if (!players[0]) throw new Error("Spelaren finns inte i pilotlaget.");
+  const observations = await sql`DELETE FROM match_observations WHERE player_id=${id} AND match_id IN (SELECT id FROM matches WHERE team_id=${team.id}) RETURNING id`;
+  const deleted = await sql`DELETE FROM players WHERE id=${id} AND team_id=${team.id} RETURNING id`;
+  await audit("player.erased", "player", id, { deletedPlayers: deleted.length, deletedPlayerObservations: observations.length });
+}
+
+export async function setPlayerStatus(id: string, status: "active" | "paused") {
+  const team = await pilotTeam();
+  const updated = await sql`UPDATE players SET status=${status} WHERE id=${id} AND team_id=${team.id} RETURNING id`;
+  if (!updated[0]) throw new Error("Spelaren finns inte i pilotlaget.");
+  await audit(status === "paused" ? "player.restricted" : "player.reactivated", "player", id);
+}
+
+export async function getPlayerName(id: string): Promise<string | null> {
+  const team = await pilotTeam();
+  const rows = await sql`SELECT name FROM players WHERE id=${id} AND team_id=${team.id}`;
+  return rows[0] ? String(rows[0].name) : null;
+}
+
+export async function exportPlayerData(id: string) {
+  const team = await pilotTeam();
+  const players = await sql`SELECT id,team_id,name,birth_year,shirt_number,positions,status,created_at FROM players WHERE id=${id} AND team_id=${team.id}`;
+  if (!players[0]) return null;
+  const [attendance, assessments, goals, observations] = await Promise.all([
+    sql`SELECT a.status,a.minutes,s.title session_title,s.starts_at FROM training_session_attendance a JOIN training_sessions s ON s.id=a.session_id WHERE a.player_id=${id} AND s.team_id=${team.id} ORDER BY s.starts_at`,
+    sql`SELECT a.level,a.context,a.comment,a.assessed_at,s.name skill FROM player_skill_assessments a JOIN skills s ON s.id=a.skill_id WHERE a.player_id=${id} ORDER BY a.assessed_at`,
+    sql`SELECT g.id,g.title,g.description,g.starts_on,g.ends_on,g.status,COALESCE(array_agg(s.name) FILTER (WHERE s.name IS NOT NULL),'{}') skills FROM development_goals g LEFT JOIN development_goal_skills gs ON gs.goal_id=g.id LEFT JOIN skills s ON s.id=gs.skill_id WHERE g.player_id=${id} GROUP BY g.id ORDER BY g.starts_on`,
+    sql`SELECT o.id,o.summary,o.sentiment,o.priority,o.created_at,m.opponent,m.starts_at FROM match_observations o JOIN matches m ON m.id=o.match_id WHERE o.player_id=${id} AND m.team_id=${team.id} ORDER BY o.created_at`,
+  ]);
+  await audit("player.data_exported", "player", id, { version: 1 });
+  return {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    player: players[0],
+    attendance,
+    skillAssessments: assessments,
+    developmentGoals: goals,
+    matchObservations: observations,
+  };
 }
 
 export async function listExercises(): Promise<Exercise[]> {
@@ -344,7 +383,7 @@ export async function getAnalytics() {
   const [sessions, attendance, goals, observations, activity] = await Promise.all([
     sql`SELECT status,COUNT(*) count FROM training_sessions WHERE team_id=${team.id} GROUP BY status`,
     sql`SELECT a.status,COUNT(*) count FROM training_session_attendance a JOIN training_sessions s ON s.id=a.session_id WHERE s.team_id=${team.id} GROUP BY a.status`,
-    sql`SELECT status,COUNT(*) count FROM development_goals g JOIN players p ON p.id=g.player_id WHERE p.team_id=${team.id} GROUP BY status`,
+    sql`SELECT g.status,COUNT(*) count FROM development_goals g JOIN players p ON p.id=g.player_id WHERE p.team_id=${team.id} GROUP BY g.status`,
     sql`SELECT sentiment,COUNT(*) count FROM match_observations o JOIN matches m ON m.id=o.match_id WHERE m.team_id=${team.id} GROUP BY sentiment`,
     sql`SELECT action,entity_type,created_at FROM activity_logs WHERE organization_id=${team.organizationId} ORDER BY created_at DESC LIMIT 12`,
   ]);

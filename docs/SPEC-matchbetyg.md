@@ -1,6 +1,6 @@
 # Kravspec: Matchbetyg med ELO-form
 
-Status: **Fas 1 byggd** (2026-06-15). Fas 2-integrationer kvar – se "Faser" nedan.
+Status: **Fas 1–2 byggda** (verifierat 2026-08-10). Formlista finns på Översikt och bästa form visas i cupkort.
 Implementation: `lib/rating.ts`, tabell `match_ratings` + `players.form_rating`,
 `saveMatchRatings`, betygssektion på matchsidan, form-band + trend på spelarprofilen.
 
@@ -19,7 +19,7 @@ per spelare som utvecklas över tid och kan föreslå nivåjusteringar.
 | Inmatning (snabb) | **Mot förväntan** (under / som väntat / över) |
 | Visning | **Vänligt band + trend** (form-pil + nivåband, ej naket tal) |
 | Var betygsätts | **Matchsidan efter match** ("Betygsätt spelare"-sektion) |
-| Syns/matar | Spelarprofil, AI-förslag, översikt, cupkort |
+| Syns/matar | Spelarprofil, regelbaserade nivåförslag, översikt, cupkort |
 
 ## Kärnidé – "mot förväntan" + ELO
 Tränaren bedömer inte ett abstrakt 1–5, utan **hur spelaren presterade mot
@@ -46,7 +46,7 @@ höjer formen mer. Att överprestera i en lätt match höjer lite.
 När tränaren öppnar betygssättningen förväljs ett "mot förväntan"-steg utifrån
 spelarens matchstatistik vägd mot position och nivå (t.ex. ren nolla för back i
 svår match → "över förväntan"; få mål för anfallare i lätt match → "under").
-Tränaren bekräftar/justerar. Heuristik först, ev. AI senare.
+Tränaren bekräftar/justerar det regelbaserade förslaget.
 
 ### Nivåförslag
 När `form_rating` konsekvent ligger i ett annat nivåband än spelarens satta nivå
@@ -69,14 +69,14 @@ Matchsidan (`/matcher/[id]`), tränarläge, ny sektion **"Betygsätt spelare"**:
 
 ## Visning (de fyra ytorna)
 1. **Spelarprofil:** form-band + trendkurva över matcher (delta över tid).
-2. **AI-utvärderingsförslag:** väg in senaste matchform som signal i prompten.
+2. **Regelbaserat nivåförslag:** väg in senaste matchform som signal.
 3. **Översikt:** form-topplista / "i form"-kort.
 4. **Cupkort:** bästa form i cupen (utöver dagens skytteliga).
 
 ## Faser
 - **Fas 1 (kärna):** datamodell, inmatning på matchsidan (snabb + avancerat),
   ELO-uppdatering, statistik-förslag, spelarprofil-trend.
-- **Fas 2 (integrationer):** nivåförslag, AI-förslag, översikt, cupkort.
+- **Fas 2 (integrationer):** nivåförslag, översikt, cupkort.
 
 ## Öppna frågor / antaganden att bekräfta vid bygge
 - Exakt K-värde per nivå och seed-tal (kalibreras).

@@ -280,6 +280,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 </p>
                 <div className="mt-2">
                   <CopyLinkButton code={String(match.id)} path="live" variant="light" label="Kopiera Livescore-länk" />
+                  {reportOpen && (
+                    <span className="ml-2 inline-flex">
+                      <CopyLinkButton
+                        code={`${match.id}/rapportera?token=${encodeURIComponent(match.report_token)}`}
+                        path="live"
+                        variant="light"
+                        label="Kopiera rapporteringslänk"
+                      />
+                    </span>
+                  )}
                 </div>
               </div>
               <form action={toggleMatchReporting}>

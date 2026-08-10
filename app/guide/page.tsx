@@ -313,7 +313,6 @@ export default function GuidePage() {
                   <Item><strong style={{ color: "var(--ink)" }}>Utvecklingsdiagram</strong> sammanfattar tränarnas utvärderingar över tid.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Matchform</strong> visar förändring baserad på matchbetyg.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Styrkor och utvecklingsmål</strong> kommer från senaste utvärderingen.</Item>
-                  <Item><strong style={{ color: "var(--ink)" }}>Samtal</strong> visar genomförda spelarintervjuer.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Matchstatistik</strong> visar både summering och match-för-match.</Item>
                 </List>
               </Topic>
@@ -572,11 +571,6 @@ export default function GuidePage() {
                 <Callout title="Följ upp signaler" tone="warn">
                   Om en spelare beskriver låg trygghet eller trivsel ska en ansvarig vuxen följa upp det på ett varsamt sätt. Appen ersätter inte ett samtal.
                 </Callout>
-              </Topic>
-
-              <Topic title="AI-intervju">
-                <p>Spelaren väljer en intervjutyp och genomför ett guidat samtal i chatten. När samtalet avslutas sparas det så att behöriga tränare kan läsa det under Spelare → Samtal och på spelarprofilen.</p>
-                <p>Berätta för spelaren vem som kan läsa svaren och varför samtalet görs. Tränaren ansvarar för uppföljningen även när frågorna ställs av AI.</p>
               </Topic>
 
               <Topic title="Förälderns Google-konto">

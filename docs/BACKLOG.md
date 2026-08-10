@@ -18,31 +18,69 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   unika index `idx_match_events_idem`/`idx_match_subs_idem` på
   `(match_id, idempotency_key)`. `recordEvent`/`recordSub` skippar dubbletter;
   unikt index är backstop vid sann samtidighet. Verifierat i
-  `scripts/test-live.sh` steg O (33/33). (`components/LiveTracker.tsx`,
+  `scripts/test-live.sh` inklusive steg O och P (36/36). (`components/LiveTracker.tsx`,
   `lib/live.ts`, `lib/db.ts`)
 
 ### Övriga granskningsfynd
 
-- **[Hög] Intervjuer är inte bundna till spelar-ID** – en spelarsession
-  kontrolleras vid API-anropet, men namn och position tas från requesten och
-  intervjuer kopplas senare via fritextnamn. Spara `player_id` och hämta
-  identiteten server-side. (`app/api/ai/intervju/`, `lib/queries.ts`)
+- ~~**Testskydd**~~ – **KLART FÖR NUVARANDE MVP.** Huvudappen har 9 gröna
+  Vitest-tester för roller, permissions, grupp-/spelarscope och
+  säkerhetskontrakt. Liveprotokollet verifierar 36/36 steg inklusive capability,
+  coach/förälder, atomisk rate-limit, ångra, offline-replay och två samtidiga
+  rapportörer. `coach-platform` har 12 Vitest-tester och tre gröna
+  Playwright-flöden, inklusive spelarutdrag, begränsning och permanent radering.
 
-- **Testskydd** – lägg till automatiska tester för behörighet, gruppscope,
-  cupgrupper, parallell liverapportering och offline-replay. Projektet saknar
-  även separata test- och lintscript.
-
-- **GDPR** – appen lagrar personuppgifter om **minderåriga** (spelare 11–12 år):
-  namn, bedömningar/betyg, AI-intervjusvar, närvaro m.m. Behöver gås igenom:
+- **GDPR – föreningsbeslut kvar.** Appen lagrar personuppgifter om **minderåriga** (spelare 11–12 år):
+  namn, bedömningar/betyg, självskattningar, närvaro m.m. Behöver gås igenom:
   rättslig grund/samtycke (vårdnadshavare), lagringstid & gallring, rätt till
-  radering/utdrag, vilka personuppgifter som skickas till AI (Anthropic) och om
-  det kräver särskild information. Frågan: vad behöver vi göra för att vara
-  GDPR-kompatibla, och vad är minsta rimliga steg? *(Spec saknas – behöver skrivas.)*
+  radering/utdrag och åtkomstloggning. Frågan: vad behöver vi göra för att vara
+  GDPR-kompatibla, och vad är minsta rimliga steg? Befintlig
+  [SPEC-samtycke.md](SPEC-samtycke.md) behöver revideras: RF anger att
+  medlemsbehandling normalt grundas på avtal, så samtycke får inte kodas som
+  universell rättslig grund innan föreningen beslutat ändamål och grund för
+  just utvecklingsbedömningar.
+  Tekniskt finns nu versionsmärkta spelarutdrag, separat avaktivering/begränsning
+  och namnverifierad permanent radering i båda apparna. Åtgärderna scope- och
+  behörighetskontrolleras samt auditloggas utan barnets namn. Coachdatabasens
+  återställningsprov är grönt mot 27 tabeller. Kvar före verkliga barnuppgifter:
+  protokollför ändamål/rättslig grund/lagringstid, fyll i
+  [DRIFT-OCH-BITRADEN.md](DRIFT-OCH-BITRADEN.md), besluta skadefältet och bygg
+  gallring först efter fastställd retentiontabell.
 
-- **Matchbetyg – Fas 2** (integrationer): kvar är **form-topplista i Översikt** och
-  **bästa form-kort i cup**. Klart sedan tidigare: nivåförslag från matchform och
-  invävning av form i AI-förslaget. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
+- ~~**Matchbetyg – Fas 2**~~ – **KLART.** Formlistan visas på Översikt och
+  cupkorten visar bästa form i cupen. Nivåförslag och regelbaserade förslag från
+  matchstatistik är inkopplade. Skrivflödet är dessutom avgränsat till faktiska
+  `match_players`. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
 
 - **Staging** – koden klar, manuella engångssteg kvar (Vercel-env, Google-redirect).
-  OBS: DB:n är migrerad från Turso till **Supabase/Postgres** – stegen i STAGING.md
-  behöver uppdateras till en Supabase-stagingdatabas. Se [STAGING.md](STAGING.md).
+  `STAGING.md` är uppdaterad för Supabase/Postgres. Kvarvarande steg kräver ett
+  separat Supabase-projekt, Preview-hemligheter och Google-redirect i de externa
+  tjänsterna. Se [STAGING.md](STAGING.md).
+
+### Externa produktionsgrindar
+
+- Skapa separat Supabase-staging, sätt Vercel Preview-hemligheter och registrera
+  Google OAuth-redirect. Kräver konto-/budgetbeslut utanför repot.
+- Sätt samma `BSK_SESSION_BRIDGE_SECRET` i coach-processen och den betrodda
+  BSK/VPS-bryggan samt låt proxyn skriva signerade `x-bsk-coach`-headers. Ingen
+  proxy-/deploykonfiguration eller VPS-åtkomst finns i repot.
+- Föreningen måste utse integritetskontakt och fatta besluten i
+  [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
+  lagringstid.
+
+### Säkerhetshärdning 2026-08-10
+
+- ~~**Coach-platform saknar auth på sidor och actions**~~ – **KLART.** Root layout,
+  Proxy, export-routes och samtliga 20 server actions kräver signerad BSK-identitet.
+  Felaktig HMAC/JSON avvisas och testas.
+- ~~**Publik liverapportering kan nås med sekventiellt match-id**~~ – **KLART.**
+  Livescore är fortsatt publik, men rapporteringsdetaljer och mutationer kräver
+  en unik `report_token` i den tränardelade länken eller coachbehörighet. Global
+  match-rate-limit kompletterar rapportörsgränsen.
+- ~~**Matchbetyg kan skriva över gruppgräns**~~ – **KLART.** Endast spelare med
+  rad i `match_players` för den behörighetskontrollerade matchen behandlas.
+- ~~**Publik rate-limit har samtidighetsrace**~~ – **KLART.** Atomisk
+  `live_rate_limits`-upsert begränsar både matchen och rapportören; verifierat
+  med parallella anrop.
+- ~~**Dependency-audit**~~ – **KLART.** Båda apparna kör Next 16.3.0 och har
+  `npm audit` = 0. Osäkra `xlsx` är ersatt med `read-excel-file`.

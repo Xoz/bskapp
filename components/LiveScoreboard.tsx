@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import type { LiveState } from "@/lib/liveTypes";
 import { formatClock } from "@/lib/liveTypes";
 import LiveFeed from "@/components/LiveFeed";
@@ -100,16 +99,6 @@ export default function LiveScoreboard({
           )}
         </div>
       </div>
-
-      {/* Rapportera-knapp – bara när tränaren öppnat rapportering */}
-      {live.reportOpen && !live.finished && (
-        <Link
-          href={`/live/${matchId}/rapportera`}
-          className="btn-primary w-full flex items-center justify-center gap-2 py-3"
-        >
-          📋 Hjälp till att rapportera
-        </Link>
-      )}
 
       {/* Händelseflöde */}
       <div className="card p-6">

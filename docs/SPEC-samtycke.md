@@ -1,6 +1,19 @@
 # Kravspec: Föräldrasamtycke för statistik
 
-Status: **Beslutad, ej byggd** (2026-06-21).
+Status: **Pausad för juridisk omprövning 2026-08-10 – bygg inte denna modell ännu.**
+
+Den tidigare intervjubaserade lösningen nedan är bevarad som historiskt
+produktunderlag men är inte längre ett godkänt genomförandebeslut. RF anger att
+behandling inom barns medlemskap normalt grundas på medlemsavtalet och att varje
+ytterligare behandling behöver ett eget ändamål och rättslig grund. Ett generellt
+samtyckesflöde får därför inte byggas innan föreningen har beslutat grunden för
+utvecklingsbedömningar, närvaro, självskattningar och matchbetyg. Se
+[GDPR-GRIND.md](GDPR-GRIND.md).
+
+Påståendet nedan att data aldrig delas med tredje part är tekniskt felaktigt:
+databas-, drift- och inloggningsleverantörer behandlar uppgifter som
+personuppgiftsbiträden. Biträden, regioner och avtal måste redovisas i
+integritetsinformationen.
 
 ## Mål
 Klubben har en mejllista på alla föräldrar. Vi vill kunna **mata in föräldrarnas
@@ -86,7 +99,7 @@ Två regler (beslut 2026-06-21), motsvarar "Hur länge sparas uppgifterna?" i
 
 Kräver en **schemalagd städrutin** (finns inte idag) – t.ex. Vercel Cron som kör båda
 reglerna periodiskt. Rör spelar- och matchanknuten data (`players`, `evaluations`,
-`match_*`, `player_self_evals`, `player_interviews`, `match_ratings`). Säsong styrs av
+`match_*`, `player_self_evals`, `match_ratings`). Säsong styrs av
 `settings.season`. Server-/datalagring inom EU/EES (Supabase – bekräftat).
 
 ## Texten (samtyckesskärmen)
