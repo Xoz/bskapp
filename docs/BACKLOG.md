@@ -61,10 +61,12 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 
 - Skapa separat Supabase-staging, sätt Vercel Preview-hemligheter och registrera
   Google OAuth-redirect. Kräver konto-/budgetbeslut utanför repot.
-- Sätt samma `BSK_SESSION_BRIDGE_SECRET` i coach-processen och den betrodda
-  BSK/VPS-bryggan samt aktivera nginx-konfigurationen. Bryggrouten och en
-  strippande `auth_request`-mall finns nu i repot, men VPS-env/service/nginx kan
-  inte ändras med den tillgängliga deployworkflowen.
+- ~~Driftsätt BSK/VPS-bryggan och skydda coach-plattformen~~ – **KLART
+  2026-08-10.** Deployworkflowen bygger och migrerar nu båda apparna, håller
+  samma bridge-hemlighet i båda root-skyddade env-filerna och tar bort den
+  utfasade `ANTHROPIC_API_KEY`. `https://bsk2014.se/coach/` använder strippande
+  nginx-`auth_request`; den tidigare öppna `https://klvr.se/coach/` omdirigeras
+  dit. Actions `31381324085` och en extern HTTP-kontroll verifierade grinden.
 - Föreningen måste utse integritetskontakt och fatta besluten i
   [GDPR-GRIND.md](GDPR-GRIND.md); koden får inte gissa rättslig grund eller
   lagringstid.
