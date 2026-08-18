@@ -20,6 +20,23 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 
 ## Nasta steg
 
+- Produktomstart beslutad 2026-08-18: appens primara uppgift ar att hjalpa
+  tranarna utveckla varje spelare och ta ut balanserade, utvecklande matchtrupper.
+  Svenska Lag ska fortsatt aga kalender, kallelser och narvaro; BSK-appen ska
+  inte duplicera dessa floden. Appen ska i stallet aga utvecklingsmal,
+  malanknutna observationer fran traning och match, deltagande/exponering samt
+  transparent beslutsstod for uttagning. Match-, cup-, live-, detaljstatistik-,
+  ovningsritar- och administrationsfunktioner ar sekundara tills denna karna ar
+  bevisad i verklig tranarvardag. Planlinjen ar en UX-referens, inte en fortsatt
+  parallell produkt eller separat sanningskalla.
+- Fas 1-3 i produktomstarten byggda 2026-08-18 i huvudappen. `/idag`,
+  `/observera`, `/spelare` och `/uttagning` ar enda primara navigationen.
+  Datamodellen har kanoniska aktiviteter, hogst tva aktiva utvecklingsmal,
+  malanknuten evidens, deltagande/exponering och explicita uttagningsbeslut.
+  Befintlig kalender-, match- och narvaroimport speglas idempotent; Svenska Lag
+  forblir kalla. Uttagningsstodet ger enbart forklarbara mojligheter och
+  balansvarningar, aldrig poang/ranking/automatval. Fas 4 har teknisk matning i
+  `/idag`; verklig fyraveckorspilot aterstar och far inte slutmarkeras i fortid.
 - Beslut 2026-08-10: allt generativt AI-arbete ar pausat. AI-routes, AI-intervjuer, AI-forslag, AI-genererade spelarkortstexter och Anthropic-beroendet ar borttagna. Fokus ar en fungerande tranar- och utvecklingsplattform; regelbaserade rekommendationer ar kvar.
 - Sakerhetshardning 2026-08-10: coach-platform kraver signerad tranaridentitet i Proxy, root layout, export och samtliga server actions. Huvudappens publika liverapportering kraver nu matchspecifik capability-token medan Livescore forblir publik. Matchbetyg behandlar bara faktiska matchdeltagare. Vitest, Playwright och lokalt liveprotokoll ar inkopplade.
 - Produktionshardning 2026-08-10: båda apparna kör Next 16.3.0 med ren dependency-audit och nätoberoende huvudappsbygge. Huvudappen har 10 Vitest-tester och 36/36 liveprotokollsteg; Planlinjen har 13 Vitest + 3 Playwright. Båda har spelarutdrag och permanent radering. Planlinjens versionsmigrering och backup/restore är verifierade mot 27 tabeller.

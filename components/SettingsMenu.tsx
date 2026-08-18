@@ -19,6 +19,13 @@ export const SETTINGS_SECTIONS = [
   { id: "tranare", label: "Tränare", Icon: IconShield },
 ] as const;
 
+const SECONDARY_TOOLS = [
+  { href: "/matcher", label: "Matcharkiv" },
+  { href: "/statistik", label: "Äldre statistik" },
+  { href: "/administration", label: "Administration" },
+  { href: "/guide", label: "Guide" },
+] as const;
+
 export default function SettingsMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -90,6 +97,14 @@ export default function SettingsMenu() {
               }}
             >
               <Icon width={16} height={16} style={{ color: "var(--ink-muted)" }} />
+              {label}
+            </Link>
+          ))}
+          <p className="caption px-3 pt-3 pb-1.5" style={{ color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+            Sekundära verktyg
+          </p>
+          {SECONDARY_TOOLS.map(({ href, label }) => (
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="block px-3 py-2 body-small" style={{ color: "var(--ink-secondary)", borderRadius: "var(--r-button)" }}>
               {label}
             </Link>
           ))}

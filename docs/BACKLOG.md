@@ -5,6 +5,20 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
 
 ## Öppet
 
+### Produktomstart – fyraveckorspilot
+
+- **Fas 1–3 tekniskt klara 2026-08-18.** En kanonisk utvecklingskärna speglar
+  Svenska Lag-/matchreferenser och lagrar högst två aktiva mål, målkopplade
+  observationer, deltagande/exponering och tränarens uttagningsbeslut. De fyra
+  primärvyerna är Idag, Observera, Spelare och Uttagning. Uttagningsstödet visar
+  förklarbara möjligheter och balansvarningar utan poäng, ranking eller automatval.
+- **Fas 4 pågår i verklig användning.** Appen mäter målgrad, observerade
+  aktiviteter, sparade uttagningar och registreringstid för de senaste 28
+  dagarna. En faktisk fyraveckorspilot med tränarna måste genomföras innan
+  kärnloopen kan godkännas. Mål: minst 80 % av spelarna med aktivt mål, minst
+  75 % av aktiviteterna observerade och observationer normalt sparade på högst
+  två minuter. Samla kvalitativ feedback om uttagningsunderlaget efter varje match.
+
 ### Cupberedskap – kvar från kodgranskning
 
 - ~~**[Hög] Live-status ändrar matchen vid läsning**~~ – **KLART 2026-06-25.**

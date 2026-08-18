@@ -1,690 +1,94 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole, hasPermission } from "@/lib/auth";
-import {
-  getPlayer,
-  getEvaluations,
-  getScores,
-  getPlayerDevelopment,
-  getPlayerMatchStats,
-  getPlayerFormTrend,
-  getPlayerAttendanceOverview,
-  getPlayerAttendanceByCategory,
-  getPlayerAttendanceTrend,
-  shareLinkActive,
-  getLatestSelfEval,
-  getDevelopmentCheckpoints,
-  SHARE_TTL_MS,
-  type PlayerMatchRow,
-} from "@/lib/queries";
-import { CATEGORIES, LEVELS } from "@/lib/svff";
-import { POSITIONS } from "@/lib/positions";
-import { LEVELS as MATCH_LEVELS, suggestLevel } from "@/lib/levels";
-import { ratingBand, EXPECTATION_STEPS, levelSuggestion } from "@/lib/rating";
-import { updatePlayer, removePlayer, erasePlayer, deleteEvaluation, generateShareLink, revokeShareLink, setPlayerLevel } from "@/lib/actions";
-import DevelopmentChart from "@/components/DevelopmentChart";
-import AttendanceTrendChart from "@/components/AttendanceTrendChart";
-import FormTrendChart from "@/components/FormTrendChart";
-import SkillRadar from "@/components/SkillRadar";
+import { getCurrentUser, isStaffRole } from "@/lib/auth";
+import { getPlayerCore, type Evidence } from "@/lib/developmentCore";
+import { closeDevelopmentGoal, createDevelopmentGoal } from "@/lib/coreActions";
 import Avatar from "@/components/Avatar";
-import CopyLinkButton from "@/components/CopyLinkButton";
-import { STAT_FIELDS } from "@/lib/stats";
-import { FEATURES } from "@/lib/features";
-import { IconArrowLeft, IconSpark, IconTarget, IconAlert } from "@/components/Icons";
+import PilotStartField from "@/components/PilotStartField";
+import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
+const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
 
-function categoryAverages(scores: Record<string, number>) {
-  return CATEGORIES.map((cat) => {
-    const levels = cat.skills.map((s) => scores[s.id]).filter((v): v is number => v != null);
-    return {
-      category: cat.short,
-      value:
-        levels.length > 0
-          ? Math.round((levels.reduce((a, b) => a + b, 0) / levels.length) * 100) / 100
-          : 0,
-    };
-  });
-}
-
-export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
-  const role = await getRole();
-  if (role !== "coach") redirect("/matcher");
-  const canManagePrivacy = await hasPermission("manage_users");
-
+export default async function PlayerPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mal?: string }>;
+}) {
+  const user = await getCurrentUser();
+  if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   const { id } = await params;
-  const player = await getPlayer(Number(id));
-  if (!player || !player.active) notFound();
-
-  const shareSinceMs = player.share_expires ? player.share_expires - SHARE_TTL_MS : null;
-  const shareSinceIso = shareSinceMs ? new Date(shareSinceMs).toISOString().replace("T", " ").slice(0, 19) : undefined;
-
-  const [evaluations, development, matchStats, selfEval, formTrend, attendanceOverview, attendanceByCategory, attendanceTrend, developmentCheckpoints] = await Promise.all([
-    getEvaluations(player.id),
-    getPlayerDevelopment(player.id),
-    getPlayerMatchStats(player.id),
-    getLatestSelfEval(player.id, shareSinceIso),
-    getPlayerFormTrend(player.id),
-    getPlayerAttendanceOverview(player.id),
-    getPlayerAttendanceByCategory(player.id),
-    getPlayerAttendanceTrend(player.id),
-    getDevelopmentCheckpoints(player.id),
-  ]);
-  const linkActive = shareLinkActive(player);
-  const hoursLeft = linkActive ? Math.ceil((player.share_expires! - Date.now()) / 3_600_000) : 0;
-  // Nivåförslag från senaste utvärderingens snitt
-  const lastDev = development[development.length - 1];
-  const evalAvg = lastDev && typeof lastDev.total === "number" ? lastDev.total : null;
-  const suggestedLevel = suggestLevel(evalAvg);
-  // Matchform (ELO) – vänligt band + trend, ej naket tal
-  const formBand = player.form_rating != null ? ratingBand(player.form_rating) : null;
-  const formLastTwo = formTrend.slice(-2);
-  const formDir = formLastTwo.length === 2 ? Math.sign(formLastTwo[1].rating - formLastTwo[0].rating) : 0;
-  const lastOutcome = formTrend.length
-    ? EXPECTATION_STEPS.find((s) => s.key === formTrend[formTrend.length - 1].outcome) ?? null
-    : null;
-  // Nivåförslag: formen ligger konsekvent i ett annat band än den satta nivån
-  const levelSugg = levelSuggestion(player.level, formTrend);
-
-  const latest = evaluations[0];
-  const previous = evaluations[1];
-  const latestScores = latest ? await getScores(latest.id) : null;
-  const previousScores = previous ? await getScores(previous.id) : null;
-  // Förhämta alla utvärderingars nivåer för historiklistan
-  const scoresByEval = new Map(
-    await Promise.all(
-      evaluations.map(async (ev) => [ev.id, await getScores(ev.id)] as const)
-    )
-  );
-  const attendanceCategoryLabels: Record<string, string> = {
-    training: "Träningar",
-    match: "Matcher",
-    cup: "Cuper",
-    competition: "Tävlingar",
-    meeting: "Möten",
-    education: "Utbildningar",
-    work: "Arbetspass",
-    other: "Övrigt",
-  };
+  const playerId = Number(id);
+  if (!Number.isInteger(playerId)) notFound();
+  const core = await getPlayerCore(playerId);
+  if (!core) notFound();
+  const { mal } = await searchParams;
+  const { summary, goalHistory, observations } = core;
+  const canEdit = user.permissions.includes("manage_evaluations");
+  const addGoal = createDevelopmentGoal.bind(null, playerId);
 
   return (
-    <div className="space-y-6">
-      <Link
-        href="/spelare"
-        className="inline-flex items-center gap-1.5 body-small font-medium transition-colors"
-        style={{ color: "var(--ink-secondary)" }}
-      >
+    <div className="space-y-7">
+      <Link href="/spelare" className="inline-flex items-center gap-1.5 body-small" style={{ color: "var(--ink-secondary)" }}>
         <IconArrowLeft width={15} height={15} /> Alla spelare
       </Link>
-
-      {/* Spelarhuvud */}
-      <div className="card p-6 md:p-7 flex items-center gap-5 flex-wrap">
-        <Avatar name={player.name} jersey={player.jersey_number} size={64} />
-        <div className="flex-1 min-w-40">
-          <div className="flex items-center gap-2.5">
-            <h1 className="leading-tight" style={{ fontSize: "32px" }}>{player.name}</h1>
-            {player.jersey_number != null && (
-              <span className="badge badge-primary">
-                #{player.jersey_number}
-              </span>
-            )}
+      <header className="card p-5 md:p-7 flex items-center gap-5 flex-wrap">
+        <Avatar name={summary.player.name} jersey={summary.player.jersey_number} size={64} />
+        <div className="flex-1 min-w-48">
+          <p className="eyebrow">Utvecklingsprofil</p><h1 className="mt-1">{summary.player.name}</h1>
+          <div className="flex flex-wrap gap-4 mt-3 body-small" style={{ color: "var(--ink-secondary)" }}>
+            <span>{summary.trainingCount} träningar</span><span>{summary.matchCount} matcher</span>
+            <span>{summary.selectedCount} uttagningar</span><span>{summary.periodsPlayed} perioder</span>
           </div>
-          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            {developmentCheckpoints[0]
-              ? `Senaste utvecklingsavstämning ${developmentCheckpoints[0].date}`
-              : evaluations.length === 0
-                ? "Ingen utvecklingsavstämning ännu"
-                : `${evaluations.length} äldre ${evaluations.length === 1 ? "utvärdering" : "utvärderingar"} · senast ${latest.date}`}
-          </p>
         </div>
-        <Link href={`/spelare/${player.id}/utveckling`} className="btn-primary">
-          Öppna utveckling
-        </Link>
-      </div>
+        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
+      </header>
 
-      {/* Spelarens egen sida – tidsbegränsad delningslänk för spelarsamtal */}
-      <div className="card p-5 space-y-3" style={{ background: "var(--primary-ghost)" }}>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-48">
-            <p className="font-semibold body-small">Spelarsamtal – personlig länk</p>
-            <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-              Skapa en länk där {player.name.split(" ")[0]} kan se sin statistik och utveckling. Länken gäller i 48 timmar och måste sedan förnyas.
-            </p>
-          </div>
-          {linkActive ? (
-            <span className="badge badge-success shrink-0">
-              Aktiv · {hoursLeft} h kvar
-            </span>
-          ) : (
-            <span className="badge badge-neutral shrink-0">
-              Ingen aktiv länk
-            </span>
-          )}
+      <section>
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div><p className="eyebrow">Fokus</p><h2 className="mt-1">Aktiva utvecklingsmål</h2></div>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>{summary.goals.length}/2 aktiva</span>
         </div>
-        {linkActive ? (
-          <div className="flex items-center gap-3 flex-wrap">
-            <CopyLinkButton code={player.share_token!} path="spelarkort" variant="light" label="Kopiera spelarlänk" />
-            <Link
-              href={`/spelarkort/${player.share_token}`}
-              target="_blank"
-              className="caption underline"
-              style={{ color: "var(--ink-secondary)" }}
-            >
-              Förhandsgranska
-            </Link>
-            <form action={generateShareLink}>
-              <input type="hidden" name="id" value={player.id} />
-              <button type="submit" className="caption underline cursor-pointer" style={{ color: "var(--ink-secondary)" }}>
-                Förnya 48 h
-              </button>
-            </form>
-            <form action={revokeShareLink}>
-              <input type="hidden" name="id" value={player.id} />
-              <button type="submit" className="caption underline cursor-pointer" style={{ color: "var(--danger)" }}>
-                Återkalla
-              </button>
-            </form>
-          </div>
-        ) : (
-          <form action={generateShareLink}>
-            <input type="hidden" name="id" value={player.id} />
-            <button type="submit" className="btn-secondary btn-sm">
-              🔗 Skapa länk (gäller 48 h)
-            </button>
+        {mal === "max" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--warn-bg)" }}>Avsluta eller pausa ett mål innan ett nytt läggs till.</p>}
+        {mal === "ogiltigt" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--danger-bg)" }}>Kontrollera måltexten och datumet.</p>}
+        <div className="grid md:grid-cols-2 gap-3 mt-3">
+          {summary.goals.map((goal) => {
+            const closeGoal = closeDevelopmentGoal.bind(null, goal.id);
+            return (
+              <article key={goal.id} className="card p-5">
+                <span className="badge badge-primary">Mål {goal.slot}</span><h3 className="mt-3">{goal.title}</h3>
+                {goal.evidence_hint && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>Leta efter: {goal.evidence_hint}</p>}
+                <p className="caption mt-3" style={{ color: "var(--ink-muted)" }}>Start {goal.starts_on}{goal.review_on ? ` · följ upp ${goal.review_on}` : ""}</p>
+                {canEdit && <form action={closeGoal} className="flex gap-2 mt-4">
+                  <button name="status" value="achieved" className="btn-secondary btn-sm">Uppnått</button>
+                  <button name="status" value="paused" className="btn-secondary btn-sm">Pausa</button>
+                </form>}
+              </article>
+            );
+          })}
+        </div>
+        {canEdit && summary.goals.length < 2 && (
+          <form action={addGoal} className="card p-5 mt-3 grid md:grid-cols-2 gap-4">
+            <PilotStartField />
+            <div className="md:col-span-2"><p className="eyebrow">Nytt mål</p><h3 className="mt-1">Ett observerbart nästa steg</h3></div>
+            <label><span className="label">Utvecklingsmål</span><input name="title" className="input mt-1" required minLength={3} maxLength={120} placeholder="Exempel: söka spelbar yta före mottagning" /></label>
+            <label><span className="label">Vad kan tränaren se?</span><input name="evidence_hint" className="input mt-1" maxLength={240} placeholder="Ett konkret beteende, frivilligt" /></label>
+            <label><span className="label">Följ upp senast</span><input name="review_on" type="date" className="input mt-1" /></label>
+            <div className="flex items-end"><button type="submit" className="btn-primary">Lägg till mål</button></div>
           </form>
         )}
-      </div>
+      </section>
 
-      {/* Spelarens egenutvärdering (senaste för aktiv länk) */}
-      {selfEval && (
-        <div className="card p-6 space-y-5" style={{ border: "1px solid var(--primary-soft)" }}>
-          <div>
-            <p className="eyebrow mb-0.5" style={{ color: "var(--primary)" }}>Egenutvärdering</p>
-            <p className="caption" style={{ color: "var(--ink-muted)" }}>
-              Inlämnad {selfEval.created_at.slice(0, 10)} – läs inför spelarsamtalet
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "Roligt med fotboll", value: selfEval.fun_rating, emojis: ["😐","😊","😄"] },
-              { label: "Hur det går", value: selfEval.progress_rating, emojis: ["😅","👍","🔥"] },
-              { label: "Trivs i laget", value: selfEval.team_rating, emojis: ["😐","😊","🤝"] },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="py-3 px-2 text-center"
-                style={{ background: "var(--primary-ghost)", borderRadius: "var(--r-button)" }}
-              >
-                <p className="text-2xl">{item.emojis[item.value - 1]}</p>
-                <p className="caption mt-1 leading-tight" style={{ color: "var(--ink-secondary)" }}>
-                  {item.label}
-                </p>
-              </div>
-            ))}
-          </div>
-          {(selfEval.best_at || selfEval.want_to_improve || selfEval.note_to_coach) && (
-            <div className="grid md:grid-cols-2 gap-4">
-              {selfEval.best_at && (
-                <div>
-                  <p className="label mb-1">Bra på</p>
-                  <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
-                    {selfEval.best_at}
-                  </p>
-                </div>
-              )}
-              {selfEval.want_to_improve && (
-                <div>
-                  <p className="label mb-1">Vill bli bättre på</p>
-                  <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
-                    {selfEval.want_to_improve}
-                  </p>
-                </div>
-              )}
-              {selfEval.note_to_coach && (
-                <div className="md:col-span-2">
-                  <p className="label mb-1">Till tränaren</p>
-                  <p
-                    className="body-small leading-relaxed rounded-lg px-4 py-3"
-                    style={{ background: "var(--surface)", color: "var(--ink)" }}
-                  >
-                    {selfEval.note_to_coach}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <section>
+        <div className="flex items-end justify-between gap-3"><div><p className="eyebrow">Evidens över tid</p><h2 className="mt-1">Observationer</h2></div><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
+        {observations.length ? <div className="space-y-2 mt-3">{observations.map((observation) => (
+          <article key={observation.id} className="card p-4 md:p-5 flex items-start justify-between gap-4">
+            <div><p className="caption" style={{ color: "var(--ink-muted)" }}>{observation.activity_date} · {observation.activity_title}</p><h3 className="mt-1">{observation.goal_title ?? "Generell observation"}</h3>{observation.note && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{observation.note}</p>}</div>
+            <span className="badge">{EVIDENCE_LABELS[observation.evidence]}</span>
+          </article>
+        ))}</div> : <div className="card p-6 mt-3"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
+      </section>
 
-      {evaluations.length > 0 && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="card p-6">
-            <p className="eyebrow mb-0.5">Profil</p>
-            <h2 className="font-semibold mb-1">Styrkeområden just nu</h2>
-            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>
-              {latest.date}
-              {previous ? ` jämfört med ${previous.date} (streckad)` : ""}
-            </p>
-            <SkillRadar
-              data={categoryAverages(latestScores!)}
-              compare={previousScores ? categoryAverages(previousScores) : undefined}
-            />
-          </div>
-          <div className="card p-6">
-            <p className="eyebrow mb-0.5">Resan</p>
-            <h2 className="font-semibold mb-1">Utveckling över tid</h2>
-            <p className="caption mb-2" style={{ color: "var(--ink-muted)" }}>
-              Nivå per område vid varje utvärdering
-            </p>
-            <DevelopmentChart data={development} />
-          </div>
-        </div>
-      )}
-
-      {/* Matchform – ELO-baserat form-tal från matchbetygen (dold när matchStats är av) */}
-      {FEATURES.matchStats && formBand && (
-        <div className="card p-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
-            <div>
-              <p className="eyebrow mb-0.5">Form</p>
-              <h2 className="font-semibold mb-1">Matchform</h2>
-              <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                Bygger på betygen "mot förväntan" – nivåjusterat över matcher
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="badge"
-                style={{ background: "var(--surface)", color: formBand.color, fontSize: "0.78rem", fontWeight: 700 }}
-              >
-                {formBand.label}
-              </span>
-              {formDir !== 0 && (
-                <span
-                  className="text-lg"
-                  title={formDir > 0 ? "Stigande form" : "Sjunkande form"}
-                  style={{ color: formDir > 0 ? "#4ade80" : "var(--danger)" }}
-                >
-                  {formDir > 0 ? "▲" : "▼"}
-                </span>
-              )}
-              {lastOutcome && (
-                <span className="caption" style={{ color: "var(--ink-muted)" }}>
-                  senast: {lastOutcome.label.toLowerCase()}
-                </span>
-              )}
-            </div>
-          </div>
-          {formTrend.length >= 2 ? (
-            <FormTrendChart
-              data={formTrend.map((p) => ({ date: p.date, opponent: p.opponent, rating: p.rating, outcome: p.outcome }))}
-            />
-          ) : (
-            <p className="body-small" style={{ color: "var(--ink-muted)" }}>
-              Betygsätt fler matcher för att se en trend.
-            </p>
-          )}
-
-          {levelSugg && (
-            <div
-              className="mt-4 flex items-start justify-between gap-4 flex-wrap rounded-lg p-3"
-              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-            >
-              <div className="body-small">
-                <p className="font-semibold mb-0.5">
-                  Presterar {levelSugg.direction === "up" ? "över" : "under"} sin nivå
-                </p>
-                <p style={{ color: "var(--ink-secondary)" }}>
-                  Formen har legat i bandet{" "}
-                  <strong style={{ color: levelSugg.to.color }}>{levelSugg.to.label}</strong> de
-                  senaste {levelSugg.matches} matcherna – satt nivå är {levelSugg.from.label}.
-                  Flytta {levelSugg.direction === "up" ? "upp" : "ned"} till {levelSugg.to.label}?
-                </p>
-              </div>
-              <form action={setPlayerLevel} className="shrink-0">
-                <input type="hidden" name="id" value={player.id} />
-                <input type="hidden" name="level" value={levelSugg.to.id} />
-                <button type="submit" className="btn-secondary text-sm py-1.5 px-3.5">
-                  Flytta till {levelSugg.to.label}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-      )}
-
-      {latest && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="card p-6">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ background: "var(--ok-bg)", color: "var(--success)" }}
-              >
-                <IconSpark width={16} height={16} />
-              </span>
-              <h2 className="font-semibold">Styrkor</h2>
-            </div>
-            <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
-              {latest.strengths || "Inga noteringar i senaste utvärderingen."}
-            </p>
-          </div>
-          <div className="card p-6">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-              >
-                <IconTarget width={16} height={16} />
-              </span>
-              <h2 className="font-semibold">Utvecklingsmål</h2>
-            </div>
-            <p className="body-small leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
-              {latest.development_goals || "Inga noteringar i senaste utvärderingen."}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {attendanceOverview && (
-        <div className="card p-6 md:p-7">
-          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-            <div>
-              <p className="eyebrow mb-0.5">Närvaro</p>
-              <h2 className="font-semibold mb-1">Närvarotrend</h2>
-              <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                Bygger på senaste importen från Svenska Lag
-              </p>
-            </div>
-            <div
-              className="rounded-xl px-4 py-3"
-              style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
-            >
-              <p className="caption" style={{ color: "var(--ink-muted)" }}>Total närvaro</p>
-              <p className="text-lg font-semibold">
-                {attendanceOverview.attended_activities}/{attendanceOverview.total_activities}
-                {attendanceOverview.attendance_rate != null ? (
-                  <span className="body-small ml-2" style={{ color: "var(--ink-secondary)" }}>
-                    {attendanceOverview.attendance_rate}%
-                  </span>
-                ) : null}
-              </p>
-            </div>
-          </div>
-          {attendanceTrend.length >= 2 ? (
-            <AttendanceTrendChart
-              data={attendanceTrend.map((row) => ({
-                month: row.month.slice(5),
-                attendanceRate: row.attendance_rate ?? 0,
-                trainingRate: row.training_rate,
-              }))}
-            />
-          ) : (
-            <p className="body-small" style={{ color: "var(--ink-muted)" }}>
-              Importera fler månader för att se en tydlig trendkurva.
-            </p>
-          )}
-          {attendanceByCategory.length > 0 && (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-              {attendanceByCategory.map((row) => (
-                <div
-                  key={row.category}
-                  className="rounded-xl px-4 py-3"
-                  style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}
-                >
-                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                    {attendanceCategoryLabels[row.category] ?? row.category}
-                  </p>
-                  <p className="font-semibold mt-1">
-                    {row.attended_activities}/{row.total_activities}
-                  </p>
-                  <p className="caption mt-1" style={{ color: "var(--ink-secondary)" }}>
-                    {row.attendance_rate != null ? `${row.attendance_rate}% närvaro` : "Saknar procent"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {evaluations.length > 0 && (
-        <div id="aldre-utvarderingar" className="card p-6 md:p-7 scroll-mt-6">
-          <p className="eyebrow mb-1">Äldre modell</p>
-          <h2 className="font-semibold mb-5">Tidigare utvärderingar</h2>
-          <div className="space-y-7">
-            {evaluations.map((ev) => {
-              const scores = scoresByEval.get(ev.id) ?? {};
-              return (
-                <div
-                  key={ev.id}
-                  className="border-b last:border-b-0 pb-7 last:pb-0"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                      {ev.date}
-                      {ev.coach_name && (
-                        <span className="body-small font-normal ml-2" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
-                          av {ev.coach_name}
-                        </span>
-                      )}
-                    </p>
-                    <form action={deleteEvaluation}>
-                      <input type="hidden" name="id" value={ev.id} />
-                      <input type="hidden" name="player_id" value={player.id} />
-                      <button
-                        className="caption hover:underline cursor-pointer"
-                        style={{ color: "var(--danger)" }}
-                        type="submit"
-                      >
-                        Ta bort
-                      </button>
-                    </form>
-                  </div>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                    {CATEGORIES.map((cat) => (
-                      <div key={cat.id}>
-                        <p
-                          className="caption font-semibold uppercase tracking-[0.1em] mb-2"
-                          style={{ color: cat.color, fontFamily: "var(--font-display)" }}
-                        >
-                          {cat.name}
-                        </p>
-                        {cat.skills.map((skill) => {
-                          const level = scores[skill.id];
-                          if (level == null) return null;
-                          return (
-                            <div key={skill.id} className="flex items-center justify-between gap-3 py-1">
-                              <span className="body-small truncate" style={{ color: "var(--ink-secondary)" }}>
-                                {skill.name}
-                              </span>
-                              <span
-                                className="level-meter shrink-0"
-                                title={LEVELS.find((l) => l.value === level)?.label}
-                              >
-                                {[1, 2, 3, 4].map((i) => (
-                                  <i key={i} className={i <= level ? "on" : ""} />
-                                ))}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Matchstatistik. matchStats = en rad per match spelaren deltog i (även
-          nollmatcher). Vi visar alla och flaggar matcher utan registrerad
-          statistik så tränaren kan öppna matchen och rätta en glömd rapportering.
-          Dold när matchStats-flaggan är av. */}
-      {FEATURES.matchStats && (() => {
-        const hasStats = (m: PlayerMatchRow) =>
-          STAT_FIELDS.some((f) => ((m as unknown as Record<string, number>)[f.id] ?? 0) > 0);
-        const participated = matchStats.length;
-        if (participated === 0) return null;
-        const missing = matchStats.filter((m) => !hasStats(m)).length;
-        const totals = STAT_FIELDS.reduce((acc, f) => {
-          acc[f.id] = matchStats.reduce((s, m) => s + ((m as unknown as Record<string, number>)[f.id] ?? 0), 0);
-          return acc;
-        }, {} as Record<string, number>);
-        return (
-          <div className="card p-6 md:p-7">
-            <h2 className="font-semibold mb-1">Matchstatistik</h2>
-            <p className="caption" style={{ color: "var(--ink-muted)" }}>
-              {`Spelat ${participated} ${participated === 1 ? "match" : "matcher"}`}
-              {missing > 0 && <> · {missing} utan registrerad statistik</>}
-            </p>
-            {missing > 0 && (
-              <p
-                className="caption rounded-lg px-3.5 py-2.5 mt-3 mb-1 flex items-start gap-2"
-                style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
-              >
-                <IconAlert width={14} height={14} className="shrink-0 mt-0.5" />
-                <span>
-                  {missing === 1 ? "En match är" : `${missing} matcher är`} markerade utan statistik.
-                  Det är oftast en glömd rapportering – öppna matchen för att fylla i.
-                </span>
-              </p>
-            )}
-            <div className="overflow-x-auto -mx-2 mt-4">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Match</th>
-                    {STAT_FIELDS.map((f) => (
-                      <th key={f.id} title={f.label}>{f.short}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matchStats.map((m) => {
-                    const row = m as unknown as Record<string, number>;
-                    const hasResult = m.our_score != null && m.opponent_score != null;
-                    const empty = !hasStats(m);
-                    return (
-                      <tr key={m.match_id} style={empty ? { background: "var(--warn-bg)" } : undefined}>
-                        <td>
-                          <Link
-                            href={`/matcher/${m.match_id}`}
-                            className="hover:underline font-medium whitespace-nowrap inline-flex items-center gap-1.5"
-                            style={{ color: empty ? "var(--warning)" : "var(--primary)" }}
-                          >
-                            {m.opponent}
-                            {empty && <span title="Ingen statistik registrerad"><IconAlert width={12} height={12} /></span>}
-                          </Link>
-                          <span className="block caption" style={{ color: "var(--ink-muted)" }}>
-                            {empty ? "Saknar statistik – tryck för att rätta" : `${m.date}${hasResult ? ` · ${m.our_score}–${m.opponent_score}` : ""}`}
-                          </span>
-                        </td>
-                        {STAT_FIELDS.map((f) => (
-                          <td key={f.id} style={empty ? { color: "var(--ink-muted)" } : undefined}>{row[f.id] || 0}</td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: "2px solid var(--border)", fontWeight: 600 }}>
-                    <td>Totalt</td>
-                    {STAT_FIELDS.map((f) => (
-                      <td key={f.id}>{totals[f.id]}</td>
-                    ))}
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        );
-      })()}
-
-      <div className="card p-6 md:p-7">
-        <h2 className="font-semibold mb-5">Redigera spelare</h2>
-        <form action={updatePlayer} className="space-y-4 max-w-lg">
-          <input type="hidden" name="id" value={player.id} />
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="label" htmlFor="name">Namn</label>
-              <input id="name" name="name" defaultValue={player.name} required className="input" />
-            </div>
-            <div className="w-24">
-              <label className="label" htmlFor="jersey_number">Tröjnr</label>
-              <input
-                id="jersey_number"
-                name="jersey_number"
-                type="number"
-                min="1"
-                max="99"
-                defaultValue={player.jersey_number ?? ""}
-                className="input"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="position">Position</label>
-            <select id="position" name="position" defaultValue={player.position ?? ""} className="input">
-              <option value="">Ej angiven</option>
-              {POSITIONS.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-            </select>
-            <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
-              Används i planering, laguttagning och spelarens profil.
-            </p>
-          </div>
-          <div>
-            <label className="label" htmlFor="level">Spelnivå</label>
-            <select id="level" name="level" defaultValue={player.level ?? ""} className="input">
-              <option value="">Ej graderad</option>
-              {MATCH_LEVELS.map((l) => (
-                <option key={l.id} value={l.id}>{l.label}</option>
-              ))}
-            </select>
-            <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>
-              {suggestedLevel
-                ? <>Förslag från utvärderingen: <strong style={{ color: "var(--ink-secondary)" }}>{suggestedLevel.label}</strong>. Styr laguttagningen till matcher.</>
-                : "Gör en utvärdering för att få ett nivåförslag. Styr laguttagningen till matcher."}
-            </p>
-          </div>
-          <div>
-            <label className="label" htmlFor="notes">Anteckningar (syns bara för tränare)</label>
-            <textarea id="notes" name="notes" rows={3} defaultValue={player.notes} className="input" />
-          </div>
-          <button type="submit" className="btn-primary">Spara</button>
-        </form>
-        <hr className="divider my-5" />
-        <form action={removePlayer}>
-          <input type="hidden" name="id" value={player.id} />
-          <button
-            type="submit"
-            className="body-small hover:underline cursor-pointer"
-            style={{ color: "var(--danger)" }}
-          >
-            Ta bort spelaren från truppen (historiken sparas)
-          </button>
-        </form>
-        {canManagePrivacy && (
-          <div className="mt-5 space-y-3">
-            <a className="btn-secondary inline-flex" href={`/api/export/player/${player.id}`}>Ladda ner spelarutdrag (JSON)</a>
-            <details>
-              <summary className="body-small cursor-pointer" style={{ color: "var(--danger)" }}>Permanent radering</summary>
-              <form action={erasePlayer} className="space-y-3 mt-3">
-                <input type="hidden" name="id" value={player.id} />
-                <p className="caption" style={{ color: "var(--ink-secondary)" }}>Raderar profilen och alla direkt kopplade bedömningar, närvarorader, matchdata, utvecklingsavstämningar och kontokopplingar. Åtgärden kan inte ångras i appen.</p>
-                <label className="label" htmlFor="erase-confirmation">Skriv {player.name} för att bekräfta</label>
-                <input id="erase-confirmation" name="confirmation" className="input" required autoComplete="off" />
-                <button type="submit" className="body-small cursor-pointer" style={{ color: "var(--danger)" }}>Radera alla spelaruppgifter permanent</button>
-              </form>
-            </details>
-          </div>
-        )}
-      </div>
+      {goalHistory.some((goal) => goal.status !== "active") && <details className="card p-5"><summary className="font-semibold cursor-pointer">Tidigare mål</summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
     </div>
   );
 }

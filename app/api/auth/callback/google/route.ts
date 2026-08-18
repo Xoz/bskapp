@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
      LIMIT 1`,
     [appUser.id]
   );
-  const destination = primaryRole?.role === "parent" || primaryRole?.role === "player" ? "/mina-spelare" : "/oversikt";
+  const destination = primaryRole?.role === "parent" || primaryRole?.role === "player" ? "/mina-spelare" : "/idag";
   const maxAge = 60 * 60 * 24 * 90;
   const res = NextResponse.redirect(`${origin}${destination}`);
 

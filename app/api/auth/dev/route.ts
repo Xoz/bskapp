@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 // DEV-ONLY genväg för inloggning utan Google. Hela routen är död i produktion
 // (returnerar 404) så den aldrig kan bli en auth-bypass i en skarp miljö.
 // Öppna /api/auth/dev i webbläsaren → loggas in som admin (ADMIN_EMAIL) och
-// landar på /oversikt. Använd ?role=coach|leader|parent|player för annan roll.
+// landar på /idag. Använd ?role=coach|leader|parent|player för annan roll.
 export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return new NextResponse("Not found", { status: 404 });
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     [user.id, finalRole]
   );
 
-  const destination = finalRole === "parent" || finalRole === "player" ? "/mina-spelare" : "/oversikt";
+  const destination = finalRole === "parent" || finalRole === "player" ? "/mina-spelare" : "/idag";
   const maxAge = 60 * 60 * 24 * 90;
   const res = NextResponse.redirect(`${origin}${destination}`);
 

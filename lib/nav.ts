@@ -3,40 +3,28 @@ import {
   IconPlayers,
   IconPitch,
   IconChart,
-  IconBook,
 } from "@/components/Icons";
 import type { Permission } from "@/lib/auth";
-import { FEATURES } from "@/lib/features";
 
 export interface NavItem {
   href: string;
   label: string;
   Icon: typeof IconOverview;
   permission?: Permission;
-  /** Special-behörighet för Administration (ska synas om man har någon av dessa) */
-  permissionAny?: Permission[];
 }
 
 /**
  * Enda källan för navigationslänkar. Används av både NavLinks (desktop)
  * och BottomNav (mobil). Eliminerar duplicering av nav-config.
  *
- * "Administration" och "Guide" visas inte i BottomNav (desktop-only / sekundärt).
- * Det styrs via `desktopOnly`-flaggan.
+ * Produktens fyra primära arbetsytor. Kalender, matchadministration och statistik
+ * är sekundära verktyg och ska inte konkurrera om huvudnavigationen.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/oversikt", label: "Översikt", Icon: IconOverview },
+  { href: "/idag", label: "Idag", Icon: IconOverview },
+  { href: "/observera", label: "Observera", Icon: IconChart, permission: "manage_evaluations" },
   { href: "/spelare", label: "Spelare", Icon: IconPlayers, permission: "view_players" },
-  { href: "/matcher", label: "Matcher", Icon: IconPitch, permission: "view_matches" },
-  { href: "/statistik", label: "Statistik", Icon: IconChart, permission: "view_statistics" },
-  {
-    href: "/administration",
-    label: "Administration",
-    Icon: IconPlayers,
-    permissionAny: ["manage_users", "manage_groups"],
-    desktopOnly: true,
-  } as NavItem & { desktopOnly: true },
-  { href: "/guide", label: "Guide", Icon: IconBook, desktopOnly: true } as NavItem & { desktopOnly: true },
+  { href: "/uttagning", label: "Uttagning", Icon: IconPitch, permission: "manage_squads" },
 ];
 
 /**
@@ -48,25 +36,17 @@ export function filterNavItems(
   mobile = false
 ): NavItem[] {
   return NAV_ITEMS.filter((item) => {
-    // Göm funktioner som är avstängda via feature-flags
-    if (item.href === "/statistik" && !FEATURES.matchStats) return false;
-
-    if (mobile && (item as NavItem & { desktopOnly?: boolean }).desktopOnly) {
-      return false;
-    }
-    if (item.permissionAny) {
-      return item.permissionAny.some((p) => permissions.includes(p));
-    }
+    void mobile;
     return !item.permission || permissions.includes(item.permission);
   });
 }
 
 /**
  * Kontrollera om en path är aktiv för en given href.
- * /oversikt och / är exakta matchningar; övriga använder startsWith.
+ * /idag och / är exakta matchningar; övriga använder startsWith.
  */
 export function isActive(pathname: string, href: string): boolean {
-  if (href === "/oversikt" || href === "/") {
+  if (href === "/idag" || href === "/") {
     return pathname === href;
   }
   return pathname === href || pathname.startsWith(href);

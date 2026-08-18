@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { getAllSettings } from "@/lib/db";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -43,7 +44,6 @@ export default async function RootLayout({
   const settings = await getAllSettings();
   return (
     <html lang="sv" className="h-full antialiased" suppressHydrationWarning>
-      <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}` }} />
       <body
         className="min-h-full flex flex-col"
         style={
@@ -61,6 +61,9 @@ export default async function RootLayout({
           } as React.CSSProperties
         }
       >
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}`}
+        </Script>
         <ServiceWorkerRegistration />
         {children}
       </body>

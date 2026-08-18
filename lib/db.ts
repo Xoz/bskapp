@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-10-live-rate-limit";
+const SCHEMA_VERSION = "2026-08-18-development-core";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -306,6 +306,74 @@ async function init(): Promise<void> {
       is_focus INTEGER NOT NULL DEFAULT 0 CHECK (is_focus IN (0, 1)),
       PRIMARY KEY (checkpoint_id, skill_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS development_activities (
+      id TEXT PRIMARY KEY,
+      activity_date TEXT NOT NULL,
+      start_time TEXT,
+      activity_type TEXT NOT NULL CHECK (activity_type IN ('training', 'match', 'other')),
+      title TEXT NOT NULL,
+      external_source TEXT NOT NULL DEFAULT 'manual',
+      external_key TEXT NOT NULL UNIQUE,
+      match_id INTEGER REFERENCES matches(id) ON DELETE SET NULL,
+      group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+      theme TEXT NOT NULL DEFAULT '',
+      challenge_context TEXT NOT NULL DEFAULT 'balanced' CHECK (challenge_context IN ('safe', 'balanced', 'challenging')),
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
+    `CREATE TABLE IF NOT EXISTS player_development_goals (
+      id TEXT PRIMARY KEY,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      slot INTEGER NOT NULL CHECK (slot IN (1, 2)),
+      title TEXT NOT NULL,
+      evidence_hint TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'achieved', 'paused')),
+      starts_on TEXT NOT NULL,
+      review_on TEXT,
+      ended_on TEXT,
+      created_by TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_activity_participation (
+      activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      attendance_status TEXT NOT NULL DEFAULT 'unknown' CHECK (attendance_status IN ('unknown', 'present', 'absent')),
+      selected INTEGER NOT NULL DEFAULT 0 CHECK (selected IN (0, 1)),
+      periods_played INTEGER NOT NULL DEFAULT 0 CHECK (periods_played >= 0 AND periods_played <= 9),
+      position TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'manual',
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      PRIMARY KEY (activity_id, player_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_observations (
+      id TEXT PRIMARY KEY,
+      activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
+      player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
+      goal_id TEXT REFERENCES player_development_goals(id) ON DELETE SET NULL,
+      evidence TEXT NOT NULL CHECK (evidence IN ('shown', 'practicing', 'revisit')),
+      note TEXT NOT NULL DEFAULT '',
+      coach_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_selection_decisions (
+      activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      decision TEXT NOT NULL CHECK (decision IN ('selected', 'reserve', 'rested')),
+      rationale TEXT NOT NULL DEFAULT '',
+      decided_by TEXT NOT NULL DEFAULT '',
+      decided_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      PRIMARY KEY (activity_id, player_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_pilot_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL CHECK (event_type IN ('source_sync', 'goal_saved', 'observation_saved', 'selection_saved')),
+      activity_id TEXT REFERENCES development_activities(id) ON DELETE SET NULL,
+      duration_seconds INTEGER,
+      item_count INTEGER NOT NULL DEFAULT 1,
+      actor TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
   ];
   for (const sql of tables) await getClient().unsafe(sql);
 
@@ -394,6 +462,101 @@ async function init(): Promise<void> {
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_attendance_events_import_name ON attendance_events(import_id, lower(player_name))`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_attendance_events_import_date ON attendance_events(import_id, activity_date)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_checkpoints_player_date ON development_checkpoints(player_id, date DESC, created_at DESC)`);
+  await tryExec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_development_goals_active_slot ON player_development_goals(player_id, slot) WHERE status = 'active'`);
+  await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_goals_player ON player_development_goals(player_id, status, starts_on DESC)`);
+  await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_activities_date ON development_activities(activity_date DESC, start_time DESC)`);
+  await tryExec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_development_activities_match ON development_activities(match_id) WHERE match_id IS NOT NULL`);
+  await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_observations_player ON development_observations(player_id, created_at DESC)`);
+  await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_observations_activity ON development_observations(activity_id, created_at DESC)`);
+
+  // Befintliga Svenska Lag-källor blir kontext i den nya kärnan. Ingen kalender,
+  // match eller närvaro kopieras till en ny sanningskälla; raderna nedan är
+  // stabila referenser som kan kompletteras med tema, observation och uttagning.
+  await getClient().unsafe(`
+    INSERT INTO development_activities (
+      id, activity_date, start_time, activity_type, title,
+      external_source, external_key, match_id, group_id
+    )
+    SELECT
+      'match-' || m.id::text,
+      m.date,
+      m.start_time,
+      'match',
+      CASE WHEN m.home_away = 'away' THEN 'Borta mot ' ELSE 'Hemma mot ' END || m.opponent,
+      COALESCE(NULLIF(m.source, ''), 'match'),
+      'match:' || m.id::text,
+      m.id,
+      m.group_id
+    FROM matches m
+    ON CONFLICT (external_key) DO UPDATE SET
+      activity_date = excluded.activity_date,
+      start_time = excluded.start_time,
+      title = excluded.title,
+      group_id = excluded.group_id,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await getClient().unsafe(`
+    INSERT INTO development_activities (
+      id, activity_date, start_time, activity_type, title,
+      external_source, external_key
+    )
+    SELECT
+      'svenskalag-' || md5(concat_ws('|', ae.activity_date, ae.start_time, ae.title, ae.category)),
+      ae.activity_date,
+      MIN(ae.start_time),
+      CASE WHEN ae.category = 'training' THEN 'training'
+           WHEN ae.category = 'match' THEN 'match'
+           ELSE 'other' END,
+      COALESCE(NULLIF(MAX(ae.title), ''), 'Aktivitet'),
+      'svenskalag_attendance',
+      'svenskalag:' || md5(concat_ws('|', ae.activity_date, ae.start_time, ae.title, ae.category))
+    FROM attendance_events ae
+    WHERE ae.import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+      AND ae.activity_date IS NOT NULL
+    GROUP BY ae.activity_date, ae.start_time, ae.title, ae.category
+    ON CONFLICT (external_key) DO UPDATE SET
+      activity_date = excluded.activity_date,
+      start_time = excluded.start_time,
+      activity_type = excluded.activity_type,
+      title = excluded.title,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await getClient().unsafe(`
+    INSERT INTO development_activity_participation (
+      activity_id, player_id, attendance_status, source
+    )
+    SELECT
+      da.id,
+      ae.player_id,
+      CASE WHEN MAX(ae.present) = 1 THEN 'present' ELSE 'absent' END,
+      'svenskalag_attendance'
+    FROM attendance_events ae
+    JOIN development_activities da
+      ON da.external_key = 'svenskalag:' || md5(concat_ws('|', ae.activity_date, ae.start_time, ae.title, ae.category))
+    WHERE ae.import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
+      AND ae.player_id IS NOT NULL
+    GROUP BY da.id, ae.player_id
+    ON CONFLICT (activity_id, player_id) DO UPDATE SET
+      attendance_status = excluded.attendance_status,
+      source = excluded.source,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await getClient().unsafe(`
+    INSERT INTO development_activity_participation (
+      activity_id, player_id, attendance_status, selected, periods_played, source
+    )
+    SELECT da.id, mp.player_id, 'present', 1, 0, 'legacy_match'
+    FROM match_players mp
+    JOIN development_activities da ON da.match_id = mp.match_id
+    ON CONFLICT (activity_id, player_id) DO UPDATE SET
+      attendance_status = 'present',
+      selected = 1,
+      source = CASE
+        WHEN development_activity_participation.source = 'manual' THEN development_activity_participation.source
+        ELSE excluded.source
+      END,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
 
   // Seed – inställningar
   const settingsCount = await getClient().unsafe("SELECT COUNT(*) AS c FROM settings");

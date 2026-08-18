@@ -24,6 +24,7 @@ import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
 import { normalizePersonName, parseAttendanceWorkbook } from "./attendance";
+import { syncDevelopmentSourceRows } from "./developmentSync";
 import { erasePlayerData } from "./playerPrivacy";
 import { swedishToday } from "./dates";
 import {
@@ -673,7 +674,11 @@ export async function saveMatch(formData: FormData) {
   const logName = (await getCoachName()) ?? "Tränare";
   await logActivity(logName, id ? "Uppdaterade match" : "Lade till match", opponent);
 
+  await syncDevelopmentSourceRows();
   revalidatePath("/matcher");
+  revalidatePath("/idag");
+  revalidatePath("/observera");
+  revalidatePath("/uttagning");
   revalidatePath("/statistik");
   redirect(`/matcher/${matchId}`);
 }
@@ -1313,7 +1318,11 @@ export async function importCalendarMatches() {
     redirect("/installningar?kalender=fel");
   }
 
+  await syncDevelopmentSourceRows();
   revalidatePath("/matcher");
+  revalidatePath("/idag");
+  revalidatePath("/observera");
+  revalidatePath("/uttagning");
   redirect(`/installningar?kalender=${imported}`);
 }
 
@@ -1408,7 +1417,10 @@ export async function importCupMatches(formData: FormData) {
 
   const logName = (await getCoachName()) ?? "Tränare";
   await logActivity(logName, "Importerade cup", cupName);
+  await syncDevelopmentSourceRows();
   revalidatePath("/matcher");
+  revalidatePath("/idag");
+  revalidatePath("/uttagning");
   redirect(`/matcher/cup/${encodeURIComponent(cupName)}`);
 }
 
@@ -1500,8 +1512,11 @@ export async function importAttendanceWorkbook(formData: FormData) {
   }
 
   await logActivity(importedBy, "Importerade närvaro", `${parsed.players.length} spelare`);
+  await syncDevelopmentSourceRows();
   revalidatePath("/installningar");
   revalidatePath("/spelare");
+  revalidatePath("/idag");
+  revalidatePath("/observera");
   redirect(
     `/installningar?narvaro=ok&narvaro_spelare=${parsed.players.length}&narvaro_aktiviteter=${parsed.activities.length}&narvaro_matchade=${matchedPlayers}`
   );

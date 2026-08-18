@@ -15,7 +15,7 @@ export default async function Navbar() {
     getCoachName(),
   ]);
   const isStaff = !!user && isStaffRole(user.primaryRole);
-  const homeHref = isStaff ? "/oversikt" : user ? "/mina-spelare" : "/";
+  const homeHref = isStaff ? "/idag" : user ? "/mina-spelare" : "/";
 
   return (
     <header

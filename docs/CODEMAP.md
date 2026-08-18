@@ -6,6 +6,12 @@
 
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
+Primär produktkärna sedan 2026-08-18: `/idag`, `/observera`, `/spelare` och
+`/uttagning`. Svenska Lag äger kalender/kallelser/närvaro; appen speglar bara
+aktivitetsreferenser och äger utvecklingsmål, målkopplad evidens, exponering och
+tränarens explicita uttagningsbeslut. Äldre match-, statistik- och Planlinjen-flöden
+är sekundära och får inte styra huvudnavigationen.
+
 Drift: `main` deployas till VPS av `.github/workflows/deploy.yml`. `vercel.json`
 stänger av Vercels automatiska `main`-byggen; Vercel är reserverat för Preview
 när en separat staging-Postgres finns. Se `docs/STAGING.md`.
@@ -23,6 +29,8 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 | Vill ändra | Läs dessa filer |
 | --- | --- |
+| **Primär utvecklingsloop** (Idag → mål → observation → historik) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `components/{CoreActivityCard,PilotStartField}.tsx` |
+| **Transparent uttagningsstöd** (exponering, möjligheter, varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
 | **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `app/api/live/[id]/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
@@ -54,6 +62,10 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 ## lib/ — exports per fil
 
 - **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, inställningar, delningslänkar och administration.
+- **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
+- **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering samt uttagningsarbetsytan och 28-dagars pilotmått.
+- **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.
+- **selectionSupport.ts**: rena, testade möjlighets- och varningsmeningar för uttagning utan poäng, ranking eller automatval.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvarohelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
 - **attendance.ts**: parser för Svenska Lag-filen `Närvarotillfällen per aktivitet & person`, inklusive datumtolkning, kategorisering och namnnormalisering.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
@@ -83,13 +95,16 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 `player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
 `player_skill_status` (aktuellt utvecklingsträd, PK player_id+skill_id), `player_skill_notes`, `development_checkpoints` (daterad avstämning), `development_checkpoint_skills` (snapshot + föregående status + fokus per färdighet).
+Utvecklingskärnan använder `development_activities`, `player_development_goals` (max två aktiva slots),
+`development_activity_participation`, `development_observations`, `development_selection_decisions`
+och `development_pilot_events`.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
 
 ---
 
 ## Routes (app/)
 
-Skyddade (kräver inloggning) under `app/(skyddad)/`: oversikt, matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), spelare (+ `[id]`, utvardera, utveckling), utveckling (lagets snitt), statistik, installningar, administration och mina-spelare.
+Skyddade primärvyer under `app/(skyddad)/`: `idag`, `observera`, `spelare` (+ `[id]`) och `uttagning`. `oversikt` omdirigerar till `idag`. Sekundära skyddade vyer: matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), äldre spelarutvärdering/utveckling, statistik, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
 API: `app/api/auth/{google,callback/google,dev,coach-bridge}`, `app/api/live/[id]`, `app/api/export/player/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 

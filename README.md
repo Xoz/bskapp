@@ -1,19 +1,26 @@
 # BSK F2014 – tränar- och utvecklingsplattform
 
-Webbapp för Bollstanäs SK F2014 med spelarutveckling, träningsplanering,
-matcher, live-rapportering, laguttagning, statistik och administration.
+Webbapp för Bollstanäs SK F2014 med spelarutveckling och transparent stöd för
+tränarens laguttagning som primär uppgift.
 Generativa AI-funktioner är pausade; regelbaserad produktlogik är kvar.
 
 ## Funktioner
 
-- Daterade utvecklingsavstämningar, färdighetsträd och läsvy för spelaren.
-- Matcher, cuper, laguttagning, matchobservationer och matchspecifik form.
+- Fyra primära arbetsytor: Idag, Observera, Spelare och Uttagning.
+- Högst två observerbara utvecklingsmål per spelare och snabb målkopplad evidens
+  från träning eller match.
+- Exponeringshistorik och transparenta möjligheter/varningar vid uttagning;
+  tränaren väljer alltid laget och kandidater visas utan dold ranking.
+- Svenska Lag fortsätter äga kalender, kallelser och närvaro. Importerad data
+  speglas idempotent till utvecklingskärnan utan dubbelregistrering.
+- Äldre avstämningar, matcher, cuper, live-rapportering, statistik och
+  administration är bevarade som sekundära verktyg.
 - Publik Livescore samt capability-skyddad liverapportering.
 - Grupp- och spelaravgränsade roller för admin, huvudtränare, tränare,
   lagledare, föräldrar och spelare.
 - Versionsmärkt spelarutdrag och behörighetsstyrd permanent radering.
-- Separat Planlinjen-app för övningar, träningspass, säsongsplanering,
-  genomförande, matcher och analys.
+- Den separata Planlinjen-appen är pausad som produktspår och används endast som
+  sekundärt arkiv/UX-referens medan kärnloopen pilottestas.
 
 ## Lokal utveckling
 
