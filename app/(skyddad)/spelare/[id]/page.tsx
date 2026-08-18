@@ -27,15 +27,15 @@ export default async function PlayerPage({ params, searchParams }: {
   const addGoal = createDevelopmentGoal.bind(null, playerId);
 
   return (
-    <div className="space-y-7">
+    <div className="core-page">
       <Link href="/spelare" className="inline-flex items-center gap-1.5 body-small" style={{ color: "var(--ink-secondary)" }}>
         <IconArrowLeft width={15} height={15} /> Alla spelare
       </Link>
-      <header className="card p-5 md:p-7 flex items-center gap-5 flex-wrap">
-        <Avatar name={summary.player.name} jersey={summary.player.jersey_number} size={64} />
+      <header className="core-panel p-5 md:p-6 flex items-center gap-5 flex-wrap">
+        <Avatar name={summary.player.name} jersey={summary.player.jersey_number} size={58} />
         <div className="flex-1 min-w-48">
-          <p className="eyebrow">Utvecklingsprofil</p><h1 className="mt-1">{summary.player.name}</h1>
-          <div className="flex flex-wrap gap-4 mt-3 body-small" style={{ color: "var(--ink-secondary)" }}>
+          <p className="core-kicker">Utvecklingsprofil</p><h1 className="core-title">{summary.player.name}</h1>
+          <div className="core-statline">
             <span>{summary.trainingCount} träningar</span><span>{summary.matchCount} matcher</span>
             <span>{summary.selectedCount} uttagningar</span><span>{summary.periodsPlayed} perioder</span>
           </div>
@@ -44,17 +44,17 @@ export default async function PlayerPage({ params, searchParams }: {
       </header>
 
       <section>
-        <div className="flex items-end justify-between gap-4 flex-wrap">
-          <div><p className="eyebrow">Fokus</p><h2 className="mt-1">Aktiva utvecklingsmål</h2></div>
-          <span className="caption" style={{ color: "var(--ink-muted)" }}>{summary.goals.length}/2 aktiva</span>
+        <div className="core-section-head">
+          <div><p className="core-kicker">Fokus</p><h2 className="core-section-title mt-2">Aktiva utvecklingsmål</h2></div>
+          <span className="core-section-note">{summary.goals.length}/2 aktiva</span>
         </div>
         {mal === "max" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--warn-bg)" }}>Avsluta eller pausa ett mål innan ett nytt läggs till.</p>}
         {mal === "ogiltigt" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--danger-bg)" }}>Kontrollera måltexten och datumet.</p>}
-        <div className="grid md:grid-cols-2 gap-3 mt-3">
+        <div className="core-list core-list-2">
           {summary.goals.map((goal) => {
             const closeGoal = closeDevelopmentGoal.bind(null, goal.id);
             return (
-              <article key={goal.id} className="card p-5">
+              <article key={goal.id} className="core-panel core-form-panel">
                 <span className="badge badge-primary">Mål {goal.slot}</span><h3 className="mt-3">{goal.title}</h3>
                 {goal.evidence_hint && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>Leta efter: {goal.evidence_hint}</p>}
                 <p className="caption mt-3" style={{ color: "var(--ink-muted)" }}>Start {goal.starts_on}{goal.review_on ? ` · följ upp ${goal.review_on}` : ""}</p>
@@ -67,9 +67,9 @@ export default async function PlayerPage({ params, searchParams }: {
           })}
         </div>
         {canEdit && summary.goals.length < 2 && (
-          <form action={addGoal} className="card p-5 mt-3 grid md:grid-cols-2 gap-4">
+          <form action={addGoal} className="core-panel core-form-panel mt-3 grid md:grid-cols-2 gap-4">
             <PilotStartField />
-            <div className="md:col-span-2"><p className="eyebrow">Nytt mål</p><h3 className="mt-1">Ett observerbart nästa steg</h3></div>
+            <div className="md:col-span-2"><p className="core-kicker">Nytt mål</p><h3 className="mt-2">Ett observerbart nästa steg</h3></div>
             <label><span className="label">Utvecklingsmål</span><input name="title" className="input mt-1" required minLength={3} maxLength={120} placeholder="Exempel: söka spelbar yta före mottagning" /></label>
             <label><span className="label">Vad kan tränaren se?</span><input name="evidence_hint" className="input mt-1" maxLength={240} placeholder="Ett konkret beteende, frivilligt" /></label>
             <label><span className="label">Följ upp senast</span><input name="review_on" type="date" className="input mt-1" /></label>
@@ -79,16 +79,16 @@ export default async function PlayerPage({ params, searchParams }: {
       </section>
 
       <section>
-        <div className="flex items-end justify-between gap-3"><div><p className="eyebrow">Evidens över tid</p><h2 className="mt-1">Observationer</h2></div><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
-        {observations.length ? <div className="space-y-2 mt-3">{observations.map((observation) => (
-          <article key={observation.id} className="card p-4 md:p-5 flex items-start justify-between gap-4">
+        <div className="core-section-head"><div><p className="core-kicker">Evidens över tid</p><h2 className="core-section-title mt-2">Observationer</h2></div><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
+        {observations.length ? <div className="core-list">{observations.map((observation) => (
+          <article key={observation.id} className="core-panel p-4 flex items-start justify-between gap-4">
             <div><p className="caption" style={{ color: "var(--ink-muted)" }}>{observation.activity_date} · {observation.activity_title}</p><h3 className="mt-1">{observation.goal_title ?? "Generell observation"}</h3>{observation.note && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{observation.note}</p>}</div>
             <span className="badge">{EVIDENCE_LABELS[observation.evidence]}</span>
           </article>
-        ))}</div> : <div className="card p-6 mt-3"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
+        ))}</div> : <div className="core-panel p-5"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
       </section>
 
-      {goalHistory.some((goal) => goal.status !== "active") && <details className="card p-5"><summary className="font-semibold cursor-pointer">Tidigare mål</summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
+      {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel p-5"><summary className="font-semibold cursor-pointer">Tidigare mål</summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
     </div>
   );
 }

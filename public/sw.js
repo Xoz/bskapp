@@ -1,4 +1,4 @@
-const CACHE = "bsk-v1";
+const CACHE = "bsk-v2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -27,20 +27,20 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(request.url);
 
-  // Next.js hashed static assets — cache first (filnamnen innehåller content hash)
+  // Next.js-assets — nätverk först. Turbopacks utvecklingsnamn och vissa
+  // deploykombinationer är inte säkra att behandla som eviga content-hashar;
+  // gammal CSS tillsammans med ny HTML gör gränssnittet helt ostylat.
   if (url.pathname.startsWith("/_next/static/")) {
     e.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ??
-          fetch(request).then((res) => {
-            if (res.ok) {
-              const clone = res.clone();
-              caches.open(CACHE).then((c) => c.put(request, clone));
-            }
-            return res;
-          })
-      )
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

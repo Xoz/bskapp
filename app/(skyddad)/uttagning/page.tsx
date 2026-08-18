@@ -23,15 +23,17 @@ export default async function SelectionPage({
   if (!aktivitet) {
     const matches = (await getCoreActivities(100)).filter((activity) => activity.activity_type === "match");
     return (
-      <div className="space-y-6">
-        <header>
-          <p className="eyebrow">Transparent beslutsstöd</p>
-          <h1 className="mt-1">Uttagning</h1>
-          <p className="body mt-2 max-w-2xl" style={{ color: "var(--ink-secondary)" }}>
+      <div className="core-page">
+        <header className="core-header">
+          <div className="core-header-copy">
+          <p className="core-kicker">Transparent beslutsstöd</p>
+          <h1 className="core-title">Uttagning</h1>
+          <p className="core-lead">
             Appen visar exponering, utvecklingsmöjligheter och belastning. Tränaren väljer alltid laget.
           </p>
+          </div>
         </header>
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="core-list core-list-2">
           {matches.map((activity) => (
             <CoreActivityCard
               key={activity.id}
@@ -50,14 +52,14 @@ export default async function SelectionPage({
   const selectedCount = workspace.candidates.filter((candidate) => candidate.decision === "selected").length;
 
   return (
-    <div className="space-y-7">
+    <div className="core-page">
       <header>
-        <Link href="/uttagning" className="caption">← Alla matchtillfällen</Link>
-        <div className="mt-3 flex items-start justify-between gap-4 flex-wrap">
+        <Link href="/uttagning" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla matchtillfällen</Link>
+        <div className="core-header mt-2">
           <div>
-            <p className="eyebrow">{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</p>
-            <h1 className="mt-1">{workspace.activity.title}</h1>
-            <p className="body mt-2" style={{ color: "var(--ink-secondary)" }}>
+            <p className="core-kicker">{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</p>
+            <h1 className="core-title">{workspace.activity.title}</h1>
+            <p className="core-lead">
               {selectedCount} uttagna · alfabetisk lista, ingen dold ranking
             </p>
           </div>
@@ -67,9 +69,8 @@ export default async function SelectionPage({
         </div>
       </header>
 
-      <section className="card p-5">
-        <p className="eyebrow">Kontroller för helheten</p>
-        <h2 className="mt-1">Truppbalans</h2>
+      <section className="core-panel core-form-panel">
+        <div className="core-section-head"><div><p className="core-kicker">Kontroller för helheten</p><h2 className="core-section-title mt-2">Truppbalans</h2></div></div>
         {workspace.warnings.length ? (
           <ul className="mt-3 space-y-2">
             {workspace.warnings.map((warning) => (
@@ -83,10 +84,10 @@ export default async function SelectionPage({
         )}
       </section>
 
-      <form action={saveAction} className="space-y-3">
+      <form action={saveAction} className="core-list">
         <PilotStartField />
         {workspace.candidates.map((candidate) => (
-          <article key={candidate.player.id} className="card p-4 md:p-5">
+          <article key={candidate.player.id} className="core-selection-card">
             <div className="grid lg:grid-cols-[minmax(210px,1fr)_minmax(260px,1.4fr)_260px] gap-4 items-start">
               <div>
                 <div className="flex items-center gap-3">
@@ -98,7 +99,7 @@ export default async function SelectionPage({
                     defaultChecked={candidate.decision === "selected"}
                     className="h-5 w-5"
                   />
-                  <label htmlFor={`selected-${candidate.player.id}`} className="font-semibold text-lg cursor-pointer">
+                  <label htmlFor={`selected-${candidate.player.id}`} className="core-player-name cursor-pointer">
                     {candidate.player.name}
                   </label>
                 </div>
@@ -114,10 +115,10 @@ export default async function SelectionPage({
 
               <div className="space-y-2">
                 {candidate.support.opportunities.map((reason) => (
-                  <p key={reason} className="body-small rounded-lg px-3 py-2" style={{ background: "var(--ok-bg)" }}>Möjlighet: {reason}</p>
+                  <p key={reason} className="core-signal" style={{ background: "var(--ok-bg)" }}>Möjlighet: {reason}</p>
                 ))}
                 {candidate.support.cautions.map((reason) => (
-                  <p key={reason} className="body-small rounded-lg px-3 py-2" style={{ background: "var(--warn-bg)" }}>Tänk på: {reason}</p>
+                  <p key={reason} className="core-signal" style={{ background: "var(--warn-bg)" }}>Tänk på: {reason}</p>
                 ))}
                 {candidate.goals.map((goal) => (
                   <p key={goal.id} className="caption" style={{ color: "var(--ink-secondary)" }}>Mål: {goal.title}</p>

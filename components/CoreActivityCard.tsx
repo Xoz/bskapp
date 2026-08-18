@@ -14,31 +14,27 @@ export default function CoreActivityCard({
   activity: CoreActivity;
   href: string;
 }) {
+  const [year, month, day] = activity.activity_date.split("-").map(Number);
+  const monthLabel = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][month - 1] ?? "";
   return (
-    <Link href={href} className="card block p-4 transition-transform hover:-translate-y-0.5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="badge">{TYPE_LABEL[activity.activity_type]}</span>
-            {activity.external_source.startsWith("svenskalag") && (
-              <span className="caption" style={{ color: "var(--ink-muted)" }}>Svenska Lag</span>
-            )}
-          </div>
-          <h3 className="mt-2 text-lg font-semibold">{activity.title}</h3>
-          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            {activity.activity_date}{activity.start_time ? ` · ${activity.start_time}` : ""}
-          </p>
-          {activity.theme && (
-            <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
-              Fokus: {activity.theme}
-            </p>
-          )}
+    <Link href={href} className="core-activity">
+      <time className="core-date" dateTime={activity.activity_date}>
+        <strong>{String(day).padStart(2, "0")}</strong>
+        <span>{monthLabel} {String(year).slice(-2)}</span>
+      </time>
+      <div className="min-w-0 flex-1">
+        <div className="core-tags">
+          <span className={`core-tag core-tag-${activity.activity_type}`}>{TYPE_LABEL[activity.activity_type]}</span>
+          {activity.start_time && <span>{activity.start_time}</span>}
         </div>
-        <div className="text-right shrink-0">
-          <strong className="block text-xl">{activity.observation_count}</strong>
-          <span className="caption" style={{ color: "var(--ink-muted)" }}>observationer</span>
-        </div>
+        <h3 className="core-activity-title">{activity.title}</h3>
+        <p className="core-activity-sub">{activity.theme ? `Fokus: ${activity.theme}` : "Fokus inte satt"}</p>
       </div>
+      <div className="core-count" title="Sparade observationer">
+        <strong>{activity.observation_count}</strong>
+        <span>obs.</span>
+      </div>
+      <span className="core-chevron" aria-hidden>›</span>
     </Link>
   );
 }

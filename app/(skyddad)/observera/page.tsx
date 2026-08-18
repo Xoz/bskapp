@@ -27,15 +27,17 @@ export default async function ObservePage({
   if (!aktivitet) {
     const activities = await getCoreActivities(80);
     return (
-      <div className="space-y-6">
-        <header>
-          <p className="eyebrow">Snabb registrering</p>
-          <h1 className="mt-1">Observera</h1>
-          <p className="body mt-2" style={{ color: "var(--ink-secondary)" }}>
+      <div className="core-page">
+        <header className="core-header">
+          <div className="core-header-copy">
+          <p className="core-kicker">Snabb registrering</p>
+          <h1 className="core-title">Observera</h1>
+          <p className="core-lead">
             Välj en aktivitet. Kalender och närvaro ligger kvar i Svenska Lag.
           </p>
+          </div>
         </header>
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="core-list core-list-2">
           {activities.map((activity) => (
             <CoreActivityCard
               key={activity.id}
@@ -55,14 +57,14 @@ export default async function ObservePage({
   const observationAction = saveQuickObservations.bind(null, detail.activity.id);
 
   return (
-    <div className="space-y-7">
+    <div className="core-page">
       <header>
-        <Link href="/observera" className="caption">← Alla aktiviteter</Link>
-        <div className="mt-3 flex items-start justify-between gap-4 flex-wrap">
+        <Link href="/observera" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla aktiviteter</Link>
+        <div className="core-header mt-2">
           <div>
-            <p className="eyebrow">{detail.activity.activity_type === "training" ? "Träning" : detail.activity.activity_type === "match" ? "Match" : "Aktivitet"}</p>
-            <h1 className="mt-1">{detail.activity.title}</h1>
-            <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
+            <p className="core-kicker">{detail.activity.activity_type === "training" ? "Träning" : detail.activity.activity_type === "match" ? "Match" : "Aktivitet"}</p>
+            <h1 className="core-title">{detail.activity.title}</h1>
+            <p className="core-lead">
               {detail.activity.activity_date}{detail.activity.start_time ? ` · ${detail.activity.start_time}` : ""}
             </p>
           </div>
@@ -74,7 +76,7 @@ export default async function ObservePage({
         </div>
       </header>
 
-      <form action={contextAction} className="card p-5 grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
+      <form action={contextAction} className="core-panel core-form-panel grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
         <label className="block">
           <span className="label">Aktivitetens fokus</span>
           <input name="theme" className="input mt-1" defaultValue={detail.activity.theme} placeholder="Exempel: spelbarhet före mottagning" />
@@ -91,16 +93,13 @@ export default async function ObservePage({
       </form>
 
       <section>
-        <div className="flex items-end justify-between gap-3 flex-wrap">
-          <div>
-            <p className="eyebrow">Målanknuten evidens</p>
-            <h2 className="mt-1">Vad såg ni?</h2>
-          </div>
-          <span className="caption" style={{ color: "var(--ink-muted)" }}>Markera bara det som faktiskt observerades</span>
+        <div className="core-section-head">
+          <div><p className="core-kicker">Målanknuten evidens</p><h2 className="core-section-title mt-2">Vad såg ni?</h2></div>
+          <span className="core-section-note">Markera bara det som faktiskt observerades</span>
         </div>
 
         {playersWithGoals.length === 0 ? (
-          <div className="card p-6 mt-3">
+          <div className="core-panel core-form-panel">
             <h3>Inga aktiva utvecklingsmål ännu</h3>
             <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
               Sätt högst två mål på spelarsidan innan observationer registreras.
@@ -108,13 +107,13 @@ export default async function ObservePage({
             <Link href="/spelare" className="btn-primary mt-4">Öppna spelarna</Link>
           </div>
         ) : (
-          <form action={observationAction} className="mt-3 space-y-3">
+          <form action={observationAction} className="core-list">
             <PilotStartField />
             {playersWithGoals.map(({ player, goals }) => (
-              <article key={player.id} className="card p-4 md:p-5">
+              <article key={player.id} className="core-selection-card">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <h3>{player.name}</h3>
+                    <h3 className="core-player-name">{player.name}</h3>
                     <select name={`goal_${player.id}`} className="input mt-2" defaultValue={goals[0]?.id}>
                       {goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
                     </select>
@@ -123,7 +122,7 @@ export default async function ObservePage({
                 </div>
                 <div className="grid sm:grid-cols-3 gap-2 mt-4">
                   {EVIDENCE.map((option) => (
-                    <label key={option.value} className="rounded-xl p-3 cursor-pointer" style={{ border: "1px solid var(--border)", background: "var(--elevated)" }}>
+                    <label key={option.value} className="core-choice">
                       <span className="flex items-center gap-2 font-semibold">
                         <input type="radio" name={`evidence_${player.id}`} value={option.value} />
                         {option.label}
@@ -144,10 +143,10 @@ export default async function ObservePage({
 
       {detail.observations.length > 0 && (
         <section>
-          <h2>Redan registrerat</h2>
-          <div className="space-y-2 mt-3">
+          <div className="core-section-head"><h2 className="core-section-title">Redan registrerat</h2></div>
+          <div className="core-list">
             {detail.observations.map((observation) => (
-              <div key={observation.id} className="card p-4 flex items-start justify-between gap-3">
+              <div key={observation.id} className="core-panel p-4 flex items-start justify-between gap-3">
                 <div>
                   <strong>{observation.player_name}</strong>
                   <p className="body-small mt-1">{observation.goal_title}</p>

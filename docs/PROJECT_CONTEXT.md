@@ -37,6 +37,13 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
   forblir kalla. Uttagningsstodet ger enbart forklarbara mojligheter och
   balansvarningar, aldrig poang/ranking/automatval. Fas 4 har teknisk matning i
   `/idag`; verklig fyraveckorspilot aterstar och far inte slutmarkeras i fortid.
+- Designkorrigering 2026-08-18: kärnvyerna har ett lugnare, tätare visuellt
+  språk med systemtypografi, mindre rubriker, kompakta aktivitets-/spelarkort,
+  datumorientering och responsiva arbetsformulär. Ett separat leveransfel
+  rättades samtidigt: service workern använde evig cache-first för Next-CSS,
+  vilket kunde kombinera ny HTML med gammal CSS och ge en nästan ostylad sida.
+  Cache `bsk-v2` använder nätverk först för `/_next/static/` och registreras inte
+  i utvecklingsläge.
 - Beslut 2026-08-10: allt generativt AI-arbete ar pausat. AI-routes, AI-intervjuer, AI-forslag, AI-genererade spelarkortstexter och Anthropic-beroendet ar borttagna. Fokus ar en fungerande tranar- och utvecklingsplattform; regelbaserade rekommendationer ar kvar.
 - Sakerhetshardning 2026-08-10: coach-platform kraver signerad tranaridentitet i Proxy, root layout, export och samtliga server actions. Huvudappens publika liverapportering kraver nu matchspecifik capability-token medan Livescore forblir publik. Matchbetyg behandlar bara faktiska matchdeltagare. Vitest, Playwright och lokalt liveprotokoll ar inkopplade.
 - Produktionshardning 2026-08-10: båda apparna kör Next 16.3.0 med ren dependency-audit och nätoberoende huvudappsbygge. Huvudappen har 10 Vitest-tester och 36/36 liveprotokollsteg; Planlinjen har 13 Vitest + 3 Playwright. Båda har spelarutdrag och permanent radering. Planlinjens versionsmigrering och backup/restore är verifierade mot 27 tabeller.

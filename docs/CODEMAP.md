@@ -53,7 +53,8 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | **Krypterad VPS-databasbackup** | `scripts/backup-vps-databases.sh`, `deploy/backup/{README.md,backup.env.example,bsk-database-backup.service,bsk-database-backup.timer,install-vps-backup.sh}`, `docs/DRIFT-OCH-BITRADEN.md` |
 | **Lag, undergrupper och matchgrupper** | `lib/organization.ts`, `lib/db.ts`, `lib/actions.ts` (createGroup/saveGroup), `app/(skyddad)/administration/`, `docs/SPEC-roller-och-grupper.md` |
 | **Inställningar / white label** | `lib/actions.ts` (updateSettings), `lib/db.ts` (getSetting/setSetting), `components/Settings*.tsx`, `app/(skyddad)/installningar/` |
-| **Branding / logga & tema** | `components/Logo90.tsx` (Logo90Mark + Logo90-lockup, "Stopptidsringen"), `public/{icon,icon-light,logo-mark}.svg`, `app/globals.css` (design-tokens dark+light, grain), `app/page.tsx` (landning), `components/Navbar.tsx` |
+| **Branding / logga & tema** | `components/Logo90.tsx` (Logo90Mark + Logo90-lockup, "Stopptidsringen"), `public/{icon,icon-light,logo-mark}.svg`, `app/globals.css` (design-tokens dark+light samt `core-*` för primärvyerna), `app/page.tsx` (landning), `components/Navbar.tsx` |
+| **PWA-cache / service worker** | `public/sw.js` (versionsmärkt cache; nätverk först för Next-assets), `components/ServiceWorkerRegistration.tsx` (endast produktion) |
 | **Datum / tid (svensk tid!)** | `lib/dates.ts` — använd ALLTID denna, aldrig `toISOString`-datum |
 | **DB-access (lågnivå)** | `lib/db.ts` (all/get/run/batch) |
 

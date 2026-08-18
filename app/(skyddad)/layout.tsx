@@ -13,9 +13,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Navbar />
       <main
         className="flex-1 w-full mx-auto rise pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8"
-        style={{ maxWidth: "1200px", padding: "16px 16px" }}
+        style={{ maxWidth: "1120px", padding: "12px 16px" }}
       >
-        <div className="md:px-6 md:py-8">{children}</div>
+        <div className="md:px-5 md:py-7">{children}</div>
       </main>
       <BottomNav permissions={user.permissions} staff={isStaffRole(user.primaryRole)} />
       <InstallPrompt />
