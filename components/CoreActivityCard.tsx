@@ -31,18 +31,22 @@ export default function CoreActivityCard({
         <span>{monthLabel} {String(year).slice(-2)}</span>
       </time>
       <div className="min-w-0 flex-1">
-        <div className="core-tags">
-          <span className={`core-tag core-tag-${activity.activity_type}`}>{TYPE_LABEL[activity.activity_type]}</span>
-          {activity.is_upcoming && <span className="badge badge-primary">Kommande</span>}
-          {needsMoreAccepted && <span className="core-understaffed-badge">Saknar {playersMissing}</span>}
-          {activity.source_team && (
-            <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
-          )}
-          {isSanktan && activity.competition_level && (
-            <span className="badge">Sanktan {sanktanLevelLabel(activity.competition_level)}</span>
-          )}
-          {activity.start_time && <span>{activity.start_time}</span>}
-        </div>
+        {isSanktan ? (
+          <div className="core-match-meta">
+            {activity.source_team && (
+              <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
+            )}
+            {activity.competition_level && <span>{sanktanLevelLabel(activity.competition_level)}</span>}
+            {activity.start_time && <span className="core-match-time">{activity.start_time}</span>}
+            {needsMoreAccepted && <span className="core-understaffed-badge">Saknar {playersMissing}</span>}
+          </div>
+        ) : (
+          <div className="core-tags">
+            <span className={`core-tag core-tag-${activity.activity_type}`}>{TYPE_LABEL[activity.activity_type]}</span>
+            {activity.is_upcoming && <span className="badge badge-primary">Kommande</span>}
+            {activity.start_time && <span>{activity.start_time}</span>}
+          </div>
+        )}
         <h3 className="core-activity-title">{activity.title}</h3>
         {activity.is_upcoming ? (
           activity.called_player_names.length > 0 ? (
@@ -55,7 +59,7 @@ export default function CoreActivityCard({
           ) : <p className="core-activity-sub">Ingen kallelse registrerad ännu</p>
         ) : activity.activity_type === "match" && activity.participant_names.length > 0 ? (
           <p className="core-activity-players">
-            <strong>Spelade ({activity.participant_names.length}):</strong> {activity.participant_names.join(", ")}
+            <strong>{activity.participant_names.length} spelade</strong><span> · Trupp i matchdetaljen</span>
           </p>
         ) : (
           <p className="core-activity-sub">{activity.theme ? `Fokus: ${activity.theme}` : "Fokus inte satt"}</p>
