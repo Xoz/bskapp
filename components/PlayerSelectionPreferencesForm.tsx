@@ -38,22 +38,22 @@ function PreferenceRows({
   onSecondaryChange: (value: string) => void;
 }) {
   return (
-    <fieldset className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--elevated)" }}>
-      <legend className="px-1 font-semibold">{title}</legend>
-      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-5 gap-y-3 mt-2">
+    <fieldset className="min-w-0">
+      <legend className="mb-2 text-sm font-semibold">{title}</legend>
+      <div className="grid grid-cols-[minmax(0,1fr)_2.5rem_2.5rem] items-center gap-x-2 gap-y-1">
         <span className="caption" style={{ color: "var(--ink-muted)" }}>Val</span>
-        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>Första</span>
-        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>Andra</span>
+        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>1:a</span>
+        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>2:a</span>
         {choices.map((choice) => {
           const primaryId = `${title}-${choice.value}-primary`;
           const secondaryId = `${title}-${choice.value}-secondary`;
           return (
             <div key={choice.value} className="contents">
-              <span className="body-small">{choice.label}</span>
-              <label htmlFor={primaryId} className="flex justify-center cursor-pointer">
+              <span className="body-small py-1">{choice.label}</span>
+              <label htmlFor={primaryId} className="flex justify-center cursor-pointer py-1">
                 <input id={primaryId} type="checkbox" checked={primary === choice.value} onChange={() => onPrimaryChange(primary === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)]" aria-label={`${choice.label}, förstaval`} />
               </label>
-              <label htmlFor={secondaryId} className="flex justify-center cursor-pointer">
+              <label htmlFor={secondaryId} className="flex justify-center cursor-pointer py-1">
                 <input id={secondaryId} type="checkbox" checked={secondary === choice.value} onChange={() => onSecondaryChange(secondary === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)]" aria-label={`${choice.label}, andraval`} />
               </label>
             </div>
@@ -91,20 +91,22 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
   };
 
   return (
-    <form action={action} className="mt-4 space-y-4">
+    <form action={action} className="mt-4 space-y-3">
       <input type="hidden" name="preferred_position_primary" value={positionPrimary} />
       <input type="hidden" name="preferred_position_secondary" value={positionSecondary} />
       <input type="hidden" name="preferred_level_primary" value={levelPrimary} />
       <input type="hidden" name="preferred_level_secondary" value={levelSecondary} />
-      <label className="flex cursor-pointer items-center gap-3 rounded-xl border p-4" style={{ borderColor: selectionEligible ? "var(--primary-line)" : "var(--border)", background: selectionEligible ? "var(--primary-wash)" : "var(--elevated)" }}>
+      <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: selectionEligible ? "var(--primary-wash)" : "var(--elevated)" }}>
         <input name="selection_eligible" value="1" type="checkbox" checked={selectionEligible} onChange={(event) => setSelectionEligible(event.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
-        <span>
-          <strong className="block text-sm">Kan föreslås till match</strong>
-          <span className="caption" style={{ color: "var(--ink-muted)" }}>Avmarkera tillfälligt när spelaren inte ska ingå i automatiska förslag.</span>
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <strong className="text-sm">Kan föreslås till match</strong>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>Avmarkera tillfälligt vid frånvaro.</span>
         </span>
       </label>
-      <PreferenceRows title="Position" choices={POSITIONS.map((value) => ({ value, label: value }))} primary={positionPrimary} secondary={positionSecondary} onPrimaryChange={(value) => setPosition("primary", value)} onSecondaryChange={(value) => setPosition("secondary", value)} />
-      <PreferenceRows title="Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
+      <div className="grid gap-5 rounded-xl border p-3 md:grid-cols-2 md:gap-8" style={{ borderColor: "var(--border)", background: "var(--elevated)" }}>
+        <PreferenceRows title="Position" choices={POSITIONS.map((value) => ({ value, label: value }))} primary={positionPrimary} secondary={positionSecondary} onPrimaryChange={(value) => setPosition("primary", value)} onSecondaryChange={(value) => setPosition("secondary", value)} />
+        <PreferenceRows title="Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
+      </div>
       <div className="flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>
     </form>
   );
