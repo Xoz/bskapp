@@ -5,6 +5,7 @@ import PilotStartField from "@/components/PilotStartField";
 import { squadBalanceWarnings } from "@/lib/selectionSupport";
 
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
+const SELECTION_GRID = "2rem minmax(13rem, 1fr) 7rem 7.25rem 7.25rem 5.25rem 5.75rem 8.75rem";
 
 type Candidate = {
   player: {
@@ -65,6 +66,13 @@ export default function SelectionEditor({
     [candidates, teamFilter]
   );
 
+  function teamTone(teamName: string) {
+    if (teamName === "Gul") return "yellow";
+    if (teamName === "Grön") return "green";
+    if (teamName === "F15") return "blue";
+    return "neutral";
+  }
+
   function toggleSelected(playerId: number, checked: boolean) {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -76,56 +84,76 @@ export default function SelectionEditor({
 
   return (
     <>
-      <section className="core-panel core-form-panel">
-        <div className="core-section-head">
-          <div><p className="core-kicker text-[11px]">Truppen just nu</p><h2 className="core-section-title mt-1 text-lg">{selected.length} uttagna</h2></div>
-        </div>
-        {selected.length > 0 ? (
-          <p className="text-xs text-[var(--ink-muted)]" style={{ overflowWrap: "anywhere" }}>
-            {selected.map((candidate) => candidate.player.name).join(", ")}
+      <section className="selection-summary">
+        <div className="selection-summary-main">
+          <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Truppen just nu</div>
+          <div className="selection-summary-count"><strong>{selected.length}</strong><span>uttagna</span></div>
+          <p className="selection-summary-copy">
+            {selected.length > 0
+              ? "Spelare valda till matchtruppen. Ändra urvalet direkt i listan nedan."
+              : "Markera spelare i listan för att bygga matchtruppen."}
           </p>
-        ) : (
-          <p className="text-xs mt-2" style={{ color: "var(--ink-secondary)" }}>Markera en spelare för att lägga till henne i truppen.</p>
+        </div>
+        <div className="selection-summary-stat">
+          <span>Spelarlista</span>
+          <strong>{visibleCandidates.length}</strong>
+          <small>{teamFilter === "Alla" ? "alla lag" : teamFilter}</small>
+        </div>
+        <div className="selection-summary-stat selection-summary-stat-accent">
+          <span>Balans</span>
+          <strong>{warnings.length === 0 ? "OK" : warnings.length}</strong>
+          <small>{warnings.length === 0 ? "inga varningar" : "att se över"}</small>
+        </div>
+        {warnings.length > 0 && (
+          <ul className="selection-summary-warnings">
+            {warnings.map((warning) => <li key={warning}>{warning}</li>)}
+          </ul>
         )}
-        <ul className="mt-2 space-y-0.5 text-[11px]">
-          {warnings.map((warning) => (
-            <li key={warning} style={{ color: "var(--ink)" }}>{warning}</li>
-          ))}
-        </ul>
       </section>
 
-      <form action={action} className="mt-2">
+      <form action={action} className="selection-workspace">
         <PilotStartField />
-        <div className="flex items-center justify-between mb-2 gap-3">
-          <label className="text-[11px]" htmlFor="team-filter-select">
-            Filtrera lag:
-          </label>
-          <select
-            id="team-filter-select"
-            className="input h-7 px-2 py-1 text-[11px] w-36"
-            value={teamFilter}
-            onChange={(event) => setTeamFilter(event.target.value)}
-          >
-            {teamOptions.map((team) => <option key={team} value={team}>{team}</option>)}
-          </select>
+        <div className="selection-toolbar">
+          <div>
+            <p className="selection-toolbar-title">Matchtrupp</p>
+            <p className="selection-toolbar-subtitle">Välj spelare och ange position vid behov</p>
+          </div>
+          <div className="selection-filter-group" role="group" aria-label="Filtrera spelare efter lag">
+            <span className="selection-filter-label">Lag</span>
+            <div className="core-team-filters selection-filter-pills">
+              {teamOptions.map((team) => (
+                <button
+                  key={team}
+                  type="button"
+                  className={`core-team-filter ${teamFilter === team ? "core-team-filter-active" : ""}`}
+                  data-team-tone={team === "Gul" ? "yellow" : team === "Grön" ? "green" : team === "F15" ? "blue" : undefined}
+                  onClick={() => setTeamFilter(team)}
+                >
+                  {team} <span>{team === "Alla" ? candidates.length : candidates.filter((candidate) => candidate.teams.some((candidateTeam) => candidateTeam.name === team)).length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="px-1 mb-1 grid items-center gap-2 min-w-0" style={{ gridTemplateColumns: "auto 1fr 7rem 2.6rem 2.6rem 2.2rem 2.2rem 7.5rem" }}>
-          <span />
-          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Spelare</span>
-          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Lag</span>
-          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Pos 1</span>
-          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Pos 2</span>
-          <span className="caption text-[10px] text-right" style={{ color: "var(--ink-muted)" }}>Matcher</span>
-          <span className="caption text-[10px] text-right" style={{ color: "var(--ink-muted)" }}>Kallelser</span>
-          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Vald position</span>
-        </div>
-        <ul className="divide-y divide-[var(--border)] border border-transparent">
-          {visibleCandidates.map((candidate) => {
+        <div className="selection-table-scroll">
+          <div className="selection-table">
+            <div className="selection-table-head" style={{ gridTemplateColumns: SELECTION_GRID }}>
+              <span />
+              <span>Spelare</span>
+              <span>Lag</span>
+              <span>Pos 1</span>
+              <span>Pos 2</span>
+              <span className="selection-number">Matcher</span>
+              <span className="selection-number">Kallelser</span>
+              <span>Vald position</span>
+            </div>
+            <ul className="selection-table-body">
+              {visibleCandidates.map((candidate) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
             const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
             return (
-              <li key={candidate.player.id} className={`py-1 leading-4 text-[11px] ${selectedForMatch ? "bg-[var(--primary-soft)]" : ""}`}>
-                <div className="px-1 min-w-0 grid items-center gap-2" style={{ gridTemplateColumns: "auto 1fr 7rem 2.6rem 2.6rem 2.2rem 2.2rem 7.5rem" }}>
+              <li key={candidate.player.id} className={`selection-row ${selectedForMatch ? "selection-row-selected" : ""}`}>
+                <div className="selection-row-grid" style={{ gridTemplateColumns: SELECTION_GRID }}>
                   <input
                     id={`selected-${candidate.player.id}`}
                     type="checkbox"
@@ -133,44 +161,33 @@ export default function SelectionEditor({
                     value={candidate.player.id}
                     checked={selectedForMatch}
                     onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
-                    className="h-3.5 w-3.5 accent-[var(--primary)]"
+                    className="selection-checkbox"
                   />
-                  <label htmlFor={`selected-${candidate.player.id}`} className="whitespace-nowrap cursor-pointer flex-1 overflow-hidden text-ellipsis">
-                    {candidate.player.name}
+                  <label htmlFor={`selected-${candidate.player.id}`} className="selection-player">
+                    <span className="selection-player-name">{candidate.player.name}</span>
+                    {selectedForMatch && <span className="selection-player-status">Vald</span>}
                   </label>
-                  <span
-                    className="text-[10px] text-ellipsis overflow-hidden whitespace-nowrap"
-                    title={teamNames}
-                    style={{ color: "var(--ink-muted)", maxWidth: "8.5rem" }}
-                  >
-                    {teamNames}
+                  <span className="selection-teams" title={teamNames}>
+                    {candidate.teams.length > 0 ? candidate.teams.map((team) => <span key={team.id} className="selection-team-tag" data-team-tone={teamTone(team.name)}>{team.name}</span>) : <span className="selection-empty">—</span>}
                   </span>
-                  <span
-                    className="text-[10px] text-ellipsis overflow-hidden whitespace-nowrap"
-                    title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}
-                    style={{ color: "var(--ink-muted)", minWidth: "2.7rem", textAlign: "left" }}
-                  >
+                  <span className="selection-preference" title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}>
                     {candidate.player.preferred_position_primary || "—"}
                   </span>
-                  <span
-                    className="text-[10px] text-ellipsis overflow-hidden whitespace-nowrap"
-                    title={`Val 2: ${candidate.player.preferred_position_secondary || "Ej satt"}`}
-                    style={{ color: "var(--ink-muted)", minWidth: "2.7rem", textAlign: "left" }}
-                  >
+                  <span className="selection-preference" title={`Val 2: ${candidate.player.preferred_position_secondary || "Ej satt"}`}>
                     {candidate.player.preferred_position_secondary || "—"}
                   </span>
-                  <span className="tabular-nums" style={{ color: "var(--ink-muted)", minWidth: "2rem", textAlign: "right" }}>
+                  <span className="selection-number tabular-nums">
                     {candidate.matchCount}
                   </span>
-                  <span className="tabular-nums" style={{ color: "var(--ink-muted)", minWidth: "2rem", textAlign: "right" }}>
+                  <span className="selection-number tabular-nums">
                     {candidate.callupCount}
                   </span>
                   {selectedForMatch && (
-                    <label className="flex items-center gap-1.5">
+                    <label className="selection-position-select">
                       <span className="sr-only">Position</span>
                       <select
                         name={`position_${candidate.player.id}`}
-                        className="input h-6 px-1.5 py-0.5 text-[11px] w-20"
+                        className="selection-position-input"
                         value={positions[candidate.player.id] ?? ""}
                         onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
                       >
@@ -181,10 +198,13 @@ export default function SelectionEditor({
                 </div>
               </li>
             );
-          })}
-        </ul>
-        <div className="sticky bottom-20 md:bottom-4 flex justify-end">
-          <button type="submit" className="btn-primary shadow-lg">Spara uttagning</button>
+              })}
+            </ul>
+          </div>
+        </div>
+        <div className="selection-footer">
+          <span>{selected.length} spelare valda</span>
+          <button type="submit" className="btn-primary selection-save-button">Spara uttagning <span aria-hidden="true">→</span></button>
         </div>
       </form>
     </>
