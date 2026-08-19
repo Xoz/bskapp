@@ -395,15 +395,21 @@ export async function saveGroup(formData: FormData) {
   const cupName = String(formData.get("cup_name") ?? "").trim().slice(0, 100);
   const color = String(formData.get("color") ?? "").trim().slice(0, 20);
   const active = formData.get("active") === "1" ? 1 : 0;
-  await run("UPDATE groups SET name = ?, parent_id = ?, cup_name = ?, color = ?, active = ? WHERE id = ?", [name, parentId, cupName, color, active, groupId]);
-  await run("DELETE FROM player_group_memberships WHERE group_id = ?", [groupId]);
   const playerIds = formData.getAll("player_id").map(Number).filter(Boolean);
+  const statements: { sql: string; args?: (string | number | null)[] }[] = [
+    {
+      sql: "UPDATE groups SET name = ?, parent_id = ?, cup_name = ?, color = ?, active = ? WHERE id = ?",
+      args: [name, parentId, cupName, color, active, groupId],
+    },
+    { sql: "DELETE FROM player_group_memberships WHERE group_id = ?", args: [groupId] },
+  ];
   for (const playerId of playerIds) {
-    await run(
-      "INSERT INTO player_group_memberships (player_id, group_id, is_primary) VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET is_primary = excluded.is_primary",
-      [playerId, groupId, formData.get(`primary_${playerId}`) === "1" ? 1 : 0]
-    );
+    statements.push({
+      sql: "INSERT INTO player_group_memberships (player_id, group_id, is_primary) VALUES (?, ?, ?) ON CONFLICT (player_id, group_id) DO UPDATE SET is_primary = excluded.is_primary",
+      args: [playerId, groupId, formData.get(`primary_${playerId}`) === "1" ? 1 : 0],
+    });
   }
+  await batch(statements);
   revalidatePath("/administration");
   revalidatePath("/spelare");
 }
