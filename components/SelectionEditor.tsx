@@ -16,6 +16,7 @@ type Candidate = {
     preferred_position_secondary: string;
     preferred_level_primary: string;
     preferred_level_secondary: string;
+    selection_eligible: number;
   };
   decision: "selected" | "reserve" | "rested";
   teams: { id: number; name: string }[];
@@ -116,6 +117,7 @@ export default function SelectionEditor({
         secondaryLevel: candidate.player.preferred_level_secondary,
         primaryPosition: candidate.player.preferred_position_primary || candidate.player.position || "",
         secondaryPosition: candidate.player.preferred_position_secondary,
+        selectionEligible: Boolean(candidate.player.selection_eligible),
         currentCallupStatus: candidate.currentCallupStatus,
       })),
     });

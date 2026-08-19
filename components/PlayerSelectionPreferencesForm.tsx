@@ -16,6 +16,7 @@ type Props = {
     positionSecondary: string;
     levelPrimary: string;
     levelSecondary: string;
+    selectionEligible: boolean;
   };
 };
 
@@ -68,6 +69,7 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
   const [positionSecondary, setPositionSecondary] = useState(defaults.positionSecondary);
   const [levelPrimary, setLevelPrimary] = useState(defaults.levelPrimary);
   const [levelSecondary, setLevelSecondary] = useState(defaults.levelSecondary);
+  const [selectionEligible, setSelectionEligible] = useState(defaults.selectionEligible);
 
   const setPosition = (choice: "primary" | "secondary", value: string) => {
     if (choice === "primary") {
@@ -94,6 +96,13 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
       <input type="hidden" name="preferred_position_secondary" value={positionSecondary} />
       <input type="hidden" name="preferred_level_primary" value={levelPrimary} />
       <input type="hidden" name="preferred_level_secondary" value={levelSecondary} />
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border p-4" style={{ borderColor: selectionEligible ? "var(--primary-line)" : "var(--border)", background: selectionEligible ? "var(--primary-wash)" : "var(--elevated)" }}>
+        <input name="selection_eligible" value="1" type="checkbox" checked={selectionEligible} onChange={(event) => setSelectionEligible(event.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
+        <span>
+          <strong className="block text-sm">Kan föreslås till match</strong>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>Avmarkera tillfälligt när spelaren inte ska ingå i automatiska förslag.</span>
+        </span>
+      </label>
       <PreferenceRows title="Position" choices={POSITIONS.map((value) => ({ value, label: value }))} primary={positionPrimary} secondary={positionSecondary} onPrimaryChange={(value) => setPosition("primary", value)} onSecondaryChange={(value) => setPosition("secondary", value)} />
       <PreferenceRows title="Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
       <div className="flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>

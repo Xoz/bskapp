@@ -24,6 +24,7 @@ export type RecommendationCandidate = {
   secondaryLevel: string;
   primaryPosition: string;
   secondaryPosition: string;
+  selectionEligible: boolean;
   currentCallupStatus: RecommendationCallupStatus;
 };
 
@@ -150,6 +151,7 @@ export function recommendYellowSelection(input: {
     reasons[candidate.id] = reason;
   };
   const selectable = input.candidates
+    .filter((candidate) => candidate.selectionEligible)
     .filter((candidate) => candidate.currentCallupStatus !== "declined")
     .filter((candidate) => !(input.matchLevel === 4 && candidate.teamNames.includes("F15")));
 

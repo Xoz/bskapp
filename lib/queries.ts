@@ -18,6 +18,7 @@ export interface Player {
   preferred_position_secondary: string;
   preferred_level_primary: string;
   preferred_level_secondary: string;
+  selection_eligible: number;
   share_token: string | null;
   share_expires: number | null;
   level: string;

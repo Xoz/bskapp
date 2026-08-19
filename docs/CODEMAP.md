@@ -91,7 +91,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## DB-tabeller (definieras i lib/db.ts)
 
-`settings`, `players`, `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
+`settings`, `players` (inkl. `selection_eligible` för generell tillgänglighet i automatiska uttagningsförslag), `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
 `match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
 `player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,

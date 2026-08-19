@@ -342,18 +342,21 @@ export async function savePlayerSelectionPreferences(playerId: number, formData:
   const secondaryPosition = enumValue(formData.get("preferred_position_secondary"), POSITION_VALUES);
   const primaryLevel = enumValue(formData.get("preferred_level_primary"), SANKTAN_LEVEL_VALUES);
   const secondaryLevel = enumValue(formData.get("preferred_level_secondary"), SANKTAN_LEVEL_VALUES);
+  const selectionEligible = formData.get("selection_eligible") === "1" ? 1 : 0;
   if (primaryPosition === null || secondaryPosition === null || primaryLevel === null || secondaryLevel === null) return;
 
   await run(
     `UPDATE players
      SET preferred_position_primary = ?, preferred_position_secondary = ?,
-         preferred_level_primary = ?, preferred_level_secondary = ?
+         preferred_level_primary = ?, preferred_level_secondary = ?,
+         selection_eligible = ?
      WHERE id = ?`,
     [
       primaryPosition,
       secondaryPosition === primaryPosition ? "" : secondaryPosition,
       primaryLevel,
       secondaryLevel === primaryLevel ? "" : secondaryLevel,
+      selectionEligible,
       playerId,
     ]
   );

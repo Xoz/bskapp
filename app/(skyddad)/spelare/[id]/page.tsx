@@ -66,6 +66,7 @@ export default async function PlayerPage({ params, searchParams }: {
             positionSecondary: summary.player.preferred_position_secondary,
             levelPrimary: summary.player.preferred_level_primary,
             levelSecondary: summary.player.preferred_level_secondary,
+            selectionEligible: Boolean(summary.player.selection_eligible),
           }} />
         ) : (
           <div className="core-player-chips mt-4">
@@ -73,6 +74,7 @@ export default async function PlayerPage({ params, searchParams }: {
             <span className="badge">Position 2: {summary.player.preferred_position_secondary || "Ej satt"}</span>
             <span className="badge">Nivå 1: {sanktanLevelLabel(Number(summary.player.preferred_level_primary)) || "Ej satt"}</span>
             <span className="badge">Nivå 2: {sanktanLevelLabel(Number(summary.player.preferred_level_secondary)) || "Ej satt"}</span>
+            <span className="badge">Uttagning: {summary.player.selection_eligible ? "Kan föreslås" : "Ej tillgänglig"}</span>
           </div>
         )}
       </details>

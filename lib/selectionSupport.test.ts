@@ -15,6 +15,7 @@ function candidate(overrides: Partial<RecommendationCandidate> & Pick<Recommenda
     secondaryLevel: "",
     primaryPosition: "Mittfält",
     secondaryPosition: "",
+    selectionEligible: true,
     currentCallupStatus: null,
     ...overrides,
   };
@@ -104,6 +105,18 @@ describe("transparent uttagningsstöd", () => {
     });
     expect(result.selectedIds).toEqual([1, 3]);
     expect(result.reasons[1]).toBe("Redan kallad");
+  });
+
+  it("väljer inte en spelare som tillfälligt stängts av från automatiska förslag", () => {
+    const result = recommendYellowSelection({
+      matchLevel: 3,
+      targetSize: 1,
+      candidates: [
+        candidate({ id: 1, name: "Ej tillgänglig", teamNames: ["Gul"], selectionEligible: false, callupCount: 0 }),
+        candidate({ id: 2, name: "Tillgänglig", teamNames: ["Gul"], callupCount: 4 }),
+      ],
+    });
+    expect(result.selectedIds).toEqual([2]);
   });
 
   it("spärrar F15 på nivå 4 och använder Grön som sista utfyllnad", () => {
