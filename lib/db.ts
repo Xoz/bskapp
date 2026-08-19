@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-sanktan-history";
+const SCHEMA_VERSION = "2026-08-19-observera-sanktan";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -547,6 +547,46 @@ async function init(): Promise<void> {
       start_time = excluded.start_time,
       activity_type = excluded.activity_type,
       title = excluded.title,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await getClient().unsafe(`
+    INSERT INTO development_activities (
+      id, activity_date, start_time, activity_type, title,
+      external_source, external_key, group_id
+    )
+    SELECT
+      'sanktan-' || pcm.external_id,
+      pcm.match_date,
+      pcm.start_time,
+      'match',
+      CASE WHEN pcm.home_away = 'away' THEN 'Borta mot ' ELSE 'Hemma mot ' END || pcm.opponent,
+      'svenskalag_sanktan',
+      'sanktan:' || pcm.external_id,
+      g.id
+    FROM player_competition_matches pcm
+    LEFT JOIN groups g
+      ON g.group_type = 'subgroup' AND g.active = 1 AND g.name = pcm.source_team
+    WHERE pcm.competition = 'sanktan'
+    ON CONFLICT (external_key) DO UPDATE SET
+      activity_date = excluded.activity_date,
+      start_time = excluded.start_time,
+      activity_type = excluded.activity_type,
+      title = excluded.title,
+      group_id = excluded.group_id,
+      updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await getClient().unsafe(`
+    INSERT INTO development_activity_participation (
+      activity_id, player_id, attendance_status, selected, source
+    )
+    SELECT da.id, pcmp.player_id, 'present', 1, 'svenskalag_sanktan'
+    FROM player_competition_match_players pcmp
+    JOIN development_activities da
+      ON da.external_key = 'sanktan:' || pcmp.match_external_id
+    ON CONFLICT (activity_id, player_id) DO UPDATE SET
+      attendance_status = 'present',
+      selected = 1,
+      source = 'svenskalag_sanktan',
       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
   `);
   await getClient().unsafe(`
