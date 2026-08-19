@@ -5,18 +5,12 @@ import { getPlayerCore, type Evidence } from "@/lib/developmentCore";
 import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
+import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
 import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
-const POSITION_OPTIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
-const LEVEL_OPTIONS = [
-  { value: "", label: "Ej satt" },
-  { value: "2", label: "Svår" },
-  { value: "3", label: "Medel" },
-  { value: "4", label: "Lätt" },
-];
 
 function formatMatchDate(value: string) {
   return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
@@ -67,13 +61,12 @@ export default async function PlayerPage({ params, searchParams }: {
           <span className="core-section-note">Första- och andraval</span>
         </div>
         {canSetSelectionPreferences ? (
-          <form action={savePreferences} className="grid md:grid-cols-2 gap-4 mt-4">
-            <label><span className="label">Position · förstaval</span><select name="preferred_position_primary" className="input mt-1" defaultValue={summary.player.preferred_position_primary}><option value="">Ej satt</option>{POSITION_OPTIONS.slice(1).map((position) => <option key={position} value={position}>{position}</option>)}</select></label>
-            <label><span className="label">Position · andraval</span><select name="preferred_position_secondary" className="input mt-1" defaultValue={summary.player.preferred_position_secondary}><option value="">Ej satt</option>{POSITION_OPTIONS.slice(1).map((position) => <option key={position} value={position}>{position}</option>)}</select></label>
-            <label><span className="label">Sanktan-nivå · förstaval</span><select name="preferred_level_primary" className="input mt-1" defaultValue={summary.player.preferred_level_primary}>{LEVEL_OPTIONS.map((level) => <option key={level.value || "none"} value={level.value}>{level.label}</option>)}</select></label>
-            <label><span className="label">Sanktan-nivå · andraval</span><select name="preferred_level_secondary" className="input mt-1" defaultValue={summary.player.preferred_level_secondary}>{LEVEL_OPTIONS.map((level) => <option key={level.value || "none"} value={level.value}>{level.label}</option>)}</select></label>
-            <div className="md:col-span-2 flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>
-          </form>
+          <PlayerSelectionPreferencesForm action={savePreferences} defaults={{
+            positionPrimary: summary.player.preferred_position_primary,
+            positionSecondary: summary.player.preferred_position_secondary,
+            levelPrimary: summary.player.preferred_level_primary,
+            levelSecondary: summary.player.preferred_level_secondary,
+          }} />
         ) : (
           <div className="core-player-chips mt-4">
             <span className="badge">Position 1: {summary.player.preferred_position_primary || "Ej satt"}</span>
