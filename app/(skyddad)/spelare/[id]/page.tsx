@@ -55,11 +55,11 @@ export default async function PlayerPage({ params, searchParams }: {
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
       </header>
 
-      <section className="core-panel core-form-panel">
-        <div className="core-section-head">
+      <details className="core-panel core-form-panel" open>
+        <summary className="core-section-head cursor-pointer list-none">
           <div><p className="core-kicker">Matchpreferenser</p><h2 className="core-section-title mt-2">Position och Sanktan-nivå</h2></div>
-          <span className="core-section-note">Första- och andraval</span>
-        </div>
+          <div className="flex items-center gap-3"><span className="core-section-note">Första- och andraval</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
+        </summary>
         {canSetSelectionPreferences ? (
           <PlayerSelectionPreferencesForm action={savePreferences} defaults={{
             positionPrimary: summary.player.preferred_position_primary,
@@ -75,40 +75,13 @@ export default async function PlayerPage({ params, searchParams }: {
             <span className="badge">Nivå 2: {sanktanLevelLabel(Number(summary.player.preferred_level_secondary)) || "Ej satt"}</span>
           </div>
         )}
-      </section>
+      </details>
 
-      <section>
-        <div className="core-section-head">
-          <div><p className="core-kicker">Sanktan</p><h2 className="core-section-title mt-2">Matchhistorik</h2></div>
-          <span className="core-section-note">{matchHistory.length} spelade</span>
-        </div>
-        {matchHistory.length ? (
-          <div className="core-list core-list-2">
-            {matchHistory.map((match) => (
-              <article key={match.external_id} className="core-panel p-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="core-team-tag" data-team-tone={match.source_team === "Gul" ? "yellow" : "green"}>{match.source_team}</span>
-                  {match.level && <span className="badge">Sanktan {sanktanLevelLabel(match.level)}</span>}
-                  <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>{match.home_away === "home" ? "Hemma" : "Borta"}</span>
-                </div>
-                <h3 className="mt-3">{match.opponent}</h3>
-                <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-                  {formatMatchDate(match.match_date)}{match.start_time ? ` · ${match.start_time}` : ""}
-                </p>
-                {match.location && <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{match.location}</p>}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="core-panel p-5"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga spelade Sanktanmatcher registrerade.</p></div>
-        )}
-      </section>
-
-      <section>
-        <div className="core-section-head">
+      <details className="core-panel core-form-panel" open>
+        <summary className="core-section-head cursor-pointer list-none">
           <div><p className="core-kicker">Fokus</p><h2 className="core-section-title mt-2">Aktiva utvecklingsmål</h2></div>
-          <span className="core-section-note">{summary.goals.length}/2 aktiva</span>
-        </div>
+          <div className="flex items-center gap-3"><span className="core-section-note">{summary.goals.length}/2 aktiva</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
+        </summary>
         {mal === "max" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--warn-bg)" }}>Avsluta eller pausa ett mål innan ett nytt läggs till.</p>}
         {mal === "ogiltigt" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--danger-bg)" }}>Kontrollera måltexten och datumet.</p>}
         <div className="core-list core-list-2">
@@ -137,19 +110,47 @@ export default async function PlayerPage({ params, searchParams }: {
             <div className="flex items-end"><button type="submit" className="btn-primary">Lägg till mål</button></div>
           </form>
         )}
-      </section>
+      </details>
 
-      <section>
-        <div className="core-section-head"><div><p className="core-kicker">Evidens över tid</p><h2 className="core-section-title mt-2">Observationer</h2></div><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
-        {observations.length ? <div className="core-list">{observations.map((observation) => (
+      <details className="core-panel core-form-panel" open>
+        <summary className="core-section-head cursor-pointer list-none"><div><p className="core-kicker">Evidens över tid</p><h2 className="core-section-title mt-2">Observationer</h2></div><div className="flex items-center gap-3"><span className="core-section-note">{observations.length} registrerade</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div></summary>
+        <div className="flex justify-end mt-4"><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
+        {observations.length ? <div className="core-list mt-4">{observations.map((observation) => (
           <article key={observation.id} className="core-panel p-4 flex items-start justify-between gap-4">
             <div><p className="caption" style={{ color: "var(--ink-muted)" }}>{observation.activity_date} · {observation.activity_title}</p><h3 className="mt-1">{observation.goal_title ?? "Generell observation"}</h3>{observation.note && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{observation.note}</p>}</div>
             <span className="badge">{EVIDENCE_LABELS[observation.evidence]}</span>
           </article>
-        ))}</div> : <div className="core-panel p-5"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
-      </section>
+        ))}</div> : <div className="core-panel p-5 mt-4"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
+      </details>
 
-      {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel p-5"><summary className="font-semibold cursor-pointer">Tidigare mål</summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
+      {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel core-form-panel"><summary className="font-semibold cursor-pointer list-none flex items-center justify-between"><span>Tidigare mål</span><span aria-hidden="true" style={{ color: "var(--ink-muted)" }}>⌄</span></summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
+
+      <details className="core-panel core-form-panel">
+        <summary className="core-section-head cursor-pointer list-none">
+          <div><p className="core-kicker">Sanktan</p><h2 className="core-section-title mt-2">Spelade matcher</h2></div>
+          <div className="flex items-center gap-3"><span className="core-section-note">{matchHistory.length} spelade</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
+        </summary>
+        {matchHistory.length ? (
+          <div className="core-list core-list-2 mt-4">
+            {matchHistory.map((match) => (
+              <article key={match.external_id} className="core-panel p-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="core-team-tag" data-team-tone={match.source_team === "Gul" ? "yellow" : "green"}>{match.source_team}</span>
+                  {match.level && <span className="badge">Sanktan {sanktanLevelLabel(match.level)}</span>}
+                  <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>{match.home_away === "home" ? "Hemma" : "Borta"}</span>
+                </div>
+                <h3 className="mt-3">{match.opponent}</h3>
+                <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
+                  {formatMatchDate(match.match_date)}{match.start_time ? ` · ${match.start_time}` : ""}
+                </p>
+                {match.location && <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{match.location}</p>}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="core-panel p-5 mt-4"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga spelade Sanktanmatcher registrerade.</p></div>
+        )}
+      </details>
     </div>
   );
 }
