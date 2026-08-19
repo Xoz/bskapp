@@ -708,6 +708,8 @@ table.data-table tbody tr:hover {
 .core-metric-detail { display: block; margin-top: 4px; color: var(--ink-secondary); font-size: 11px; }
 .core-list { display: grid; min-width: 0; gap: 8px; }
 .core-list-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.core-list-divider { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; margin: 8px 0 2px; color: var(--ink-muted); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; }
+.core-list-divider::before, .core-list-divider::after { content: ""; height: 1px; flex: 1; background: var(--border); }
 .core-activity {
   display: flex;
   align-items: center;
@@ -723,18 +725,6 @@ table.data-table tbody tr:hover {
   transition: background var(--t-normal), border-color var(--t-normal), transform var(--t-normal);
 }
 .core-activity:hover { background: var(--elevated); border-color: var(--line-strong); transform: translateY(-1px); }
-.core-activity-upcoming {
-  border-color: var(--primary-line);
-  background: linear-gradient(90deg, var(--primary-wash), var(--surface) 48%);
-  box-shadow: inset 4px 0 0 var(--primary);
-}
-.core-activity-upcoming:hover { background: linear-gradient(90deg, var(--primary-wash), var(--elevated) 48%); border-color: var(--primary); }
-.core-activity-understaffed {
-  border-color: color-mix(in srgb, var(--warning), transparent 35%);
-  background: linear-gradient(90deg, var(--warn-bg), var(--surface) 48%);
-  box-shadow: inset 4px 0 0 var(--warning);
-}
-.core-activity-understaffed:hover { background: linear-gradient(90deg, var(--warn-bg), var(--elevated) 48%); border-color: var(--warning); }
 .core-date {
   display: flex;
   flex-direction: column;

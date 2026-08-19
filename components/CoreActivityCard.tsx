@@ -25,7 +25,7 @@ export default function CoreActivityCard({
     && activity.accepted_callup_count < 9;
   const playersMissing = Math.max(0, 9 - activity.accepted_callup_count);
   return (
-    <Link href={href} className={`core-activity${activity.is_upcoming ? " core-activity-upcoming" : ""}${needsMoreAccepted ? " core-activity-understaffed" : ""}`}>
+    <Link href={href} className="core-activity">
       <time className="core-date" dateTime={activity.activity_date}>
         <strong>{String(day).padStart(2, "0")}</strong>
         <span>{monthLabel} {String(year).slice(-2)}</span>

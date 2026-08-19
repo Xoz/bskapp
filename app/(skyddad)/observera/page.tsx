@@ -42,6 +42,8 @@ export default async function ObservePage({
     const visibleActivities = selectedTeam
       ? activities.filter((activity) => activity.source_team === selectedTeam)
       : activities;
+    const upcomingActivities = visibleActivities.filter((activity) => activity.is_upcoming);
+    const playedActivities = visibleActivities.filter((activity) => !activity.is_upcoming);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -69,7 +71,17 @@ export default async function ObservePage({
           ))}
         </nav>
         <div className="core-list core-list-2">
-          {visibleActivities.map((activity) => (
+          {upcomingActivities.map((activity) => (
+            <CoreActivityCard
+              key={activity.id}
+              activity={activity}
+              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+            />
+          ))}
+          {upcomingActivities.length > 0 && playedActivities.length > 0 && (
+            <div className="core-list-divider"><span>Spelade matcher</span></div>
+          )}
+          {playedActivities.map((activity) => (
             <CoreActivityCard
               key={activity.id}
               activity={activity}
