@@ -32,13 +32,13 @@ export default function CoreActivityCard({
       </time>
       <div className="min-w-0 flex-1">
         {isSanktan ? (
-          <div className="core-match-meta">
+          <div className={`core-match-meta${needsMoreAccepted ? " core-match-meta-has-warning" : ""}`}>
             {activity.source_team && (
               <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
             )}
             {activity.competition_level && <span>{sanktanLevelLabel(activity.competition_level)}</span>}
-            {activity.start_time && <span className="core-match-time">{activity.start_time}</span>}
             {needsMoreAccepted && <span className="core-understaffed-badge">Saknar {playersMissing}</span>}
+            {activity.start_time && <span className="core-match-time">{activity.start_time}</span>}
           </div>
         ) : (
           <div className="core-tags">

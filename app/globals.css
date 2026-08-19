@@ -742,6 +742,8 @@ table.data-table tbody tr:hover {
 .core-tags { display: flex; align-items: center; gap: 8px; color: var(--ink-muted); font-size: 11px; }
 .core-match-meta { display: flex; align-items: center; gap: 8px; min-height: 25px; color: var(--ink-muted); font-size: 12px; font-weight: 650; }
 .core-match-time { margin-left: auto; color: var(--ink); font-size: 21px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.core-match-meta-has-warning .core-understaffed-badge { margin-left: auto; }
+.core-match-meta-has-warning .core-match-time { margin-left: 0; }
 .core-tag { font-weight: 700; }
 .core-tag-training { color: #69d58a; }
 .core-tag-match { color: #74a8ff; }
