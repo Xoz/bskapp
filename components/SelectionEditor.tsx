@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
-import { squadBalanceWarnings } from "@/lib/selectionSupport";
+import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 const SELECTION_GRID = "2rem minmax(13rem, 1fr) 7rem 7.25rem 7.25rem 5.25rem 5.75rem 8.75rem";
@@ -14,6 +14,8 @@ type Candidate = {
     position: string | null;
     preferred_position_primary: string;
     preferred_position_secondary: string;
+    preferred_level_primary: string;
+    preferred_level_secondary: string;
   };
   decision: "selected" | "reserve" | "rested";
   teams: { id: number; name: string }[];
@@ -21,20 +23,30 @@ type Candidate = {
   selectedLastThree: number;
   matchCount: number;
   callupCount: number;
+  plannedUpcomingCount: number;
+  lastSelectedDate: string | null;
+  currentCallupStatus: "accepted" | "declined" | "pending" | null;
   goals: { id: string; title: string }[];
   support: { opportunities: string[]; cautions: string[] };
 };
 
 export default function SelectionEditor({
   candidates,
+  sourceTeam,
+  matchLevel,
   action,
 }: {
   candidates: Candidate[];
+  sourceTeam: string | null;
+  matchLevel: number | null;
   action: (formData: FormData) => Promise<void>;
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "selected").map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
   const [teamFilter, setTeamFilter] = useState<string>("Alla");
+  const [recommendationReasons, setRecommendationReasons] = useState<Record<number, string>>({});
+  const [recommendationSummary, setRecommendationSummary] = useState<SelectionRecommendation | null>(null);
+  const [selectionBeforeRecommendation, setSelectionBeforeRecommendation] = useState<Set<number> | null>(null);
 
   const selected = useMemo(
     () => candidates.filter((candidate) => selectedIds.has(candidate.player.id)),
@@ -80,6 +92,44 @@ export default function SelectionEditor({
       else next.delete(playerId);
       return next;
     });
+    setRecommendationReasons((current) => {
+      if (!(playerId in current)) return current;
+      const next = { ...current };
+      delete next[playerId];
+      return next;
+    });
+    setRecommendationSummary(null);
+  }
+
+  function applyRecommendation() {
+    const recommendation = recommendYellowSelection({
+      matchLevel,
+      targetSize: Math.max(9, selectedIds.size),
+      candidates: candidates.map((candidate) => ({
+        id: candidate.player.id,
+        name: candidate.player.name,
+        teamNames: candidate.teams.map((team) => team.name),
+        callupCount: candidate.callupCount,
+        plannedUpcomingCount: candidate.plannedUpcomingCount,
+        lastSelectedDate: candidate.lastSelectedDate,
+        primaryLevel: candidate.player.preferred_level_primary,
+        secondaryLevel: candidate.player.preferred_level_secondary,
+        primaryPosition: candidate.player.preferred_position_primary || candidate.player.position || "",
+        secondaryPosition: candidate.player.preferred_position_secondary,
+        currentCallupStatus: candidate.currentCallupStatus,
+      })),
+    });
+    setSelectionBeforeRecommendation(new Set(selectedIds));
+    setSelectedIds(new Set(recommendation.selectedIds));
+    setRecommendationReasons(recommendation.reasons);
+    setRecommendationSummary(recommendation);
+  }
+
+  function undoRecommendation() {
+    if (selectionBeforeRecommendation) setSelectedIds(new Set(selectionBeforeRecommendation));
+    setSelectionBeforeRecommendation(null);
+    setRecommendationReasons({});
+    setRecommendationSummary(null);
   }
 
   return (
@@ -118,23 +168,41 @@ export default function SelectionEditor({
             <p className="selection-toolbar-title">Matchtrupp</p>
             <p className="selection-toolbar-subtitle">Välj spelare och ange position vid behov</p>
           </div>
-          <div className="selection-filter-group" role="group" aria-label="Filtrera spelare efter lag">
-            <span className="selection-filter-label">Lag</span>
-            <div className="core-team-filters selection-filter-pills">
-              {teamOptions.map((team) => (
-                <button
-                  key={team}
-                  type="button"
-                  className={`core-team-filter ${teamFilter === team ? "core-team-filter-active" : ""}`}
-                  data-team-tone={team === "Gul" ? "yellow" : team === "Grön" ? "green" : team === "F15" ? "blue" : undefined}
-                  onClick={() => setTeamFilter(team)}
-                >
-                  {team} <span>{team === "Alla" ? candidates.length : candidates.filter((candidate) => candidate.teams.some((candidateTeam) => candidateTeam.name === team)).length}</span>
-                </button>
-              ))}
+          <div className="selection-toolbar-tools">
+            {sourceTeam === "Gul" && (
+              <button type="button" className="selection-recommend-button" onClick={applyRecommendation}>
+                <span className="selection-recommend-icon" aria-hidden="true">↻</span>
+                {recommendationSummary ? "Räkna om förslag" : "Föreslå rättvis trupp"}
+              </button>
+            )}
+            <div className="selection-filter-group" role="group" aria-label="Filtrera spelare efter lag">
+              <span className="selection-filter-label">Lag</span>
+              <div className="core-team-filters selection-filter-pills">
+                {teamOptions.map((team) => (
+                  <button
+                    key={team}
+                    type="button"
+                    className={`core-team-filter ${teamFilter === team ? "core-team-filter-active" : ""}`}
+                    data-team-tone={team === "Gul" ? "yellow" : team === "Grön" ? "green" : team === "F15" ? "blue" : undefined}
+                    onClick={() => setTeamFilter(team)}
+                  >
+                    {team} <span>{team === "Alla" ? candidates.length : candidates.filter((candidate) => candidate.teams.some((candidateTeam) => candidateTeam.name === team)).length}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+        {recommendationSummary && (
+          <div className="selection-recommendation-notice" aria-live="polite">
+            <span className="selection-recommendation-mark" aria-hidden="true">✓</span>
+            <p>
+              <strong>Förslag klart</strong>
+              <span>{recommendationSummary.selectedIds.length} spelare · {recommendationSummary.yellowCount} Gul · {recommendationSummary.fillerCount} utfyllnad</span>
+            </p>
+            <button type="button" onClick={undoRecommendation}>Ångra</button>
+          </div>
+        )}
         <div className="selection-table-scroll">
           <div className="selection-table">
             <div className="selection-table-head" style={{ gridTemplateColumns: SELECTION_GRID }}>
@@ -150,6 +218,7 @@ export default function SelectionEditor({
             <ul className="selection-table-body">
               {visibleCandidates.map((candidate) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
+            const recommendationReason = recommendationReasons[candidate.player.id];
             const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
             return (
               <li key={candidate.player.id} className={`selection-row ${selectedForMatch ? "selection-row-selected" : ""}`}>
@@ -164,8 +233,13 @@ export default function SelectionEditor({
                     className="selection-checkbox"
                   />
                   <label htmlFor={`selected-${candidate.player.id}`} className="selection-player">
-                    <span className="selection-player-name">{candidate.player.name}</span>
-                    {selectedForMatch && <span className="selection-player-status">Vald</span>}
+                    <span className="selection-player-copy">
+                      <span className="selection-player-name">{candidate.player.name}</span>
+                      {recommendationReason && <small className="selection-player-reason">{recommendationReason}</small>}
+                    </span>
+                    {recommendationReason
+                      ? <span className="selection-player-status">Förslag</span>
+                      : selectedForMatch && <span className="selection-player-status selection-player-status-manual">Vald</span>}
                   </label>
                   <span className="selection-teams" title={teamNames}>
                     {candidate.teams.length > 0 ? candidate.teams.map((team) => <span key={team.id} className="selection-team-tag" data-team-tone={teamTone(team.name)}>{team.name}</span>) : <span className="selection-empty">—</span>}

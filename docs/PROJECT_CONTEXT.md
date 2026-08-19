@@ -37,6 +37,11 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
   forblir kalla. Uttagningsstodet ger enbart forklarbara mojligheter och
   balansvarningar, aldrig poang/ranking/automatval. Fas 4 har teknisk matning i
   `/idag`; verklig fyraveckorspilot aterstar och far inte slutmarkeras i fortid.
+- Uttagningen har sedan 2026-08-19 en explicit knappstyrd rekommendationsmotor
+  för Gulmatcher. Den rättvisejämför endast ordinarie Gulspelares Sanktan-
+  kallelser, räknar även redan planerade kommande uttagningar och använder F15
+  samt därefter Grön endast som utfyllnad. Förslaget är transparent, går att
+  ångra och sparas aldrig utan tränarens separata bekräftelse.
 - Designkorrigering 2026-08-18: kärnvyerna har ett lugnare, tätare visuellt
   språk med systemtypografi, mindre rubriker, kompakta aktivitets-/spelarkort,
   datumorientering och responsiva arbetsformulär. Ett separat leveransfel

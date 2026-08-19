@@ -89,7 +89,12 @@ export default async function SelectionPage({
         </div>
       </header>
 
-      <SelectionEditor candidates={workspace.candidates} action={saveAction} />
+      <SelectionEditor
+        candidates={workspace.candidates}
+        sourceTeam={workspace.activity.source_team}
+        matchLevel={workspace.activity.competition_level}
+        action={saveAction}
+      />
     </div>
   );
 }

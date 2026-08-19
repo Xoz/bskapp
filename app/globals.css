@@ -907,10 +907,21 @@ table.data-table tbody tr:hover {
 .selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 20px 15px; border-bottom: 1px solid var(--border); }
 .selection-toolbar-title { font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
 .selection-toolbar-subtitle { margin-top: 2px; color: var(--ink-muted); font-size: 11px; }
+.selection-toolbar-tools { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+.selection-recommend-button { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 6px 11px; border: 1px solid var(--primary-line); border-radius: 10px; background: var(--primary-wash); color: var(--primary); font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast); white-space: nowrap; }
+.selection-recommend-button:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--surface)); transform: translateY(-1px); }
+.selection-recommend-button:active { transform: translateY(0); }
+.selection-recommend-icon { font-size: 15px; line-height: 1; }
 .selection-filter-group { display: flex; align-items: center; gap: 10px; }
 .selection-filter-label { color: var(--ink-muted); font-size: 11px; font-weight: 700; }
 .selection-filter-pills { margin: 0; gap: 6px; }
 .selection-filter-pills .core-team-filter { min-height: 29px; padding: 5px 9px; font-size: 10px; }
+.selection-recommendation-notice { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--primary-line); background: var(--primary-wash); }
+.selection-recommendation-mark { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; background: var(--primary); color: var(--primary-deep); font-size: 12px; font-weight: 900; }
+.selection-recommendation-notice p { display: flex; align-items: baseline; gap: 9px; min-width: 0; font-size: 11px; }
+.selection-recommendation-notice p strong { color: var(--primary); }
+.selection-recommendation-notice p span { color: var(--ink-secondary); }
+.selection-recommendation-notice button { margin-left: auto; color: var(--primary); font-size: 11px; font-weight: 750; cursor: pointer; }
 .selection-table-scroll { overflow-x: auto; }
 .selection-table { min-width: 780px; }
 .selection-table-head, .selection-row-grid { display: grid; align-items: center; gap: 12px; }
@@ -925,8 +936,11 @@ table.data-table tbody tr:hover {
 .selection-row-grid { min-height: 48px; padding: 0 20px; }
 .selection-checkbox { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
 .selection-player { display: flex; align-items: center; gap: 8px; min-width: 0; cursor: pointer; }
+.selection-player-copy { display: flex; min-width: 0; flex-direction: column; justify-content: center; }
 .selection-player-name { overflow: hidden; color: var(--ink); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.selection-player-reason { overflow: hidden; margin-top: 1px; color: var(--primary); font-size: 9px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .selection-player-status { flex: 0 0 auto; padding: 2px 6px; border: 1px solid var(--primary-line); border-radius: 999px; background: var(--primary-wash); color: var(--primary); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.selection-player-status-manual { border-color: var(--border); background: var(--elevated); color: var(--ink-secondary); }
 .selection-teams { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
 .selection-team-tag { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 3px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink-secondary); font-size: 10px; font-weight: 750; line-height: 1.1; }
 .selection-team-tag[data-team-tone="yellow"] { border-color: color-mix(in srgb, #F5A524 62%, transparent); background: color-mix(in srgb, #F5A524 14%, var(--surface)); color: #FFD45D; }
@@ -947,11 +961,15 @@ table.data-table tbody tr:hover {
   .selection-summary-main { grid-column: 1 / -1; }
   .selection-summary-stat { min-height: 84px; }
   .selection-toolbar { align-items: flex-start; flex-direction: column; }
+  .selection-toolbar-tools { width: 100%; align-items: flex-start; flex-direction: column; }
+  .selection-recommend-button { width: 100%; justify-content: center; }
   .selection-filter-group { width: 100%; align-items: flex-start; flex-direction: column; gap: 7px; }
   .selection-filter-pills { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
   .selection-filter-pills .core-team-filter { flex: 0 0 auto; }
   .selection-table-head, .selection-row-grid { gap: 9px; }
   .selection-table-head, .selection-row-grid { padding-left: 14px; padding-right: 14px; }
+  .selection-recommendation-notice { padding-left: 14px; padding-right: 14px; }
+  .selection-recommendation-notice p { align-items: flex-start; flex-direction: column; gap: 0; }
   .selection-footer { padding-left: 14px; padding-right: 14px; }
 }
 

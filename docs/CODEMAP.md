@@ -66,7 +66,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
 - **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering samt uttagningsarbetsytan och 28-dagars pilotmått.
 - **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.
-- **selectionSupport.ts**: rena, testade möjlighets- och varningsmeningar för uttagning utan poäng, ranking eller automatval.
+- **selectionSupport.ts**: rena, testade möjlighets-/varningsmeningar samt `recommendYellowSelection`, en deterministisk och osparad trupprekommendation som rättvisejämför endast Gul och använder F15/Grön som utfyllnad.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvarohelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
 - **attendance.ts**: parser för Svenska Lag-filen `Närvarotillfällen per aktivitet & person`, inklusive datumtolkning, kategorisering och namnnormalisering.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**

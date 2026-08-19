@@ -4,7 +4,12 @@ import { all, get } from "./db";
 import { canAccessGroup, canAccessPlayer, getCurrentUser, isStaffRole } from "./auth";
 import { getPlayers, type Player } from "./queries";
 import { swedishDateOffset, swedishToday } from "./dates";
-import { selectionSupport, squadBalanceWarnings, type SelectionSupport } from "./selectionSupport";
+import {
+  selectionSupport,
+  squadBalanceWarnings,
+  type RecommendationCallupStatus,
+  type SelectionSupport,
+} from "./selectionSupport";
 
 export type CoreActivityType = "training" | "match" | "other";
 export type Evidence = "shown" | "practicing" | "revisit";
@@ -452,6 +457,8 @@ export type SelectionCandidate = PlayerCoreSummary & {
   selectedLastEight: number;
   selectedLastThree: number;
   lastSelectedDate: string | null;
+  plannedUpcomingCount: number;
+  currentCallupStatus: RecommendationCallupStatus;
   support: SelectionSupport;
 };
 
@@ -475,6 +482,8 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     selected_last_eight: number;
     selected_last_three: number;
     last_selected_date: string | null;
+    planned_upcoming_count: number;
+    current_callup_status: RecommendationCallupStatus;
     decision: "selected" | "reserve" | "rested" | null;
   }>(
     `WITH recent AS (
@@ -497,6 +506,38 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
             MAX(CASE
               WHEN ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.activity_date
             END) AS last_selected_date,
+            (
+              SELECT COUNT(DISTINCT future_sd.activity_id)
+              FROM development_selection_decisions future_sd
+              JOIN development_activities future_da ON future_da.id = future_sd.activity_id
+              WHERE future_sd.player_id = p.id
+                AND future_sd.decision = 'selected'
+                AND future_da.activity_type = 'match'
+                AND future_da.external_source = 'svenskalag_sanktan'
+                AND future_da.activity_date >= ?
+                AND future_da.id <> ?
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM development_activity_participation future_ap
+                  WHERE future_ap.activity_id = future_sd.activity_id
+                    AND future_ap.player_id = future_sd.player_id
+                    AND future_ap.source = 'svenskalag_callup'
+                    AND future_ap.selected = 1
+                )
+            ) AS planned_upcoming_count,
+            (
+              SELECT CASE
+                WHEN current_ap.attendance_status = 'present' THEN 'accepted'
+                WHEN current_ap.attendance_status = 'absent' THEN 'declined'
+                ELSE 'pending'
+              END
+              FROM development_activity_participation current_ap
+              WHERE current_ap.activity_id = ?
+                AND current_ap.player_id = p.id
+                AND current_ap.source = 'svenskalag_callup'
+                AND current_ap.selected = 1
+              LIMIT 1
+            ) AS current_callup_status,
             current_sd.decision
      FROM players p
      LEFT JOIN recent r ON TRUE
@@ -504,7 +545,15 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
      LEFT JOIN development_selection_decisions current_sd ON current_sd.activity_id = ? AND current_sd.player_id = p.id
      WHERE p.id IN (${idSql})
      GROUP BY p.id, current_sd.decision`,
-    [detail.activity.activity_date, activityId, activityId, ...ids]
+    [
+      detail.activity.activity_date,
+      activityId,
+      detail.activity.activity_date,
+      activityId,
+      activityId,
+      activityId,
+      ...ids,
+    ]
   );
   const history = new Map(rows.map((row) => [row.player_id, row]));
   const minimum = Math.min(...rows.map((row) => Number(row.selected_last_eight ?? 0)));
@@ -523,6 +572,8 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       selectedLastEight: signals.selectedLastEight,
       selectedLastThree: signals.selectedLastThree,
       lastSelectedDate: signals.lastSelectedDate,
+      plannedUpcomingCount: Number(row?.planned_upcoming_count ?? 0),
+      currentCallupStatus: row?.current_callup_status ?? null,
       support: selectionSupport(signals),
     };
   });
