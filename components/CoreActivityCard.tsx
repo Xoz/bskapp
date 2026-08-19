@@ -27,6 +27,7 @@ export default function CoreActivityCard({
       <div className="min-w-0 flex-1">
         <div className="core-tags">
           <span className={`core-tag core-tag-${activity.activity_type}`}>{TYPE_LABEL[activity.activity_type]}</span>
+          {activity.is_upcoming && <span className="badge badge-primary">Kommande</span>}
           {activity.source_team && (
             <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
           )}
@@ -36,7 +37,9 @@ export default function CoreActivityCard({
           {activity.start_time && <span>{activity.start_time}</span>}
         </div>
         <h3 className="core-activity-title">{activity.title}</h3>
-        {activity.activity_type === "match" && activity.participant_names.length > 0 ? (
+        {activity.is_upcoming ? (
+          <p className="core-activity-sub">Kommande Sanktanmatch</p>
+        ) : activity.activity_type === "match" && activity.participant_names.length > 0 ? (
           <p className="core-activity-players">
             <strong>Spelade ({activity.participant_names.length}):</strong> {activity.participant_names.join(", ")}
           </p>

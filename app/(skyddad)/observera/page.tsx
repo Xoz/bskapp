@@ -25,7 +25,7 @@ export default async function ObservePage({
   const { aktivitet } = await searchParams;
 
   if (!aktivitet) {
-    const activities = await getCoreActivities(80);
+    const activities = await getCoreActivities(80, "sanktan");
     return (
       <div className="core-page">
         <header className="core-header">
@@ -33,7 +33,7 @@ export default async function ObservePage({
           <p className="core-kicker">Snabb registrering</p>
           <h1 className="core-title">Observera</h1>
           <p className="core-lead">
-            Välj en aktivitet. Kalender och närvaro ligger kvar i Svenska Lag.
+            Spelade och kommande Sanktanmatcher direkt från Svenska Lag.
           </p>
           </div>
         </header>
@@ -74,13 +74,14 @@ export default async function ObservePage({
                 {detail.activity.source_team && (
                   <span className="core-team-tag" data-team-tone={teamTone}>{detail.activity.source_team}</span>
                 )}
+                {detail.activity.is_upcoming && <span className="badge badge-primary">Kommande</span>}
                 {isSanktan && detail.activity.competition_level && (
                   <span className="badge">Sanktan nivå {detail.activity.competition_level}</span>
                 )}
               </div>
             )}
           </div>
-          {detail.activity.activity_type === "match" && (
+          {detail.activity.activity_type === "match" && detail.activity.is_upcoming && (
             <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary">
               Till uttagningen
             </Link>
@@ -88,7 +89,7 @@ export default async function ObservePage({
         </div>
       </header>
 
-      {detail.activity.activity_type === "match" && (
+      {detail.activity.activity_type === "match" && !detail.activity.is_upcoming && (
         <section className="core-panel core-form-panel">
           <div className="core-section-head">
             <div><p className="core-kicker">Matchtrupp</p><h2 className="core-section-title mt-2">Spelare som spelade</h2></div>
@@ -120,7 +121,7 @@ export default async function ObservePage({
         <button type="submit" className="btn-secondary">Spara fokus</button>
       </form>
 
-      <section>
+      {!detail.activity.is_upcoming && <section>
         <div className="core-section-head">
           <div><p className="core-kicker">Målanknuten evidens</p><h2 className="core-section-title mt-2">Vad såg ni?</h2></div>
           <span className="core-section-note">Markera bara det som faktiskt observerades</span>
@@ -167,7 +168,7 @@ export default async function ObservePage({
             </div>
           </form>
         )}
-      </section>
+      </section>}
 
       {detail.observations.length > 0 && (
         <section>
