@@ -4,6 +4,10 @@ import { run } from "./db";
 
 /** Speglar externa referenser till utvecklingskärnan utan att ta över källans ansvar. */
 export async function syncDevelopmentSourceRows(): Promise<void> {
+  // Sanktan importeras separat med detaljerad matchhistorik från Svenska Lag.
+  // Behåll den äldre speglingen inaktiv så att olika datakällor inte blandas.
+  return;
+
   await run(`
     INSERT INTO development_activities (
       id, activity_date, start_time, activity_type, title,

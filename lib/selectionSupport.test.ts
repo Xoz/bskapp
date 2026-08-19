@@ -13,14 +13,14 @@ describe("transparent uttagningsstöd", () => {
       })
     ).toEqual({
       opportunities: [
-        "Ingen uttagning bland de senaste åtta matchtillfällena",
+        "Ingen spelad Sanktanmatch bland de senaste åtta matchtillfällena",
         "Har ett aktivt utvecklingsmål att observera",
       ],
       cautions: [],
     });
   });
 
-  it("varnar för tre raka uttagningar", () => {
+  it("varnar för tre raka Sanktanmatcher", () => {
     const result = selectionSupport({
       selectedLastEight: 5,
       selectedLastThree: 3,
@@ -28,7 +28,7 @@ describe("transparent uttagningsstöd", () => {
       activeGoalCount: 0,
       lastSelectedDate: "2026-08-15",
     });
-    expect(result.cautions).toContain("Har varit uttagen till tre matchtillfällen i följd");
+    expect(result.cautions).toContain("Har spelat tre Sanktanmatcher i följd");
   });
 
   it("visar lagbalans som varningar, inte automatval", () => {
