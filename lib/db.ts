@@ -639,10 +639,15 @@ async function init(): Promise<void> {
     );
     const subgroup = subgroupRows[0] ?? (await getClient().unsafe("SELECT id FROM groups WHERE group_type = 'subgroup' ORDER BY id LIMIT 1"))[0];
     if (subgroup?.id) {
-      await getClient().unsafe(
-        "INSERT INTO player_group_memberships (player_id, group_id, is_primary) SELECT id, $1, 1 FROM players ON CONFLICT DO NOTHING",
-        [subgroup.id]
-      );
+      // Lägg hela den odelade truppen i standardgruppen endast när gruppen
+      // faktiskt skapas första gången. Vid senare schemaändringar finns gruppen
+      // redan och befintliga Gul/Grön/F15-medlemskap får aldrig skrivas över.
+      if (subgroupRows[0]?.id) {
+        await getClient().unsafe(
+          "INSERT INTO player_group_memberships (player_id, group_id, is_primary) SELECT id, $1, 1 FROM players ON CONFLICT DO NOTHING",
+          [subgroup.id]
+        );
+      }
       await getClient().unsafe("UPDATE matches SET group_id = $1 WHERE group_id IS NULL", [subgroup.id]);
     }
   }
