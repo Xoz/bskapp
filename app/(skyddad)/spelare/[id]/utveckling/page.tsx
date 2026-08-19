@@ -7,12 +7,12 @@ import {
   getEvaluations,
   getLatestSelfEval,
   getPlayer,
+  getPlayerSkillNote,
   getPlayerSkillStatuses,
 } from "@/lib/queries";
-import { getNextPlanStep, DEVELOPMENT_PLAN_AREAS } from "@/lib/developmentPlan";
-import { skill as skillById, STATUS_LABEL } from "@/lib/skillTrappan";
+import { CATEGORIES, skill as skillById, STATUS_LABEL } from "@/lib/skillTrappan";
 import Avatar from "@/components/Avatar";
-import Utvecklingsplan3 from "@/components/Utvecklingsplan3";
+import UtvecklingChecklist from "@/components/UtvecklingChecklist";
 import { IconArrowLeft, IconPlus, IconSpark, IconTarget } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -32,8 +32,9 @@ export default async function PlayerDevelopmentPage({
   const player = await getPlayer(Number(id));
   if (!player || !player.active) notFound();
 
-  const [statuses, checkpoints, legacyEvaluations, selfEval, query] = await Promise.all([
+  const [statuses, note, checkpoints, legacyEvaluations, selfEval, query] = await Promise.all([
     getPlayerSkillStatuses(player.id),
+    getPlayerSkillNote(player.id),
     getDevelopmentCheckpoints(player.id),
     getEvaluations(player.id),
     getLatestSelfEval(player.id),
@@ -43,11 +44,9 @@ export default async function PlayerDevelopmentPage({
     await Promise.all(checkpoints.map(async (checkpoint) => [checkpoint.id, await getDevelopmentCheckpointSkills(checkpoint.id)] as const))
   );
   const latest = checkpoints[0] ?? null;
+  const latestSkills = latest ? checkpointSkills.get(latest.id) ?? [] : [];
+  const focusIds = latestSkills.filter((item) => item.is_focus).map((item) => item.skill_id);
   const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
-  const planFocus = DEVELOPMENT_PLAN_AREAS.map((area) => ({
-    area,
-    step: getNextPlanStep(area.id, statuses),
-  }));
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -81,7 +80,7 @@ export default async function PlayerDevelopmentPage({
 
       <nav className="flex flex-wrap gap-2" aria-label="Delar på utvecklingssidan">
         <a href="#oversikt" className="btn-secondary btn-sm">Översikt</a>
-        <a href="#fardigheter" className="btn-secondary btn-sm">Plan</a>
+        <a href="#fardigheter" className="btn-secondary btn-sm">Färdigheter</a>
         <a href="#historik" className="btn-secondary btn-sm">Avstämningar</a>
       </nav>
 
@@ -111,12 +110,13 @@ export default async function PlayerDevelopmentPage({
                 </span>
                 <h3 className="font-semibold">Nästa fokus</h3>
               </div>
-              <div className="space-y-1 mb-3">
-                {planFocus.map(({ area, step }) => (
-                  <p key={area.id} className="caption" style={{ color: step ? "var(--ink-secondary)" : "var(--success)" }}>
-                    {area.icon} {area.name}: {step ? step.label : "Klart"}
-                  </p>
-                ))}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {focusIds.map((skillId) => {
+                  const skill = skillById(skillId);
+                  const cat = skill ? CATEGORIES.find((item) => item.id === skill.category) : null;
+                  return skill ? <span key={skillId} className="badge badge-primary">{cat?.icon} {skill.title}</span> : null;
+                })}
+                {focusIds.length === 0 && <span className="caption" style={{ color: "var(--ink-muted)" }}>Inga fokusfärdigheter valda.</span>}
               </div>
               <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
                 {latest.focus_note || "Ingen särskild fokusanteckning."}
@@ -147,13 +147,19 @@ export default async function PlayerDevelopmentPage({
 
       <section id="fardigheter" className="scroll-mt-6 space-y-4">
         <div>
-          <p className="eyebrow">Plan</p>
-          <h2 className="text-xl font-semibold mt-0.5">3-stegs utvecklingsplan</h2>
+          <p className="eyebrow">Färdigheter</p>
+          <h2 className="text-xl font-semibold mt-0.5">Trädet och aktuellt nuläge</h2>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            Varje steg måste vara klarat innan nästa låses upp.
+            “Aktuellt” visar nästa olåsta steg i varje område. Öppna hela trädet när du behöver mer detalj.
           </p>
         </div>
-        <Utvecklingsplan3 playerId={player.id} initialStatuses={statuses} />
+        <UtvecklingChecklist
+          playerId={player.id}
+          firstName={firstName}
+          initialStatuses={statuses}
+          initialNote={note}
+          focusSkillIds={focusIds}
+        />
       </section>
 
       <section id="historik" className="scroll-mt-6 space-y-4">

@@ -8,8 +8,6 @@ import PilotStartField from "@/components/PilotStartField";
 import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
 import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
-import { getNextPlanStep, DEVELOPMENT_PLAN_AREAS } from "@/lib/developmentPlan";
-import { getPlayerSkillStatuses } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
@@ -32,11 +30,6 @@ export default async function PlayerPage({ params, searchParams }: {
   if (!core) notFound();
   const { mal } = await searchParams;
   const { summary, goalHistory, observations, matchHistory } = core;
-  const statuses = await getPlayerSkillStatuses(playerId);
-  const planFocus = DEVELOPMENT_PLAN_AREAS.map((area) => ({
-    area,
-    step: getNextPlanStep(area.id, statuses),
-  }));
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
@@ -59,7 +52,7 @@ export default async function PlayerPage({ params, searchParams }: {
             <span>{summary.callupCount} kallelser</span><span>{summary.periodsPlayed} perioder</span>
           </div>
         </div>
-        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Utvecklingsplan + historik</Link>
+        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
       </header>
 
       <details className="core-panel core-form-panel" open>
@@ -117,23 +110,6 @@ export default async function PlayerPage({ params, searchParams }: {
             <div className="flex items-end"><button type="submit" className="btn-primary">Lägg till mål</button></div>
           </form>
         )}
-      </details>
-
-      <details className="core-panel core-form-panel" open>
-        <summary className="core-section-head cursor-pointer list-none">
-          <div><p className="core-kicker">Plan</p><h2 className="core-section-title mt-2">3-stegs utveckling</h2></div>
-          <div className="flex items-center gap-3"><span className="core-section-note">Per område nästa steg</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
-        </summary>
-        <div className="core-list mt-4">
-          {planFocus.map(({ area, step }) => (
-            <article key={area.id} className="core-panel p-4">
-              <p className="font-semibold flex items-center gap-2"><span>{area.icon}</span> {area.name}</p>
-              <p className="caption mt-1" style={{ color: step ? "var(--ink-secondary)" : "var(--success)" }}>
-                {step ? step.label : "Klart"}
-              </p>
-            </article>
-          ))}
-        </div>
       </details>
 
       <details className="core-panel core-form-panel" open>
