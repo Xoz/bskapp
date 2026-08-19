@@ -21,7 +21,7 @@ export default async function SelectionPage({
   const { aktivitet } = await searchParams;
 
   if (!aktivitet) {
-    const matches = (await getCoreActivities(100)).filter((activity) => activity.activity_type === "match");
+    const matches = (await getCoreActivities(100, "sanktan")).filter((activity) => activity.is_upcoming);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -29,7 +29,7 @@ export default async function SelectionPage({
           <p className="core-kicker">Transparent beslutsstöd</p>
           <h1 className="core-title">Uttagning</h1>
           <p className="core-lead">
-            Appen visar exponering, utvecklingsmöjligheter och belastning. Tränaren väljer alltid laget.
+            Välj en kommande Sanktanmatch. Appen visar exponering, utvecklingsmöjligheter och belastning.
           </p>
           </div>
         </header>
@@ -54,7 +54,7 @@ export default async function SelectionPage({
   return (
     <div className="core-page">
       <header>
-        <Link href="/uttagning" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla matchtillfällen</Link>
+        <Link href="/uttagning" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla kommande Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
             <p className="core-kicker">{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</p>

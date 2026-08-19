@@ -402,8 +402,13 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
   warnings: string[];
 } | null> {
   const detail = await getActivityDetail(activityId);
-  if (!detail || detail.activity.activity_type !== "match") return null;
-  const ids = detail.players.map((row) => row.player.id);
+  if (!detail
+    || detail.activity.activity_type !== "match"
+    || detail.activity.external_source !== "svenskalag_sanktan"
+    || !detail.activity.is_upcoming
+  ) return null;
+  const candidateSummaries = await getPlayerCoreSummaries();
+  const ids = candidateSummaries.map((row) => row.player.id);
   if (ids.length === 0) return { activity: detail.activity, candidates: [], warnings: [] };
   const idSql = placeholders(ids);
   const rows = await all<{
@@ -417,7 +422,9 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
        SELECT id, activity_date,
               row_number() OVER (ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC) AS rn
        FROM development_activities
-       WHERE activity_type = 'match' AND activity_date <= ? AND id <> ?
+       WHERE activity_type = 'match'
+         AND external_source = 'svenskalag_sanktan'
+         AND activity_date <= ? AND id <> ?
        ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC
        LIMIT 8
      )
@@ -443,7 +450,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
   );
   const history = new Map(rows.map((row) => [row.player_id, row]));
   const minimum = Math.min(...rows.map((row) => Number(row.selected_last_eight ?? 0)));
-  const candidates: SelectionCandidate[] = detail.players.map((summary) => {
+  const candidates: SelectionCandidate[] = candidateSummaries.map((summary) => {
     const row = history.get(summary.player.id);
     const signals = {
       selectedLastEight: Number(row?.selected_last_eight ?? 0),

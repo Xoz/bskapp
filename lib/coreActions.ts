@@ -36,7 +36,9 @@ async function requireActivity(activityId: string) {
     id: string;
     activity_type: "training" | "match" | "other";
     group_id: number | null;
-  }>("SELECT id, activity_type, group_id FROM development_activities WHERE id = ?", [activityId]);
+    external_source: string;
+    activity_date: string;
+  }>("SELECT id, activity_type, group_id, external_source, activity_date FROM development_activities WHERE id = ?", [activityId]);
   if (!activity || !(await canAccessGroup(activity.group_id))) redirect("/idag?behorighet=saknas");
   return activity;
 }
@@ -278,7 +280,11 @@ export async function saveQuickObservations(activityId: string, formData: FormDa
 export async function saveDevelopmentSelection(activityId: string, formData: FormData) {
   await requireCorePermission("manage_squads");
   const activity = await requireActivity(activityId);
-  if (activity.activity_type !== "match") redirect("/uttagning?aktivitet=ogiltig");
+  if (
+    activity.activity_type !== "match"
+    || activity.external_source !== "svenskalag_sanktan"
+    || activity.activity_date <= swedishToday()
+  ) redirect("/uttagning?aktivitet=ogiltig");
   const actor = (await getCoachName()) ?? "Tränare";
   const accessiblePlayers = await getPlayers();
   const selected = new Set(formData.getAll("selected_player").map(Number));
