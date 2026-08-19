@@ -69,12 +69,12 @@ export default function SelectionEditor({
 
       <form action={action} className="core-list">
         <PilotStartField />
-        <ul className="mt-2 space-y-1">
+        <ul className="mt-2 divide-y divide-[var(--border)]">
           {candidates.map((candidate) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
             return (
-              <li key={candidate.player.id} className={`rounded-lg border px-3 py-2 ${selectedForMatch ? "border-[var(--primary)] bg-[var(--primary-soft)]" : "border-[var(--border)]"}`}>
-                <div className="flex flex-wrap items-center gap-2.5">
+              <li key={candidate.player.id} className={`py-1.5 text-sm ${selectedForMatch ? "bg-[var(--primary-soft)]" : ""}`}>
+                <div className="flex items-center gap-2">
                   <input
                     id={`selected-${candidate.player.id}`}
                     type="checkbox"
@@ -84,23 +84,25 @@ export default function SelectionEditor({
                     onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
                     className="h-4 w-4"
                   />
-                  <label htmlFor={`selected-${candidate.player.id}`} className="core-player-name whitespace-nowrap cursor-pointer">
+                  <label htmlFor={`selected-${candidate.player.id}`} className="whitespace-nowrap cursor-pointer flex-1">
                     {candidate.player.name}
                   </label>
-                  <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  <span className="caption text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>
                     {candidate.matchCount}
                   </span>
-                  <label className="flex items-center gap-1.5 ml-auto">
-                    <span className="sr-only">Position</span>
-                    <select
-                      name={`position_${candidate.player.id}`}
-                      className="input mt-0 w-28"
-                      value={positions[candidate.player.id] ?? ""}
-                      onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
-                    >
-                      {POSITIONS.map((position) => <option key={position || "none"} value={position}>{position || "Ej satt"}</option>)}
-                    </select>
-                  </label>
+                  {selectedForMatch && (
+                    <label className="flex items-center gap-1.5">
+                      <span className="sr-only">Position</span>
+                      <select
+                        name={`position_${candidate.player.id}`}
+                        className="input h-8 px-2 py-1 text-xs w-24"
+                        value={positions[candidate.player.id] ?? ""}
+                        onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
+                      >
+                        {POSITIONS.map((position) => <option key={position || "none"} value={position}>{position || "Ej satt"}</option>)}
+                      </select>
+                    </label>
+                  )}
                 </div>
               </li>
             );
