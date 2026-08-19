@@ -1765,7 +1765,7 @@ export async function syncSanktanCallupHistory(formData: FormData) {
     const called = new Set<number>();
     for (const name of match.called) {
       const player = yellowByName.get(normalizePersonName(String(name)));
-      if (!player || called.has(player.id)) redirect("/installningar?sanktan_kallelser=spelare#trupp");
+      if (!player || called.has(player.id)) redirect(`/installningar?sanktan_kallelser=spelare&sanktan_kallelse_match=${externalId}&sanktan_kallelse_index=${called.size}#trupp`);
       called.add(player.id);
       statements.push({
         sql: `INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
