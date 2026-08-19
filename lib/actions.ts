@@ -1584,6 +1584,109 @@ export async function syncSanktanMatchCounts(formData: FormData) {
   redirect(`/installningar?sanktan=ok&sanktan_spelare=${parsed.size}#trupp`);
 }
 
+export async function syncSanktanMatchHistory(formData: FormData) {
+  await requirePermission("manage_settings");
+  const season = Number(formData.get("season"));
+  const raw = String(formData.get("history") ?? "").trim();
+  if (!Number.isInteger(season) || season < 2020 || season > 2100 || !raw) {
+    redirect("/installningar?sanktan_historik=fel#trupp");
+  }
+
+  type ImportedMatch = {
+    id: string;
+    date: string;
+    time: string | null;
+    opponent: string;
+    homeAway: "home" | "away";
+    location: string | null;
+    sourceTeam: "Gul" | "Grön";
+    level: number;
+    href: string;
+    players: string[];
+  };
+  let imported: ImportedMatch[];
+  try {
+    imported = JSON.parse(raw) as ImportedMatch[];
+  } catch {
+    redirect("/installningar?sanktan_historik=fel#trupp");
+  }
+  if (!Array.isArray(imported) || imported.length === 0) {
+    redirect("/installningar?sanktan_historik=fel#trupp");
+  }
+
+  const activePlayers = await all<{ id: number; name: string }>(
+    "SELECT id, name FROM players WHERE active = 1 ORDER BY name"
+  );
+  const playersByName = new Map(activePlayers.map((player) => [normalizePersonName(player.name), player] as const));
+  const seenMatches = new Set<string>();
+  const historyCounts = new Map<string, number>();
+
+  for (const match of imported) {
+    if (
+      !match || !/^\d+$/.test(String(match.id)) || seenMatches.has(String(match.id))
+      || !new RegExp(`^${season}-\\d{2}-\\d{2}$`).test(String(match.date))
+      || !["Gul", "Grön"].includes(match.sourceTeam)
+      || ![2, 3, 4].includes(Number(match.level))
+      || !["home", "away"].includes(match.homeAway)
+      || !String(match.opponent ?? "").trim()
+      || !String(match.href ?? "").startsWith("/bollstanassk-fotboll-f2014-")
+      || !Array.isArray(match.players)
+    ) {
+      redirect("/installningar?sanktan_historik=fel#trupp");
+    }
+    seenMatches.add(String(match.id));
+    const seenPlayers = new Set<number>();
+    for (const name of match.players) {
+      const player = playersByName.get(normalizePersonName(name));
+      if (!player || seenPlayers.has(player.id)) redirect("/installningar?sanktan_historik=fel#trupp");
+      seenPlayers.add(player.id);
+      const key = `${player.id}:${match.sourceTeam}`;
+      historyCounts.set(key, (historyCounts.get(key) ?? 0) + 1);
+    }
+  }
+
+  const expectedCounts = await all<{ player_id: number; source_team: string; match_count: number }>(
+    `SELECT player_id, source_team, match_count
+     FROM player_competition_match_counts
+     WHERE season = ? AND competition = 'sanktan'`,
+    [season]
+  );
+  if (expectedCounts.length !== activePlayers.length * 2 || expectedCounts.some((row) =>
+    Number(row.match_count) !== (historyCounts.get(`${row.player_id}:${row.source_team}`) ?? 0)
+  )) {
+    redirect("/installningar?sanktan_historik=avvikelse#trupp");
+  }
+
+  const statements: { sql: string; args: (string | number | null)[] }[] = [{
+    sql: "DELETE FROM player_competition_matches WHERE season = ? AND competition = 'sanktan'",
+    args: [season],
+  }];
+  for (const match of imported) {
+    statements.push({
+      sql: `INSERT INTO player_competition_matches
+            (external_id, season, competition, source_team, level, match_date, start_time, opponent, home_away, location, source_url, updated_at)
+            VALUES (?, ?, 'sanktan', ?, ?, ?, ?, ?, ?, ?, ?, to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))`,
+      args: [String(match.id), season, match.sourceTeam, Number(match.level), match.date, match.time || null,
+        match.opponent.trim(), match.homeAway, match.location?.trim() || null, match.href],
+    });
+    for (const name of match.players) {
+      const player = playersByName.get(normalizePersonName(name));
+      if (!player) continue;
+      statements.push({
+        sql: "INSERT INTO player_competition_match_players (match_external_id, player_id) VALUES (?, ?)",
+        args: [String(match.id), player.id],
+      });
+    }
+  }
+  await batch(statements);
+
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  await logActivity(importedBy, "Synkade Sanktan-historik", `${season} · ${imported.length} matcher`);
+  revalidatePath("/installningar");
+  revalidatePath("/spelare");
+  redirect(`/installningar?sanktan_historik=ok&sanktan_matcher=${imported.length}#trupp`);
+}
+
 export async function resetColors() {
   await requirePermission("manage_settings");
   for (const [key, value] of Object.entries(DEFAULT_COLORS)) {

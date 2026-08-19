@@ -70,6 +70,18 @@ export type PlayerCoreSummary = {
   periodsPlayed: number;
 };
 
+export type CompetitionMatchHistory = {
+  external_id: string;
+  season: number;
+  source_team: "Gul" | "Grön";
+  level: number | null;
+  match_date: string;
+  start_time: string | null;
+  opponent: string;
+  home_away: "home" | "away";
+  location: string | null;
+};
+
 function placeholders(values: unknown[]): string {
   return values.map(() => "?").join(", ");
 }
@@ -235,12 +247,13 @@ export async function getPlayerCore(playerId: number): Promise<{
   summary: PlayerCoreSummary;
   goalHistory: DevelopmentGoal[];
   observations: DevelopmentObservation[];
+  matchHistory: CompetitionMatchHistory[];
 } | null> {
   if (!(await canAccessPlayer(playerId))) return null;
   const summaries = await getPlayerCoreSummaries();
   const summary = summaries.find((row) => row.player.id === playerId);
   if (!summary) return null;
-  const [goalHistory, observations] = await Promise.all([
+  const [goalHistory, observations, matchHistory] = await Promise.all([
     all<DevelopmentGoal>(
       `SELECT id, player_id, slot, title, evidence_hint, status, starts_on, review_on, ended_on, created_by
        FROM player_development_goals WHERE player_id = ?
@@ -260,8 +273,17 @@ export async function getPlayerCore(playerId: number): Promise<{
        LIMIT 40`,
       [playerId]
     ),
+    all<CompetitionMatchHistory>(
+      `SELECT pcm.external_id, pcm.season, pcm.source_team, pcm.level, pcm.match_date,
+              pcm.start_time, pcm.opponent, pcm.home_away, pcm.location
+       FROM player_competition_match_players pcmp
+       JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
+       WHERE pcmp.player_id = ? AND pcm.competition = 'sanktan'
+       ORDER BY pcm.match_date DESC, pcm.start_time DESC NULLS LAST, pcm.external_id DESC`,
+      [playerId]
+    ),
   ]);
-  return { summary, goalHistory, observations };
+  return { summary, goalHistory, observations, matchHistory };
 }
 
 export async function getActivityDetail(activityId: string): Promise<{

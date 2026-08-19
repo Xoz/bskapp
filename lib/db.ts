@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-sanktan-counts";
+const SCHEMA_VERSION = "2026-08-19-sanktan-history";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -280,6 +280,25 @@ async function init(): Promise<void> {
       match_count INTEGER NOT NULL DEFAULT 0 CHECK (match_count >= 0),
       updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
       PRIMARY KEY (player_id, season, competition, source_team)
+    )`,
+    `CREATE TABLE IF NOT EXISTS player_competition_matches (
+      external_id TEXT PRIMARY KEY,
+      season INTEGER NOT NULL,
+      competition TEXT NOT NULL,
+      source_team TEXT NOT NULL,
+      level INTEGER,
+      match_date TEXT NOT NULL,
+      start_time TEXT,
+      opponent TEXT NOT NULL,
+      home_away TEXT NOT NULL CHECK (home_away IN ('home', 'away')),
+      location TEXT,
+      source_url TEXT,
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
+    `CREATE TABLE IF NOT EXISTS player_competition_match_players (
+      match_external_id TEXT NOT NULL REFERENCES player_competition_matches(external_id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      PRIMARY KEY (match_external_id, player_id)
     )`,
     // Utvecklingsträdet (7v7 → 9v9): en rad per spelare/färdighet som klickas
     // i checklistan. skill_id pekar in i lib/skillTrappan.ts (statisk data, ingen tabell).

@@ -10,6 +10,11 @@ import { IconArrowLeft } from "@/components/Icons";
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
 
+function formatMatchDate(value: string) {
+  return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
+    .format(new Date(`${value}T12:00:00`));
+}
+
 export default async function PlayerPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ mal?: string }>;
@@ -22,7 +27,7 @@ export default async function PlayerPage({ params, searchParams }: {
   const core = await getPlayerCore(playerId);
   if (!core) notFound();
   const { mal } = await searchParams;
-  const { summary, goalHistory, observations } = core;
+  const { summary, goalHistory, observations, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
 
@@ -45,6 +50,33 @@ export default async function PlayerPage({ params, searchParams }: {
         </div>
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
       </header>
+
+      <section>
+        <div className="core-section-head">
+          <div><p className="core-kicker">Sanktan</p><h2 className="core-section-title mt-2">Matchhistorik</h2></div>
+          <span className="core-section-note">{matchHistory.length} spelade</span>
+        </div>
+        {matchHistory.length ? (
+          <div className="core-list core-list-2">
+            {matchHistory.map((match) => (
+              <article key={match.external_id} className="core-panel p-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="core-team-tag" data-team-tone={match.source_team === "Gul" ? "yellow" : "green"}>{match.source_team}</span>
+                  {match.level && <span className="badge">Nivå {match.level}</span>}
+                  <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>{match.home_away === "home" ? "Hemma" : "Borta"}</span>
+                </div>
+                <h3 className="mt-3">{match.opponent}</h3>
+                <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
+                  {formatMatchDate(match.match_date)}{match.start_time ? ` · ${match.start_time}` : ""}
+                </p>
+                {match.location && <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{match.location}</p>}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="core-panel p-5"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga spelade Sanktanmatcher registrerade.</p></div>
+        )}
+      </section>
 
       <section>
         <div className="core-section-head">

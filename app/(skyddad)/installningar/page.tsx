@@ -9,6 +9,7 @@ import {
   importCalendarMatches,
   importAttendanceWorkbook,
   syncSanktanMatchCounts,
+  syncSanktanMatchHistory,
   generatePlayerPin,
   generateCoachInvite,
   addCoachEmail,
@@ -73,6 +74,8 @@ export default async function SettingsPage({
     narvaro_matchade?: string;
     sanktan?: string;
     sanktan_spelare?: string;
+    sanktan_historik?: string;
+    sanktan_matcher?: string;
   }>;
 }) {
   const role = await getRole();
@@ -101,7 +104,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher } =
     await searchParams;
 
   return (
@@ -200,6 +203,26 @@ export default async function SettingsPage({
               {sanktan === "ofullstandig"
                 ? `Underlaget innehöll ${sanktan_spelare ?? "0"} av ${players.length} aktiva spelare. Ingen matchdata ändrades.`
                 : "Kunde inte läsa Sanktan-underlaget. Använd en rad per aktiv spelare: namn, Gul och Grön."}
+            </div>
+          )}
+          {sanktan_historik === "ok" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--ok-bg)", color: "var(--success)" }}
+            >
+              <IconCheck width={16} height={16} />
+              Detaljerad Sanktan-historik synkades för {sanktan_matcher ?? "0"} matcher.
+            </div>
+          )}
+          {sanktan_historik != null && sanktan_historik !== "ok" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
+            >
+              <IconAlert width={16} height={16} />
+              {sanktan_historik === "avvikelse"
+                ? "Matchhistoriken stämde inte med de synkade totalsiffrorna. Ingen historik ändrades."
+                : "Kunde inte läsa den detaljerade Sanktan-historiken. Ingen historik ändrades."}
             </div>
           )}
         </div>
@@ -600,6 +623,29 @@ export default async function SettingsPage({
                 </p>
                 <button type="submit" className="btn-primary">Synka Sanktanmatcher</button>
               </ConfirmForm>
+              <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--primary)" }}>
+                  Synka detaljerad matchhistorik
+                </summary>
+                <ConfirmForm
+                  action={syncSanktanMatchHistory}
+                  message="Ersätt befintlig detaljerad Sanktan-historik för den valda säsongen?"
+                  className="mt-4 space-y-3"
+                >
+                  <div>
+                    <label className="label" htmlFor="sanktan_history_season">Säsong</label>
+                    <input id="sanktan_history_season" name="season" type="number" min="2020" max="2100" defaultValue={new Date().getFullYear()} required className="input w-28" />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="sanktan_history">Matchhistorik (JSON)</label>
+                    <textarea id="sanktan_history" name="history" rows={10} required className="input font-mono text-sm" />
+                  </div>
+                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                    Historiken sparas bara om varje spelares deltaganden exakt stämmer med de synkade totalsiffrorna.
+                  </p>
+                  <button type="submit" className="btn-secondary">Synka matchhistorik</button>
+                </ConfirmForm>
+              </details>
             </div>
 
             <div className="card p-6 md:p-7 space-y-5">
