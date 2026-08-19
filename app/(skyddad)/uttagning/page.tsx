@@ -13,15 +13,20 @@ const POSITIONS = ["", "Målvakt", "Försvar", "Mittfält", "Anfall"];
 export default async function SelectionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aktivitet?: string }>;
+  searchParams: Promise<{ aktivitet?: string; lag?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("manage_squads")) redirect("/idag?behorighet=saknas");
-  const { aktivitet } = await searchParams;
+  const { aktivitet, lag } = await searchParams;
+  const selectedTeam = lag === "Gul" || lag === "Grön" ? lag : null;
+  const listHref = selectedTeam ? `/uttagning?lag=${encodeURIComponent(selectedTeam)}` : "/uttagning";
 
   if (!aktivitet) {
     const matches = (await getCoreActivities(100, "sanktan")).filter((activity) => activity.is_upcoming);
+    const visibleMatches = selectedTeam
+      ? matches.filter((activity) => activity.source_team === selectedTeam)
+      : matches;
     return (
       <div className="core-page">
         <header className="core-header">
@@ -33,12 +38,27 @@ export default async function SelectionPage({
           </p>
           </div>
         </header>
+        <nav className="core-team-filters" aria-label="Filtrera kommande Sanktanmatcher efter lag">
+          <Link href="/uttagning" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
+            Alla <span>{matches.length}</span>
+          </Link>
+          {(["Gul", "Grön"] as const).map((team) => (
+            <Link
+              key={team}
+              href={`/uttagning?lag=${encodeURIComponent(team)}`}
+              className={`core-team-filter ${selectedTeam === team ? "core-team-filter-active" : ""}`}
+              data-team-tone={team === "Gul" ? "yellow" : "green"}
+            >
+              {team} <span>{matches.filter((activity) => activity.source_team === team).length}</span>
+            </Link>
+          ))}
+        </nav>
         <div className="core-list core-list-2">
-          {matches.map((activity) => (
+          {visibleMatches.map((activity) => (
             <CoreActivityCard
               key={activity.id}
               activity={activity}
-              href={`/uttagning?aktivitet=${encodeURIComponent(activity.id)}`}
+              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
             />
           ))}
         </div>
@@ -54,7 +74,7 @@ export default async function SelectionPage({
   return (
     <div className="core-page">
       <header>
-        <Link href="/uttagning" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla kommande Sanktanmatcher</Link>
+        <Link href={listHref} className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla kommande Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
             <p className="core-kicker">{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</p>

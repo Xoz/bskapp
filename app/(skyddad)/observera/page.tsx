@@ -25,17 +25,22 @@ function endOfCurrentWeek(date: string) {
 export default async function ObservePage({
   searchParams,
 }: {
-  searchParams: Promise<{ aktivitet?: string }>;
+  searchParams: Promise<{ aktivitet?: string; lag?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("manage_evaluations")) redirect("/idag?behorighet=saknas");
-  const { aktivitet } = await searchParams;
+  const { aktivitet, lag } = await searchParams;
+  const selectedTeam = lag === "Gul" || lag === "Grön" ? lag : null;
+  const listHref = selectedTeam ? `/observera?lag=${encodeURIComponent(selectedTeam)}` : "/observera";
 
   if (!aktivitet) {
     const weekEnd = endOfCurrentWeek(swedishToday());
     const activities = (await getCoreActivities(80, "sanktan"))
       .filter((activity) => !activity.is_upcoming || activity.activity_date <= weekEnd);
+    const visibleActivities = selectedTeam
+      ? activities.filter((activity) => activity.source_team === selectedTeam)
+      : activities;
     return (
       <div className="core-page">
         <header className="core-header">
@@ -47,12 +52,27 @@ export default async function ObservePage({
           </p>
           </div>
         </header>
+        <nav className="core-team-filters" aria-label="Filtrera Sanktanmatcher efter lag">
+          <Link href="/observera" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
+            Alla <span>{activities.length}</span>
+          </Link>
+          {(["Gul", "Grön"] as const).map((team) => (
+            <Link
+              key={team}
+              href={`/observera?lag=${encodeURIComponent(team)}`}
+              className={`core-team-filter ${selectedTeam === team ? "core-team-filter-active" : ""}`}
+              data-team-tone={team === "Gul" ? "yellow" : "green"}
+            >
+              {team} <span>{activities.filter((activity) => activity.source_team === team).length}</span>
+            </Link>
+          ))}
+        </nav>
         <div className="core-list core-list-2">
-          {activities.map((activity) => (
+          {visibleActivities.map((activity) => (
             <CoreActivityCard
               key={activity.id}
               activity={activity}
-              href={`/observera?aktivitet=${encodeURIComponent(activity.id)}`}
+              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
             />
           ))}
         </div>
@@ -71,7 +91,7 @@ export default async function ObservePage({
   return (
     <div className="core-page">
       <header>
-        <Link href="/observera" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla Sanktanmatcher</Link>
+        <Link href={listHref} className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
             <p className="core-kicker">{detail.activity.activity_type === "training" ? "Träning" : detail.activity.activity_type === "match" ? "Match" : "Aktivitet"}</p>
