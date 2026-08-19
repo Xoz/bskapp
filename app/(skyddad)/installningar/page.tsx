@@ -14,6 +14,7 @@ import {
   removeCoachEmail,
   addPlayer,
   addPlayersBulk,
+  removePlayer,
   removeDemoPlayers,
   resetColors,
 } from "@/lib/actions";
@@ -28,6 +29,7 @@ import {
 } from "@/components/Icons";
 import { headers } from "next/headers";
 import SettingsSidebar from "@/components/SettingsSidebar";
+import ConfirmForm from "@/components/ConfirmForm";
 import { getCoachName, getCoachEmail } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -577,6 +579,19 @@ export default async function SettingsPage({
                         {(p as unknown as { pin?: string }).pin ? "Ny PIN" : "Generera PIN"}
                       </button>
                     </form>
+                    <ConfirmForm
+                      action={removePlayer}
+                      message={`Inaktivera ${p.name}? Spelaren försvinner från den aktiva truppen, men historiken behålls.`}
+                    >
+                      <input type="hidden" name="id" value={p.id} />
+                      <button
+                        type="submit"
+                        className="caption px-3 py-1.5 rounded-lg transition-colors"
+                        style={{ border: "1px solid var(--danger)", color: "var(--danger)", background: "transparent" }}
+                      >
+                        Inaktivera
+                      </button>
+                    </ConfirmForm>
                   </div>
                 ))}
                 {players.length === 0 && (
