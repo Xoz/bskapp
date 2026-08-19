@@ -109,13 +109,23 @@ export default function SelectionEditor({
             {teamOptions.map((team) => <option key={team} value={team}>{team}</option>)}
           </select>
         </div>
+        <div className="px-1 mb-1 grid items-center gap-2 min-w-0" style={{ gridTemplateColumns: "auto 1fr 7rem 2.6rem 2.6rem 2.2rem 2.2rem 7.5rem" }}>
+          <span />
+          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Spelare</span>
+          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Lag</span>
+          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Pos 1</span>
+          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Pos 2</span>
+          <span className="caption text-[10px] text-right" style={{ color: "var(--ink-muted)" }}>Matcher</span>
+          <span className="caption text-[10px] text-right" style={{ color: "var(--ink-muted)" }}>Kallelser</span>
+          <span className="caption text-[10px]" style={{ color: "var(--ink-muted)" }}>Vald position</span>
+        </div>
         <ul className="divide-y divide-[var(--border)] border border-transparent">
           {visibleCandidates.map((candidate) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
             const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
             return (
               <li key={candidate.player.id} className={`py-1 leading-4 text-[11px] ${selectedForMatch ? "bg-[var(--primary-soft)]" : ""}`}>
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="px-1 min-w-0 grid items-center gap-2" style={{ gridTemplateColumns: "auto 1fr 7rem 2.6rem 2.6rem 2.2rem 2.2rem 7.5rem" }}>
                   <input
                     id={`selected-${candidate.player.id}`}
                     type="checkbox"
