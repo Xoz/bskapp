@@ -489,19 +489,18 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
      )
      SELECT p.id AS player_id,
             COUNT(DISTINCT CASE
-              WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN r.id
+              WHEN ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.id
             END) AS selected_last_eight,
             COUNT(DISTINCT CASE
-              WHEN r.rn <= 3 AND COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN r.id
+              WHEN r.rn <= 3 AND ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.id
             END) AS selected_last_three,
             MAX(CASE
-              WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN r.activity_date
+              WHEN ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.activity_date
             END) AS last_selected_date,
             current_sd.decision
      FROM players p
      LEFT JOIN recent r ON TRUE
      LEFT JOIN development_activity_participation ap ON ap.activity_id = r.id AND ap.player_id = p.id
-     LEFT JOIN development_selection_decisions sd ON sd.activity_id = r.id AND sd.player_id = p.id
      LEFT JOIN development_selection_decisions current_sd ON current_sd.activity_id = ? AND current_sd.player_id = p.id
      WHERE p.id IN (${idSql})
      GROUP BY p.id, current_sd.decision`,

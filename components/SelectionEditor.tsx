@@ -11,7 +11,7 @@ type Candidate = {
   decision: "selected" | "reserve" | "rested";
   selectedLastEight: number;
   selectedLastThree: number;
-  selectedCount: number;
+  matchCount: number;
   goals: { id: string; title: string }[];
   support: { opportunities: string[]; cautions: string[] };
 };
@@ -99,8 +99,8 @@ export default function SelectionEditor({
                     <label htmlFor={`selected-${candidate.player.id}`} className="core-player-name cursor-pointer">{candidate.player.name}</label>
                   </div>
                   <div className="flex gap-3 mt-2 caption" style={{ color: "var(--ink-secondary)" }}>
-                    <span>{candidate.selectedLastEight}/8 senaste</span>
-                    <span>{candidate.selectedCount} totalt sparade</span>
+                    <span>{candidate.selectedLastEight}/8 senaste Sanktan</span>
+                    <span>{candidate.matchCount} Sanktanmatcher</span>
                   </div>
                   <label className="flex items-center gap-2 mt-3 caption">
                     <input

@@ -20,9 +20,9 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
   const cautions: string[] = [];
 
   if (signals.selectedLastEight === 0) {
-    opportunities.push("Ingen uttagning bland de senaste åtta matchtillfällena");
+    opportunities.push("Ingen spelad Sanktanmatch bland de senaste åtta matchtillfällena");
   } else if (signals.selectedLastEight <= signals.teamMinimumLastEight + 1) {
-    opportunities.push("Har färre uttagningar än många lagkamrater i den senaste perioden");
+    opportunities.push("Har spelat färre Sanktanmatcher än många lagkamrater i den senaste perioden");
   }
 
   if (signals.activeGoalCount > 0) {
@@ -34,7 +34,7 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
   }
 
   if (signals.selectedLastThree >= 3) {
-    cautions.push("Har varit uttagen till tre matchtillfällen i följd");
+    cautions.push("Har spelat tre Sanktanmatcher i följd");
   }
 
   return { opportunities, cautions };
