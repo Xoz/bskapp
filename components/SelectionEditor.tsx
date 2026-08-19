@@ -72,39 +72,51 @@ export default function SelectionEditor({
         <PilotStartField />
         {candidates.map((candidate) => {
           const selectedForMatch = selectedIds.has(candidate.player.id);
+          const opportunities = candidate.support.opportunities;
+          const cautions = candidate.support.cautions;
+          const goals = candidate.goals;
+          const opportunitiesText = opportunities.length === 0
+            ? "Inga särskilda möjligheter noterade"
+            : `${opportunities.slice(0, 2).join(" · ")}${opportunities.length > 2 ? ` +${opportunities.length - 2}` : ""}`;
+          const cautionsText = cautions.length === 0
+            ? "Inga särskilda varningar"
+            : `${cautions.slice(0, 2).join(" · ")}${cautions.length > 2 ? ` +${cautions.length - 2}` : ""}`;
+          const goalsText = goals.length === 0
+            ? "Inget aktivt mål i fokus"
+            : `${goals[0].title}${goals.length > 1 ? ` +${goals.length - 1}` : ""}`;
+
           return (
             <article key={candidate.player.id} className={`core-selection-card${selectedForMatch ? " core-selection-card-selected" : ""}`}>
-              <div className="grid lg:grid-cols-[minmax(210px,1fr)_minmax(260px,1.4fr)_220px] gap-4 items-start">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      id={`selected-${candidate.player.id}`}
-                      type="checkbox"
-                      name="selected_player"
-                      value={candidate.player.id}
-                      checked={selectedForMatch}
-                      onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
-                      className="h-5 w-5"
-                    />
-                    <label htmlFor={`selected-${candidate.player.id}`} className="core-player-name cursor-pointer">{candidate.player.name}</label>
-                  </div>
-                  <div className="flex gap-3 mt-2 caption" style={{ color: "var(--ink-secondary)" }}>
-                    <span>{candidate.selectedLastEight}/8 senaste Sanktan</span>
-                    <span>{candidate.matchCount} Sanktanmatcher</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {candidate.support.opportunities.map((reason) => <p key={reason} className="core-signal" style={{ background: "var(--ok-bg)" }}>Möjlighet: {reason}</p>)}
-                  {candidate.support.cautions.map((reason) => <p key={reason} className="core-signal" style={{ background: "var(--warn-bg)" }}>Tänk på: {reason}</p>)}
-                  {candidate.goals.map((goal) => <p key={goal.id} className="caption" style={{ color: "var(--ink-secondary)" }}>Mål: {goal.title}</p>)}
-                </div>
-
-                <label>
-                  <span className="caption">Position</span>
+              <div className="flex flex-wrap items-center gap-2.5 py-2">
+                <input
+                  id={`selected-${candidate.player.id}`}
+                  type="checkbox"
+                  name="selected_player"
+                  value={candidate.player.id}
+                  checked={selectedForMatch}
+                  onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor={`selected-${candidate.player.id}`} className="core-player-name whitespace-nowrap cursor-pointer">
+                  {candidate.player.name}
+                </label>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  {candidate.selectedLastEight}/8 senaste · {candidate.matchCount} matcher
+                </span>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Möj: {opportunitiesText}
+                </span>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Varning: {cautionsText}
+                </span>
+                <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Mål: {goalsText}
+                </span>
+                <label className="flex items-center gap-1.5 ml-auto">
+                  <span className="caption">Pos</span>
                   <select
                     name={`position_${candidate.player.id}`}
-                    className="input mt-1"
+                    className="input mt-0 w-28"
                     value={positions[candidate.player.id] ?? ""}
                     onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
                   >
