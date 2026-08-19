@@ -17,6 +17,8 @@ import { swedishToday } from "./dates";
 const EVIDENCE_VALUES = ["shown", "practicing", "revisit"] as const;
 const CHALLENGE_VALUES = ["safe", "balanced", "challenging"] as const;
 const GOAL_STATUS_VALUES = ["achieved", "paused"] as const;
+const POSITION_VALUES = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"] as const;
+const SANKTAN_LEVEL_VALUES = ["", "2", "3", "4"] as const;
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, values: readonly T[]): T | null {
   const candidate = String(value ?? "") as T;
@@ -331,4 +333,30 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   await logActivity(actor, "sparade utvecklingsuttagning", `${selected.size} uttagna`);
   revalidatePath(`/uttagning?aktivitet=${encodeURIComponent(activityId)}`);
   revalidatePath("/idag");
+}
+
+export async function savePlayerSelectionPreferences(playerId: number, formData: FormData) {
+  await requireCorePermission("manage_squads");
+  if (!(await canAccessPlayer(playerId))) redirect("/spelare");
+  const primaryPosition = enumValue(formData.get("preferred_position_primary"), POSITION_VALUES);
+  const secondaryPosition = enumValue(formData.get("preferred_position_secondary"), POSITION_VALUES);
+  const primaryLevel = enumValue(formData.get("preferred_level_primary"), SANKTAN_LEVEL_VALUES);
+  const secondaryLevel = enumValue(formData.get("preferred_level_secondary"), SANKTAN_LEVEL_VALUES);
+  if (primaryPosition === null || secondaryPosition === null || primaryLevel === null || secondaryLevel === null) return;
+
+  await run(
+    `UPDATE players
+     SET preferred_position_primary = ?, preferred_position_secondary = ?,
+         preferred_level_primary = ?, preferred_level_secondary = ?
+     WHERE id = ?`,
+    [
+      primaryPosition,
+      secondaryPosition === primaryPosition ? "" : secondaryPosition,
+      primaryLevel,
+      secondaryLevel === primaryLevel ? "" : secondaryLevel,
+      playerId,
+    ]
+  );
+  revalidatePath(`/spelare/${playerId}`);
+  revalidatePath("/uttagning");
 }

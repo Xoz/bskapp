@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-sanktan-kallelsesvar";
+const SCHEMA_VERSION = "2026-08-19-spelarpreferenser";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -80,6 +80,10 @@ async function init(): Promise<void> {
       name TEXT NOT NULL,
       jersey_number INTEGER,
       notes TEXT DEFAULT '',
+      preferred_position_primary TEXT NOT NULL DEFAULT '',
+      preferred_position_secondary TEXT NOT NULL DEFAULT '',
+      preferred_level_primary TEXT NOT NULL DEFAULT '',
+      preferred_level_secondary TEXT NOT NULL DEFAULT '',
       active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
@@ -435,6 +439,10 @@ async function init(): Promise<void> {
     `ALTER TABLE match_events ADD COLUMN created_at INTEGER`,
     `ALTER TABLE match_reporters ADD COLUMN last_seen INTEGER`,
     `ALTER TABLE players ADD COLUMN position TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN preferred_position_primary TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN preferred_position_secondary TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN preferred_level_primary TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN preferred_level_secondary TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN share_token TEXT`,
     // BIGINT, inte INTEGER: share_expires lagrar Date.now() i millisekunder
     // (13 siffror), som svämmar över Postgres 32-bitars INTEGER.

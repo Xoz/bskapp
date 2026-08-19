@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCore, type Evidence } from "@/lib/developmentCore";
-import { closeDevelopmentGoal, createDevelopmentGoal } from "@/lib/coreActions";
+import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
 import { IconArrowLeft } from "@/components/Icons";
@@ -10,6 +10,13 @@ import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
+const POSITION_OPTIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
+const LEVEL_OPTIONS = [
+  { value: "", label: "Ej satt" },
+  { value: "2", label: "Svår" },
+  { value: "3", label: "Medel" },
+  { value: "4", label: "Lätt" },
+];
 
 function formatMatchDate(value: string) {
   return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
@@ -30,7 +37,9 @@ export default async function PlayerPage({ params, searchParams }: {
   const { mal } = await searchParams;
   const { summary, goalHistory, observations, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
+  const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
+  const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
 
   return (
     <div className="core-page">
@@ -51,6 +60,29 @@ export default async function PlayerPage({ params, searchParams }: {
         </div>
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
       </header>
+
+      <section className="core-panel core-form-panel">
+        <div className="core-section-head">
+          <div><p className="core-kicker">Matchpreferenser</p><h2 className="core-section-title mt-2">Position och Sanktan-nivå</h2></div>
+          <span className="core-section-note">Första- och andraval</span>
+        </div>
+        {canSetSelectionPreferences ? (
+          <form action={savePreferences} className="grid md:grid-cols-2 gap-4 mt-4">
+            <label><span className="label">Position · förstaval</span><select name="preferred_position_primary" className="input mt-1" defaultValue={summary.player.preferred_position_primary}><option value="">Ej satt</option>{POSITION_OPTIONS.slice(1).map((position) => <option key={position} value={position}>{position}</option>)}</select></label>
+            <label><span className="label">Position · andraval</span><select name="preferred_position_secondary" className="input mt-1" defaultValue={summary.player.preferred_position_secondary}><option value="">Ej satt</option>{POSITION_OPTIONS.slice(1).map((position) => <option key={position} value={position}>{position}</option>)}</select></label>
+            <label><span className="label">Sanktan-nivå · förstaval</span><select name="preferred_level_primary" className="input mt-1" defaultValue={summary.player.preferred_level_primary}>{LEVEL_OPTIONS.map((level) => <option key={level.value || "none"} value={level.value}>{level.label}</option>)}</select></label>
+            <label><span className="label">Sanktan-nivå · andraval</span><select name="preferred_level_secondary" className="input mt-1" defaultValue={summary.player.preferred_level_secondary}>{LEVEL_OPTIONS.map((level) => <option key={level.value || "none"} value={level.value}>{level.label}</option>)}</select></label>
+            <div className="md:col-span-2 flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>
+          </form>
+        ) : (
+          <div className="core-player-chips mt-4">
+            <span className="badge">Position 1: {summary.player.preferred_position_primary || "Ej satt"}</span>
+            <span className="badge">Position 2: {summary.player.preferred_position_secondary || "Ej satt"}</span>
+            <span className="badge">Nivå 1: {sanktanLevelLabel(Number(summary.player.preferred_level_primary)) || "Ej satt"}</span>
+            <span className="badge">Nivå 2: {sanktanLevelLabel(Number(summary.player.preferred_level_secondary)) || "Ej satt"}</span>
+          </div>
+        )}
+      </section>
 
       <section>
         <div className="core-section-head">

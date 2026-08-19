@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
 import { squadBalanceWarnings } from "@/lib/selectionSupport";
 
-const POSITIONS = ["", "Målvakt", "Försvar", "Mittfält", "Anfall"];
+const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 
 type Candidate = {
-  player: { id: number; name: string; position: string | null };
+  player: { id: number; name: string; position: string | null; preferred_position_primary: string };
   decision: "selected" | "reserve" | "rested";
   selectedLastEight: number;
   selectedLastThree: number;
@@ -25,7 +25,7 @@ export default function SelectionEditor({
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "selected").map((candidate) => candidate.player.id)));
   const [reserveIds, setReserveIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "reserve").map((candidate) => candidate.player.id)));
-  const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.position ?? ""])) as Record<number, string>);
+  const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
 
   const selected = useMemo(
     () => candidates.filter((candidate) => selectedIds.has(candidate.player.id)),

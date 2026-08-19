@@ -14,6 +14,10 @@ export interface Player {
   notes: string;
   active: number;
   position: string;
+  preferred_position_primary: string;
+  preferred_position_secondary: string;
+  preferred_level_primary: string;
+  preferred_level_secondary: string;
   share_token: string | null;
   share_expires: number | null;
   level: string;
