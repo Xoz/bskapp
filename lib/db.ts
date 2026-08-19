@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-observera-sanktan";
+const SCHEMA_VERSION = "2026-08-19-sanktan-kallelsesvar";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -373,6 +373,14 @@ async function init(): Promise<void> {
       source TEXT NOT NULL DEFAULT 'manual',
       updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
       PRIMARY KEY (activity_id, player_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS development_activity_callup_summaries (
+      activity_id TEXT PRIMARY KEY REFERENCES development_activities(id) ON DELETE CASCADE,
+      accepted_count INTEGER NOT NULL DEFAULT 0 CHECK (accepted_count >= 0),
+      declined_count INTEGER NOT NULL DEFAULT 0 CHECK (declined_count >= 0),
+      pending_count INTEGER NOT NULL DEFAULT 0 CHECK (pending_count >= 0),
+      source TEXT NOT NULL DEFAULT 'svenskalag_callup',
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
     `CREATE TABLE IF NOT EXISTS development_observations (
       id TEXT PRIMARY KEY,

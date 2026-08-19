@@ -754,6 +754,10 @@ table.data-table tbody tr:hover {
 .core-activity-players strong { color: var(--ink-secondary); font-weight: 700; }
 .core-activity-declined { margin-top: 3px; color: var(--danger); font-size: 11px; line-height: 1.45; }
 .core-activity-declined strong { font-weight: 700; }
+.core-callup-summary { display: flex; flex-wrap: wrap; gap: 5px 11px; margin-top: 5px; color: var(--ink-muted); font-size: 11px; line-height: 1.45; }
+.core-callup-summary strong { color: var(--ink-secondary); font-weight: 750; }
+.core-callup-accepted { color: var(--primary); }
+.core-callup-declined { color: var(--danger); }
 .core-player-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .core-count { display: flex; flex-direction: column; align-items: center; min-width: 35px; color: var(--ink-muted); }
 .core-count strong { color: var(--ink); font-size: 15px; }

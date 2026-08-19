@@ -39,16 +39,12 @@ export default function CoreActivityCard({
         <h3 className="core-activity-title">{activity.title}</h3>
         {activity.is_upcoming ? (
           activity.called_player_names.length > 0 ? (
-            <>
-              <p className="core-activity-players">
-                <strong>Kallade ({activity.called_player_names.length}):</strong> {activity.called_player_names.join(", ")}
-              </p>
-              {activity.declined_player_names.length > 0 && (
-                <p className="core-activity-declined">
-                  <strong>Tackat nej ({activity.declined_player_names.length}):</strong> {activity.declined_player_names.join(", ")}
-                </p>
-              )}
-            </>
+            <div className="core-callup-summary" aria-label="Kallelsesvar">
+              <span><strong>{activity.called_player_names.length}</strong> kallade</span>
+              <span className="core-callup-accepted">{activity.accepted_callup_count} ja</span>
+              <span className="core-callup-declined">{activity.declined_callup_count} nej</span>
+              <span>{activity.pending_callup_count} inväntar svar</span>
+            </div>
           ) : <p className="core-activity-sub">Ingen kallelse registrerad ännu</p>
         ) : activity.activity_type === "match" && activity.participant_names.length > 0 ? (
           <p className="core-activity-players">

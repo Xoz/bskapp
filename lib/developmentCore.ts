@@ -30,6 +30,9 @@ export type CoreActivity = {
   participant_names: string[];
   called_player_names: string[];
   declined_player_names: string[];
+  accepted_callup_count: number;
+  declined_callup_count: number;
+  pending_callup_count: number;
   is_upcoming: boolean;
 };
 
@@ -137,6 +140,9 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             da.theme, da.challenge_context,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
+            COALESCE(dacs.accepted_count, 0) AS accepted_callup_count,
+            COALESCE(dacs.declined_count, 0) AS declined_callup_count,
+            COALESCE(dacs.pending_count, 0) AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -173,9 +179,11 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
      LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
+     LEFT JOIN development_activity_callup_summaries dacs ON dacs.activity_id = da.id
      WHERE ${scope.sql}
        ${sourceFilter}
-     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name
+     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name,
+              dacs.accepted_count, dacs.declined_count, dacs.pending_count
      ORDER BY
        CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
        CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,
@@ -371,6 +379,9 @@ export async function getActivityDetail(activityId: string): Promise<{
     `SELECT da.*,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
+            COALESCE(dacs.accepted_count, 0) AS accepted_callup_count,
+            COALESCE(dacs.declined_count, 0) AS declined_callup_count,
+            COALESCE(dacs.pending_count, 0) AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -404,6 +415,7 @@ export async function getActivityDetail(activityId: string): Promise<{
      LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
+     LEFT JOIN development_activity_callup_summaries dacs ON dacs.activity_id = da.id
      WHERE da.id = ?`,
     [activityId]
   );
