@@ -51,30 +51,30 @@ export default function SelectionEditor({
     <>
       <section className="core-panel core-form-panel">
         <div className="core-section-head">
-          <div><p className="core-kicker">Truppen just nu</p><h2 className="core-section-title mt-2">{selected.length} uttagna</h2></div>
+          <div><p className="core-kicker text-[11px]">Truppen just nu</p><h2 className="core-section-title mt-1 text-lg">{selected.length} uttagna</h2></div>
         </div>
         {selected.length > 0 ? (
-          <ol className="mt-3 pl-4 text-sm list-decimal space-y-0.5">
-            {selected.map((candidate) => <li key={candidate.player.id}>{candidate.player.name}</li>)}
-          </ol>
+          <p className="text-xs text-[var(--ink-muted)]" style={{ overflowWrap: "anywhere" }}>
+            {selected.map((candidate) => candidate.player.name).join(", ")}
+          </p>
         ) : (
-          <p className="body-small mt-3" style={{ color: "var(--ink-secondary)" }}>Markera en spelare för att lägga till henne i truppen.</p>
+          <p className="text-xs mt-2" style={{ color: "var(--ink-secondary)" }}>Markera en spelare för att lägga till henne i truppen.</p>
         )}
-        <ul className="mt-3 space-y-1">
+        <ul className="mt-2 space-y-0.5 text-[11px]">
           {warnings.map((warning) => (
-            <li key={warning} className="body-small" style={{ color: "var(--ink)" }}>{warning}</li>
+            <li key={warning} style={{ color: "var(--ink)" }}>{warning}</li>
           ))}
         </ul>
       </section>
 
-      <form action={action} className="core-list">
+      <form action={action} className="mt-2">
         <PilotStartField />
-        <ul className="mt-2 divide-y divide-[var(--border)]">
+        <ul className="divide-y divide-[var(--border)] border border-transparent">
           {candidates.map((candidate) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
             return (
-              <li key={candidate.player.id} className={`py-1.5 text-sm ${selectedForMatch ? "bg-[var(--primary-soft)]" : ""}`}>
-                <div className="flex items-center gap-2">
+              <li key={candidate.player.id} className={`py-1 leading-4 text-[11px] ${selectedForMatch ? "bg-[var(--primary-soft)]" : ""}`}>
+                <div className="flex items-center gap-2 min-w-0">
                   <input
                     id={`selected-${candidate.player.id}`}
                     type="checkbox"
@@ -82,12 +82,12 @@ export default function SelectionEditor({
                     value={candidate.player.id}
                     checked={selectedForMatch}
                     onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
-                    className="h-4 w-4"
+                    className="h-3.5 w-3.5 accent-[var(--primary)]"
                   />
-                  <label htmlFor={`selected-${candidate.player.id}`} className="whitespace-nowrap cursor-pointer flex-1">
+                  <label htmlFor={`selected-${candidate.player.id}`} className="whitespace-nowrap cursor-pointer flex-1 overflow-hidden text-ellipsis">
                     {candidate.player.name}
                   </label>
-                  <span className="caption text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>
+                  <span className="tabular-nums" style={{ color: "var(--ink-muted)", minWidth: "2rem", textAlign: "right" }}>
                     {candidate.matchCount}
                   </span>
                   {selectedForMatch && (
@@ -95,7 +95,7 @@ export default function SelectionEditor({
                       <span className="sr-only">Position</span>
                       <select
                         name={`position_${candidate.player.id}`}
-                        className="input h-8 px-2 py-1 text-xs w-24"
+                        className="input h-6 px-1.5 py-0.5 text-[11px] w-20"
                         value={positions[candidate.player.id] ?? ""}
                         onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
                       >
