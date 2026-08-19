@@ -7,7 +7,13 @@ import { squadBalanceWarnings } from "@/lib/selectionSupport";
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 
 type Candidate = {
-  player: { id: number; name: string; position: string | null; preferred_position_primary: string };
+  player: {
+    id: number;
+    name: string;
+    position: string | null;
+    preferred_position_primary: string;
+    preferred_position_secondary: string;
+  };
   decision: "selected" | "reserve" | "rested";
   teams: { id: number; name: string }[];
   selectedLastEight: number;
@@ -128,6 +134,20 @@ export default function SelectionEditor({
                     style={{ color: "var(--ink-muted)", maxWidth: "8.5rem" }}
                   >
                     {teamNames}
+                  </span>
+                  <span
+                    className="text-[10px] text-ellipsis overflow-hidden whitespace-nowrap"
+                    title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}
+                    style={{ color: "var(--ink-muted)", minWidth: "2.7rem", textAlign: "left" }}
+                  >
+                    {candidate.player.preferred_position_primary || "—"}
+                  </span>
+                  <span
+                    className="text-[10px] text-ellipsis overflow-hidden whitespace-nowrap"
+                    title={`Val 2: ${candidate.player.preferred_position_secondary || "Ej satt"}`}
+                    style={{ color: "var(--ink-muted)", minWidth: "2.7rem", textAlign: "left" }}
+                  >
+                    {candidate.player.preferred_position_secondary || "—"}
                   </span>
                   <span className="tabular-nums" style={{ color: "var(--ink-muted)", minWidth: "2rem", textAlign: "right" }}>
                     {candidate.matchCount}
