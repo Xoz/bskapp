@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlayerSession } from "@/lib/auth";
 import { getLatestDevelopmentCheckpoint, getPlayer, getPlayerSkillStatuses } from "@/lib/queries";
-import { skill as skillById } from "@/lib/skillTrappan";
-import UtvecklingChecklist from "@/components/UtvecklingChecklist";
+import { getNextPlanStep, DEVELOPMENT_PLAN_AREAS } from "@/lib/developmentPlan";
+import Utvecklingsplan3 from "@/components/Utvecklingsplan3";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,10 @@ export default async function MittUtvecklingstradPage() {
     getLatestDevelopmentCheckpoint(playerId),
   ]);
   const firstName = player.name.split(" ")[0];
-  const focusIds = latest?.skills.filter((skill) => skill.is_focus).map((skill) => skill.skill_id) ?? [];
+  const planFocus = DEVELOPMENT_PLAN_AREAS.map((area) => ({
+    area,
+    step: getNextPlanStep(area.id, statuses),
+  }));
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto px-5 py-8">
@@ -51,20 +54,22 @@ export default async function MittUtvecklingstradPage() {
           </div>
           <div className="card p-5">
             <p className="eyebrow mb-2">Det här tränar du på nu</p>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {focusIds.map((id) => {
-                const skill = skillById(id);
-                return skill ? <span key={id} className="badge badge-primary">{skill.title}</span> : null;
-              })}
+            <div className="space-y-1">
+              {planFocus.map(({ area, step }) => (
+                <p key={area.id} className="caption" style={{ color: step ? "var(--ink-secondary)" : "var(--success)" }}>
+                  {area.icon} {area.name}: {step ? step.label : "Klart"}
+                </p>
+              ))}
             </div>
-            <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
+            <p className="body-small mt-2 whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
               {latest.focus_note || "Fortsätt träna och våga prova – din tränare fyller på med nästa fokus."}
             </p>
           </div>
         </div>
       )}
 
-      <UtvecklingChecklist playerId={player.id} firstName={firstName} initialStatuses={statuses} focusSkillIds={focusIds} readOnly />
+      <Utvecklingsplan3 playerId={player.id} initialStatuses={statuses} readOnly />
     </div>
   );
 }
+

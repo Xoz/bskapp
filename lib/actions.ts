@@ -20,6 +20,7 @@ import {
 } from "./auth";
 import { ALL_SKILLS } from "./svff";
 import { SKILLS, STATUS_ORDER, type SkillStatus, type StatusMap } from "./skillTrappan";
+import { DEVELOPMENT_PLAN_STEP_IDS } from "./developmentPlan";
 import { STAT_IDS, LIVE_COUNT_IDS } from "./stats";
 import { OPPONENT_GOAL } from "./liveTypes";
 import { fetchCalendar, extractMatches, calendarName, calendarGroup } from "./ical";
@@ -1785,6 +1786,19 @@ export async function setSkillStatus(playerId: number, skillId: string, status: 
   );
   revalidatePath(`/spelare/${playerId}/utveckling`);
   revalidatePath("/utveckling");
+  revalidatePath("/mitt-utvecklingstrad");
+}
+
+export async function setDevelopmentPlanStepStatus(playerId: number, stepId: string, status: SkillStatus): Promise<void> {
+  if (!STATUS_ORDER.includes(status) || !DEVELOPMENT_PLAN_STEP_IDS.includes(stepId)) return;
+  await requirePlayerPermission("manage_evaluations", playerId);
+  await run(
+    `INSERT INTO player_skill_status (player_id, skill_id, status, updated_at)
+     VALUES (?, ?, ?, to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+     ON CONFLICT (player_id, skill_id) DO UPDATE SET status = EXCLUDED.status, updated_at = EXCLUDED.updated_at`,
+    [playerId, stepId, status]
+  );
+  revalidatePath(`/spelare/${playerId}/utveckling`);
   revalidatePath("/mitt-utvecklingstrad");
 }
 
