@@ -25,18 +25,18 @@ export interface Category {
 }
 
 export const CATEGORIES: Category[] = [
-  { id: "bollkontroll", name: "Bollkontroll", short: "Kontroll", icon: "⚽", color: "#1fba8a" },
-  { id: "driva", name: "Driva bollen", short: "Driva", icon: "🏃", color: "#4d8ef0" },
-  { id: "vandning", name: "Vända och byta riktning", short: "Vändning", icon: "🔄", color: "#a78bfa" },
-  { id: "passning", name: "Passning", short: "Passning", icon: "🎯", color: "#f59e0b" },
-  { id: "mottagning", name: "Mottagning / första touch", short: "Mottagning", icon: "🤲", color: "#22d3ee" },
-  { id: "skott", name: "Skott och avslut", short: "Avslut", icon: "🥅", color: "#f87171" },
-  { id: "1v1_off", name: "1 mot 1 offensivt", short: "1v1 off", icon: "💥", color: "#f472b6" },
-  { id: "1v1_def", name: "1 mot 1 defensivt", short: "1v1 def", icon: "🛡️", color: "#818cf8" },
-  { id: "spelforstaelse", name: "Spelförståelse", short: "Spelförståelse", icon: "🧠", color: "#a3e635" },
-  { id: "positionsspel", name: "Positionsspel 7v7/9v9", short: "Position", icon: "📍", color: "#fb923c" },
-  { id: "kommunikation", name: "Kommunikation", short: "Kommunikation", icon: "🗣️", color: "#86efac" },
-  { id: "matchbeteende", name: "Matchbeteende", short: "Matchbeteende", icon: "🔥", color: "#facc15" },
+  { id: "bollkontroll", name: "Bollkontroll", short: "Kontroll", icon: "BK", color: "#1fba8a" },
+  { id: "driva", name: "Driva bollen", short: "Driva", icon: "DRV", color: "#4d8ef0" },
+  { id: "vandning", name: "Vända och byta riktning", short: "Vändning", icon: "VND", color: "#a78bfa" },
+  { id: "passning", name: "Passning", short: "Passning", icon: "PAS", color: "#f59e0b" },
+  { id: "mottagning", name: "Mottagning / första touch", short: "Mottagning", icon: "MOT", color: "#22d3ee" },
+  { id: "skott", name: "Skott och avslut", short: "Avslut", icon: "SKT", color: "#f87171" },
+  { id: "1v1_off", name: "1 mot 1 offensivt", short: "1v1 off", icon: "1V1", color: "#f472b6" },
+  { id: "1v1_def", name: "1 mot 1 defensivt", short: "1v1 def", icon: "1V1D", color: "#818cf8" },
+  { id: "spelforstaelse", name: "Spelförståelse", short: "Spelförståelse", icon: "SPF", color: "#a3e635" },
+  { id: "positionsspel", name: "Positionsspel 7v7/9v9", short: "Position", icon: "POS", color: "#fb923c" },
+  { id: "kommunikation", name: "Kommunikation", short: "Kommunikation", icon: "KOM", color: "#86efac" },
+  { id: "matchbeteende", name: "Matchbeteende", short: "Matchbeteende", icon: "MB", color: "#facc15" },
 ];
 
 export function category(id: CategoryId): Category {

@@ -101,7 +101,7 @@ export default async function MinProfilPage() {
           {latestEval.strengths && (
             <div>
               <p className="caption font-semibold mb-1" style={{ color: "var(--primary)" }}>
-                ⭐ Dina styrkor
+                Dina styrkor
               </p>
               <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
                 {latestEval.strengths}
@@ -112,7 +112,7 @@ export default async function MinProfilPage() {
           {latestEval.development_goals && (
             <div>
               <p className="caption font-semibold mb-1" style={{ color: "var(--ink-secondary)" }}>
-                🎯 Nästa steg
+                Nästa steg
               </p>
               <p className="body-small leading-relaxed" style={{ color: "var(--ink-secondary)" }}>
                 {latestEval.development_goals}
@@ -128,7 +128,7 @@ export default async function MinProfilPage() {
           className="btn-primary w-full flex items-center justify-center gap-2"
           style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
         >
-          🌱 Min utveckling
+          Min utveckling
         </a>
 
         {/* Logga ut */}

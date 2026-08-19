@@ -106,7 +106,9 @@ export default function UtvecklingChecklist({
               <p className="caption" style={{ color: "var(--ink-secondary)" }}>{next.question}</p>
             </>
           ) : (
-            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>Allt klart – grymt jobbat! 🎉</p>
+            <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
+              Allt klart – grymt jobbat!
+            </p>
           )}
         </div>
       </div>
@@ -239,7 +241,7 @@ export default function UtvecklingChecklist({
 
                       {!unlocked ? (
                         <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                          🔒 Lås upp genom att klara föregående steg.
+                          Lås upp genom att klara föregående steg.
                         </p>
                       ) : (
                         <>
