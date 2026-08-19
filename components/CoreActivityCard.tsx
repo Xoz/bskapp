@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CoreActivity } from "@/lib/developmentCore";
+import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 
 const TYPE_LABEL: Record<CoreActivity["activity_type"], string> = {
   training: "Träning",
@@ -38,7 +39,7 @@ export default function CoreActivityCard({
             <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
           )}
           {isSanktan && activity.competition_level && (
-            <span className="badge">Sanktan nivå {activity.competition_level}</span>
+            <span className="badge">Sanktan {sanktanLevelLabel(activity.competition_level)}</span>
           )}
           {activity.start_time && <span>{activity.start_time}</span>}
         </div>

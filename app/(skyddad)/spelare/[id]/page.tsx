@@ -6,6 +6,7 @@ import { closeDevelopmentGoal, createDevelopmentGoal } from "@/lib/coreActions";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
 import { IconArrowLeft } from "@/components/Icons";
+import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
@@ -62,7 +63,7 @@ export default async function PlayerPage({ params, searchParams }: {
               <article key={match.external_id} className="core-panel p-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="core-team-tag" data-team-tone={match.source_team === "Gul" ? "yellow" : "green"}>{match.source_team}</span>
-                  {match.level && <span className="badge">Nivå {match.level}</span>}
+                  {match.level && <span className="badge">Sanktan {sanktanLevelLabel(match.level)}</span>}
                   <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>{match.home_away === "home" ? "Hemma" : "Borta"}</span>
                 </div>
                 <h3 className="mt-3">{match.opponent}</h3>

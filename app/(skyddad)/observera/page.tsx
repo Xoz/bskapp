@@ -4,6 +4,7 @@ import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
 import { saveActivityContext, saveQuickObservations } from "@/lib/coreActions";
 import { swedishToday } from "@/lib/dates";
+import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import CoreActivityCard from "@/components/CoreActivityCard";
 import PilotStartField from "@/components/PilotStartField";
 
@@ -106,7 +107,7 @@ export default async function ObservePage({
                 )}
                 {detail.activity.is_upcoming && <span className="badge badge-primary">Kommande</span>}
                 {isSanktan && detail.activity.competition_level && (
-                  <span className="badge">Sanktan nivå {detail.activity.competition_level}</span>
+                  <span className="badge">Sanktan {sanktanLevelLabel(detail.activity.competition_level)}</span>
                 )}
               </div>
             )}
