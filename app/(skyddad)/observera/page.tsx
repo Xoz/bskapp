@@ -115,6 +115,30 @@ export default async function ObservePage({
         </section>
       )}
 
+      {detail.activity.activity_type === "match" && detail.activity.is_upcoming && (
+        <section className="core-panel core-form-panel">
+          <div className="core-section-head">
+            <div><p className="core-kicker">Kallelse från Svenska Lag</p><h2 className="core-section-title mt-2">Kallade spelare</h2></div>
+            <span className="core-section-note">{detail.activity.called_player_names.length} kallade</span>
+          </div>
+          {detail.activity.called_player_names.length > 0 ? (
+            <div className="core-player-chips mt-4">
+              {detail.activity.called_player_names.map((name) => <span key={name} className="badge">{name}</span>)}
+            </div>
+          ) : (
+            <p className="body-small mt-4" style={{ color: "var(--ink-secondary)" }}>Ingen kallelse är registrerad ännu.</p>
+          )}
+          {detail.activity.declined_player_names.length > 0 && (
+            <div className="mt-5">
+              <p className="label" style={{ color: "var(--danger)" }}>Tackat nej ({detail.activity.declined_player_names.length})</p>
+              <div className="core-player-chips mt-2">
+                {detail.activity.declined_player_names.map((name) => <span key={name} className="badge">{name}</span>)}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       <form action={contextAction} className="core-panel core-form-panel grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
         <label className="block">
           <span className="label">Aktivitetens fokus</span>

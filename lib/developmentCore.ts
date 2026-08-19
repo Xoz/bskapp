@@ -28,6 +28,8 @@ export type CoreActivity = {
   source_team: string | null;
   competition_level: number | null;
   participant_names: string[];
+  called_player_names: string[];
+  declined_player_names: string[];
   is_upcoming: boolean;
 };
 
@@ -70,6 +72,7 @@ export type PlayerCoreSummary = {
   hasSanktanSync: boolean;
   sanktanGulCount: number;
   sanktanGronCount: number;
+  callupCount: number;
   selectedCount: number;
   periodsPlayed: number;
 };
@@ -142,6 +145,24 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
               ORDER BY p2.name
             ) AS participant_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id
+                AND ap2.source = 'svenskalag_callup'
+                AND ap2.selected = 1
+              ORDER BY p2.name
+            ) AS called_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id
+                AND ap2.source = 'svenskalag_callup'
+                AND ap2.attendance_status = 'absent'
+              ORDER BY p2.name
+            ) AS declined_player_names,
             COUNT(DISTINCT o.id) AS observation_count,
             COUNT(DISTINCT CASE WHEN ap.attendance_status = 'present' THEN ap.player_id END) AS participant_count,
             COUNT(DISTINCT CASE WHEN sd.decision = 'selected' THEN sd.player_id END) AS selection_count
@@ -210,6 +231,7 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
       has_sanktan_sync: boolean;
       sanktan_gul_count: number;
       sanktan_gron_count: number;
+      callup_count: number;
       selected_count: number;
       periods_played: number;
     }>(
@@ -239,6 +261,12 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
                 WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Grön'
                   AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
               ), 0) AS sanktan_gron_count,
+              COUNT(DISTINCT CASE
+                WHEN da.external_source = 'svenskalag_sanktan'
+                 AND ap.source = 'svenskalag_callup'
+                 AND ap.selected = 1
+                THEN da.id
+              END) AS callup_count,
               COUNT(DISTINCT CASE WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN da.id END) AS selected_count,
               COALESCE(SUM(ap.periods_played), 0) AS periods_played
        FROM players p
@@ -284,6 +312,7 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
       hasSanktanSync: Boolean(row?.has_sanktan_sync),
       sanktanGulCount: Number(row?.sanktan_gul_count ?? 0),
       sanktanGronCount: Number(row?.sanktan_gron_count ?? 0),
+      callupCount: Number(row?.callup_count ?? 0),
       selectedCount: Number(row?.selected_count ?? 0),
       periodsPlayed: Number(row?.periods_played ?? 0),
     };
@@ -350,6 +379,24 @@ export async function getActivityDetail(activityId: string): Promise<{
               WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
               ORDER BY p2.name
             ) AS participant_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id
+                AND ap2.source = 'svenskalag_callup'
+                AND ap2.selected = 1
+              ORDER BY p2.name
+            ) AS called_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id
+                AND ap2.source = 'svenskalag_callup'
+                AND ap2.attendance_status = 'absent'
+              ORDER BY p2.name
+            ) AS declined_player_names,
             (SELECT COUNT(*) FROM development_observations o WHERE o.activity_id = da.id) AS observation_count,
             (SELECT COUNT(*) FROM development_activity_participation ap WHERE ap.activity_id = da.id AND ap.attendance_status = 'present') AS participant_count,
             (SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected') AS selection_count

@@ -315,7 +315,11 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
               selected = excluded.selected,
               periods_played = excluded.periods_played,
               position = excluded.position,
-              source = 'manual',
+              source = CASE
+                WHEN development_activity_participation.source = 'svenskalag_callup'
+                THEN development_activity_participation.source
+                ELSE 'manual'
+              END,
               updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
       args: [activityId, player.id, decision === "selected" ? 1 : 0, periods, position],
     });

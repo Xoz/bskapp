@@ -38,7 +38,18 @@ export default function CoreActivityCard({
         </div>
         <h3 className="core-activity-title">{activity.title}</h3>
         {activity.is_upcoming ? (
-          <p className="core-activity-sub">Kommande Sanktanmatch</p>
+          activity.called_player_names.length > 0 ? (
+            <>
+              <p className="core-activity-players">
+                <strong>Kallade ({activity.called_player_names.length}):</strong> {activity.called_player_names.join(", ")}
+              </p>
+              {activity.declined_player_names.length > 0 && (
+                <p className="core-activity-declined">
+                  <strong>Tackat nej ({activity.declined_player_names.length}):</strong> {activity.declined_player_names.join(", ")}
+                </p>
+              )}
+            </>
+          ) : <p className="core-activity-sub">Ingen kallelse registrerad ännu</p>
         ) : activity.activity_type === "match" && activity.participant_names.length > 0 ? (
           <p className="core-activity-players">
             <strong>Spelade ({activity.participant_names.length}):</strong> {activity.participant_names.join(", ")}

@@ -45,7 +45,7 @@ export default async function PlayerPage({ params, searchParams }: {
             <span title={summary.hasSanktanSync ? `Gul ${summary.sanktanGulCount} · Grön ${summary.sanktanGronCount}` : undefined}>
               {summary.matchCount} {summary.hasSanktanSync ? "Sanktanmatcher" : "matcher"}
             </span>
-            <span>{summary.selectedCount} uttagningar</span><span>{summary.periodsPlayed} perioder</span>
+            <span>{summary.callupCount} kallelser</span><span>{summary.periodsPlayed} perioder</span>
           </div>
         </div>
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>

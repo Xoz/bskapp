@@ -75,7 +75,7 @@ export default async function PlayersPage({ searchParams }: {
         )}
       </nav>
       <div className="core-list core-list-2">
-        {visiblePlayers.map(({ player, teams, goals, lastObservation, trainingCount, matchCount, hasSanktanSync, sanktanGulCount, sanktanGronCount, selectedCount }) => (
+        {visiblePlayers.map(({ player, teams, goals, lastObservation, trainingCount, matchCount, hasSanktanSync, sanktanGulCount, sanktanGronCount, callupCount }) => (
           <Link key={player.id} href={`/spelare/${player.id}`} className="core-player-card">
             <div className="flex items-start gap-4">
               <Avatar name={player.name} jersey={player.jersey_number} size={42} />
@@ -101,7 +101,7 @@ export default async function PlayersPage({ searchParams }: {
                   <span title={hasSanktanSync ? `Gul ${sanktanGulCount} · Grön ${sanktanGronCount}` : undefined}>
                     {matchCount} {hasSanktanSync ? "Sanktanmatcher" : "matcher"}
                   </span>
-                  <span>{selectedCount} uttagningar</span>
+                  <span>{callupCount} kallelser</span>
                 </div>
                 {lastObservation && (
                   <p className="core-activity-sub mt-2">
