@@ -19,7 +19,7 @@ export default function CoreActivityCard({
   const teamTone = activity.source_team === "Gul" ? "yellow" : activity.source_team === "Grön" ? "green" : "blue";
   const isSanktan = activity.external_source === "svenskalag_sanktan";
   return (
-    <Link href={href} className="core-activity">
+    <Link href={href} className={`core-activity${activity.is_upcoming ? " core-activity-upcoming" : ""}`}>
       <time className="core-date" dateTime={activity.activity_date}>
         <strong>{String(day).padStart(2, "0")}</strong>
         <span>{monthLabel} {String(year).slice(-2)}</span>

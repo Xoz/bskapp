@@ -723,6 +723,12 @@ table.data-table tbody tr:hover {
   transition: background var(--t-normal), border-color var(--t-normal), transform var(--t-normal);
 }
 .core-activity:hover { background: var(--elevated); border-color: var(--line-strong); transform: translateY(-1px); }
+.core-activity-upcoming {
+  border-color: var(--primary-line);
+  background: linear-gradient(90deg, var(--primary-wash), var(--surface) 48%);
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+.core-activity-upcoming:hover { background: linear-gradient(90deg, var(--primary-wash), var(--elevated) 48%); border-color: var(--primary); }
 .core-date {
   display: flex;
   flex-direction: column;
