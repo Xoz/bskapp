@@ -758,6 +758,24 @@ table.data-table tbody tr:hover {
 }
 .core-player-card:hover { background: var(--elevated); border-color: var(--line-strong); }
 .core-player-name { font-family: var(--font-body); font-size: 16px; font-weight: 700; letter-spacing: -.015em; }
+.core-team-tag {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid var(--primary-line);
+  border-radius: 999px;
+  background: var(--primary-wash);
+  color: var(--primary);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.core-team-tag-unassigned {
+  border-color: var(--border);
+  background: var(--elevated);
+  color: var(--ink-muted);
+}
 .core-goal {
   margin-top: 9px;
   padding-left: 11px;

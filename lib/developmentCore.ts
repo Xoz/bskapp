@@ -58,6 +58,7 @@ export type DevelopmentObservation = {
 
 export type PlayerCoreSummary = {
   player: Player;
+  teams: { id: number; name: string }[];
   goals: DevelopmentGoal[];
   lastObservation: DevelopmentObservation | null;
   trainingCount: number;
@@ -118,7 +119,8 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
   if (players.length === 0) return [];
   const ids = players.map((player) => player.id);
   const idSql = placeholders(ids);
-  const [goals, lastObservations, exposure] = await Promise.all([
+  const today = swedishToday();
+  const [goals, lastObservations, exposure, teamMemberships] = await Promise.all([
     all<DevelopmentGoal>(
       `SELECT id, player_id, slot, title, evidence_hint, status, starts_on, review_on, ended_on, created_by
        FROM player_development_goals
@@ -159,17 +161,34 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
        GROUP BY p.id`,
       ids
     ),
+    all<{ player_id: number; id: number; name: string }>(
+      `SELECT pgm.player_id, g.id, g.name
+       FROM player_group_memberships pgm
+       JOIN groups g ON g.id = pgm.group_id
+       WHERE pgm.player_id IN (${idSql})
+         AND g.group_type = 'subgroup'
+         AND g.active = 1
+         AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
+         AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
+       ORDER BY pgm.is_primary DESC, lower(g.name)`,
+      [...ids, today, today]
+    ),
   ]);
 
   const goalsByPlayer = new Map<number, DevelopmentGoal[]>();
   for (const goal of goals) goalsByPlayer.set(goal.player_id, [...(goalsByPlayer.get(goal.player_id) ?? []), goal]);
   const observationByPlayer = new Map(lastObservations.map((row) => [Number(row.player_id), row]));
   const exposureByPlayer = new Map(exposure.map((row) => [row.player_id, row]));
+  const teamsByPlayer = new Map<number, { id: number; name: string }[]>();
+  for (const team of teamMemberships) {
+    teamsByPlayer.set(team.player_id, [...(teamsByPlayer.get(team.player_id) ?? []), { id: team.id, name: team.name }]);
+  }
 
   return players.map((player) => {
     const row = exposureByPlayer.get(player.id);
     return {
       player,
+      teams: teamsByPlayer.get(player.id) ?? [],
       goals: goalsByPlayer.get(player.id) ?? [],
       lastObservation: observationByPlayer.get(player.id) ?? null,
       trainingCount: Number(row?.training_count ?? 0),

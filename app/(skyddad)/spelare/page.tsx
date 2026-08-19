@@ -30,13 +30,20 @@ export default async function PlayersPage() {
         </div>
       </header>
       <div className="core-list core-list-2">
-        {players.map(({ player, goals, lastObservation, trainingCount, matchCount, selectedCount }) => (
+        {players.map(({ player, teams, goals, lastObservation, trainingCount, matchCount, selectedCount }) => (
           <Link key={player.id} href={`/spelare/${player.id}`} className="core-player-card">
             <div className="flex items-start gap-4">
               <Avatar name={player.name} jersey={player.jersey_number} size={42} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="core-player-name truncate">{player.name}</h2>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h2 className="core-player-name truncate">{player.name}</h2>
+                    {teams.length ? teams.map((team) => (
+                      <span key={team.id} className="core-team-tag">{team.name}</span>
+                    )) : (
+                      <span className="core-team-tag core-team-tag-unassigned">Ej tilldelat lag</span>
+                    )}
+                  </div>
                   <span className={`core-tag ${goals.length ? "core-tag-training" : ""}`}>{goals.length}/2 mål</span>
                 </div>
                 <div>
