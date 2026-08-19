@@ -63,6 +63,9 @@ export type PlayerCoreSummary = {
   lastObservation: DevelopmentObservation | null;
   trainingCount: number;
   matchCount: number;
+  hasSanktanSync: boolean;
+  sanktanGulCount: number;
+  sanktanGronCount: number;
   selectedCount: number;
   periodsPlayed: number;
 };
@@ -145,12 +148,38 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
       player_id: number;
       training_count: number;
       match_count: number;
+      has_sanktan_sync: boolean;
+      sanktan_gul_count: number;
+      sanktan_gron_count: number;
       selected_count: number;
       periods_played: number;
     }>(
       `SELECT p.id AS player_id,
               COUNT(DISTINCT CASE WHEN da.activity_type = 'training' AND ap.attendance_status = 'present' THEN da.id END) AS training_count,
-              COUNT(DISTINCT CASE WHEN da.activity_type = 'match' AND ap.attendance_status = 'present' THEN da.id END) AS match_count,
+              COALESCE(
+                (SELECT SUM(pcmc.match_count)
+                 FROM player_competition_match_counts pcmc
+                 WHERE pcmc.player_id = p.id
+                   AND pcmc.competition = 'sanktan'
+                   AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')),
+                COUNT(DISTINCT CASE WHEN da.activity_type = 'match' AND ap.attendance_status = 'present' THEN da.id END)
+              ) AS match_count,
+              EXISTS(
+                SELECT 1 FROM player_competition_match_counts pcmc
+                WHERE pcmc.player_id = p.id
+                  AND pcmc.competition = 'sanktan'
+                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+              ) AS has_sanktan_sync,
+              COALESCE((
+                SELECT SUM(pcmc.match_count) FROM player_competition_match_counts pcmc
+                WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Gul'
+                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+              ), 0) AS sanktan_gul_count,
+              COALESCE((
+                SELECT SUM(pcmc.match_count) FROM player_competition_match_counts pcmc
+                WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Grön'
+                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+              ), 0) AS sanktan_gron_count,
               COUNT(DISTINCT CASE WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN da.id END) AS selected_count,
               COALESCE(SUM(ap.periods_played), 0) AS periods_played
        FROM players p
@@ -193,6 +222,9 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
       lastObservation: observationByPlayer.get(player.id) ?? null,
       trainingCount: Number(row?.training_count ?? 0),
       matchCount: Number(row?.match_count ?? 0),
+      hasSanktanSync: Boolean(row?.has_sanktan_sync),
+      sanktanGulCount: Number(row?.sanktan_gul_count ?? 0),
+      sanktanGronCount: Number(row?.sanktan_gron_count ?? 0),
       selectedCount: Number(row?.selected_count ?? 0),
       periodsPlayed: Number(row?.periods_played ?? 0),
     };

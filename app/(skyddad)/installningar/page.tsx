@@ -8,6 +8,7 @@ import {
   updateCoachProfile,
   importCalendarMatches,
   importAttendanceWorkbook,
+  syncSanktanMatchCounts,
   generatePlayerPin,
   generateCoachInvite,
   addCoachEmail,
@@ -70,6 +71,8 @@ export default async function SettingsPage({
     narvaro_spelare?: string;
     narvaro_aktiviteter?: string;
     narvaro_matchade?: string;
+    sanktan?: string;
+    sanktan_spelare?: string;
   }>;
 }) {
   const role = await getRole();
@@ -98,7 +101,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare } =
     await searchParams;
 
   return (
@@ -177,6 +180,26 @@ export default async function SettingsPage({
             >
               <IconAlert width={16} height={16} />
               Kunde inte läsa närvarofilen. Använd exporten &quot;Närvarotillfällen per aktivitet &amp; person&quot; från Svenska Lag.
+            </div>
+          )}
+          {sanktan === "ok" && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--ok-bg)", color: "var(--success)" }}
+            >
+              <IconCheck width={16} height={16} />
+              Sanktanmatcherna synkades för {sanktan_spelare ?? "0"} aktiva spelare.
+            </div>
+          )}
+          {(sanktan === "fel" || sanktan === "ofullstandig") && (
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm"
+              style={{ background: "var(--warn-bg)", color: "var(--warning)" }}
+            >
+              <IconAlert width={16} height={16} />
+              {sanktan === "ofullstandig"
+                ? `Underlaget innehöll ${sanktan_spelare ?? "0"} av ${players.length} aktiva spelare. Ingen matchdata ändrades.`
+                : "Kunde inte läsa Sanktan-underlaget. Använd en rad per aktiv spelare: namn, Gul och Grön."}
             </div>
           )}
         </div>
@@ -535,6 +558,48 @@ export default async function SettingsPage({
                 </p>
                 <button type="submit" className="btn-primary">Importera närvaro</button>
               </form>
+            </div>
+
+            <div className="card p-6 md:p-7 space-y-5">
+              <div className="flex items-start gap-3">
+                <span
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  <IconPitch width={17} height={17} />
+                </span>
+                <div>
+                  <h2 className="font-semibold">Sanktanmatcher från Svenska Lag</h2>
+                  <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
+                    Synka spelade Sanktanmatcher från Guls och Gröns statistik. Summan visas på spelarkorten; cuper och träningsmatcher räknas inte.
+                  </p>
+                </div>
+              </div>
+              <ConfirmForm
+                action={syncSanktanMatchCounts}
+                message="Ersätt befintliga Sanktan-siffror för den valda säsongen?"
+                className="space-y-3"
+              >
+                <div>
+                  <label className="label" htmlFor="sanktan_season">Säsong</label>
+                  <input id="sanktan_season" name="season" type="number" min="2020" max="2100" defaultValue={new Date().getFullYear()} required className="input w-28" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="sanktan_counts">Spelare, Gul, Grön</label>
+                  <textarea
+                    id="sanktan_counts"
+                    name="counts"
+                    rows={12}
+                    required
+                    className="input font-mono text-sm"
+                    placeholder={"Spelare\tGul\tGrön\nAlva Svensson\t8\t2\nEbba Karlsson\t5\t4"}
+                  />
+                </div>
+                <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Alla aktiva spelare måste finnas med, även de som har noll matcher. Uppgifterna valideras innan tidigare siffror ersätts.
+                </p>
+                <button type="submit" className="btn-primary">Synka Sanktanmatcher</button>
+              </ConfirmForm>
             </div>
 
             <div className="card p-6 md:p-7 space-y-5">

@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-18-development-core";
+const SCHEMA_VERSION = "2026-08-19-sanktan-counts";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -271,6 +271,15 @@ async function init(): Promise<void> {
       source_column INTEGER NOT NULL DEFAULT 0,
       source_label TEXT NOT NULL DEFAULT '',
       present INTEGER NOT NULL DEFAULT 0 CHECK (present IN (0, 1))
+    )`,
+    `CREATE TABLE IF NOT EXISTS player_competition_match_counts (
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      season INTEGER NOT NULL,
+      competition TEXT NOT NULL,
+      source_team TEXT NOT NULL,
+      match_count INTEGER NOT NULL DEFAULT 0 CHECK (match_count >= 0),
+      updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+      PRIMARY KEY (player_id, season, competition, source_team)
     )`,
     // Utvecklingsträdet (7v7 → 9v9): en rad per spelare/färdighet som klickas
     // i checklistan. skill_id pekar in i lib/skillTrappan.ts (statisk data, ingen tabell).

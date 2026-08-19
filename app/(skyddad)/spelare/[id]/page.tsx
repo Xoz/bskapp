@@ -36,7 +36,10 @@ export default async function PlayerPage({ params, searchParams }: {
         <div className="flex-1 min-w-48">
           <p className="core-kicker">Utvecklingsprofil</p><h1 className="core-title">{summary.player.name}</h1>
           <div className="core-statline">
-            <span>{summary.trainingCount} träningar</span><span>{summary.matchCount} matcher</span>
+            <span>{summary.trainingCount} träningar</span>
+            <span title={summary.hasSanktanSync ? `Gul ${summary.sanktanGulCount} · Grön ${summary.sanktanGronCount}` : undefined}>
+              {summary.matchCount} {summary.hasSanktanSync ? "Sanktanmatcher" : "matcher"}
+            </span>
             <span>{summary.selectedCount} uttagningar</span><span>{summary.periodsPlayed} perioder</span>
           </div>
         </div>

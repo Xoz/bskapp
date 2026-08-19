@@ -1528,6 +1528,62 @@ export async function importAttendanceWorkbook(formData: FormData) {
   );
 }
 
+export async function syncSanktanMatchCounts(formData: FormData) {
+  await requirePermission("manage_settings");
+  const season = Number(formData.get("season"));
+  const raw = String(formData.get("counts") ?? "").trim();
+  if (!Number.isInteger(season) || season < 2020 || season > 2100 || !raw) {
+    redirect("/installningar?sanktan=fel#trupp");
+  }
+
+  const activePlayers = await all<{ id: number; name: string }>(
+    "SELECT id, name FROM players WHERE active = 1 ORDER BY name"
+  );
+  const playersByName = new Map(activePlayers.map((player) => [normalizePersonName(player.name), player] as const));
+  const parsed = new Map<number, { player: { id: number; name: string }; gul: number; gron: number }>();
+
+  for (const [index, line] of raw.split(/\r?\n/).map((value) => value.trim()).filter(Boolean).entries()) {
+    const columns = line.split(/\t|;/).map((value) => value.trim());
+    if (index === 0 && normalizePersonName(columns[0] ?? "") === "spelare") continue;
+    if (columns.length < 3) redirect("/installningar?sanktan=fel#trupp");
+    const player = playersByName.get(normalizePersonName(columns[0]));
+    const gul = Number(columns[1]);
+    const gron = Number(columns[2]);
+    if (!player || !Number.isInteger(gul) || gul < 0 || !Number.isInteger(gron) || gron < 0 || parsed.has(player.id)) {
+      redirect("/installningar?sanktan=fel#trupp");
+    }
+    parsed.set(player.id, { player, gul, gron });
+  }
+
+  if (parsed.size !== activePlayers.length) {
+    redirect(`/installningar?sanktan=ofullstandig&sanktan_spelare=${parsed.size}#trupp`);
+  }
+
+  const statements: { sql: string; args: (string | number)[] }[] = [{
+    sql: "DELETE FROM player_competition_match_counts WHERE season = ? AND competition = 'sanktan'",
+    args: [season],
+  }];
+  for (const { player, gul, gron } of parsed.values()) {
+    for (const [sourceTeam, matchCount] of [["Gul", gul], ["Grön", gron]] as const) {
+      statements.push({
+        sql: `INSERT INTO player_competition_match_counts
+              (player_id, season, competition, source_team, match_count, updated_at)
+              VALUES (?, ?, 'sanktan', ?, ?, to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+              ON CONFLICT (player_id, season, competition, source_team)
+              DO UPDATE SET match_count = excluded.match_count, updated_at = excluded.updated_at`,
+        args: [player.id, season, sourceTeam, matchCount],
+      });
+    }
+  }
+  await batch(statements);
+
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  await logActivity(importedBy, "Synkade Sanktanmatcher", `${season} · ${parsed.size} spelare`);
+  revalidatePath("/installningar");
+  revalidatePath("/spelare");
+  redirect(`/installningar?sanktan=ok&sanktan_spelare=${parsed.size}#trupp`);
+}
+
 export async function resetColors() {
   await requirePermission("manage_settings");
   for (const [key, value] of Object.entries(DEFAULT_COLORS)) {
