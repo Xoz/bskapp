@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
 const TEAM_ORDER = ["Gul", "Grön", "F15"];
+const TEAM_TONES: Record<string, "yellow" | "green" | "blue"> = { Gul: "yellow", Grön: "green", F15: "blue" };
 const UNASSIGNED_TEAM = "utan-lag";
 
 export default async function PlayersPage({ searchParams }: {
@@ -59,6 +60,7 @@ export default async function PlayersPage({ searchParams }: {
             key={teamName}
             href={`/spelare?lag=${encodeURIComponent(teamName)}`}
             className={`core-team-filter ${selectedTeam === teamName ? "core-team-filter-active" : ""}`}
+            data-team-tone={TEAM_TONES[teamName]}
           >
             {teamName} <span>{teamCount(teamName)}</span>
           </Link>
@@ -82,7 +84,7 @@ export default async function PlayersPage({ searchParams }: {
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <h2 className="core-player-name truncate">{player.name}</h2>
                     {teams.length ? teams.map((team) => (
-                      <span key={team.id} className="core-team-tag">{team.name}</span>
+                      <span key={team.id} className="core-team-tag" data-team-tone={TEAM_TONES[team.name]}>{team.name}</span>
                     )) : (
                       <span className="core-team-tag core-team-tag-unassigned">Ej tilldelat lag</span>
                     )}
