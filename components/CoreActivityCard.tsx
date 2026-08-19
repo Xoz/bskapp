@@ -65,10 +65,6 @@ export default function CoreActivityCard({
           <p className="core-activity-sub">{activity.theme ? `Fokus: ${activity.theme}` : "Fokus inte satt"}</p>
         )}
       </div>
-      <div className="core-count" title="Sparade observationer">
-        <strong>{activity.observation_count}</strong>
-        <span>obs.</span>
-      </div>
       <span className="core-chevron" aria-hidden>›</span>
     </Link>
   );
