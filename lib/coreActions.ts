@@ -293,27 +293,28 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
 
   for (const player of accessiblePlayers) {
     const decision = selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
-    const periods = Math.max(0, Math.min(9, Number(formData.get(`periods_${player.id}`)) || 0));
     const position = String(formData.get(`position_${player.id}`) ?? player.position ?? "").trim().slice(0, 40);
-    const rationale = String(formData.get(`rationale_${player.id}`) ?? "").trim().slice(0, 240);
     statements.push({
       sql: `INSERT INTO development_selection_decisions
-              (activity_id, player_id, decision, rationale, decided_by)
-            VALUES (?, ?, ?, ?, ?)
+              (activity_id, player_id, decision, decided_by)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT (activity_id, player_id) DO UPDATE SET
               decision = excluded.decision,
-              rationale = excluded.rationale,
+              rationale = '',
               decided_by = excluded.decided_by,
               decided_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, player.id, decision, rationale, actor],
+      args: [activityId, player.id, decision, actor],
     });
     statements.push({
       sql: `INSERT INTO development_activity_participation
-              (activity_id, player_id, attendance_status, selected, periods_played, position, source)
-            VALUES (?, ?, 'unknown', ?, ?, ?, 'manual')
+              (activity_id, player_id, attendance_status, selected, position, source)
+            VALUES (?, ?, 'unknown', ?, ?, 'manual')
             ON CONFLICT (activity_id, player_id) DO UPDATE SET
-              selected = excluded.selected,
-              periods_played = excluded.periods_played,
+              selected = CASE
+                WHEN development_activity_participation.source = 'svenskalag_callup'
+                THEN development_activity_participation.selected
+                ELSE excluded.selected
+              END,
               position = excluded.position,
               source = CASE
                 WHEN development_activity_participation.source = 'svenskalag_callup'
@@ -321,7 +322,7 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
                 ELSE 'manual'
               END,
               updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, player.id, decision === "selected" ? 1 : 0, periods, position],
+      args: [activityId, player.id, decision === "selected" ? 1 : 0, position],
     });
   }
 

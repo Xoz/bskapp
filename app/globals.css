@@ -866,6 +866,7 @@ table.data-table tbody tr:hover {
 }
 .core-choice:hover { border-color: var(--line-strong); background: var(--elevated); }
 .core-selection-card { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.core-selection-card-selected { border-color: var(--primary-line); background: var(--primary-wash); }
 .core-signal { padding: 7px 9px; border-radius: 8px; font-size: 12px; line-height: 1.4; }
 
 @media (max-width: 760px) {
