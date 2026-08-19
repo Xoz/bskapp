@@ -107,7 +107,7 @@ export async function getCoreActivities(limit = 80): Promise<CoreActivity[]> {
             da.external_source, da.external_key, da.match_id, da.group_id,
             da.theme, da.challenge_context,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
-            COALESCE(pcm.level, m.level) AS competition_level,
+            COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2
@@ -339,7 +339,7 @@ export async function getActivityDetail(activityId: string): Promise<{
   const activity = await get<CoreActivity>(
     `SELECT da.*,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
-            COALESCE(pcm.level, m.level) AS competition_level,
+            COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2
