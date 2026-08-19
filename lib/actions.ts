@@ -1763,12 +1763,12 @@ export async function syncSanktanCallupHistory(formData: FormData) {
   const statements: { sql: string; args: (string | number)[] }[] = [];
   for (const match of imported) {
     const externalId = String(match?.id ?? "");
-    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !Array.isArray(match.called)) redirect("/installningar?sanktan_kallelser=fel#trupp");
+    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !Array.isArray(match.called)) redirect("/installningar?sanktan_kallelser=match#trupp");
     seen.add(externalId);
     const called = new Set<number>();
     for (const name of match.called) {
       const player = yellowByName.get(normalizePersonName(String(name)));
-      if (!player || called.has(player.id)) redirect("/installningar?sanktan_kallelser=fel#trupp");
+      if (!player || called.has(player.id)) redirect("/installningar?sanktan_kallelser=spelare#trupp");
       called.add(player.id);
       statements.push({
         sql: `INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
