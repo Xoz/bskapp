@@ -1744,10 +1744,7 @@ export async function syncSanktanCallupHistory(formData: FormData) {
 
   const [yellowPlayers, historicalMatches] = await Promise.all([
     all<{ id: number; name: string }>(
-      `SELECT DISTINCT p.id, p.name FROM players p
-       JOIN player_group_memberships pgm ON pgm.player_id = p.id
-       JOIN groups g ON g.id = pgm.group_id
-       WHERE p.active = 1 AND g.group_type = 'subgroup' AND g.active = 1 AND g.name = 'Gul' ORDER BY p.name`
+      "SELECT id, name FROM players WHERE active = 1 ORDER BY name"
     ),
     all<{ activity_id: string; external_id: string }>(
       `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
