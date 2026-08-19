@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
 import { saveActivityContext, saveQuickObservations } from "@/lib/coreActions";
+import { swedishToday } from "@/lib/dates";
 import CoreActivityCard from "@/components/CoreActivityCard";
 import PilotStartField from "@/components/PilotStartField";
 
@@ -13,6 +14,13 @@ const EVIDENCE: Array<{ value: Evidence; label: string; help: string }> = [
   { value: "practicing", label: "Tränar på", help: "Försökte och är på väg" },
   { value: "revisit", label: "Nytt tillfälle", help: "Behöver observeras igen" },
 ];
+
+function endOfCurrentWeek(date: string) {
+  const current = new Date(`${date}T12:00:00Z`);
+  const daysUntilSunday = (7 - current.getUTCDay()) % 7;
+  current.setUTCDate(current.getUTCDate() + daysUntilSunday);
+  return current.toISOString().slice(0, 10);
+}
 
 export default async function ObservePage({
   searchParams,
@@ -25,7 +33,9 @@ export default async function ObservePage({
   const { aktivitet } = await searchParams;
 
   if (!aktivitet) {
-    const activities = await getCoreActivities(80, "sanktan");
+    const weekEnd = endOfCurrentWeek(swedishToday());
+    const activities = (await getCoreActivities(80, "sanktan"))
+      .filter((activity) => !activity.is_upcoming || activity.activity_date <= weekEnd);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -33,7 +43,7 @@ export default async function ObservePage({
           <p className="core-kicker">Snabb registrering</p>
           <h1 className="core-title">Observera</h1>
           <p className="core-lead">
-            Spelade och kommande Sanktanmatcher direkt från Svenska Lag.
+            Spelade Sanktanmatcher samt den här veckans kommande matcher från Svenska Lag.
           </p>
           </div>
         </header>
