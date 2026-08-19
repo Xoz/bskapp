@@ -25,6 +25,9 @@ export type CoreActivity = {
   observation_count: number;
   participant_count: number;
   selection_count: number;
+  source_team: string | null;
+  competition_level: number | null;
+  participant_names: string[];
 };
 
 export type DevelopmentGoal = {
@@ -103,6 +106,15 @@ export async function getCoreActivities(limit = 80): Promise<CoreActivity[]> {
     `SELECT da.id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.external_source, da.external_key, da.match_id, da.group_id,
             da.theme, da.challenge_context,
+            COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
+            COALESCE(pcm.level, m.level) AS competition_level,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
+              ORDER BY p2.name
+            ) AS participant_names,
             COUNT(DISTINCT o.id) AS observation_count,
             COUNT(DISTINCT CASE WHEN ap.attendance_status = 'present' THEN ap.player_id END) AS participant_count,
             COUNT(DISTINCT CASE WHEN sd.decision = 'selected' THEN sd.player_id END) AS selection_count
@@ -110,8 +122,41 @@ export async function getCoreActivities(limit = 80): Promise<CoreActivity[]> {
      LEFT JOIN development_observations o ON o.activity_id = da.id
      LEFT JOIN development_activity_participation ap ON ap.activity_id = da.id
      LEFT JOIN development_selection_decisions sd ON sd.activity_id = da.id
+     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
+     LEFT JOIN matches m ON m.id = da.match_id
+     LEFT JOIN groups g ON g.id = da.group_id
      WHERE ${scope.sql}
-     GROUP BY da.id
+       AND NOT (
+         da.activity_type = 'match'
+         AND da.external_source <> 'svenskalag_sanktan'
+         AND EXISTS (
+           SELECT 1 FROM player_competition_matches preferred_pcm
+           WHERE preferred_pcm.competition = 'sanktan'
+             AND preferred_pcm.match_date = da.activity_date
+             AND COALESCE(preferred_pcm.start_time, '') = COALESCE(da.start_time, '')
+             AND lower(da.title) LIKE '%' || lower(preferred_pcm.opponent) || '%'
+         )
+       )
+       AND NOT (
+         da.activity_type = 'match'
+         AND da.external_source = 'svenskalag_attendance'
+         AND EXISTS (
+           SELECT 1 FROM development_activities linked_da
+           WHERE linked_da.match_id IS NOT NULL
+             AND linked_da.activity_date = da.activity_date
+             AND COALESCE(linked_da.start_time, '') = COALESCE(da.start_time, '')
+             AND lower(regexp_replace(linked_da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', ''))
+                 = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', ''))
+         )
+       )
+       AND NOT (
+         da.external_source = 'svenskalag_sanktan'
+         AND NOT EXISTS (
+           SELECT 1 FROM development_activity_participation source_ap
+           WHERE source_ap.activity_id = da.id AND source_ap.attendance_status = 'present'
+         )
+       )
+     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST, da.id DESC
      LIMIT ?`,
     [...scope.args, limit]
@@ -293,14 +338,27 @@ export async function getActivityDetail(activityId: string): Promise<{
 } | null> {
   const activity = await get<CoreActivity>(
     `SELECT da.*,
+            COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
+            COALESCE(pcm.level, m.level) AS competition_level,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_participation ap2
+              JOIN players p2 ON p2.id = ap2.player_id
+              WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
+              ORDER BY p2.name
+            ) AS participant_names,
             (SELECT COUNT(*) FROM development_observations o WHERE o.activity_id = da.id) AS observation_count,
             (SELECT COUNT(*) FROM development_activity_participation ap WHERE ap.activity_id = da.id AND ap.attendance_status = 'present') AS participant_count,
             (SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected') AS selection_count
-     FROM development_activities da WHERE da.id = ?`,
+     FROM development_activities da
+     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
+     LEFT JOIN matches m ON m.id = da.match_id
+     LEFT JOIN groups g ON g.id = da.group_id
+     WHERE da.id = ?`,
     [activityId]
   );
   if (!activity || !(await canAccessGroup(activity.group_id))) return null;
-  const [players, observations] = await Promise.all([
+  const [allPlayers, observations, participantRows] = await Promise.all([
     getPlayerCoreSummaries(),
     all<DevelopmentObservation>(
       `SELECT o.id, o.activity_id, da.activity_date, da.title AS activity_title,
@@ -313,7 +371,17 @@ export async function getActivityDetail(activityId: string): Promise<{
        WHERE o.activity_id = ? ORDER BY o.created_at DESC`,
       [activityId]
     ),
+    all<{ player_id: number }>(
+      `SELECT DISTINCT player_id
+       FROM development_activity_participation
+       WHERE activity_id = ? AND attendance_status = 'present'`,
+      [activityId]
+    ),
   ]);
+  const participantIds = new Set(participantRows.map((row) => Number(row.player_id)));
+  const players = activity.activity_type === "match" && participantIds.size > 0
+    ? allPlayers.filter((row) => participantIds.has(row.player.id))
+    : allPlayers;
   return { activity, players, observations };
 }
 

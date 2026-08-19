@@ -744,6 +744,9 @@ table.data-table tbody tr:hover {
 .core-tag-other { color: var(--ink-secondary); }
 .core-activity-title { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-body); font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
 .core-activity-sub { margin-top: 3px; overflow: hidden; color: var(--ink-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.core-activity-players { margin-top: 5px; color: var(--ink-muted); font-size: 11px; line-height: 1.45; }
+.core-activity-players strong { color: var(--ink-secondary); font-weight: 700; }
+.core-player-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .core-count { display: flex; flex-direction: column; align-items: center; min-width: 35px; color: var(--ink-muted); }
 .core-count strong { color: var(--ink); font-size: 15px; }
 .core-count span { font-size: 9px; }

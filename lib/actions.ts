@@ -1657,11 +1657,32 @@ export async function syncSanktanMatchHistory(formData: FormData) {
     redirect("/installningar?sanktan_historik=avvikelse#trupp");
   }
 
-  const statements: { sql: string; args: (string | number | null)[] }[] = [{
-    sql: "DELETE FROM player_competition_matches WHERE season = ? AND competition = 'sanktan'",
-    args: [season],
-  }];
+  const teamGroups = await all<{ id: number; name: string }>(
+    "SELECT id, name FROM groups WHERE group_type = 'subgroup' AND active = 1 AND name IN ('Gul', 'Grön')"
+  );
+  const groupIdByName = new Map(teamGroups.map((group) => [group.name, group.id] as const));
+  if (!groupIdByName.has("Gul") || !groupIdByName.has("Grön")) {
+    redirect("/installningar?sanktan_historik=fel#trupp");
+  }
+
+  const statements: { sql: string; args: (string | number | null)[] }[] = [
+    {
+      sql: "DELETE FROM player_competition_matches WHERE season = ? AND competition = 'sanktan'",
+      args: [season],
+    },
+    {
+      sql: `DELETE FROM development_activity_participation
+            WHERE source = 'svenskalag_sanktan'
+              AND activity_id IN (
+                SELECT id FROM development_activities
+                WHERE external_source = 'svenskalag_sanktan' AND activity_date LIKE ?
+              )`,
+      args: [`${season}-%`],
+    },
+  ];
   for (const match of imported) {
+    const activityId = `sanktan-${match.id}`;
+    const activityTitle = `${match.homeAway === "home" ? "Hemma" : "Borta"} mot ${match.opponent.trim()}`;
     statements.push({
       sql: `INSERT INTO player_competition_matches
             (external_id, season, competition, source_team, level, match_date, start_time, opponent, home_away, location, source_url, updated_at)
@@ -1669,12 +1690,34 @@ export async function syncSanktanMatchHistory(formData: FormData) {
       args: [String(match.id), season, match.sourceTeam, Number(match.level), match.date, match.time || null,
         match.opponent.trim(), match.homeAway, match.location?.trim() || null, match.href],
     });
+    statements.push({
+      sql: `INSERT INTO development_activities
+            (id, activity_date, start_time, activity_type, title, external_source, external_key, group_id)
+            VALUES (?, ?, ?, 'match', ?, 'svenskalag_sanktan', ?, ?)
+            ON CONFLICT (external_key) DO UPDATE SET
+              activity_date = excluded.activity_date,
+              start_time = excluded.start_time,
+              activity_type = excluded.activity_type,
+              title = excluded.title,
+              group_id = excluded.group_id,
+              updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
+      args: [activityId, match.date, match.time || null, activityTitle, `sanktan:${match.id}`, groupIdByName.get(match.sourceTeam) ?? null],
+    });
     for (const name of match.players) {
       const player = playersByName.get(normalizePersonName(name));
       if (!player) continue;
       statements.push({
         sql: "INSERT INTO player_competition_match_players (match_external_id, player_id) VALUES (?, ?)",
         args: [String(match.id), player.id],
+      });
+      statements.push({
+        sql: `INSERT INTO development_activity_participation
+              (activity_id, player_id, attendance_status, selected, source, updated_at)
+              VALUES (?, ?, 'present', 1, 'svenskalag_sanktan', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+              ON CONFLICT (activity_id, player_id) DO UPDATE SET
+                attendance_status = 'present', selected = 1, source = 'svenskalag_sanktan',
+                updated_at = excluded.updated_at`,
+        args: [activityId, player.id],
       });
     }
   }
@@ -1684,6 +1727,7 @@ export async function syncSanktanMatchHistory(formData: FormData) {
   await logActivity(importedBy, "Synkade Sanktan-historik", `${season} · ${imported.length} matcher`);
   revalidatePath("/installningar");
   revalidatePath("/spelare");
+  revalidatePath("/observera");
   redirect(`/installningar?sanktan_historik=ok&sanktan_matcher=${imported.length}#trupp`);
 }
 

@@ -53,6 +53,8 @@ export default async function ObservePage({
   const detail = await getActivityDetail(aktivitet);
   if (!detail) redirect("/observera");
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
+  const teamTone = detail.activity.source_team === "Gul" ? "yellow" : detail.activity.source_team === "Grön" ? "green" : "blue";
+  const isSanktan = detail.activity.external_source === "svenskalag_sanktan";
   const contextAction = saveActivityContext.bind(null, detail.activity.id);
   const observationAction = saveQuickObservations.bind(null, detail.activity.id);
 
@@ -67,6 +69,16 @@ export default async function ObservePage({
             <p className="core-lead">
               {detail.activity.activity_date}{detail.activity.start_time ? ` · ${detail.activity.start_time}` : ""}
             </p>
+            {detail.activity.activity_type === "match" && (
+              <div className="flex items-center gap-2 flex-wrap mt-3">
+                {detail.activity.source_team && (
+                  <span className="core-team-tag" data-team-tone={teamTone}>{detail.activity.source_team}</span>
+                )}
+                {isSanktan && detail.activity.competition_level && (
+                  <span className="badge">Sanktan nivå {detail.activity.competition_level}</span>
+                )}
+              </div>
+            )}
           </div>
           {detail.activity.activity_type === "match" && (
             <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary">
@@ -75,6 +87,22 @@ export default async function ObservePage({
           )}
         </div>
       </header>
+
+      {detail.activity.activity_type === "match" && (
+        <section className="core-panel core-form-panel">
+          <div className="core-section-head">
+            <div><p className="core-kicker">Matchtrupp</p><h2 className="core-section-title mt-2">Spelare som spelade</h2></div>
+            <span className="core-section-note">{detail.activity.participant_names.length} spelare</span>
+          </div>
+          {detail.activity.participant_names.length > 0 ? (
+            <div className="core-player-chips mt-4">
+              {detail.activity.participant_names.map((name) => <span key={name} className="badge">{name}</span>)}
+            </div>
+          ) : (
+            <p className="body-small mt-4" style={{ color: "var(--ink-secondary)" }}>Inga spelare är registrerade på matchen ännu.</p>
+          )}
+        </section>
+      )}
 
       <form action={contextAction} className="core-panel core-form-panel grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
         <label className="block">
