@@ -24,7 +24,6 @@ export default function SelectionEditor({
   action: (formData: FormData) => Promise<void>;
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "selected").map((candidate) => candidate.player.id)));
-  const [reserveIds, setReserveIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "reserve").map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
 
   const selected = useMemo(
@@ -41,15 +40,6 @@ export default function SelectionEditor({
 
   function toggleSelected(playerId: number, checked: boolean) {
     setSelectedIds((current) => {
-      const next = new Set(current);
-      if (checked) next.add(playerId);
-      else next.delete(playerId);
-      return next;
-    });
-  }
-
-  function toggleReserve(playerId: number, checked: boolean) {
-    setReserveIds((current) => {
       const next = new Set(current);
       if (checked) next.add(playerId);
       else next.delete(playerId);
@@ -102,16 +92,6 @@ export default function SelectionEditor({
                     <span>{candidate.selectedLastEight}/8 senaste Sanktan</span>
                     <span>{candidate.matchCount} Sanktanmatcher</span>
                   </div>
-                  <label className="flex items-center gap-2 mt-3 caption">
-                    <input
-                      type="checkbox"
-                      name="reserve_player"
-                      value={candidate.player.id}
-                      checked={reserveIds.has(candidate.player.id)}
-                      onChange={(event) => toggleReserve(candidate.player.id, event.target.checked)}
-                    />
-                    Reserv
-                  </label>
                 </div>
 
                 <div className="space-y-2">
