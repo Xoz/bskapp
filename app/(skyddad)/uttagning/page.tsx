@@ -79,6 +79,9 @@ export default async function SelectionPage({
             <p className="core-lead">
               Markera spelare för matchtruppen. Listan är alfabetisk och utan dold ranking.
             </p>
+            {workspace.activity.source_team === "Gul" && (
+              <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
+            )}
           </div>
           <Link href={`/observera?aktivitet=${encodeURIComponent(workspace.activity.id)}`} className="btn-secondary">
             Observationer

@@ -526,10 +526,22 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       support: selectionSupport(signals),
     };
   });
-  const selected = candidates.filter((candidate) => candidate.decision === "selected");
+  const orderedCandidates = detail.activity.source_team === "Gul"
+    ? [...candidates].sort((left, right) => {
+      const priority = (candidate: SelectionCandidate) => {
+        const teams = candidate.teams.map((team) => team.name);
+        if (teams.includes("Gul")) return 0;
+        if (teams.includes("F15")) return 1;
+        if (teams.includes("Grön")) return 2;
+        return 3;
+      };
+      return priority(left) - priority(right) || left.player.name.localeCompare(right.player.name, "sv");
+    })
+    : candidates;
+  const selected = orderedCandidates.filter((candidate) => candidate.decision === "selected");
   return {
     activity: detail.activity,
-    candidates,
+    candidates: orderedCandidates,
     warnings: squadBalanceWarnings(
       selected.map((candidate) => ({
         position: candidate.player.position,
