@@ -312,17 +312,9 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
               (activity_id, player_id, attendance_status, selected, position, source)
             VALUES (?, ?, 'unknown', ?, ?, 'manual')
             ON CONFLICT (activity_id, player_id) DO UPDATE SET
-              selected = CASE
-                WHEN development_activity_participation.source = 'svenskalag_callup'
-                THEN development_activity_participation.selected
-                ELSE excluded.selected
-              END,
+              selected = excluded.selected,
               position = excluded.position,
-              source = CASE
-                WHEN development_activity_participation.source = 'svenskalag_callup'
-                THEN development_activity_participation.source
-                ELSE 'manual'
-              END,
+              source = 'manual',
               updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
       args: [activityId, player.id, decision === "selected" ? 1 : 0, position],
     });

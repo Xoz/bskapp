@@ -10,6 +10,7 @@ import {
   importAttendanceWorkbook,
   syncSanktanMatchCounts,
   syncSanktanMatchHistory,
+  syncSanktanCallupHistory,
   generatePlayerPin,
   generateCoachInvite,
   addCoachEmail,
@@ -644,6 +645,25 @@ export default async function SettingsPage({
                     Historiken sparas bara om varje spelares deltaganden exakt stämmer med de synkade totalsiffrorna.
                   </p>
                   <button type="submit" className="btn-secondary">Synka matchhistorik</button>
+                </ConfirmForm>
+              </details>
+              <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--primary)" }}>
+                  Synka historiska kallelser för Gul
+                </summary>
+                <ConfirmForm action={syncSanktanCallupHistory} message="Ersätt historiska Sanktan-kallelser för ordinarie Gul-spelare?" className="mt-4 space-y-3">
+                  <div>
+                    <label className="label" htmlFor="sanktan_callups_season">Säsong</label>
+                    <input id="sanktan_callups_season" name="season" type="number" min="2020" max="2100" defaultValue={new Date().getFullYear()} required className="input w-28" />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="sanktan_callups">Kallelser (JSON)</label>
+                    <textarea id="sanktan_callups" name="callups" rows={10} required className="input font-mono text-sm" />
+                  </div>
+                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                    Endast ordinarie Gul-spelare accepteras. Alla spelade Gul-matcher i säsongen måste finnas med; tidigare kallelser för dessa matcher ersätts.
+                  </p>
+                  <button type="submit" className="btn-secondary">Synka kallelser</button>
                 </ConfirmForm>
               </details>
             </div>

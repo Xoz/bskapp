@@ -158,20 +158,16 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             ) AS participant_names,
             ARRAY(
               SELECT p2.name
-              FROM development_activity_participation ap2
-              JOIN players p2 ON p2.id = ap2.player_id
-              WHERE ap2.activity_id = da.id
-                AND ap2.source = 'svenskalag_callup'
-                AND ap2.selected = 1
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id
               ORDER BY p2.name
             ) AS called_player_names,
             ARRAY(
               SELECT p2.name
-              FROM development_activity_participation ap2
-              JOIN players p2 ON p2.id = ap2.player_id
-              WHERE ap2.activity_id = da.id
-                AND ap2.source = 'svenskalag_callup'
-                AND ap2.attendance_status = 'absent'
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
               ORDER BY p2.name
             ) AS declined_player_names,
             COUNT(DISTINCT o.id) AS observation_count,
@@ -274,12 +270,11 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
                 WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Grön'
                   AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
               ), 0) AS sanktan_gron_count,
-              COUNT(DISTINCT CASE
-                WHEN da.external_source = 'svenskalag_sanktan'
-                 AND ap.source = 'svenskalag_callup'
-                 AND ap.selected = 1
-                THEN da.id
-              END) AS callup_count,
+              (SELECT COUNT(DISTINCT dac.activity_id)
+               FROM development_activity_callups dac
+               JOIN development_activities callup_da ON callup_da.id = dac.activity_id
+               WHERE dac.player_id = p.id AND callup_da.external_source = 'svenskalag_sanktan'
+              ) AS callup_count,
               COUNT(DISTINCT CASE WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN da.id END) AS selected_count,
               COALESCE(SUM(ap.periods_played), 0) AS periods_played
        FROM players p
@@ -397,20 +392,16 @@ export async function getActivityDetail(activityId: string): Promise<{
             ) AS participant_names,
             ARRAY(
               SELECT p2.name
-              FROM development_activity_participation ap2
-              JOIN players p2 ON p2.id = ap2.player_id
-              WHERE ap2.activity_id = da.id
-                AND ap2.source = 'svenskalag_callup'
-                AND ap2.selected = 1
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id
               ORDER BY p2.name
             ) AS called_player_names,
             ARRAY(
               SELECT p2.name
-              FROM development_activity_participation ap2
-              JOIN players p2 ON p2.id = ap2.player_id
-              WHERE ap2.activity_id = da.id
-                AND ap2.source = 'svenskalag_callup'
-                AND ap2.attendance_status = 'absent'
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
               ORDER BY p2.name
             ) AS declined_player_names,
             (SELECT COUNT(*) FROM development_observations o WHERE o.activity_id = da.id) AS observation_count,
@@ -517,25 +508,21 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
                 AND future_da.activity_date >= ?
                 AND future_da.id <> ?
                 AND NOT EXISTS (
-                  SELECT 1
-                  FROM development_activity_participation future_ap
-                  WHERE future_ap.activity_id = future_sd.activity_id
-                    AND future_ap.player_id = future_sd.player_id
-                    AND future_ap.source = 'svenskalag_callup'
-                    AND future_ap.selected = 1
+                SELECT 1
+                  FROM development_activity_callups future_dac
+                  WHERE future_dac.activity_id = future_sd.activity_id
+                    AND future_dac.player_id = future_sd.player_id
                 )
             ) AS planned_upcoming_count,
             (
               SELECT CASE
-                WHEN current_ap.attendance_status = 'present' THEN 'accepted'
-                WHEN current_ap.attendance_status = 'absent' THEN 'declined'
+                WHEN current_dac.attendance_status = 'present' THEN 'accepted'
+                WHEN current_dac.attendance_status = 'absent' THEN 'declined'
                 ELSE 'pending'
               END
-              FROM development_activity_participation current_ap
-              WHERE current_ap.activity_id = ?
-                AND current_ap.player_id = p.id
-                AND current_ap.source = 'svenskalag_callup'
-                AND current_ap.selected = 1
+              FROM development_activity_callups current_dac
+              WHERE current_dac.activity_id = ?
+                AND current_dac.player_id = p.id
               LIMIT 1
             ) AS current_callup_status,
             current_sd.decision

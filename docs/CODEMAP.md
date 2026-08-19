@@ -62,7 +62,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## lib/ — exports per fil
 
-- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, inställningar, delningslänkar och administration.
+- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, Sanktan-match- och kallelsehistorik, inställningar, delningslänkar och administration.
 - **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
 - **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering samt uttagningsarbetsytan och 28-dagars pilotmått.
 - **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.
@@ -98,7 +98,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 `player_skill_status` (aktuellt utvecklingsträd, PK player_id+skill_id), `player_skill_notes`, `development_checkpoints` (daterad avstämning), `development_checkpoint_skills` (snapshot + föregående status + fokus per färdighet).
 Utvecklingskärnan använder `development_activities`, `player_development_goals` (max två aktiva slots),
 `development_activity_participation`, `development_observations`, `development_selection_decisions`
-och `development_pilot_events`.
+och `development_pilot_events`. `development_activity_callups` håller Svenska Lag-kallelser separat från faktiskt matchdeltagande.
 (`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
 
 ---

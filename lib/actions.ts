@@ -1731,6 +1731,63 @@ export async function syncSanktanMatchHistory(formData: FormData) {
   redirect(`/installningar?sanktan_historik=ok&sanktan_matcher=${imported.length}#trupp`);
 }
 
+export async function syncSanktanCallupHistory(formData: FormData) {
+  await requirePermission("manage_settings");
+  const season = Number(formData.get("season"));
+  const raw = String(formData.get("callups") ?? "").trim();
+  if (!Number.isInteger(season) || season < 2020 || season > 2100 || !raw) redirect("/installningar?sanktan_kallelser=fel#trupp");
+
+  type ImportedCallup = { id: string; called: string[] };
+  let imported: ImportedCallup[];
+  try { imported = JSON.parse(raw) as ImportedCallup[]; } catch { redirect("/installningar?sanktan_kallelser=fel#trupp"); }
+  if (!Array.isArray(imported) || imported.length === 0) redirect("/installningar?sanktan_kallelser=fel#trupp");
+
+  const [yellowPlayers, historicalMatches] = await Promise.all([
+    all<{ id: number; name: string }>(
+      `SELECT p.id, p.name FROM players p
+       JOIN player_group_memberships pgm ON pgm.player_id = p.id AND pgm.is_primary = 1
+       JOIN groups g ON g.id = pgm.group_id
+       WHERE p.active = 1 AND g.group_type = 'subgroup' AND g.active = 1 AND g.name = 'Gul' ORDER BY p.name`
+    ),
+    all<{ activity_id: string; external_id: string }>(
+      `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
+       FROM development_activities da JOIN groups g ON g.id = da.group_id
+       WHERE da.external_source = 'svenskalag_sanktan' AND da.activity_date LIKE ? AND da.activity_date <= ?
+         AND g.group_type = 'subgroup' AND g.name = 'Gul' ORDER BY da.activity_date, da.start_time, da.id`,
+      [`${season}-%`, swedishToday()]
+    ),
+  ]);
+  const yellowByName = new Map(yellowPlayers.map((player) => [normalizePersonName(player.name), player] as const));
+  const activityByExternalId = new Map(historicalMatches.map((match) => [match.external_id, match.activity_id] as const));
+  const seen = new Set<string>();
+  const statements: { sql: string; args: (string | number)[] }[] = [];
+  for (const match of imported) {
+    const externalId = String(match?.id ?? "");
+    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !Array.isArray(match.called)) redirect("/installningar?sanktan_kallelser=fel#trupp");
+    seen.add(externalId);
+    const called = new Set<number>();
+    for (const name of match.called) {
+      const player = yellowByName.get(normalizePersonName(String(name)));
+      if (!player || called.has(player.id)) redirect("/installningar?sanktan_kallelser=fel#trupp");
+      called.add(player.id);
+      statements.push({
+        sql: `INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
+              VALUES (?, ?, 'unknown') ON CONFLICT (activity_id, player_id) DO UPDATE SET attendance_status = 'unknown'`,
+        args: [activityByExternalId.get(externalId)!, player.id],
+      });
+    }
+  }
+  if (seen.size !== historicalMatches.length || seen.size !== activityByExternalId.size) redirect("/installningar?sanktan_kallelser=ofullstandig#trupp");
+  const activityIds = historicalMatches.map((match) => match.activity_id);
+  if (activityIds.length) statements.unshift({ sql: `DELETE FROM development_activity_callups WHERE activity_id IN (${activityIds.map(() => "?").join(", ")})`, args: activityIds });
+  await batch(statements);
+
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  await logActivity(importedBy, "Synkade historiska Sanktan-kallelser", `${season} · Gul · ${seen.size} matcher`);
+  revalidatePath("/installningar"); revalidatePath("/spelare"); revalidatePath("/observera"); revalidatePath("/uttagning");
+  redirect(`/installningar?sanktan_kallelser=ok&sanktan_kallelser_matcher=${seen.size}#trupp`);
+}
+
 export async function resetColors() {
   await requirePermission("manage_settings");
   for (const [key, value] of Object.entries(DEFAULT_COLORS)) {

@@ -387,6 +387,12 @@ async function init(): Promise<void> {
       source TEXT NOT NULL DEFAULT 'svenskalag_callup',
       updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
+    `CREATE TABLE IF NOT EXISTS development_activity_callups (
+      activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      attendance_status TEXT NOT NULL DEFAULT 'unknown' CHECK (attendance_status IN ('unknown', 'present', 'absent')),
+      PRIMARY KEY (activity_id, player_id)
+    )`,
     `CREATE TABLE IF NOT EXISTS development_observations (
       id TEXT PRIMARY KEY,
       activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
@@ -504,6 +510,18 @@ async function init(): Promise<void> {
     `ALTER TABLE matches ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL`,
   ];
   for (const sql of migrations) await tryExec(sql);
+
+  // En kallelse och ett spelat matchdeltagande är två separata fakta. Äldre
+  // kallelser låg i deltagandetabellen och kunde därför skriva över historiken.
+  await tryExec(`
+    INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
+    SELECT activity_id, player_id, attendance_status
+    FROM development_activity_participation
+    WHERE source = 'svenskalag_callup' AND selected = 1
+    ON CONFLICT (activity_id, player_id) DO UPDATE
+      SET attendance_status = excluded.attendance_status
+  `);
+  await tryExec(`DELETE FROM development_activity_participation WHERE source = 'svenskalag_callup'`);
 
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_memberships_group ON player_group_memberships(group_id)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_user_group_access_group ON user_group_access(group_id)`);
