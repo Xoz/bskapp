@@ -61,7 +61,7 @@ export default async function ObservePage({
   return (
     <div className="core-page">
       <header>
-        <Link href="/observera" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla aktiviteter</Link>
+        <Link href="/observera" className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
             <p className="core-kicker">{detail.activity.activity_type === "training" ? "Träning" : detail.activity.activity_type === "match" ? "Match" : "Aktivitet"}</p>
