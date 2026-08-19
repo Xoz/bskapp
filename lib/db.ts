@@ -56,7 +56,7 @@ async function tryExec(sqlText: string) {
 // Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
 // nedan hoppar över all DDL när databasen redan är på denna version – annars
 // körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-uttagningsmotor-v2";
+const SCHEMA_VERSION = "2026-08-19-uttagningsmotor-v3";
 
 async function init(): Promise<void> {
   // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
@@ -445,6 +445,27 @@ async function init(): Promise<void> {
     `ALTER TABLE players ADD COLUMN preferred_level_primary TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN preferred_level_secondary TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN selection_eligible INTEGER NOT NULL DEFAULT 1`,
+    `WITH first_run AS (
+       INSERT INTO settings (key, value)
+       VALUES ('data-2026-08-19-elif-selection-availability', 'applied')
+       ON CONFLICT (key) DO NOTHING
+       RETURNING key
+     )
+     UPDATE players
+     SET selection_eligible = 0
+     WHERE lower(trim(name)) = 'elif basar'
+       AND EXISTS (SELECT 1 FROM first_run)`,
+    `WITH first_run AS (
+       INSERT INTO settings (key, value)
+       VALUES ('data-2026-08-19-emma-goalkeeper', 'applied')
+       ON CONFLICT (key) DO NOTHING
+       RETURNING key
+     )
+     UPDATE players
+     SET preferred_position_primary = 'Målvakt'
+     WHERE lower(trim(name)) = 'emma ulander'
+       AND preferred_position_primary = ''
+       AND EXISTS (SELECT 1 FROM first_run)`,
     `ALTER TABLE players ADD COLUMN share_token TEXT`,
     // BIGINT, inte INTEGER: share_expires lagrar Date.now() i millisekunder
     // (13 siffror), som svämmar över Postgres 32-bitars INTEGER.
