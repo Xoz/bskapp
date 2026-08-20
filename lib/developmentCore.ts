@@ -159,7 +159,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
             ) AS pending_callup_count,
-            da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
+            da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2
@@ -195,9 +195,9 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
        ${sourceFilter}
      GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name
      ORDER BY
-       CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
-       CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,
-       CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.start_time END ASC NULLS LAST,
+       CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
+       CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,
+       CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.start_time END ASC NULLS LAST,
        da.activity_date DESC, da.start_time DESC NULLS LAST, da.id DESC
      LIMIT ?`,
     [...scope.args, limit]
@@ -207,12 +207,25 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
 export async function getCoreHome() {
   const activities = await getCoreActivities(120);
   const today = swedishToday();
-  const upcoming = activities
-    .filter((activity) => activity.activity_date >= today)
-    .sort((a, b) => a.activity_date.localeCompare(b.activity_date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
-  const recent = activities.filter((activity) => activity.activity_date <= today).slice(0, 6);
+  const currentDate = new Date(`${today}T12:00:00Z`);
+  const daysUntilSunday = (7 - currentDate.getUTCDay()) % 7;
+  currentDate.setUTCDate(currentDate.getUTCDate() + daysUntilSunday);
+  const weekEnd = currentDate.toISOString().slice(0, 10);
+  const yellowSanktanMatches = activities.filter((activity) =>
+    activity.activity_type === "match"
+    && activity.external_source === "svenskalag_sanktan"
+    && activity.source_team === "Gul"
+  );
+  const upcoming = yellowSanktanMatches
+    .filter((activity) => activity.activity_date >= today && activity.activity_date <= weekEnd)
+    .sort((a, b) => a.activity_date.localeCompare(b.activity_date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
+    .slice(0, 6);
+  const recent = yellowSanktanMatches
+    .filter((activity) => activity.activity_date < today)
+    .sort((a, b) => b.activity_date.localeCompare(a.activity_date) || (b.start_time ?? "").localeCompare(a.start_time ?? ""))
+    .slice(0, 6);
   const metrics = await getPilotMetrics();
-  return { today, nextActivity: upcoming[0] ?? null, upcoming: upcoming.slice(0, 5), recent, metrics };
+  return { today, upcoming, recent, metrics };
 }
 
 export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
@@ -409,7 +422,7 @@ export async function getActivityDetail(activityId: string): Promise<{
               (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
             ) AS pending_callup_count,
-            da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
+            da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2
