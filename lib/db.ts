@@ -887,6 +887,31 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
         level = excluded.level, location = excluded.location, group_id = excluded.group_id
     `, [yellowGroup.id]);
 
+    // En äldre matchimport kan redan ha skapat en generell matchaktivitet med
+    // samma match_id. Sanktanaktiviteten är den kanoniska aktiviteten i det här
+    // flödet, så frigör länken innan den flyttas dit. Själva äldre aktiviteten
+    // behålls för historik men pekar inte längre på matchen.
+    await getClient().unsafe(`
+      UPDATE development_activities legacy_activity
+      SET match_id = NULL
+      FROM player_competition_matches pcm
+      CROSS JOIN LATERAL (
+        SELECT m.id
+        FROM matches m
+        WHERE m.external_uid = 'sanktan:' || pcm.external_id
+           OR (
+             m.date = pcm.match_date
+             AND COALESCE(m.start_time, '') = COALESCE(pcm.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+           )
+        ORDER BY CASE WHEN m.external_uid = 'sanktan:' || pcm.external_id THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE legacy_activity.match_id = linked.id
+        AND legacy_activity.external_key <> 'sanktan:' || pcm.external_id
+        AND pcm.competition = 'sanktan' AND pcm.source_team = 'Gul'
+    `);
+
     await getClient().unsafe(`
       UPDATE development_activities da
       SET match_id = linked.id
