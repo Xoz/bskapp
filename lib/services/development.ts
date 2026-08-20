@@ -534,10 +534,9 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     theme: string;
     challenge_context: MobileActivity["challengeContext"];
     observation_count: number;
-    external_source: string;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.activity_type, da.title,
-            da.group_id, da.theme, da.challenge_context, da.external_source,
+            da.group_id, da.theme, da.challenge_context,
             COUNT(o.id) AS observation_count
      FROM development_activities da
      LEFT JOIN development_observations o ON o.activity_id = da.id
@@ -547,25 +546,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LIMIT 80`,
     scope.args
   );
-
-  const activityRows = new Map<string, (typeof rows)[number]>();
-  for (const row of rows) {
-    if (row.activity_type !== "match") {
-      activityRows.set(row.id, row);
-      continue;
-    }
-    const normalizedTitle = row.title.normalize("NFKC").trim().toLocaleLowerCase("sv-SE").replace(/\s+/g, " ");
-    // Samma importerade match kan ligga med olika grupp/starttid beroende på källa.
-    // I matchveckan är datum + normaliserad matchtitel den stabila identiteten.
-    const key = [row.activity_date, normalizedTitle].join("|");
-    const existing = activityRows.get(key);
-    const priority = (candidate: (typeof rows)[number]) =>
-      (Number(candidate.observation_count) > 0 ? 100 : 0) +
-      (candidate.external_source === "svenskalag_sanktan" ? 20 : candidate.external_source.startsWith("svenskalag") ? 10 : 0);
-    if (!existing || priority(row) > priority(existing)) activityRows.set(key, row);
-  }
-
-  return [...activityRows.values()].map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     date: row.activity_date,
     startTime: row.start_time,

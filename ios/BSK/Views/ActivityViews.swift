@@ -187,14 +187,8 @@ struct TodayList: View {
                         Text("MATCHVECKAN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
                         Text("Nästa uppgift").font(.largeTitle.bold())
                     }
-                    matchLink(thisWeeksMatches[0], featured: true)
-                    if thisWeeksMatches.count > 1 {
-                        Text("Senare i veckan").font(.title3.bold())
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
-                            ForEach(Array(thisWeeksMatches.dropFirst())) { activity in
-                                matchLink(activity, featured: false)
-                            }
-                        }
+                    ForEach(Array(thisWeeksMatches.enumerated()), id: \.element.id) { index, activity in
+                        matchLink(activity, featured: index == 0)
                     }
                 }
                 .padding(18)
