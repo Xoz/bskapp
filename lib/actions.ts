@@ -33,7 +33,7 @@ import {
   type ImportedCallupPlayer,
   type ImportedCallupTotals,
 } from "./callupSync";
-import { evaluationTokenHash } from "./matchEvaluation";
+import { evaluationTokenHash, getMatchEvaluationWorkspace } from "./matchEvaluation";
 import { isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluationTypes";
 
 async function requirePermission(permission: Permission): Promise<void> {
@@ -917,13 +917,8 @@ export async function setMatchLevel(formData: FormData) {
 async function persistMatchEvaluations(matchId: number, contributorType: "coach" | "invite", contributorId: string, formData: FormData) {
   const match = await get<{ level: string }>("SELECT level FROM matches WHERE id = ?", [matchId]);
   if (!match) return 0;
-  const players = await all<{ id: number; level: string }>(
-    `WITH participants AS (
-       SELECT player_id FROM match_squad WHERE match_id = ?
-       UNION SELECT player_id FROM match_players WHERE match_id = ?
-     ) SELECT p.id, p.level FROM participants part JOIN players p ON p.id = part.player_id AND p.active = 1`,
-    [matchId, matchId]
-  );
+  const workspace = await getMatchEvaluationWorkspace(matchId, contributorType, contributorId);
+  const players = workspace?.players ?? [];
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
   for (const player of players) {
     const selfComparison = String(formData.get(`self_${player.id}`) ?? "");
@@ -1692,6 +1687,44 @@ export async function syncSanktanMatchHistory(formData: FormData) {
               updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
       args: [activityId, match.date, match.time || null, activityTitle, `sanktan:${match.id}`, groupIdByName.get(match.sourceTeam) ?? null],
     });
+    if (match.sourceTeam === "Gul") {
+      const externalUid = `sanktan:${match.id}`;
+      statements.push({
+        sql: `INSERT INTO matches
+                (date, start_time, opponent, home_away, match_type, level, location, group_id, source, external_uid)
+              SELECT ?, ?, ?, ?, 'seriespel', ?, ?, ?, 'svenskalag_sanktan', ?
+              WHERE NOT EXISTS (
+                SELECT 1 FROM matches existing
+                WHERE existing.date = ?
+                  AND COALESCE(existing.start_time, '') = COALESCE(?, '')
+                  AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i')) = lower(?)
+              )
+              ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
+                date = excluded.date, start_time = excluded.start_time,
+                opponent = excluded.opponent, home_away = excluded.home_away,
+                level = excluded.level, location = excluded.location, group_id = excluded.group_id`,
+        args: [
+          match.date, match.time || null, match.opponent.trim(), match.homeAway, String(match.level),
+          match.location?.trim() || "", groupIdByName.get("Gul") ?? null, externalUid,
+          match.date, match.time || null, match.opponent.trim(),
+        ],
+      });
+      statements.push({
+        sql: `UPDATE development_activities da
+              SET match_id = (
+                SELECT m.id FROM matches m
+                WHERE m.external_uid = ?
+                   OR (
+                     m.date = ? AND COALESCE(m.start_time, '') = COALESCE(?, '')
+                     AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(?)
+                   )
+                ORDER BY CASE WHEN m.external_uid = ? THEN 0 ELSE 1 END, m.id
+                LIMIT 1
+              )
+              WHERE da.id = ?`,
+        args: [externalUid, match.date, match.time || null, match.opponent.trim(), externalUid, activityId],
+      });
+    }
     for (const name of match.players) {
       const player = playersByName.get(normalizePersonName(name));
       if (!player) continue;

@@ -4,6 +4,7 @@ import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
 import { saveQuickObservations } from "@/lib/coreActions";
 import { swedishToday } from "@/lib/dates";
+import { matchEvaluationIsOpen } from "@/lib/matchEvaluation";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import CoreActivityCard from "@/components/CoreActivityCard";
 import PilotStartField from "@/components/PilotStartField";
@@ -95,6 +96,8 @@ export default async function ObservePage({
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
   const teamTone = "yellow";
   const isSanktan = detail.activity.external_source === "svenskalag_sanktan";
+  const evaluationOpen = matchEvaluationIsOpen(detail.activity.activity_date, detail.activity.start_time);
+  const isPostMatch = evaluationOpen || !detail.activity.is_upcoming;
   const observationAction = saveQuickObservations.bind(null, detail.activity.id);
 
   return (
@@ -103,7 +106,7 @@ export default async function ObservePage({
         <Link href={listHref} className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
-            <p className="core-kicker">{detail.activity.is_upcoming ? "Förbered inför match" : "Efter matchen"}</p>
+            <p className="core-kicker">{isPostMatch ? "Efter matchen" : "Förbered inför match"}</p>
             <h1 className="core-title">{detail.activity.title}</h1>
             <p className="core-lead">
               {detail.activity.activity_date}{detail.activity.start_time ? ` · ${detail.activity.start_time}` : ""}
@@ -123,14 +126,18 @@ export default async function ObservePage({
         </div>
       </header>
 
-      <section className="core-context-banner" data-tone={detail.activity.is_upcoming ? "prepare" : "review"}>
+      <section className="core-context-banner" data-tone={isPostMatch ? "review" : "prepare"}>
         <div>
-          <strong>{detail.activity.is_upcoming ? "Det här gör du här" : "Registrera bara det ni faktiskt såg"}</strong>
-          <p>{detail.activity.is_upcoming
-            ? "Kontrollera vilka som är kallade i Uttagning. Observationer kan registreras här efter att matchen är spelad."
-            : "Matchtruppen är hämtad från Svenska Lag. Kontrollera spelarna nedan och koppla observationer till deras aktiva utvecklingsmål."}</p>
+          <strong>{isPostMatch ? "Utvärdera spelarna" : "Det här gör du här"}</strong>
+          <p>{isPostMatch
+            ? "Gör den enkla utvärderingen för spelarna som ingick i matchtruppen. Två val per spelare och sedan är du klar."
+            : "Kontrollera vilka som är kallade i Uttagning. Efter matchen öppnas den enkla spelarutvärderingen här."}</p>
         </div>
-        {detail.activity.is_upcoming && <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary btn-sm">Kontrollera uttagningen</Link>}
+        {evaluationOpen && detail.activity.match_id != null ? (
+          <Link href={`/matcher/${detail.activity.match_id}/utvardera`} className="btn-primary btn-sm">Utvärdera spelarna</Link>
+        ) : detail.activity.is_upcoming ? (
+          <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary btn-sm">Kontrollera uttagningen</Link>
+        ) : null}
       </section>
 
       {detail.activity.activity_type === "match" && !detail.activity.is_upcoming && (

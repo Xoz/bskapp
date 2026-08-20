@@ -7,12 +7,16 @@ const read = (file: string) => fs.readFileSync(path.join(process.cwd(), file), "
 describe("säkerhetskontrakt", () => {
   it("avgränsar matchutvärderingar till matchens trupp och deltagare", () => {
     const actions = read("lib/actions.ts");
+    const evaluation = read("lib/matchEvaluation.ts");
     const start = actions.indexOf("async function persistMatchEvaluations");
     const end = actions.indexOf("export async function saveCoachMatchEvaluations", start);
     const implementation = actions.slice(start, end);
-    expect(implementation).toContain("SELECT player_id FROM match_squad WHERE match_id = ?");
-    expect(implementation).toContain("UNION SELECT player_id FROM match_players WHERE match_id = ?");
-    expect(implementation).toContain("JOIN players p ON p.id = part.player_id");
+    expect(implementation).toContain("getMatchEvaluationWorkspace(matchId, contributorType, contributorId)");
+    expect(evaluation).toContain("SELECT player_id FROM match_squad WHERE match_id = ?");
+    expect(evaluation).toContain("UNION SELECT player_id FROM match_players WHERE match_id = ?");
+    expect(evaluation).toContain("dac.attendance_status = 'present'");
+    expect(evaluation).toContain("NOT EXISTS (SELECT 1 FROM explicit_participants)");
+    expect(evaluation).toContain("JOIN players p ON p.id = part.player_id");
   });
 
   it("kräver capability-token för publik liverapportering", () => {

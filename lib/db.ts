@@ -857,6 +857,66 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_device_sessions_user ON mobile_device_sessions(user_id, revoked_at)");
     await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_device_sessions_previous_refresh ON mobile_device_sessions(previous_refresh_token_hash)");
   } },
+  { id: "0005-sanktan-evaluation-bridge", run: async () => {
+    const yellowGroup = (await getClient().unsafe(
+      "SELECT id FROM groups WHERE group_type = 'subgroup' AND active = 1 AND name = 'Gul' ORDER BY id LIMIT 1"
+    ))[0];
+    if (!yellowGroup?.id) return;
+
+    // Sanktan är kalenderns sanningskälla. Återanvänd en redan importerad match
+    // när datum, tid och motståndare stämmer; skapa bara de rader som saknas.
+    await getClient().unsafe(`
+      INSERT INTO matches (
+        date, start_time, opponent, home_away, match_type, level, location,
+        group_id, source, external_uid
+      )
+      SELECT pcm.match_date, pcm.start_time, pcm.opponent, pcm.home_away,
+             'seriespel', pcm.level::text, COALESCE(pcm.location, ''),
+             $1, 'svenskalag_sanktan', 'sanktan:' || pcm.external_id
+      FROM player_competition_matches pcm
+      WHERE pcm.competition = 'sanktan' AND pcm.source_team = 'Gul'
+        AND NOT EXISTS (
+          SELECT 1 FROM matches existing
+          WHERE existing.date = pcm.match_date
+            AND COALESCE(existing.start_time, '') = COALESCE(pcm.start_time, '')
+            AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+        )
+      ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
+        date = excluded.date, start_time = excluded.start_time,
+        opponent = excluded.opponent, home_away = excluded.home_away,
+        level = excluded.level, location = excluded.location, group_id = excluded.group_id
+    `, [yellowGroup.id]);
+
+    await getClient().unsafe(`
+      UPDATE development_activities da
+      SET match_id = linked.id
+      FROM player_competition_matches pcm
+      CROSS JOIN LATERAL (
+        SELECT m.id
+        FROM matches m
+        WHERE m.external_uid = 'sanktan:' || pcm.external_id
+           OR (
+             m.date = pcm.match_date
+             AND COALESCE(m.start_time, '') = COALESCE(pcm.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+           )
+        ORDER BY CASE WHEN m.external_uid = 'sanktan:' || pcm.external_id THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE da.external_key = 'sanktan:' || pcm.external_id
+        AND pcm.competition = 'sanktan' AND pcm.source_team = 'Gul'
+    `);
+
+    // Äldre sparade uttagningar blir direkt användbara i utvärderingen.
+    await getClient().unsafe(`
+      INSERT INTO match_squad (match_id, player_id)
+      SELECT da.match_id, sd.player_id
+      FROM development_selection_decisions sd
+      JOIN development_activities da ON da.id = sd.activity_id
+      WHERE da.match_id IS NOT NULL AND sd.decision = 'selected'
+      ON CONFLICT DO NOTHING
+    `);
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

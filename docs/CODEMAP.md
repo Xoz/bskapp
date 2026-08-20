@@ -87,7 +87,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
-- **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, konsensus/avvikelse och spelartrend utan poäng eller ELO.
+- **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, `matchEvaluationIsOpen` (öppnar 75 minuter efter avspark), konsensus/avvikelse och spelartrend utan poäng eller ELO.
 
 ---
 

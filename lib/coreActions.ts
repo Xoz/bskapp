@@ -40,9 +40,10 @@ async function requireActivity(activityId: string) {
     id: string;
     activity_type: "training" | "match" | "other";
     group_id: number | null;
+    match_id: number | null;
     external_source: string;
     activity_date: string;
-  }>("SELECT id, activity_type, group_id, external_source, activity_date FROM development_activities WHERE id = ?", [activityId]);
+  }>("SELECT id, activity_type, group_id, match_id, external_source, activity_date FROM development_activities WHERE id = ?", [activityId]);
   if (!activity || !(await canAccessGroup(activity.group_id))) redirect("/idag?behorighet=saknas");
   return activity;
 }
@@ -282,13 +283,24 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   if (
     activity.activity_type !== "match"
     || activity.external_source !== "svenskalag_sanktan"
-    || activity.activity_date <= swedishToday()
+    || activity.activity_date < swedishToday()
   ) redirect("/uttagning?aktivitet=ogiltig");
   const actor = (await getCoachName()) ?? "Tränare";
   const accessiblePlayers = await getPlayers();
-  const selected = new Set(formData.getAll("selected_player").map(Number));
-  const reserves = new Set(formData.getAll("reserve_player").map(Number));
+  const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
+  const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
+  const reserves = new Set(formData.getAll("reserve_player").map(Number).filter((id) => accessibleIds.has(id)));
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
+
+  if (activity.match_id != null) {
+    statements.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [activity.match_id] });
+    for (const playerId of selected) {
+      statements.push({
+        sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+        args: [activity.match_id, playerId],
+      });
+    }
+  }
 
   for (const player of accessiblePlayers) {
     const decision = selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
@@ -321,6 +333,7 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   await pilotEvent("selection_saved", actor, activityId, measuredSeconds(formData), selected.size);
   await logActivity(actor, "sparade utvecklingsuttagning", `${selected.size} uttagna`);
   revalidatePath(`/uttagning?aktivitet=${encodeURIComponent(activityId)}`);
+  if (activity.match_id != null) revalidatePath(`/matcher/${activity.match_id}/utvardera`);
   revalidatePath("/idag");
 }
 
