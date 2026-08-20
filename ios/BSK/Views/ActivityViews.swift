@@ -37,22 +37,124 @@ struct ActivityDetail: View {
     let activity: ActivitySummary
 
     var body: some View {
-        Form {
-            Section("Aktivitet") {
-                LabeledContent("Datum", value: activity.date)
-                if let time = activity.startTime { LabeledContent("Start", value: time) }
-                LabeledContent("Typ", value: activity.type)
-                LabeledContent("Observationer", value: String(activity.observationCount))
-            }
-            if !activity.theme.isEmpty {
-                Section("Tema") { Text(activity.theme) }
-            }
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                matchHero
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 12)], spacing: 12) {
+                    metricCard(
+                        eyebrow: "AVSPARK",
+                        value: activity.startTime ?? "Tid saknas",
+                        systemImage: "clock.fill"
+                    )
+                    metricCard(
+                        eyebrow: "OBSERVATIONER",
+                        value: activity.observationCount == 1 ? "1 sparad" : "\(activity.observationCount) sparade",
+                        systemImage: "checkmark.seal.fill"
+                    )
+                }
+
+                if !activity.theme.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Matchens fokus", systemImage: "scope")
+                            .font(.caption.bold())
+                            .tracking(1.1)
+                            .foregroundStyle(BSKTheme.accent)
+                        Text(activity.theme)
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.white)
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+                }
+
                 ObservationComposer(activity: activity)
             }
+            .padding(18)
+            .frame(maxWidth: 820)
+            .frame(maxWidth: .infinity)
         }
-        .navigationTitle(activity.title)
-        .bskListSurface()
+        .background(BSKTheme.canvas)
+        .navigationTitle("Match")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var matchHero: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("NÄSTA MATCH")
+                    .font(.caption2.bold())
+                    .tracking(1.6)
+                    .foregroundStyle(BSKTheme.accent)
+                Spacer()
+                Image(systemName: "sportscourt.fill")
+                    .font(.title2.bold())
+                    .foregroundStyle(BSKTheme.backgroundDeep)
+                    .frame(width: 52, height: 52)
+                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(activity.title)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                Text("Förbered observationerna före avspark")
+                    .font(.subheadline)
+                    .foregroundStyle(BSKTheme.secondary)
+            }
+
+            HStack(spacing: 9) {
+                infoPill(activity.date, systemImage: "calendar")
+                if let time = activity.startTime {
+                    infoPill(time, systemImage: "clock")
+                }
+            }
+        }
+        .padding(22)
+        .background(
+            LinearGradient(
+                colors: [BSKTheme.elevated, BSKTheme.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(BSKTheme.accent.opacity(0.42), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.24), radius: 18, y: 9)
+    }
+
+    private func infoPill(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption.bold())
+            .foregroundStyle(BSKTheme.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(BSKTheme.backgroundDeep.opacity(0.68), in: Capsule())
+    }
+
+    private func metricCard(eyebrow: String, value: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.headline)
+                .foregroundStyle(BSKTheme.accent)
+                .frame(width: 40, height: 40)
+                .background(BSKTheme.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(eyebrow)
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(1)
+                    .foregroundStyle(BSKTheme.muted)
+                Text(value)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.white)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(15)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
     }
 }
 
@@ -76,62 +178,208 @@ private struct ObservationComposer: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Ny observation").font(.headline)
-                .foregroundStyle(BSKTheme.accent)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("SNABB OBSERVATION")
+                        .font(.caption2.bold())
+                        .tracking(1.5)
+                        .foregroundStyle(BSKTheme.accent)
+                    Text("Fånga det du ser")
+                        .font(.title2.bold())
+                        .foregroundStyle(Color.white)
+                    Text("Välj spelare, mål och en tydlig bedömning.")
+                        .font(.subheadline)
+                        .foregroundStyle(BSKTheme.secondary)
+                }
+                Spacer()
+                Image(systemName: "eye.fill")
+                    .font(.title3.bold())
+                    .foregroundStyle(BSKTheme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(BSKTheme.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
 
-            Picker("Spelare", selection: $selectedPlayerID) {
-                Text("Välj spelare").tag(nil as Int?)
-                ForEach(model.players) { player in
-                    Text(player.name).tag(player.id as Int?)
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("1. Välj spelare", systemImage: "person.fill")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 9) {
+                        ForEach(model.players) { player in
+                            playerButton(player)
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
             }
 
-            Picker("Aktivt mål", selection: $selectedGoalID) {
-                Text("Välj mål").tag(nil as String?)
-                ForEach(selectedPlayer?.activeGoals ?? []) { goal in
-                    Text(goal.title).tag(goal.id as String?)
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("2. Koppla till mål", systemImage: "scope")
+                if let player = selectedPlayer, player.activeGoals.isEmpty {
+                    Label("Spelaren saknar ett aktivt utvecklingsmål", systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.warning)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(BSKTheme.warning.opacity(0.09), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else if selectedPlayer == nil {
+                    Text("Välj en spelare för att se aktiva mål.")
+                        .font(.subheadline)
+                        .foregroundStyle(BSKTheme.muted)
+                        .padding(.vertical, 8)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(selectedPlayer?.activeGoals ?? []) { goal in
+                            goalButton(goal)
+                        }
+                    }
                 }
             }
-            .disabled(selectedPlayer == nil || selectedPlayer?.activeGoals.isEmpty == true)
 
-            Picker("Bedömning", selection: $evidence) {
-                Text("Visade").tag("shown")
-                Text("Tränar på").tag("practicing")
-                Text("Följ upp").tag("revisit")
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("3. Vad såg du?", systemImage: "waveform.path.ecg")
+                HStack(spacing: 8) {
+                    evidenceButton(value: "shown", title: "Visade", systemImage: "sparkles")
+                    evidenceButton(value: "practicing", title: "Tränar på", systemImage: "arrow.triangle.2.circlepath")
+                    evidenceButton(value: "revisit", title: "Följ upp", systemImage: "flag.fill")
+                }
             }
-            .pickerStyle(.segmented)
 
-            TextField("Kort anteckning (valfritt)", text: $note, axis: .vertical)
-                .lineLimit(2...4)
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("Anteckning", systemImage: "text.alignleft")
+                ZStack(alignment: .topLeading) {
+                    if note.isEmpty {
+                        Text("Vad gjorde spelaren? Kort och konkret...")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.muted)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 17)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $note)
+                        .font(.body)
+                        .foregroundStyle(Color.white)
+                        .scrollContentBackground(.hidden)
+                        .padding(11)
+                        .frame(minHeight: 108)
+                        .background(Color.clear)
+                }
+                .background(BSKTheme.backgroundDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+            }
+
+            if let confirmation {
+                Label(confirmation, systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(BSKTheme.accent)
+                    .padding(13)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(BSKTheme.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            }
+            if model.queuedObservationCount > 0 {
+                Label("\(model.queuedObservationCount) väntar på synkning", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption.bold())
+                    .foregroundStyle(BSKTheme.warning)
+            }
 
             Button {
                 Task { await save() }
             } label: {
-                if isSaving {
-                    ProgressView().frame(maxWidth: .infinity)
-                } else {
-                    Label("Spara observation", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
+                HStack {
+                    if isSaving {
+                        ProgressView().tint(BSKTheme.backgroundDeep)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                    }
+                    Text(isSaving ? "Sparar..." : "Spara observation")
+                        .font(.headline)
+                    Spacer()
+                    if !isSaving { Image(systemName: "arrow.right") }
                 }
+                .foregroundStyle(canSave ? BSKTheme.backgroundDeep : BSKTheme.muted)
+                .padding(.horizontal, 18)
+                .frame(height: 56)
+                .background(canSave ? BSKTheme.accent : BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(BSKTheme.accent)
+            .buttonStyle(.plain)
             .disabled(!canSave)
-
-            if let confirmation {
-                Label(confirmation, systemImage: "checkmark.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            if model.queuedObservationCount > 0 {
-                Label("\(model.queuedObservationCount) väntar på synkning", systemImage: "arrow.triangle.2.circlepath")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
-            }
         }
+        .padding(20)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
         .onAppear { selectInitialPlayer() }
         .onChange(of: selectedPlayerID) { _, _ in selectInitialGoal() }
+    }
+
+    private func sectionLabel(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.bold())
+            .foregroundStyle(BSKTheme.secondary)
+    }
+
+    private func playerButton(_ player: PlayerSummary) -> some View {
+        let selected = player.id == selectedPlayerID
+        return Button {
+            selectedPlayerID = player.id
+            confirmation = nil
+        } label: {
+            HStack(spacing: 9) {
+                Text(String(player.name.prefix(1)).uppercased())
+                    .font(.caption.bold())
+                    .foregroundStyle(selected ? BSKTheme.backgroundDeep : BSKTheme.accent)
+                    .frame(width: 30, height: 30)
+                    .background(selected ? BSKTheme.accent : BSKTheme.accent.opacity(0.1), in: Circle())
+                Text(player.name)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 50)
+            .background(selected ? BSKTheme.elevated : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected ? BSKTheme.accent : BSKTheme.border, lineWidth: selected ? 1.5 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func goalButton(_ goal: GoalSummary) -> some View {
+        let selected = goal.id == selectedGoalID
+        return Button {
+            selectedGoalID = goal.id
+            confirmation = nil
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
+                Text(goal.title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+            }
+            .padding(14)
+            .background(selected ? BSKTheme.accent.opacity(0.08) : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected ? BSKTheme.accent.opacity(0.7) : BSKTheme.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func evidenceButton(value: String, title: String, systemImage: String) -> some View {
+        let selected = evidence == value
+        return Button {
+            evidence = value
+            confirmation = nil
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: systemImage).font(.headline)
+                Text(title).font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.78)
+            }
+            .foregroundStyle(selected ? BSKTheme.backgroundDeep : BSKTheme.secondary)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(selected ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected ? BSKTheme.accent : BSKTheme.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     private func selectInitialPlayer() {
