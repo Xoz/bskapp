@@ -555,7 +555,9 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
       continue;
     }
     const normalizedTitle = row.title.normalize("NFKC").trim().toLocaleLowerCase("sv-SE").replace(/\s+/g, " ");
-    const key = [row.activity_date, row.start_time ?? "", row.group_id ?? "", normalizedTitle].join("|");
+    // Samma importerade match kan ligga med olika grupp/starttid beroende på källa.
+    // I matchveckan är datum + normaliserad matchtitel den stabila identiteten.
+    const key = [row.activity_date, normalizedTitle].join("|");
     const existing = activityRows.get(key);
     const priority = (candidate: (typeof rows)[number]) =>
       (Number(candidate.observation_count) > 0 ? 100 : 0) +
