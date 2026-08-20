@@ -1,4 +1,5 @@
-import { IMPACT_LABELS, SELF_LABELS, type MatchEvaluationTrendPoint } from "@/lib/matchEvaluation";
+import { IMPACT_LABELS, SELF_LABELS } from "@/lib/matchEvaluationTypes";
+import type { MatchEvaluationTrendPoint } from "@/lib/matchEvaluation";
 
 export default function MatchEvaluationTrend({ data }: { data: MatchEvaluationTrendPoint[] }) {
   if (!data.length) return null;

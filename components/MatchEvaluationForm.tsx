@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IMPACT_LABELS, MATCH_IMPACTS, REASON_LABELS, REASON_TAGS, SELF_COMPARISONS, SELF_LABELS, type MatchEvaluationPlayer, type MatchImpact, type SelfComparison } from "@/lib/matchEvaluation";
+import { IMPACT_LABELS, MATCH_IMPACTS, REASON_LABELS, REASON_TAGS, SELF_COMPARISONS, SELF_LABELS, type MatchImpact, type SelfComparison } from "@/lib/matchEvaluationTypes";
+import type { MatchEvaluationPlayer } from "@/lib/matchEvaluation";
 
 type Answer = { self: SelfComparison | null; impact: MatchImpact | null; reason: string };
 

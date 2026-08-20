@@ -33,7 +33,8 @@ import {
   type ImportedCallupPlayer,
   type ImportedCallupTotals,
 } from "./callupSync";
-import { evaluationTokenHash, isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluation";
+import { evaluationTokenHash } from "./matchEvaluation";
+import { isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluationTypes";
 
 async function requirePermission(permission: Permission): Promise<void> {
   if (!(await hasPermission(permission))) redirect("/oversikt?behorighet=saknas");
