@@ -6,8 +6,16 @@ import { saveDevelopmentSelection } from "@/lib/coreActions";
 import CoreActivityCard from "@/components/CoreActivityCard";
 import SelectionEditor from "@/components/SelectionEditor";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
+import { swedishToday } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
+
+function endOfCurrentWeek(date: string) {
+  const current = new Date(`${date}T12:00:00Z`);
+  const daysUntilSunday = (7 - current.getUTCDay()) % 7;
+  current.setUTCDate(current.getUTCDate() + daysUntilSunday);
+  return current.toISOString().slice(0, 10);
+}
 
 export default async function SelectionPage({
   searchParams,
@@ -26,6 +34,9 @@ export default async function SelectionPage({
     const visibleMatches = selectedTeam
       ? matches.filter((activity) => activity.source_team === selectedTeam)
       : matches;
+    const weekEnd = endOfCurrentWeek(swedishToday());
+    const thisWeek = visibleMatches.filter((activity) => activity.activity_date <= weekEnd);
+    const later = visibleMatches.filter((activity) => activity.activity_date > weekEnd);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -33,7 +44,7 @@ export default async function SelectionPage({
           <p className="core-kicker">Transparent beslutsstöd</p>
           <h1 className="core-title">Uttagning</h1>
           <p className="core-lead">
-            Välj en kommande Sanktanmatch. Appen visar exponering, utvecklingsmöjligheter och belastning.
+            Öppna en match för att se kallelser och svar, eller skapa ett rättvist lagförslag.
           </p>
           </div>
         </header>
@@ -52,15 +63,36 @@ export default async function SelectionPage({
             </Link>
           ))}
         </nav>
-        <div className="core-list core-list-2">
-          {visibleMatches.map((activity) => (
-            <CoreActivityCard
-              key={activity.id}
-              activity={activity}
-              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
-            />
-          ))}
-        </div>
+        {thisWeek.length > 0 && <section>
+          <div className="core-section-head">
+            <div><p className="core-section-eyebrow">Prioritera nu</p><h2 className="core-section-title">Den här veckan</h2></div>
+            <span className="core-section-note">{thisWeek.length} {thisWeek.length === 1 ? "match" : "matcher"}</span>
+          </div>
+          <div className="core-list core-list-2">
+            {thisWeek.map((activity) => (
+              <CoreActivityCard
+                key={activity.id}
+                activity={activity}
+                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+              />
+            ))}
+          </div>
+        </section>}
+        {later.length > 0 && <section>
+          <div className="core-section-head">
+            <div><p className="core-section-eyebrow">Planera framåt</p><h2 className="core-section-title">Senare matcher</h2></div>
+            <span className="core-section-note">{later.length} matcher</span>
+          </div>
+          <div className="core-list core-list-2">
+            {later.map((activity) => (
+              <CoreActivityCard
+                key={activity.id}
+                activity={activity}
+                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+              />
+            ))}
+          </div>
+        </section>}
       </div>
     );
   }
@@ -96,7 +128,7 @@ export default async function SelectionPage({
             )}
           </div>
           <Link href={`/observera?aktivitet=${encodeURIComponent(workspace.activity.id)}`} className="btn-secondary">
-            Observationer
+            Sätt matchfokus
           </Link>
         </div>
       </header>

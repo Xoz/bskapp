@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
-import { getPlayerCoreSummaries, type Evidence } from "@/lib/developmentCore";
-import Avatar from "@/components/Avatar";
+import { getPlayerCoreSummaries } from "@/lib/developmentCore";
+import PlayerDirectory from "@/components/PlayerDirectory";
 
 export const dynamic = "force-dynamic";
 
-const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
 const TEAM_ORDER = ["Gul", "Grön", "F15"];
 const TEAM_TONES: Record<string, "yellow" | "green" | "blue"> = { Gul: "yellow", Grön: "green", F15: "blue" };
 const UNASSIGNED_TEAM = "utan-lag";
@@ -43,7 +42,7 @@ export default async function PlayersPage({ searchParams }: {
         <p className="core-kicker">Individuell utveckling</p>
         <h1 className="core-title">Spelare</h1>
         <p className="core-lead">
-          Högst två aktiva mål per spelare. Observationer och exponering visar vad ni faktiskt har sett och erbjudit.
+          Sök fram en spelare för att se matchpreferenser, utvecklingsmål och matchhistorik.
         </p>
         </div>
         <div className="core-panel px-4 py-3 text-right">
@@ -74,45 +73,19 @@ export default async function PlayersPage({ searchParams }: {
           </Link>
         )}
       </nav>
-      <div className="core-list core-list-2">
-        {visiblePlayers.map(({ player, teams, goals, lastObservation, trainingCount, matchCount, hasSanktanSync, sanktanGulCount, sanktanGronCount, callupCount }) => (
-          <Link key={player.id} href={`/spelare/${player.id}`} className="core-player-card">
-            <div className="flex items-start gap-4">
-              <Avatar name={player.name} jersey={player.jersey_number} size={42} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <h2 className="core-player-name truncate">{player.name}</h2>
-                    {teams.length ? teams.map((team) => (
-                      <span key={team.id} className="core-team-tag" data-team-tone={TEAM_TONES[team.name]}>{team.name}</span>
-                    )) : (
-                      <span className="core-team-tag core-team-tag-unassigned">Ej tilldelat lag</span>
-                    )}
-                  </div>
-                  <span className={`core-tag ${goals.length ? "core-tag-training" : ""}`}>{goals.length}/2 mål</span>
-                </div>
-                <div>
-                  {goals.length ? goals.map((goal) => (
-                    <p key={goal.id} className="core-goal">{goal.title}</p>
-                  )) : <p className="core-goal" style={{ borderColor: "var(--border)", color: "var(--ink-muted)" }}>Inget aktivt utvecklingsmål</p>}
-                </div>
-                <div className="core-statline">
-                  <span>{trainingCount} träningar</span>
-                  <span title={hasSanktanSync ? `Gul ${sanktanGulCount} · Grön ${sanktanGronCount}` : undefined}>
-                    {matchCount} {hasSanktanSync ? "Sanktanmatcher" : "matcher"}
-                  </span>
-                  <span>{callupCount} kallelser</span>
-                </div>
-                {lastObservation && (
-                  <p className="core-activity-sub mt-2">
-                    Senast {lastObservation.activity_date}: {EVIDENCE_LABELS[lastObservation.evidence]} · {lastObservation.goal_title}
-                  </p>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals, matchCount, callupCount }) => ({
+        id: player.id,
+        name: player.name,
+        jersey: player.jersey_number,
+        teams: teams.map(({ id, name }) => ({ id, name })),
+        goals: goals.map((goal) => goal.title),
+        matchCount,
+        callupCount,
+        positionPrimary: player.preferred_position_primary,
+        positionSecondary: player.preferred_position_secondary,
+        levelPrimary: player.preferred_level_primary,
+        levelSecondary: player.preferred_level_secondary,
+      }))} />
     </div>
   );
 }

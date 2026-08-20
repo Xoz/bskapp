@@ -70,25 +70,36 @@ export default async function ObservePage({
             </Link>
           ))}
         </nav>
-        <div className="core-list core-list-2">
-          {upcomingActivities.map((activity) => (
-            <CoreActivityCard
-              key={activity.id}
-              activity={activity}
-              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
-            />
-          ))}
-          {upcomingActivities.length > 0 && playedActivities.length > 0 && (
-            <div className="core-list-divider"><span>Spelade matcher</span></div>
-          )}
-          {playedActivities.map((activity) => (
-            <CoreActivityCard
-              key={activity.id}
-              activity={activity}
-              href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
-            />
-          ))}
-        </div>
+        {upcomingActivities.length > 0 && <section>
+          <div className="core-section-head">
+            <div><p className="core-section-eyebrow">Före match</p><h2 className="core-section-title">Den här veckan</h2></div>
+            <span className="core-section-note">Sätt fokus och kontrollera truppen</span>
+          </div>
+          <div className="core-list core-list-2">
+            {upcomingActivities.map((activity) => (
+              <CoreActivityCard
+                key={activity.id}
+                activity={activity}
+                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+              />
+            ))}
+          </div>
+        </section>}
+        {playedActivities.length > 0 && <section>
+          <div className="core-section-head">
+            <div><p className="core-section-eyebrow">Efter match</p><h2 className="core-section-title">Spelade matcher</h2></div>
+            <span className="core-section-note">Öppna för att registrera det ni såg</span>
+          </div>
+          <div className="core-list core-list-2">
+            {playedActivities.map((activity) => (
+              <CoreActivityCard
+                key={activity.id}
+                activity={activity}
+                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+              />
+            ))}
+          </div>
+        </section>}
       </div>
     );
   }
@@ -107,7 +118,7 @@ export default async function ObservePage({
         <Link href={listHref} className="body-small" style={{ color: "var(--ink-secondary)" }}>← Alla Sanktanmatcher</Link>
         <div className="core-header mt-2">
           <div>
-            <p className="core-kicker">{detail.activity.activity_type === "training" ? "Träning" : detail.activity.activity_type === "match" ? "Match" : "Aktivitet"}</p>
+            <p className="core-kicker">{detail.activity.is_upcoming ? "Förbered inför match" : "Efter matchen"}</p>
             <h1 className="core-title">{detail.activity.title}</h1>
             <p className="core-lead">
               {detail.activity.activity_date}{detail.activity.start_time ? ` · ${detail.activity.start_time}` : ""}
@@ -132,6 +143,16 @@ export default async function ObservePage({
         </div>
       </header>
 
+      <section className="core-context-banner" data-tone={detail.activity.is_upcoming ? "prepare" : "review"}>
+        <div>
+          <strong>{detail.activity.is_upcoming ? "Det här gör du här" : "Registrera bara det ni faktiskt såg"}</strong>
+          <p>{detail.activity.is_upcoming
+            ? "Kontrollera vilka som är kallade i Uttagning och sätt sedan ett gemensamt fokus för matchen. Observationer registreras här efter att matchen är spelad."
+            : "Matchtruppen är hämtad från Svenska Lag. Kontrollera spelarna nedan och koppla observationer till deras aktiva utvecklingsmål."}</p>
+        </div>
+        {detail.activity.is_upcoming && <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary btn-sm">Kontrollera uttagningen</Link>}
+      </section>
+
       {detail.activity.activity_type === "match" && !detail.activity.is_upcoming && (
         <section className="core-panel core-form-panel">
           <div className="core-section-head">
@@ -152,7 +173,7 @@ export default async function ObservePage({
         <section className="core-panel core-form-panel">
           <div className="core-section-head">
             <div><p className="core-kicker">Kallelse från Svenska Lag</p><h2 className="core-section-title mt-2">Kallade spelare</h2></div>
-            <span className="core-section-note">{detail.activity.called_player_names.length} kallade</span>
+            <span className="core-section-note">{Number(detail.activity.accepted_callup_count) + Number(detail.activity.declined_callup_count) + Number(detail.activity.pending_callup_count)} kallade · {detail.activity.accepted_callup_count} ja · {detail.activity.declined_callup_count} nej · {detail.activity.pending_callup_count} inväntar</span>
           </div>
           {detail.activity.called_player_names.length > 0 ? (
             <div className="core-player-chips mt-4">
@@ -174,7 +195,7 @@ export default async function ObservePage({
 
       <form action={contextAction} className="core-panel core-form-panel grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
         <label className="block">
-          <span className="label">Aktivitetens fokus</span>
+          <span className="label">{detail.activity.activity_type === "match" ? "Matchfokus" : "Aktivitetens fokus"}</span>
           <input name="theme" className="input mt-1" defaultValue={detail.activity.theme} placeholder="Exempel: spelbarhet före mottagning" />
         </label>
         <label className="block">
@@ -185,7 +206,7 @@ export default async function ObservePage({
             <option value="challenging">Utmanande</option>
           </select>
         </label>
-        <button type="submit" className="btn-secondary">Spara fokus</button>
+        <button type="submit" className={detail.activity.is_upcoming ? "btn-primary" : "btn-secondary"}>Spara fokus</button>
       </form>
 
       {!detail.activity.is_upcoming && <section>

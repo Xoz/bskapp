@@ -5,13 +5,14 @@ import { describe, expect, it } from "vitest";
 const read = (file: string) => fs.readFileSync(path.join(process.cwd(), file), "utf8");
 
 describe("säkerhetskontrakt", () => {
-  it("avgränsar matchbetyg till faktiska matchdeltagare", () => {
+  it("avgränsar matchutvärderingar till matchens trupp och deltagare", () => {
     const actions = read("lib/actions.ts");
-    const start = actions.indexOf("export async function saveMatchRatings");
-    const end = actions.indexOf("export async function saveSquad", start);
+    const start = actions.indexOf("async function persistMatchEvaluations");
+    const end = actions.indexOf("export async function saveCoachMatchEvaluations", start);
     const implementation = actions.slice(start, end);
-    expect(implementation).toContain("JOIN match_players mp ON mp.player_id = p.id");
-    expect(implementation).toContain("WHERE mp.match_id = ?");
+    expect(implementation).toContain("SELECT player_id FROM match_squad WHERE match_id = ?");
+    expect(implementation).toContain("UNION SELECT player_id FROM match_players WHERE match_id = ?");
+    expect(implementation).toContain("JOIN players p ON p.id = part.player_id");
   });
 
   it("kräver capability-token för publik liverapportering", () => {

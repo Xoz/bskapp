@@ -39,6 +39,11 @@ export default async function PlayerPage({ params, searchParams }: {
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
   const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
+  const positionSummary = [summary.player.preferred_position_primary, summary.player.preferred_position_secondary].filter(Boolean).join(" / ");
+  const levelSummary = [summary.player.preferred_level_primary, summary.player.preferred_level_secondary]
+    .filter(Boolean)
+    .map((level) => sanktanLevelLabel(Number(level)))
+    .join(" / ");
 
   return (
     <div className="core-page">
@@ -54,16 +59,21 @@ export default async function PlayerPage({ params, searchParams }: {
             <span title={summary.hasSanktanSync ? `Gul ${summary.sanktanGulCount} · Grön ${summary.sanktanGronCount}` : undefined}>
               {summary.matchCount} {summary.hasSanktanSync ? "Sanktanmatcher" : "matcher"}
             </span>
-            <span>{summary.callupCount} kallelser</span><span>{summary.periodsPlayed} perioder</span>
+            <span>{summary.callupCount} kallelser</span>
+          </div>
+          <div className="player-profile-quickfacts">
+            {summary.teams.map((team) => <span key={team.id} className="core-team-tag" data-team-tone={team.name === "Gul" ? "yellow" : team.name === "Grön" ? "green" : "blue"}>{team.name}</span>)}
+            <span>{positionSummary ? `Position: ${positionSummary}` : "Position saknas"}</span>
+            <span>{levelSummary ? `Nivå: ${levelSummary}` : "Nivå saknas"}</span>
           </div>
         </div>
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
       </header>
 
-      <details className="core-panel core-form-panel" open>
+      <details className="core-panel core-form-panel">
         <summary className="core-section-head cursor-pointer list-none">
           <div><p className="core-kicker">Matchpreferenser</p><h2 className="core-section-title mt-2">Position och Sanktan-nivå</h2></div>
-          <div className="flex items-center gap-3"><span className="core-section-note">Första- och andraval</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
+          <div className="flex items-center gap-3"><span className="core-section-note">{positionSummary || "Position saknas"} · {levelSummary || "Nivå saknas"}</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
         </summary>
         {canSetSelectionPreferences ? (
           <PlayerSelectionPreferencesForm action={savePreferences} defaults={{
