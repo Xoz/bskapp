@@ -53,6 +53,35 @@ actor APIClient {
         try await perform(path: "/players/\(id)", method: "GET", body: nil, authorized: true)
     }
 
+    func createGoal(playerID: Int, title: String, evidenceHint: String, reviewOn: String?) async throws -> PlayerDetail {
+        struct Body: Encodable { let title: String; let evidenceHint: String; let reviewOn: String? }
+        return try await perform(
+            path: "/players/\(playerID)/goals",
+            method: "POST",
+            body: encoder.encode(Body(title: title, evidenceHint: evidenceHint, reviewOn: reviewOn)),
+            authorized: true
+        )
+    }
+
+    func closeGoal(playerID: Int, goalID: String, status: String) async throws -> PlayerDetail {
+        struct Body: Encodable { let status: String }
+        return try await perform(
+            path: "/players/\(playerID)/goals/\(goalID)",
+            method: "PATCH",
+            body: encoder.encode(Body(status: status)),
+            authorized: true
+        )
+    }
+
+    func savePlayerPreferences(playerID: Int, preferences: PlayerDetail.Preferences) async throws -> PlayerDetail {
+        try await perform(
+            path: "/players/\(playerID)/preferences",
+            method: "PUT",
+            body: encoder.encode(preferences),
+            authorized: true
+        )
+    }
+
     func activities() async throws -> [ActivitySummary] {
         try await perform(path: "/activities", method: "GET", body: nil, authorized: true)
     }

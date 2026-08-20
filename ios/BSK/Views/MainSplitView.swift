@@ -46,6 +46,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
 
 struct MainSplitView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var section: AppSection? = .today
     @State private var selectedPlayer: Int?
     @State private var selectedActivity: String?
@@ -69,6 +70,7 @@ struct MainSplitView: View {
                 }
             }
             .navigationTitle("BSK")
+            .bskListSurface()
         } content: {
             switch section ?? .today {
             case .today:
@@ -113,6 +115,45 @@ struct MainSplitView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .background(BSKTheme.background)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if horizontalSizeClass == .compact {
+                compactNavigation
+            }
+        }
+    }
+
+    private var compactNavigation: some View {
+        HStack(spacing: 0) {
+            ForEach(availableSections.filter { $0 != .settings }) { item in
+                Button {
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        section = item
+                        selectedPlayer = nil
+                        selectedActivity = nil
+                        columnVisibility = .doubleColumn
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 19, weight: section == item ? .semibold : .regular))
+                        Text(item.title)
+                            .font(.system(size: 10, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(section == item ? BSKTheme.accent : BSKTheme.muted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 9)
+                    .padding(.bottom, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(item.title)
+                .accessibilityAddTraits(section == item ? .isSelected : [])
+            }
+        }
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { Rectangle().fill(BSKTheme.border).frame(height: 1) }
     }
 }
 
@@ -128,6 +169,7 @@ private struct SettingsList: View {
             }
         }
         .navigationTitle("Inställningar")
+        .bskListSurface()
     }
 }
 
@@ -145,5 +187,6 @@ private struct AccountDetail: View {
             }
         }
         .navigationTitle("Konto")
+        .bskListSurface()
     }
 }

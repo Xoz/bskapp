@@ -68,6 +68,36 @@ struct PlayerSummary: Codable, Identifiable {
 }
 
 struct PlayerDetail: Codable, Identifiable {
+    struct Team: Codable, Identifiable {
+        let id: Int
+        let name: String
+        let isPrimary: Bool
+    }
+
+    struct Preferences: Codable {
+        let primaryPosition: String
+        let secondaryPosition: String
+        let primaryLevel: String
+        let secondaryLevel: String
+        let selectionEligible: Bool
+    }
+
+    struct Stats: Codable {
+        let trainingCount: Int
+        let matchCount: Int
+        let callupCount: Int
+    }
+
+    struct MatchHistory: Codable, Identifiable {
+        let id: String
+        let date: String
+        let startTime: String?
+        let opponent: String
+        let homeAway: String
+        let sourceTeam: String
+        let level: Int?
+    }
+
     struct Goal: Codable, Identifiable {
         let id: String
         let slot: Int
@@ -100,6 +130,10 @@ struct PlayerDetail: Codable, Identifiable {
     let primaryPosition: String
     let activeGoals: [GoalSummary]
     let lastObservation: ObservationSummary?
+    let teams: [Team]
+    let preferences: Preferences
+    let stats: Stats
+    let matchHistory: [MatchHistory]
     let goals: [Goal]
     let observations: [Observation]
 }

@@ -8,7 +8,11 @@ struct ActivityList: View {
         List(model.activities, selection: $selection) { activity in
             NavigationLink(value: activity.id) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(activity.title).fontWeight(.semibold)
+                    HStack(spacing: 10) {
+                        Image(systemName: activity.type == "match" ? "sportscourt.fill" : "figure.run")
+                            .foregroundStyle(BSKTheme.accent)
+                        Text(activity.title).fontWeight(.semibold)
+                    }
                     HStack {
                         Text(activity.date)
                         if let time = activity.startTime { Text(time) }
@@ -23,6 +27,7 @@ struct ActivityList: View {
             }
         }
         .navigationTitle("Observera")
+        .bskListSurface()
         .refreshable { await model.reload() }
     }
 }
@@ -47,6 +52,7 @@ struct ActivityDetail: View {
             }
         }
         .navigationTitle(activity.title)
+        .bskListSurface()
     }
 }
 
@@ -72,6 +78,7 @@ private struct ObservationComposer: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Ny observation").font(.headline)
+                .foregroundStyle(BSKTheme.accent)
 
             Picker("Spelare", selection: $selectedPlayerID) {
                 Text("Välj spelare").tag(nil as Int?)
@@ -109,6 +116,7 @@ private struct ObservationComposer: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .tint(BSKTheme.accent)
             .disabled(!canSave)
 
             if let confirmation {
@@ -185,6 +193,7 @@ struct TodayList: View {
             }
         }
         .navigationTitle("Idag")
+        .bskListSurface()
         .refreshable { await model.reload() }
     }
 
@@ -215,6 +224,10 @@ struct TodayDetail: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                Text("UTVECKLINGSVERKTYGET")
+                    .font(.caption2.bold())
+                    .tracking(1.6)
+                    .foregroundStyle(BSKTheme.accent)
                 Text("Hej \(model.user?.name.components(separatedBy: " ").first ?? "tränare")")
                     .font(.largeTitle.bold())
                 Text("Veckans matcher, kallelseläget och det som behöver följas upp.")
@@ -229,6 +242,7 @@ struct TodayDetail: View {
             .padding(28)
             .frame(maxWidth: 800, alignment: .leading)
         }
+        .background(BSKTheme.background)
         .navigationTitle("Översikt")
     }
 }
@@ -241,7 +255,10 @@ struct SelectionList: View {
         List(model.selectionMatches, selection: $selection) { match in
             NavigationLink(value: match.id) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(match.title).fontWeight(.semibold)
+                    HStack {
+                        Image(systemName: "sportscourt.fill").foregroundStyle(BSKTheme.accent)
+                        Text(match.title).fontWeight(.semibold)
+                    }
                     Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -257,6 +274,7 @@ struct SelectionList: View {
             }
         }
         .navigationTitle("Uttagning")
+        .bskListSurface()
         .refreshable { await model.reload() }
     }
 }
@@ -287,6 +305,7 @@ struct SelectionDetail: View {
                         }
                     }
                 }
+                .bskListSurface()
                 .safeAreaInset(edge: .bottom) {
                     Button {
                         Task { await save() }
@@ -298,6 +317,7 @@ struct SelectionDetail: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(BSKTheme.accent)
                     .disabled(isSaving)
                     .padding()
                     .background(.bar)
@@ -328,7 +348,7 @@ struct SelectionDetail: View {
                 if let status = candidate.currentCallupStatus {
                     Text(callupLabel(status))
                         .font(.caption.bold())
-                        .foregroundStyle(status == "declined" ? .red : .secondary)
+                        .foregroundStyle(status == "declined" ? BSKTheme.danger : status == "accepted" ? BSKTheme.accent : BSKTheme.warning)
                 }
             }
 

@@ -82,6 +82,24 @@ final class AppModel: ObservableObject {
         try await api.player(id: id)
     }
 
+    func createGoal(playerID: Int, title: String, evidenceHint: String, reviewOn: String?) async throws -> PlayerDetail {
+        let detail = try await api.createGoal(playerID: playerID, title: title, evidenceHint: evidenceHint, reviewOn: reviewOn)
+        players = try await api.players()
+        return detail
+    }
+
+    func closeGoal(playerID: Int, goalID: String, status: String) async throws -> PlayerDetail {
+        let detail = try await api.closeGoal(playerID: playerID, goalID: goalID, status: status)
+        players = try await api.players()
+        return detail
+    }
+
+    func savePlayerPreferences(playerID: Int, preferences: PlayerDetail.Preferences) async throws -> PlayerDetail {
+        let detail = try await api.savePlayerPreferences(playerID: playerID, preferences: preferences)
+        players = try await api.players()
+        return detail
+    }
+
     func selectionWorkspace(id: String) async throws -> SelectionWorkspace {
         try await api.selectionWorkspace(id: id)
     }

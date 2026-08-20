@@ -6,7 +6,7 @@ struct LoginView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.035, green: 0.09, blue: 0.20), Color(red: 0.08, green: 0.20, blue: 0.43)],
+                colors: [BSKTheme.background, BSKTheme.elevated, BSKTheme.background],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -14,15 +14,21 @@ struct LoginView: View {
 
             VStack(spacing: 28) {
                 Spacer()
-                Image(systemName: "figure.soccer")
-                    .font(.system(size: 58, weight: .semibold))
-                    .foregroundStyle(Color("AccentColor"))
-                    .accessibilityHidden(true)
-                VStack(spacing: 8) {
+                VStack(spacing: 14) {
+                    Text("+90")
+                        .font(.system(size: 64, weight: .black, design: .rounded))
+                        .foregroundStyle(BSKTheme.accent)
                     Text("BSK F2014")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .font(.caption.bold())
+                        .tracking(2.2)
+                        .foregroundStyle(BSKTheme.muted)
+                }
+                VStack(spacing: 8) {
                     Text("Utveckling nära träningen")
-                        .font(.title3)
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .multilineTextAlignment(.center)
+                    Text("Samma lag. Samma data. Nu native.")
+                        .font(.body)
                         .foregroundStyle(.white.opacity(0.72))
                 }
                 .foregroundStyle(.white)
@@ -39,7 +45,7 @@ struct LoginView: View {
                     .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color("AccentColor"))
+                .tint(BSKTheme.accent)
                 .foregroundStyle(.black)
                 .disabled(model.isWorking)
                 Text("Samma konto, spelare och behörigheter som på bsk2014.se.")
@@ -49,6 +55,7 @@ struct LoginView: View {
             }
             .padding(32)
             .frame(maxWidth: 520)
+            .padding(.vertical, 20)
         }
     }
 }

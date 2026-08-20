@@ -30,6 +30,28 @@ export type MobilePlayerSummary = {
 };
 
 export type MobilePlayerDetail = MobilePlayerSummary & {
+  teams: { id: number; name: string; isPrimary: boolean }[];
+  preferences: {
+    primaryPosition: string;
+    secondaryPosition: string;
+    primaryLevel: string;
+    secondaryLevel: string;
+    selectionEligible: boolean;
+  };
+  stats: {
+    trainingCount: number;
+    matchCount: number;
+    callupCount: number;
+  };
+  matchHistory: {
+    id: string;
+    date: string;
+    startTime: string | null;
+    opponent: string;
+    homeAway: "home" | "away";
+    sourceTeam: "Gul" | "Grön";
+    level: number | null;
+  }[];
   goals: {
     id: string;
     slot: 1 | 2;
@@ -291,7 +313,52 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
   }
   const summary = (await listMobilePlayers(actor)).find((player) => player.id === playerId);
   if (!summary) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
-  const [goals, observations] = await Promise.all([
+  const [profile, teams, stats, matchHistory, goals, observations] = await Promise.all([
+    get<{
+      preferred_position_primary: string;
+      preferred_position_secondary: string;
+      preferred_level_primary: string;
+      preferred_level_secondary: string;
+      selection_eligible: number;
+    }>(
+      `SELECT preferred_position_primary, preferred_position_secondary,
+              preferred_level_primary, preferred_level_secondary, selection_eligible
+       FROM players WHERE id = ?`,
+      [playerId]
+    ),
+    all<{ id: number; name: string; is_primary: number }>(
+      `SELECT g.id, g.name, pgm.is_primary
+       FROM player_group_memberships pgm
+       JOIN groups g ON g.id = pgm.group_id
+       WHERE pgm.player_id = ? AND g.active = 1
+       ORDER BY pgm.is_primary DESC, lower(g.name)`,
+      [playerId]
+    ),
+    get<{ training_count: number; match_count: number; callup_count: number }>(
+      `SELECT
+         (SELECT COUNT(DISTINCT ap.activity_id) FROM development_activity_participation ap JOIN development_activities da ON da.id = ap.activity_id WHERE ap.player_id = ? AND ap.attendance_status = 'present' AND da.activity_type = 'training') AS training_count,
+         (SELECT COUNT(DISTINCT pcmp.match_external_id) FROM player_competition_match_players pcmp WHERE pcmp.player_id = ?) AS match_count,
+         (SELECT COUNT(DISTINCT dac.activity_id) FROM development_activity_callups dac WHERE dac.player_id = ?) AS callup_count`,
+      [playerId, playerId, playerId]
+    ),
+    all<{
+      external_id: string;
+      match_date: string;
+      start_time: string | null;
+      opponent: string;
+      home_away: "home" | "away";
+      source_team: "Gul" | "Grön";
+      level: number | null;
+    }>(
+      `SELECT pcm.external_id, pcm.match_date, pcm.start_time, pcm.opponent,
+              pcm.home_away, pcm.source_team, pcm.level
+       FROM player_competition_match_players pcmp
+       JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
+       WHERE pcmp.player_id = ? AND pcm.competition = 'sanktan'
+       ORDER BY pcm.match_date DESC, pcm.start_time DESC NULLS LAST
+       LIMIT 30`,
+      [playerId]
+    ),
     all<GoalRow>(
       `SELECT id, player_id, slot, title, evidence_hint, status, starts_on, review_on, ended_on
        FROM player_development_goals
@@ -314,6 +381,28 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
   ]);
   return {
     ...summary,
+    teams: teams.map((team) => ({ id: team.id, name: team.name, isPrimary: Boolean(team.is_primary) })),
+    preferences: {
+      primaryPosition: profile?.preferred_position_primary ?? "",
+      secondaryPosition: profile?.preferred_position_secondary ?? "",
+      primaryLevel: profile?.preferred_level_primary ?? "",
+      secondaryLevel: profile?.preferred_level_secondary ?? "",
+      selectionEligible: Boolean(profile?.selection_eligible),
+    },
+    stats: {
+      trainingCount: Number(stats?.training_count ?? 0),
+      matchCount: Number(stats?.match_count ?? 0),
+      callupCount: Number(stats?.callup_count ?? 0),
+    },
+    matchHistory: matchHistory.map((match) => ({
+      id: match.external_id,
+      date: match.match_date,
+      startTime: match.start_time,
+      opponent: match.opponent,
+      homeAway: match.home_away,
+      sourceTeam: match.source_team,
+      level: match.level == null ? null : Number(match.level),
+    })),
     goals: goals.map((goal) => ({
       id: goal.id,
       slot: goal.slot,
@@ -338,6 +427,98 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       createdAt: observation.created_at,
     })),
   };
+}
+
+export async function createMobileDevelopmentGoal(
+  actor: CurrentUser,
+  playerId: number,
+  input: { title: string; evidenceHint: string; reviewOn: string | null }
+): Promise<MobilePlayerDetail> {
+  requirePermission(actor, "manage_evaluations");
+  if (!(await listMobilePlayers(actor)).some((player) => player.id === playerId)) {
+    throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+  }
+  const title = input.title.trim();
+  const evidenceHint = input.evidenceHint.trim();
+  const reviewOn = input.reviewOn?.trim() ?? "";
+  if (title.length < 3 || title.length > 120 || evidenceHint.length > 240 || (reviewOn && !/^\d{4}-\d{2}-\d{2}$/.test(reviewOn))) {
+    throw new DevelopmentServiceError("invalid", "Kontrollera måltext, ledtråd och uppföljningsdatum.", 400);
+  }
+  const rows = await run(
+    `INSERT INTO player_development_goals
+       (id, player_id, slot, title, evidence_hint, starts_on, review_on, created_by)
+     SELECT ?, ?, slots.slot, ?, ?, to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD'), NULLIF(?, ''), ?
+     FROM (VALUES (1), (2)) AS slots(slot)
+     WHERE NOT EXISTS (
+       SELECT 1 FROM player_development_goals existing
+       WHERE existing.player_id = ? AND existing.status = 'active' AND existing.slot = slots.slot
+     )
+     ORDER BY slots.slot LIMIT 1 RETURNING id`,
+    [crypto.randomUUID(), playerId, title, evidenceHint, reviewOn, actor.name, playerId]
+  );
+  if (rows.length === 0) throw new DevelopmentServiceError("invalid", "Spelaren har redan två aktiva mål.", 409);
+  await logActivity(actor.name, "satte native-utvecklingsmål", `spelare ${playerId}`);
+  return getMobilePlayer(actor, playerId);
+}
+
+export async function closeMobileDevelopmentGoal(
+  actor: CurrentUser,
+  playerId: number,
+  goalId: string,
+  status: "achieved" | "paused"
+): Promise<MobilePlayerDetail> {
+  requirePermission(actor, "manage_evaluations");
+  if (!UUID_PATTERN.test(goalId) || !["achieved", "paused"].includes(status)) {
+    throw new DevelopmentServiceError("invalid", "Ogiltigt mål eller status.", 400);
+  }
+  const summary = (await listMobilePlayers(actor)).find((player) => player.id === playerId);
+  if (!summary) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+  const updated = await run(
+    `UPDATE player_development_goals
+     SET status = ?, ended_on = to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD'),
+         updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+     WHERE id = ? AND player_id = ? AND status = 'active' RETURNING id`,
+    [status, goalId, playerId]
+  );
+  if (updated.length === 0) throw new DevelopmentServiceError("not_found", "Det aktiva målet hittades inte.", 404);
+  await logActivity(actor.name, status === "achieved" ? "uppnådde native-utvecklingsmål" : "pausade native-utvecklingsmål", `spelare ${playerId}`);
+  return getMobilePlayer(actor, playerId);
+}
+
+export async function updateMobilePlayerPreferences(
+  actor: CurrentUser,
+  playerId: number,
+  input: {
+    primaryPosition: string;
+    secondaryPosition: string;
+    primaryLevel: string;
+    secondaryLevel: string;
+    selectionEligible: boolean;
+  }
+): Promise<MobilePlayerDetail> {
+  requirePermission(actor, "manage_squads");
+  if (!(await listMobilePlayers(actor)).some((player) => player.id === playerId)) {
+    throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+  }
+  const positions = new Set(["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"]);
+  const levels = new Set(["", "2", "3", "4", "5"]);
+  if (!positions.has(input.primaryPosition) || !positions.has(input.secondaryPosition) || !levels.has(input.primaryLevel) || !levels.has(input.secondaryLevel)) {
+    throw new DevelopmentServiceError("invalid", "Ogiltig position eller Sanktan-nivå.", 400);
+  }
+  await run(
+    `UPDATE players SET preferred_position_primary = ?, preferred_position_secondary = ?,
+                        preferred_level_primary = ?, preferred_level_secondary = ?, selection_eligible = ?
+     WHERE id = ?`,
+    [
+      input.primaryPosition,
+      input.secondaryPosition === input.primaryPosition ? "" : input.secondaryPosition,
+      input.primaryLevel,
+      input.secondaryLevel === input.primaryLevel ? "" : input.secondaryLevel,
+      input.selectionEligible ? 1 : 0,
+      playerId,
+    ]
+  );
+  return getMobilePlayer(actor, playerId);
 }
 
 export async function listMobileActivities(actor: CurrentUser): Promise<MobileActivity[]> {
