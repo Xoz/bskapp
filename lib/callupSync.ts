@@ -1,4 +1,5 @@
 export type ImportedCallupStatus = "accepted" | "declined" | "pending";
+export type SavedSelectionDecision = "selected" | "reserve" | "rested";
 
 export type ImportedCallupPlayer = {
   name: string;
@@ -28,4 +29,18 @@ export function callupTotalsCoverKnownPlayers(
   return known.accepted <= totals.accepted
     && known.declined <= totals.declined
     && known.pending <= totals.pending;
+}
+
+/**
+ * När en match har synkade kallelser är Svenska Lag facit för vilka som är
+ * kallade. En äldre lokalt sparad uttagning ska då inte kunna ligga kvar och
+ * visa ett annat urval.
+ */
+export function selectionDecisionFromCallups(
+  hasSyncedCallups: boolean,
+  currentCallupStatus: ImportedCallupStatus | null,
+  savedDecision: SavedSelectionDecision | null
+): SavedSelectionDecision {
+  if (!hasSyncedCallups) return savedDecision ?? "rested";
+  return currentCallupStatus ? "selected" : "rested";
 }

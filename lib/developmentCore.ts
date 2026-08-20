@@ -10,6 +10,7 @@ import {
   type RecommendationCallupStatus,
   type SelectionSupport,
 } from "./selectionSupport";
+import { selectionDecisionFromCallups } from "./callupSync";
 
 export type CoreActivityType = "training" | "match" | "other";
 export type Evidence = "shown" | "practicing" | "revisit";
@@ -572,6 +573,9 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     ]
   );
   const history = new Map(rows.map((row) => [row.player_id, row]));
+  const hasSyncedCallups = Number(detail.activity.accepted_callup_count)
+    + Number(detail.activity.declined_callup_count)
+    + Number(detail.activity.pending_callup_count) > 0;
   const yellowRows = candidateSummaries
     .filter((summary) => summary.primaryTeam?.name === "Gul")
     .map((summary) => history.get(summary.player.id))
@@ -590,7 +594,11 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     };
     return {
       ...summary,
-      decision: row?.decision ?? "rested",
+      decision: selectionDecisionFromCallups(
+        hasSyncedCallups,
+        row?.current_callup_status ?? null,
+        row?.decision ?? null
+      ),
       selectedLastEight: signals.selectedLastEight,
       selectedLastThree: signals.selectedLastThree,
       lastSelectedDate: signals.lastSelectedDate,

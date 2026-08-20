@@ -77,7 +77,7 @@ export default async function SelectionPage({
             <p className="core-kicker">{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</p>
             <h1 className="core-title">{workspace.activity.title}</h1>
             <p className="core-lead">
-              Markera spelare för matchtruppen. Listan är alfabetisk och utan dold ranking.
+              Kallade spelare är markerade och deras svar visas direkt i listan.
             </p>
             {workspace.activity.source_team === "Gul" && (
               <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
@@ -96,6 +96,11 @@ export default async function SelectionPage({
         candidates={workspace.candidates}
         sourceTeam={workspace.activity.source_team}
         matchLevel={workspace.activity.competition_level}
+        callupSummary={{
+          accepted: Number(workspace.activity.accepted_callup_count),
+          declined: Number(workspace.activity.declined_callup_count),
+          pending: Number(workspace.activity.pending_callup_count),
+        }}
         action={saveAction}
       />
     </div>

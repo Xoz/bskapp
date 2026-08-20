@@ -5,7 +5,7 @@ import PilotStartField from "@/components/PilotStartField";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
-const SELECTION_GRID = "2rem minmax(13rem, 1fr) 7rem 7.25rem 7.25rem 5.25rem 5.75rem 8.75rem";
+const SELECTION_GRID = "2rem minmax(12rem, 1fr) 6.5rem 6.75rem 6.75rem 5rem 5.5rem 6.5rem 8.25rem";
 
 type Candidate = {
   player: {
@@ -36,11 +36,13 @@ export default function SelectionEditor({
   candidates,
   sourceTeam,
   matchLevel,
+  callupSummary,
   action,
 }: {
   candidates: Candidate[];
   sourceTeam: string | null;
   matchLevel: number | null;
+  callupSummary: { accepted: number; declined: number; pending: number };
   action: (formData: FormData) => Promise<void>;
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "selected").map((candidate) => candidate.player.id)));
@@ -79,6 +81,9 @@ export default function SelectionEditor({
       : candidates.filter((candidate) => candidate.teams.some((team) => team.name === teamFilter)),
     [candidates, teamFilter]
   );
+  const calledCount = callupSummary.accepted + callupSummary.declined + callupSummary.pending;
+  const linkedCalledCount = candidates.filter((candidate) => candidate.currentCallupStatus !== null).length;
+  const unlinkedCalledCount = Math.max(0, calledCount - linkedCalledCount);
 
   function teamTone(teamName: string) {
     if (teamName === "Gul") return "yellow";
@@ -143,17 +148,17 @@ export default function SelectionEditor({
       <section className="selection-summary">
         <div className="selection-summary-main">
           <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Truppen just nu</div>
-          <div className="selection-summary-count"><strong>{selected.length}</strong><span>uttagna</span></div>
+          <div className="selection-summary-count"><strong>{selected.length}</strong><span>markerade</span></div>
           <p className="selection-summary-copy">
-            {selected.length > 0
-              ? "Spelare valda till matchtruppen. Ändra urvalet direkt i listan nedan."
-              : "Markera spelare i listan för att bygga matchtruppen."}
+            {calledCount > 0
+              ? `Urvalet speglar den synkade kallelsen.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
+              : "Ingen synkad kallelse finns ännu. Markera spelare manuellt i listan."}
           </p>
         </div>
         <div className="selection-summary-stat">
-          <span>Spelarlista</span>
-          <strong>{visibleCandidates.length}</strong>
-          <small>{teamFilter === "Alla" ? "alla lag" : teamFilter}</small>
+          <span>Kallelse</span>
+          <strong>{calledCount}</strong>
+          <small>{callupSummary.accepted} ja · {callupSummary.declined} nej · {callupSummary.pending} inväntar</small>
         </div>
         <div className="selection-summary-stat selection-summary-stat-accent">
           <span>Balans</span>
@@ -221,6 +226,7 @@ export default function SelectionEditor({
               <span>Pos 2</span>
               <span className="selection-number">Matcher</span>
               <span className="selection-number">Kallelser</span>
+              <span>Svar</span>
               <span>Vald position</span>
             </div>
             <ul className="selection-table-body">
@@ -247,7 +253,9 @@ export default function SelectionEditor({
                     </span>
                     {recommendationReason
                       ? <span className="selection-player-status">Förslag</span>
-                      : selectedForMatch && <span className="selection-player-status selection-player-status-manual">Vald</span>}
+                      : candidate.currentCallupStatus
+                        ? <span className="selection-player-status selection-player-status-manual">Kallad</span>
+                        : selectedForMatch && <span className="selection-player-status selection-player-status-manual">Vald</span>}
                   </label>
                   <span className="selection-teams" title={teamNames}>
                     {candidate.teams.length > 0 ? candidate.teams.map((team) => <span key={team.id} className="selection-team-tag" data-team-tone={teamTone(team.name)}>{team.name}</span>) : <span className="selection-empty">—</span>}
@@ -264,6 +272,13 @@ export default function SelectionEditor({
                   <span className="selection-number tabular-nums">
                     {candidate.callupCount}
                   </span>
+                  {candidate.currentCallupStatus ? (
+                    <span className="selection-callup-status" data-callup-status={candidate.currentCallupStatus}>
+                      {candidate.currentCallupStatus === "accepted"
+                        ? "Ja"
+                        : candidate.currentCallupStatus === "declined" ? "Nej" : "Inväntar"}
+                    </span>
+                  ) : <span className="selection-empty">—</span>}
                   {selectedForMatch && (
                     <label className="selection-position-select">
                       <span className="sr-only">Position</span>

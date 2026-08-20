@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { callupTotalsCoverKnownPlayers, countImportedCallupStatuses } from "./callupSync";
+import {
+  callupTotalsCoverKnownPlayers,
+  countImportedCallupStatuses,
+  selectionDecisionFromCallups,
+} from "./callupSync";
 
 describe("kallelsesynk", () => {
   const known = [
@@ -18,5 +22,14 @@ describe("kallelsesynk", () => {
 
   it("avvisar totaler som är mindre än de kopplade spelarraderna", () => {
     expect(callupTotalsCoverKnownPlayers({ accepted: 0, declined: 1, pending: 1 }, known)).toBe(false);
+  });
+
+  it("låter en synkad kallelse styra vilka som är markerade", () => {
+    expect(selectionDecisionFromCallups(true, "declined", "rested")).toBe("selected");
+    expect(selectionDecisionFromCallups(true, null, "selected")).toBe("rested");
+  });
+
+  it("behåller sparad uttagning när kallelse saknas", () => {
+    expect(selectionDecisionFromCallups(false, null, "reserve")).toBe("reserve");
   });
 });
