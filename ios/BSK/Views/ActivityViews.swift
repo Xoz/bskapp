@@ -167,10 +167,12 @@ private struct ObservationComposer: View {
     @State private var evidence = "practicing"
     @State private var note = ""
     @State private var isSaving = false
+    @State private var isLoadingPlayers = true
+    @State private var matchPlayers: [PlayerSummary] = []
     @State private var confirmation: String?
 
     private var selectedPlayer: PlayerSummary? {
-        model.players.first { $0.id == selectedPlayerID }
+        matchPlayers.first { $0.id == selectedPlayerID }
     }
 
     private var canSave: Bool {
@@ -202,13 +204,30 @@ private struct ObservationComposer: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 sectionLabel("1. Välj spelare", systemImage: "person.fill")
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 9) {
-                        ForEach(model.players) { player in
-                            playerButton(player)
-                        }
+                if isLoadingPlayers {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(BSKTheme.accent)
+                        Text("Hämtar matchtruppen...")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 12)
+                } else if matchPlayers.isEmpty {
+                    Label("Ingen uttagen eller accepterad spelare finns för matchen ännu.", systemImage: "person.3.sequence.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.warning)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(BSKTheme.warning.opacity(0.09), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 9) {
+                            ForEach(matchPlayers) { player in
+                                playerButton(player)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
                 }
             }
 
@@ -306,7 +325,7 @@ private struct ObservationComposer: View {
         .padding(20)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
-        .onAppear { selectInitialPlayer() }
+        .task(id: activity.id) { await loadPlayers() }
         .onChange(of: selectedPlayerID) { _, _ in selectInitialGoal() }
     }
 
@@ -384,9 +403,23 @@ private struct ObservationComposer: View {
 
     private func selectInitialPlayer() {
         if selectedPlayerID == nil {
-            selectedPlayerID = model.players.first(where: { !$0.activeGoals.isEmpty })?.id
+            selectedPlayerID = matchPlayers.first(where: { !$0.activeGoals.isEmpty })?.id ?? matchPlayers.first?.id
         }
         selectInitialGoal()
+    }
+
+    @MainActor
+    private func loadPlayers() async {
+        isLoadingPlayers = true
+        defer { isLoadingPlayers = false }
+        do {
+            matchPlayers = try await model.activityPlayers(id: activity.id)
+            selectedPlayerID = nil
+            selectInitialPlayer()
+        } catch {
+            matchPlayers = []
+            model.errorMessage = error.localizedDescription
+        }
     }
 
     private func selectInitialGoal() {

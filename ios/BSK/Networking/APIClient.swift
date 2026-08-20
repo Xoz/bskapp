@@ -86,6 +86,10 @@ actor APIClient {
         try await perform(path: "/activities", method: "GET", body: nil, authorized: true)
     }
 
+    func activityPlayers(id: String) async throws -> [PlayerSummary] {
+        try await perform(path: "/activities/\(id)/players", method: "GET", body: nil, authorized: true)
+    }
+
     func saveObservations(_ commands: [ObservationCommand], activityID: String) async throws -> [ObservationCommandResult] {
         struct Body: Encodable { let commands: [ObservationCommand] }
         return try await perform(

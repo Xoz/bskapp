@@ -308,6 +308,74 @@ export async function listMobilePlayers(actor: CurrentUser): Promise<MobilePlaye
   });
 }
 
+export async function listMobileActivityPlayers(actor: CurrentUser, activityId: string): Promise<MobilePlayerSummary[]> {
+  requirePermission(actor, "manage_evaluations");
+  if (!activityId) throw new DevelopmentServiceError("invalid", "Aktivitet saknas.", 400);
+  const scope = activityScope(actor);
+  const rows = await all<{
+    id: number;
+    name: string;
+    jersey_number: number | null;
+    position: string;
+    preferred_position_primary: string;
+    active_goals: MobilePlayerSummary["activeGoals"];
+  }>(
+    `WITH target AS (
+       SELECT da.id, da.match_id
+       FROM development_activities da
+       WHERE da.id = ? AND da.activity_type = 'match' AND ${scope.sql}
+     ), explicit_participants AS (
+       SELECT ms.player_id
+       FROM target t JOIN match_squad ms ON ms.match_id = t.match_id
+       UNION
+       SELECT sd.player_id
+       FROM target t
+       JOIN development_selection_decisions sd ON sd.activity_id = t.id
+       WHERE sd.decision = 'selected'
+       UNION
+       SELECT dap.player_id
+       FROM target t
+       JOIN development_activity_participation dap ON dap.activity_id = t.id
+       WHERE dap.selected = 1
+     ), accepted_callups AS (
+       SELECT dac.player_id
+       FROM target t
+       JOIN development_activity_callups dac ON dac.activity_id = t.id
+       WHERE dac.attendance_status = 'present'
+     ), participants AS (
+       SELECT player_id FROM explicit_participants
+       UNION
+       SELECT player_id FROM accepted_callups
+       WHERE NOT EXISTS (SELECT 1 FROM explicit_participants)
+     )
+     SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary,
+            COALESCE((
+              SELECT json_agg(json_build_object(
+                'id', g.id,
+                'slot', g.slot,
+                'title', g.title,
+                'evidenceHint', g.evidence_hint,
+                'reviewOn', g.review_on
+              ) ORDER BY g.slot)
+              FROM player_development_goals g
+              WHERE g.player_id = p.id AND g.status = 'active'
+            ), '[]'::json) AS active_goals
+     FROM participants part
+     JOIN players p ON p.id = part.player_id AND p.active = 1
+     ORDER BY lower(p.name)`,
+    [activityId, ...scope.args]
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    jerseyNumber: row.jersey_number,
+    position: row.position,
+    primaryPosition: row.preferred_position_primary,
+    activeGoals: row.active_goals ?? [],
+    lastObservation: null,
+  }));
+}
+
 export async function getMobilePlayer(actor: CurrentUser, playerId: number): Promise<MobilePlayerDetail> {
   if (!Number.isInteger(playerId) || playerId < 1) {
     throw new DevelopmentServiceError("invalid", "Ogiltigt spelar-id.", 400);
@@ -803,8 +871,29 @@ export async function createDevelopmentObservations(
         `SELECT g.id
          FROM player_development_goals g
          JOIN players p ON p.id = g.player_id AND p.active = 1
-         WHERE g.id = ? AND g.player_id = ? AND g.status = 'active' AND ${pScope.sql}`,
-        [command.goalId, command.playerId, ...pScope.args]
+         WHERE g.id = ? AND g.player_id = ? AND g.status = 'active'
+           AND (
+             ${pScope.sql}
+             OR EXISTS (
+               SELECT 1 FROM development_selection_decisions sd
+               WHERE sd.activity_id = ? AND sd.player_id = p.id AND sd.decision = 'selected'
+             )
+             OR EXISTS (
+               SELECT 1 FROM development_activity_participation dap
+               WHERE dap.activity_id = ? AND dap.player_id = p.id AND dap.selected = 1
+             )
+             OR EXISTS (
+               SELECT 1 FROM development_activity_callups dac
+               WHERE dac.activity_id = ? AND dac.player_id = p.id AND dac.attendance_status = 'present'
+             )
+             OR EXISTS (
+               SELECT 1
+               FROM development_activities da
+               JOIN match_squad ms ON ms.match_id = da.match_id
+               WHERE da.id = ? AND ms.player_id = p.id
+             )
+           )`,
+        [command.goalId, command.playerId, ...pScope.args, activityId, activityId, activityId, activityId]
       );
       if (!goal) throw new DevelopmentServiceError("not_found", "Aktivt mål eller spelare hittades inte.", 404);
 
