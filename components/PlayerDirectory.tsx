@@ -82,8 +82,8 @@ export default function PlayerDirectory({ players }: { players: PlayerDirectoryI
                 </p>
               </div>
               <div className="player-directory-stats">
-                <span><strong>{player.matchCount}</strong> matcher</span>
-                <span><strong>{player.callupCount}</strong> kallelser</span>
+                <span><strong>{player.matchCount}</strong> {player.matchCount === 1 ? "match" : "matcher"}</span>
+                <span><strong>{player.callupCount}</strong> {player.callupCount === 1 ? "kallelse" : "kallelser"}</span>
               </div>
               <span className="core-chevron" aria-hidden>›</span>
             </Link>

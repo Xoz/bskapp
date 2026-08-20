@@ -135,11 +135,6 @@ export default async function ObservePage({
               </div>
             )}
           </div>
-          {detail.activity.activity_type === "match" && detail.activity.is_upcoming && (
-            <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary">
-              Till uttagningen
-            </Link>
-          )}
         </div>
       </header>
 
