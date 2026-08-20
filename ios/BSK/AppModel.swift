@@ -211,6 +211,33 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func saveObservations(
+        activityID: String,
+        submissions: [ObservationSubmission]
+    ) async throws -> ObservationSaveStatus {
+        let commands = submissions.map { submission in
+            ObservationCommand(
+                commandId: UUID().uuidString.lowercased(),
+                activityId: activityID,
+                playerId: submission.playerId,
+                goalId: submission.goalId,
+                evidence: submission.evidence,
+                note: submission.note.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
+        guard !commands.isEmpty else { return .saved }
+        do {
+            _ = try await api.saveObservations(commands, activityID: activityID)
+            await loadCoreData()
+            return .saved
+        } catch let error as URLError {
+            guard Self.isConnectivityError(error) else { throw error }
+            queuedObservations.append(contentsOf: commands)
+            persistObservationQueue()
+            return .queued
+        }
+    }
+
     func signOut() async {
         await api.logout()
         user = nil

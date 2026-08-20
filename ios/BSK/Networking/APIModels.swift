@@ -162,6 +162,13 @@ struct ObservationCommand: Codable, Identifiable {
     var id: String { commandId }
 }
 
+struct ObservationSubmission {
+    let playerId: Int
+    let goalId: String
+    let evidence: String
+    let note: String
+}
+
 struct ObservationCommandResult: Decodable, Identifiable {
     let commandId: String
     let observationId: String

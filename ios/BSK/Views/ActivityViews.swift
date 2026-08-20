@@ -70,7 +70,7 @@ struct ActivityDetail: View {
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
                 }
 
-                ObservationComposer(activity: activity)
+                MatchObservationBoard(activity: activity)
             }
             .padding(18)
             .frame(maxWidth: 820)
@@ -155,6 +155,267 @@ struct ActivityDetail: View {
         .padding(15)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+    }
+}
+
+private struct MatchObservationDraft {
+    var goalID: String
+    var evidence: String?
+    var note = ""
+}
+
+private struct MatchObservationBoard: View {
+    @EnvironmentObject private var model: AppModel
+
+    let activity: ActivitySummary
+    @State private var players: [PlayerSummary] = []
+    @State private var drafts: [Int: MatchObservationDraft] = [:]
+    @State private var isLoading = true
+    @State private var isSaving = false
+    @State private var confirmation: String?
+
+    private var playersWithGoals: [PlayerSummary] {
+        players.filter { !$0.activeGoals.isEmpty }
+    }
+
+    private var markedCount: Int {
+        drafts.values.filter { $0.evidence != nil }.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("MÅLANKNUTEN EVIDENS")
+                        .font(.caption2.bold())
+                        .tracking(1.5)
+                        .foregroundStyle(BSKTheme.accent)
+                    Text("Vad såg ni?")
+                        .font(.title2.bold())
+                        .foregroundStyle(Color.white)
+                    Text("Markera bara det som faktiskt observerades.")
+                        .font(.subheadline)
+                        .foregroundStyle(BSKTheme.secondary)
+                }
+                Spacer()
+                if markedCount > 0 {
+                    Text("\(markedCount) MARKERADE")
+                        .font(.caption2.bold())
+                        .tracking(1)
+                        .foregroundStyle(BSKTheme.backgroundDeep)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 8)
+                        .background(BSKTheme.accent, in: Capsule())
+                }
+            }
+
+            if isLoading {
+                HStack(spacing: 10) {
+                    ProgressView().tint(BSKTheme.accent)
+                    Text("Hämtar matchtruppen...").foregroundStyle(BSKTheme.secondary)
+                }
+                .padding(.vertical, 20)
+            } else if playersWithGoals.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Inga aktiva utvecklingsmål ännu", systemImage: "scope")
+                        .font(.headline)
+                        .foregroundStyle(BSKTheme.warning)
+                    Text(players.isEmpty ? "Ingen uttagen eller accepterad spelare finns för matchen ännu." : "Sätt ett aktivt mål på spelarsidan innan observationer registreras.")
+                        .font(.subheadline)
+                        .foregroundStyle(BSKTheme.secondary)
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(BSKTheme.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12, alignment: .top)], spacing: 12) {
+                    ForEach(playersWithGoals) { player in
+                        observationCard(player)
+                    }
+                }
+            }
+
+            if let confirmation {
+                Label(confirmation, systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(BSKTheme.accent)
+                    .padding(13)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(BSKTheme.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            }
+
+            if model.queuedObservationCount > 0 {
+                Label("\(model.queuedObservationCount) väntar på synkning", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption.bold())
+                    .foregroundStyle(BSKTheme.warning)
+            }
+
+            saveButton
+        }
+        .padding(20)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+        .task(id: activity.id) { await loadPlayers() }
+    }
+
+    private func observationCard(_ player: PlayerSummary) -> some View {
+        let draft = drafts[player.id] ?? initialDraft(player)
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)).uppercased())
+                    .font(.headline.bold())
+                    .foregroundStyle(BSKTheme.backgroundDeep)
+                    .frame(width: 42, height: 42)
+                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(player.name).font(.headline).foregroundStyle(Color.white)
+                    Text(draft.evidence == nil ? "Inte markerad" : "Observation markerad")
+                        .font(.caption)
+                        .foregroundStyle(draft.evidence == nil ? BSKTheme.muted : BSKTheme.accent)
+                }
+                Spacer()
+                if draft.evidence != nil {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(BSKTheme.accent)
+                }
+            }
+
+            if player.activeGoals.count > 1 {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("UTVECKLINGSMÅL").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(BSKTheme.muted)
+                    ForEach(player.activeGoals) { goal in
+                        Button {
+                            update(player) { $0.goalID = goal.id }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: draft.goalID == goal.id ? "checkmark.circle.fill" : "circle")
+                                Text(goal.title).multilineTextAlignment(.leading)
+                                Spacer()
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(draft.goalID == goal.id ? Color.white : BSKTheme.secondary)
+                            .padding(11)
+                            .background(draft.goalID == goal.id ? BSKTheme.accent.opacity(0.09) : BSKTheme.backgroundDeep.opacity(0.5), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } else if let goal = player.activeGoals.first {
+                Label(goal.title, systemImage: "scope")
+                    .font(.caption.bold())
+                    .foregroundStyle(BSKTheme.secondary)
+            }
+
+            VStack(spacing: 7) {
+                evidenceChoice(player, value: "shown", title: "Visade", help: "Beteendet syntes tydligt")
+                evidenceChoice(player, value: "practicing", title: "Tränar på", help: "Försökte och är på väg")
+                evidenceChoice(player, value: "revisit", title: "Nytt tillfälle", help: "Behöver observeras igen")
+            }
+
+            TextField("Kort konkret exempel, frivilligt", text: noteBinding(player))
+                .font(.subheadline)
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 13)
+                .frame(height: 46)
+                .background(BSKTheme.backgroundDeep.opacity(0.65), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+        }
+        .padding(16)
+        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(draft.evidence == nil ? BSKTheme.border : BSKTheme.accent.opacity(0.55), lineWidth: 1))
+    }
+
+    private func evidenceChoice(_ player: PlayerSummary, value: String, title: String, help: String) -> some View {
+        let selected = drafts[player.id]?.evidence == value
+        return Button {
+            update(player) { $0.evidence = $0.evidence == value ? nil : value }
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.headline)
+                    .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.subheadline.bold()).foregroundStyle(selected ? Color.white : BSKTheme.secondary)
+                    Text(help).font(.caption2).foregroundStyle(BSKTheme.muted)
+                }
+                Spacer()
+            }
+            .padding(11)
+            .background(selected ? BSKTheme.accent.opacity(0.09) : BSKTheme.backgroundDeep.opacity(0.48), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var saveButton: some View {
+        Button {
+            Task { await save() }
+        } label: {
+            HStack {
+                if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
+                else { Image(systemName: "checkmark.circle.fill") }
+                Text(isSaving ? "Sparar..." : "Spara markerade observationer")
+                    .font(.headline)
+                Spacer()
+                if markedCount > 0 { Text("\(markedCount)").font(.headline.monospacedDigit()) }
+            }
+            .foregroundStyle(markedCount > 0 && !isSaving ? BSKTheme.backgroundDeep : BSKTheme.muted)
+            .padding(.horizontal, 18)
+            .frame(height: 56)
+            .background(markedCount > 0 && !isSaving ? BSKTheme.accent : BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(markedCount == 0 || isSaving)
+    }
+
+    private func initialDraft(_ player: PlayerSummary) -> MatchObservationDraft {
+        MatchObservationDraft(goalID: player.activeGoals.first?.id ?? "", evidence: nil)
+    }
+
+    private func update(_ player: PlayerSummary, change: (inout MatchObservationDraft) -> Void) {
+        var draft = drafts[player.id] ?? initialDraft(player)
+        change(&draft)
+        drafts[player.id] = draft
+        confirmation = nil
+    }
+
+    private func noteBinding(_ player: PlayerSummary) -> Binding<String> {
+        Binding(
+            get: { drafts[player.id]?.note ?? "" },
+            set: { value in update(player) { $0.note = String(value.prefix(280)) } }
+        )
+    }
+
+    @MainActor
+    private func loadPlayers() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            players = try await model.activityPlayers(id: activity.id)
+            drafts = Dictionary(uniqueKeysWithValues: players.filter { !$0.activeGoals.isEmpty }.map { ($0.id, initialDraft($0)) })
+        } catch {
+            players = []
+            drafts = [:]
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func save() async {
+        let submissions = playersWithGoals.compactMap { player -> ObservationSubmission? in
+            guard let draft = drafts[player.id], let evidence = draft.evidence, !draft.goalID.isEmpty else { return nil }
+            return ObservationSubmission(playerId: player.id, goalId: draft.goalID, evidence: evidence, note: draft.note)
+        }
+        guard !submissions.isEmpty else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let status = try await model.saveObservations(activityID: activity.id, submissions: submissions)
+            confirmation = status == .saved ? "\(submissions.count) observationer sparades." : "Sparat offline och synkas automatiskt."
+            for player in playersWithGoals {
+                drafts[player.id] = initialDraft(player)
+            }
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
     }
 }
 
