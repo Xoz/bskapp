@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
@@ -81,6 +81,15 @@ export default function SelectionEditor({
       : candidates.filter((candidate) => candidate.teams.some((team) => team.name === teamFilter)),
     [candidates, teamFilter]
   );
+  const groupedVisibleCandidates = useMemo(() => [
+    ...visibleCandidates.filter((candidate) => candidate.currentCallupStatus !== null),
+    ...visibleCandidates.filter((candidate) => candidate.currentCallupStatus === null),
+  ], [visibleCandidates]);
+  const visibleCalledCount = visibleCandidates.filter((candidate) => candidate.currentCallupStatus !== null).length;
+  const visibleCallupSummary = visibleCandidates.reduce((summary, candidate) => {
+    if (candidate.currentCallupStatus) summary[candidate.currentCallupStatus] += 1;
+    return summary;
+  }, { accepted: 0, declined: 0, pending: 0 });
   const calledCount = callupSummary.accepted + callupSummary.declined + callupSummary.pending;
   const linkedCalledCount = candidates.filter((candidate) => candidate.currentCallupStatus !== null).length;
   const unlinkedCalledCount = Math.max(0, calledCount - linkedCalledCount);
@@ -230,12 +239,34 @@ export default function SelectionEditor({
               <span>Vald position</span>
             </div>
             <ul className="selection-table-body">
-              {visibleCandidates.map((candidate) => {
+              {groupedVisibleCandidates.map((candidate, index) => {
             const selectedForMatch = selectedIds.has(candidate.player.id);
             const recommendationReason = recommendationReasons[candidate.player.id];
             const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
             return (
-              <li key={candidate.player.id} className={`selection-row ${selectedForMatch ? "selection-row-selected" : ""}`}>
+              <Fragment key={candidate.player.id}>
+              {index === 0 && visibleCalledCount > 0 && (
+                <li className="selection-table-section selection-table-section-called">
+                  <div>
+                    <span className="selection-table-section-title"><span className="selection-table-section-dot" /> Kallade till matchen</span>
+                    <span className="selection-table-section-meta">
+                      {visibleCalledCount} spelare · {visibleCallupSummary.accepted} ja · {visibleCallupSummary.declined} nej · {visibleCallupSummary.pending} inväntar
+                    </span>
+                  </div>
+                </li>
+              )}
+              {calledCount > 0 && index === visibleCalledCount && groupedVisibleCandidates.length > visibleCalledCount && (
+                <li className="selection-table-section selection-table-section-others">
+                  <div>
+                    <span className="selection-table-section-title">Övriga spelare</span>
+                    <span className="selection-table-section-meta">{groupedVisibleCandidates.length - visibleCalledCount} tillgängliga i filtret</span>
+                  </div>
+                </li>
+              )}
+              <li
+                className={`selection-row ${selectedForMatch ? "selection-row-selected" : ""} ${candidate.currentCallupStatus ? "selection-row-called" : ""}`}
+                data-callup-status={candidate.currentCallupStatus ?? undefined}
+              >
                 <div className="selection-row-grid" style={{ gridTemplateColumns: SELECTION_GRID }}>
                   <input
                     id={`selected-${candidate.player.id}`}
@@ -294,6 +325,7 @@ export default function SelectionEditor({
                   )}
                 </div>
               </li>
+              </Fragment>
             );
               })}
             </ul>
