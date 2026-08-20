@@ -147,16 +147,8 @@ export async function getPlayerSession(): Promise<number | null> {
 
 const ROLE_ORDER: Role[] = ["admin", "head_coach", "coach", "leader", "parent", "player"];
 
-export const getCurrentUser = cache(async function getCurrentUser(): Promise<CurrentUser | null> {
-  const token = (await cookies()).get("bsk_session")?.value;
-  if (!token) return null;
-  const dot = token.lastIndexOf(".");
-  if (dot < 1) return null;
-  const value = token.slice(0, dot);
-  if (!value.startsWith("user:") || token.slice(dot + 1) !== sign(value)) return null;
-  const id = Number(value.slice(5));
+export async function loadCurrentUserById(id: number): Promise<CurrentUser | null> {
   if (!Number.isInteger(id) || id < 1) return null;
-
   const user = await get<{ id: number; email: string; name: string }>(
     "SELECT id, email, name FROM users WHERE id = ? AND active = 1",
     [id]
@@ -189,6 +181,17 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Cur
     permissions: [...effective],
     groupIds: groupRows.map((r) => r.group_id),
   };
+}
+
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<CurrentUser | null> {
+  const token = (await cookies()).get("bsk_session")?.value;
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const value = token.slice(0, dot);
+  if (!value.startsWith("user:") || token.slice(dot + 1) !== sign(value)) return null;
+  const id = Number(value.slice(5));
+  return loadCurrentUserById(id);
 });
 
 export function isStaffRole(role: Role | null | undefined): boolean {

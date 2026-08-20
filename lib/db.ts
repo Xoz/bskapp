@@ -821,6 +821,42 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("DROP TABLE IF EXISTS match_ratings");
     await getClient().unsafe("ALTER TABLE players DROP COLUMN IF EXISTS form_rating");
   } },
+  { id: "0004-mobile-auth", run: async () => {
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS mobile_oauth_states (
+      state_hash TEXT PRIMARY KEY,
+      code_challenge TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ
+    )`);
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS mobile_auth_codes (
+      code_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_challenge TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ
+    )`);
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS mobile_device_sessions (
+      id UUID PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      device_id UUID NOT NULL,
+      device_name TEXT NOT NULL DEFAULT '',
+      access_token_hash TEXT NOT NULL UNIQUE,
+      access_expires_at TIMESTAMPTZ NOT NULL,
+      refresh_token_hash TEXT NOT NULL UNIQUE,
+      previous_refresh_token_hash TEXT,
+      refresh_expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      revoked_at TIMESTAMPTZ,
+      UNIQUE(user_id, device_id)
+    )`);
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_oauth_states_expiry ON mobile_oauth_states(expires_at)");
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_auth_codes_expiry ON mobile_auth_codes(expires_at)");
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_device_sessions_user ON mobile_device_sessions(user_id, revoked_at)");
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_mobile_device_sessions_previous_refresh ON mobile_device_sessions(previous_refresh_token_hash)");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

@@ -8,11 +8,13 @@ import {
   canAccessGroup,
   canAccessPlayer,
   getCoachName,
+  getCurrentUser,
   hasPermission,
   type Permission,
 } from "./auth";
 import { getPlayers } from "./queries";
 import { swedishToday } from "./dates";
+import { createDevelopmentObservations, type CreateObservationCommand } from "./services/development";
 
 const EVIDENCE_VALUES = ["shown", "practicing", "revisit"] as const;
 const CHALLENGE_VALUES = ["safe", "balanced", "challenging"] as const;
@@ -245,9 +247,9 @@ export async function closeDevelopmentGoal(goalId: string, formData: FormData) {
 export async function saveQuickObservations(activityId: string, formData: FormData) {
   await requireCorePermission("manage_evaluations");
   await requireActivity(activityId);
-  const actor = (await getCoachName()) ?? "Tränare";
-  const statements: { sql: string; args: (string | number | null)[] }[] = [];
-  let itemCount = 0;
+  const actor = await getCurrentUser();
+  if (!actor) redirect("/login");
+  const commands: CreateObservationCommand[] = [];
 
   for (const [key, rawEvidence] of formData.entries()) {
     if (!key.startsWith("evidence_")) continue;
@@ -255,25 +257,20 @@ export async function saveQuickObservations(activityId: string, formData: FormDa
     const evidence = enumValue(rawEvidence, EVIDENCE_VALUES);
     if (!Number.isInteger(playerId) || !evidence || !(await canAccessPlayer(playerId))) continue;
     const goalId = String(formData.get(`goal_${playerId}`) ?? "");
-    const goal = await get<{ id: string }>(
-      `SELECT id FROM player_development_goals
-       WHERE id = ? AND player_id = ? AND status = 'active'`,
-      [goalId, playerId]
-    );
-    if (!goal) continue;
     const note = String(formData.get(`note_${playerId}`) ?? "").trim().slice(0, 280);
-    statements.push({
-      sql: `INSERT INTO development_observations
-              (id, activity_id, player_id, goal_id, evidence, note, coach_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [crypto.randomUUID(), activityId, playerId, goal.id, evidence, note, actor],
+    commands.push({
+      commandId: crypto.randomUUID(),
+      playerId,
+      goalId,
+      evidence,
+      note,
     });
-    itemCount += 1;
   }
 
-  if (statements.length) await batch(statements);
-  await pilotEvent("observation_saved", actor, activityId, measuredSeconds(formData), itemCount);
-  await logActivity(actor, "sparade utvecklingsobservationer", `${itemCount} observationer`);
+  await createDevelopmentObservations(actor, activityId, commands, {
+    skipInvalid: true,
+    durationSeconds: measuredSeconds(formData),
+  });
   revalidatePath(`/observera?aktivitet=${encodeURIComponent(activityId)}`);
   revalidatePath("/idag");
   revalidatePath("/spelare");

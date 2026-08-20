@@ -156,3 +156,23 @@ find app -name "page.tsx" -o -name "route.ts" | sort
 # Alla tabeller:
 grep -E "CREATE TABLE" lib/db.ts
 ```
+## Mobile API och nativegrund
+
+- `lib/services/development.ts` är transportoberoende servicelager för den
+  första nativevertikalen. Det äger gruppscope, permissions, läsmodeller,
+  observationsvalidering, idempotens och audit.
+- `lib/mobileApi.ts` formar versionsmärkta JSON-svar och löser tills vidare
+  både BSK:s befintliga webbsession och native bearer-session.
+- `lib/mobileAuth.ts` äger OAuth state, S256-PKCE, engångskod, access-token,
+  roterande refresh-token och återkallningsbara enhetssessioner. Flödet och
+  Keychain-kontraktet finns i `docs/NATIVE_AUTH.md`.
+- `app/api/mobile/v1/players/` och `app/api/mobile/v1/activities/` exponerar
+  trupp, spelardetalj, aktiviteter och skrivning av observationer.
+- API-kontraktet finns i `docs/MOBILE_API_V1.yaml`. Planlinjen är uttryckligen
+  utanför nuvarande scope; `docs/MOBILE_DATA_MAPPING.md` är endast en parkerad
+  framtidsreferens.
+- `ios/BSK.xcodeproj` är den universella SwiftUI-klienten för iPhone och iPad.
+  `ios/BSK/Auth` innehåller ASWebAuthenticationSession, PKCE och Keychain;
+  `ios/BSK/Networking` innehåller tokenrefresh och Mobile API-modeller; vyerna
+  använder adaptiv `NavigationSplitView`. Kör- och konfigurationsnoter finns i
+  `ios/README.md`.

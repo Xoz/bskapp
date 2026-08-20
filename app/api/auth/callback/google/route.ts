@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { get, getSetting, run } from "@/lib/db";
 import { userSessionToken, coachEmailToken, requestOrigin } from "@/lib/auth";
+import {
+  abandonNativeOAuthState,
+  createNativeAuthCode,
+  nativeCallbackUrl,
+  nativeOAuthStateExists,
+} from "@/lib/mobileAuth";
 
 export const runtime = "nodejs";
 
@@ -10,13 +16,18 @@ export async function GET(req: NextRequest) {
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
   const origin = requestOrigin(req);
+  const nativeState = state ? await nativeOAuthStateExists(state) : false;
 
   if (errorParam) {
+    if (nativeState && state) {
+      await abandonNativeOAuthState(state);
+      return NextResponse.redirect(nativeCallbackUrl({ error: "oauth_denied" }));
+    }
     return NextResponse.redirect(`${origin}/login?google_error=1`);
   }
 
   const storedState = req.cookies.get("bsk_oauth_state")?.value;
-  if (!code || !state || !storedState || state !== storedState) {
+  if (!code || !state || (!nativeState && (!storedState || state !== storedState))) {
     return NextResponse.redirect(`${origin}/login?google_error=1`);
   }
 
@@ -109,6 +120,11 @@ export async function GET(req: NextRequest) {
     [appUser.id]
   );
   const destination = primaryRole?.role === "parent" || primaryRole?.role === "player" ? "/mina-spelare" : "/idag";
+  if (nativeState) {
+    const handoffCode = await createNativeAuthCode(appUser.id, state);
+    if (!handoffCode) return NextResponse.redirect(nativeCallbackUrl({ error: "invalid_state" }));
+    return NextResponse.redirect(nativeCallbackUrl({ code: handoffCode }));
+  }
   const maxAge = 60 * 60 * 24 * 90;
   const res = NextResponse.redirect(`${origin}${destination}`);
 

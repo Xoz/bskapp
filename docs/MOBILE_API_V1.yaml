@@ -1,0 +1,194 @@
+openapi: 3.1.0
+info:
+  title: BSK Mobile API
+  version: 1.0.0-draft
+  description: Första kontraktet för nativevertikalen trupp, spelare och observation.
+servers:
+  - url: https://bsk2014.se/api/mobile/v1
+paths:
+  /players:
+    get:
+      summary: Behörig aktiv trupp med fokus och senaste observation
+      responses:
+        "200":
+          description: Trupp
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerListEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /players/{playerId}:
+    get:
+      summary: Behörig spelardetalj
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Spelare, mål och de senaste 40 observationerna
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDetailEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /activities:
+    get:
+      summary: Behöriga aktiviteter för observationsflödet
+      responses:
+        "200":
+          description: Högst 80 aktiviteter
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [apiVersion, data]
+                properties:
+                  apiVersion: { const: "1" }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /activities/{activityId}/observations:
+    post:
+      summary: Skapa eller säkert återspela observationer
+      parameters:
+        - name: activityId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commands]
+              properties:
+                commands:
+                  type: array
+                  maxItems: 50
+                  items: { $ref: "#/components/schemas/ObservationCommand" }
+      responses:
+        "200":
+          description: Resultat per kommando; replay är ett lyckat idempotent utfall
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [apiVersion, data]
+                properties:
+                  apiVersion: { const: "1" }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ObservationResult" }
+        "400": { $ref: "#/components/responses/Invalid" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Samma kommando-id har använts med annat innehåll
+components:
+  responses:
+    Unauthorized:
+      description: Inloggning krävs
+    Forbidden:
+      description: Rollen, permission eller gruppscopet saknar åtkomst
+    NotFound:
+      description: Objektet finns inte inom användarens scope
+    Invalid:
+      description: Ogiltig payload
+  schemas:
+    GoalSummary:
+      type: object
+      required: [id, slot, title, evidenceHint]
+      properties:
+        id: { type: string, format: uuid }
+        slot: { type: integer, enum: [1, 2] }
+        title: { type: string }
+        evidenceHint: { type: string }
+        reviewOn: { type: [string, "null"], format: date }
+    ObservationSummary:
+      type: object
+      required: [id, activityId, activityDate, evidence, note, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        activityId: { type: string }
+        activityDate: { type: string, format: date }
+        evidence: { type: string, enum: [shown, practicing, revisit] }
+        note: { type: string, maxLength: 280 }
+        createdAt: { type: string }
+    PlayerSummary:
+      type: object
+      required: [id, name, position, primaryPosition, activeGoals]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        jerseyNumber: { type: [integer, "null"] }
+        position: { type: string }
+        primaryPosition: { type: string }
+        activeGoals:
+          type: array
+          maxItems: 2
+          items: { $ref: "#/components/schemas/GoalSummary" }
+        lastObservation:
+          oneOf:
+            - { $ref: "#/components/schemas/ObservationSummary" }
+            - { type: "null" }
+    PlayerDetail:
+      allOf:
+        - { $ref: "#/components/schemas/PlayerSummary" }
+        - type: object
+          required: [goals, observations]
+          properties:
+            goals: { type: array, items: { type: object, additionalProperties: true } }
+            observations: { type: array, maxItems: 40, items: { type: object, additionalProperties: true } }
+    Activity:
+      type: object
+      required: [id, date, type, title, theme, challengeContext, observationCount]
+      properties:
+        id: { type: string }
+        date: { type: string, format: date }
+        startTime: { type: [string, "null"] }
+        type: { type: string, enum: [training, match, other] }
+        title: { type: string }
+        groupId: { type: [integer, "null"] }
+        theme: { type: string }
+        challengeContext: { type: string, enum: [safe, balanced, challenging] }
+        observationCount: { type: integer, minimum: 0 }
+    ObservationCommand:
+      type: object
+      required: [commandId, playerId, goalId, evidence, note]
+      properties:
+        commandId:
+          type: string
+          format: uuid
+          description: Klientskapat UUID som sparas som observationens id och återanvänds vid retry.
+        playerId: { type: integer, minimum: 1 }
+        goalId: { type: string, format: uuid }
+        evidence: { type: string, enum: [shown, practicing, revisit] }
+        note: { type: string, maxLength: 280 }
+    ObservationResult:
+      type: object
+      required: [commandId, observationId, status]
+      properties:
+        commandId: { type: string, format: uuid }
+        observationId: { type: string, format: uuid }
+        status: { type: string, enum: [created, replayed] }
+    PlayerListEnvelope:
+      type: object
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { const: "1" }
+        data: { type: array, items: { $ref: "#/components/schemas/PlayerSummary" } }
+    PlayerDetailEnvelope:
+      type: object
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { const: "1" }
+        data: { $ref: "#/components/schemas/PlayerDetail" }
