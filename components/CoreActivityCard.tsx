@@ -19,9 +19,12 @@ export default function CoreActivityCard({
   const monthLabel = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][month - 1] ?? "";
   const teamTone = activity.source_team === "Gul" ? "yellow" : activity.source_team === "Grön" ? "green" : "blue";
   const isSanktan = activity.external_source === "svenskalag_sanktan";
+  const calledCount = Number(activity.accepted_callup_count)
+    + Number(activity.declined_callup_count)
+    + Number(activity.pending_callup_count);
   const needsMoreAccepted = activity.is_upcoming
     && isSanktan
-    && activity.called_player_names.length > 0
+    && calledCount > 0
     && activity.accepted_callup_count < 9;
   const playersMissing = Math.max(0, 9 - activity.accepted_callup_count);
   return (
@@ -49,9 +52,9 @@ export default function CoreActivityCard({
         )}
         <h3 className="core-activity-title">{activity.title}</h3>
         {activity.is_upcoming ? (
-          activity.called_player_names.length > 0 ? (
+          calledCount > 0 ? (
             <div className="core-callup-summary" aria-label="Kallelsesvar">
-              <span><strong>{activity.called_player_names.length}</strong> kallade</span>
+              <span><strong>{calledCount}</strong> kallade</span>
               <span className={needsMoreAccepted ? "core-callup-accepted core-callup-accepted-warning" : "core-callup-accepted"}>{activity.accepted_callup_count} ja</span>
               <span className="core-callup-declined">{activity.declined_callup_count} nej</span>
               <span>{activity.pending_callup_count} inväntar svar</span>
