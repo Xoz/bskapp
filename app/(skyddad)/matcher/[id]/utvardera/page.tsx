@@ -27,7 +27,7 @@ export default async function EvaluateMatchPage({ params, searchParams }: {
     <header className="core-header"><div className="core-header-copy"><p className="core-kicker">Matchutvärdering</p>
       <h1 className="core-title">{match.opponent}</h1><p className="core-lead">Två val per spelare. Bedömningen tolkas mot spelarens och matchens nivå.</p></div></header>
     {sparad && <div className="core-panel p-4"><p className="body-small">Utvärderingen är sparad. Du kan ändra svaren när som helst.</p></div>}
-    {workspace.players.length ? <MatchEvaluationForm players={workspace.players} action={save} /> :
+    {workspace.players.length ? <MatchEvaluationForm players={workspace.players} saveAction={save} /> :
       <div className="core-panel p-6"><p>Det finns ingen registrerad matchtrupp att utvärdera.</p></div>}
   </div>;
 }
