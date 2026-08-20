@@ -104,8 +104,19 @@ export async function getMatchEvaluationStatus(matchId: number) {
 export async function getPendingMatchEvaluation(): Promise<null | { id: number; opponent: string; date: string; total: number; evaluated: number }> {
   const today = swedishToday();
   const nowMinutes = swedishMinutesSinceMidnight();
+  const cutoffDate = new Date(`${today}T12:00:00Z`);
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 7);
+  const recentCutoff = cutoffDate.toISOString().slice(0, 10);
   const matches = await all<{ id: number; opponent: string; date: string; start_time: string | null; group_id: number | null }>(
-    "SELECT id, opponent, date, start_time, group_id FROM matches WHERE date <= ? ORDER BY date DESC, id DESC LIMIT 20", [today]
+    `SELECT DISTINCT m.id, m.opponent, m.date, m.start_time, m.group_id
+     FROM matches m
+     JOIN development_activities da ON da.match_id = m.id
+     JOIN groups g ON g.id = da.group_id
+     WHERE m.date BETWEEN ? AND ?
+       AND da.external_source = 'svenskalag_sanktan'
+       AND lower(g.name) = 'gul'
+     ORDER BY m.date DESC, m.id DESC
+     LIMIT 20`, [recentCutoff, today]
   );
   for (const match of matches) {
     if (!matchEvaluationIsOpen(match.date, match.start_time, today, nowMinutes)) continue;
