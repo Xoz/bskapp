@@ -498,38 +498,100 @@ struct MatchEvaluationView: View {
     }
 
     private func progressCard(_ workspace: MatchEvaluationWorkspace) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("MATCHUTVÄRDERING").font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.accent)
-            HStack {
-                Text("Spelare \(activeIndex + 1) av \(workspace.players.count)").font(.headline)
-                Spacer()
-                Text("\(handledCount)/\(workspace.players.count)").foregroundStyle(BSKTheme.secondary)
+        HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(workspace.match.homeAway == "home" ? "HEMMAMATCH" : "BORTAMATCH")
+                    .font(.caption2.bold())
+                    .tracking(1.6)
+                    .foregroundStyle(BSKTheme.accent)
+                Text(workspace.match.opponent)
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                HStack(spacing: 8) {
+                    Label(workspace.match.date, systemImage: "calendar")
+                    if let startTime = workspace.match.startTime {
+                        Label(startTime, systemImage: "clock")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(BSKTheme.secondary)
+                ProgressView(value: Double(handledCount), total: Double(workspace.players.count))
+                    .tint(BSKTheme.accent)
             }
-            ProgressView(value: Double(handledCount), total: Double(workspace.players.count)).tint(BSKTheme.accent)
+
+            ZStack {
+                Circle().stroke(BSKTheme.border, lineWidth: 7)
+                Circle()
+                    .trim(from: 0, to: Double(handledCount) / Double(max(workspace.players.count, 1)))
+                    .stroke(BSKTheme.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                VStack(spacing: 0) {
+                    Text("\(handledCount)").font(.title2.bold()).monospacedDigit()
+                    Text("av \(workspace.players.count)").font(.caption2).foregroundStyle(BSKTheme.muted)
+                }
+            }
+            .frame(width: 72, height: 72)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SPELARE").font(.caption2.bold()).tracking(1.2).foregroundStyle(BSKTheme.muted)
+                Text("\(activeIndex + 1)/\(workspace.players.count)").font(.headline).monospacedDigit()
+            }
+
+            Spacer(minLength: 0)
+        }
+        .overlay(alignment: .bottomLeading) {
+            VStack(alignment: .leading, spacing: 5) {
             if let savedMessage {
-                Label(savedMessage, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(BSKTheme.accent)
+                    Label(savedMessage, systemImage: savedMessage == "Sparat" ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
+                        .font(.caption.bold())
+                        .foregroundStyle(savedMessage == "Sparat" ? BSKTheme.accent : BSKTheme.warning)
             }
             if model.queuedMatchEvaluationCount > 0 {
                 Label("\(model.queuedMatchEvaluationCount) utvärdering väntar på synkning", systemImage: "arrow.triangle.2.circlepath")
                     .font(.caption)
                     .foregroundStyle(BSKTheme.warning)
             }
+            }
+            .offset(y: 34)
         }
-        .padding(16)
-        .bskCardSurface()
+        .padding(20)
+        .padding(.bottom, savedMessage == nil && model.queuedMatchEvaluationCount == 0 ? 0 : 28)
+        .background(
+            LinearGradient(
+                colors: [BSKTheme.elevated, BSKTheme.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
     }
 
     private func playerCard(_ player: MatchEvaluationWorkspace.Player) -> some View {
         let answer = answers[player.id] ?? blankAnswer(player)
-        return VStack(alignment: .leading, spacing: 20) {
-            HStack {
+        return VStack(alignment: .leading, spacing: 24) {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(LinearGradient(colors: [BSKTheme.accent, BSKTheme.accent.opacity(0.68)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)))
+                        .font(.title.bold())
+                        .foregroundStyle(.black.opacity(0.78))
+                }
+                .frame(width: 68, height: 68)
+
                 VStack(alignment: .leading, spacing: 4) {
+                    Text("BEDÖM SPELAREN").font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.muted)
                     Text(player.name).font(.title.bold())
-                    Text(player.jerseyNumber.map { "#\($0)" } ?? "Spelare").foregroundStyle(.secondary)
+                    if !player.level.isEmpty {
+                        Text(player.level).font(.caption.bold()).foregroundStyle(BSKTheme.accent)
+                    }
                 }
                 Spacer()
                 if answer.skipped {
-                    Text("Överhoppad").font(.caption.bold()).foregroundStyle(BSKTheme.warning)
+                    Label("Överhoppad", systemImage: "forward.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(BSKTheme.warning)
                 }
             }
 
@@ -539,6 +601,7 @@ struct MatchEvaluationView: View {
             } else {
                 ChoiceRow(
                     title: "Jämfört med sin vanliga nivå",
+                    systemImage: "person.line.dotted.person.fill",
                     values: ["below", "usual", "above"],
                     labels: ["Sämre", "Som vanligt", "Bättre"],
                     selection: answer.selfComparison
@@ -546,22 +609,33 @@ struct MatchEvaluationView: View {
 
                 ChoiceRow(
                     title: "På den här matchnivån",
+                    systemImage: "sportscourt.fill",
                     values: ["struggled", "held", "influenced"],
                     labels: ["Hade svårt", "Hängde med", "Påverkade"],
                     selection: answer.matchImpact
                 ) { value in update(player.id) { $0.matchImpact = value } }
 
-                Picker("Orsakstagg", selection: Binding(
-                    get: { answers[player.id]?.reasonTag ?? "" },
-                    set: { value in update(player.id) { $0.reasonTag = value } }
-                )) {
-                    Text("Ingen orsakstagg").tag("")
-                    Text("Beslut").tag("decisions")
-                    Text("Försvar").tag("defence")
-                    Text("Anfall").tag("attack")
-                    Text("Arbetsinsats").tag("effort")
-                    Text("Självförtroende").tag("confidence")
+                HStack {
+                    Label("Vad påverkade mest?", systemImage: "scope")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.secondary)
+                    Spacer()
+                    Picker("Orsakstagg", selection: Binding(
+                        get: { answers[player.id]?.reasonTag ?? "" },
+                        set: { value in update(player.id) { $0.reasonTag = value } }
+                    )) {
+                        Text("Ingen tagg").tag("")
+                        Text("Beslut").tag("decisions")
+                        Text("Försvar").tag("defence")
+                        Text("Anfall").tag("attack")
+                        Text("Arbetsinsats").tag("effort")
+                        Text("Självförtroende").tag("confidence")
+                    }
+                    .tint(BSKTheme.accent)
                 }
+                .padding(14)
+                .background(BSKTheme.elevated)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Button("Hoppa över spelaren") {
                     update(player.id) {
@@ -573,10 +647,13 @@ struct MatchEvaluationView: View {
                 }
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
+                .tint(BSKTheme.muted)
             }
         }
-        .padding(20)
-        .bskCardSurface()
+        .padding(22)
+        .background(BSKTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
     }
 
     private func navigationBar(_ workspace: MatchEvaluationWorkspace) -> some View {
@@ -586,12 +663,14 @@ struct MatchEvaluationView: View {
                 savedMessage = nil
             }
             .buttonStyle(.bordered)
+            .controlSize(.large)
             .disabled(activeIndex == 0 || isSaving)
 
             Button(activeIndex == workspace.players.count - 1 ? "Slutför" : "Spara och nästa") {
                 Task { await save(advance: activeIndex < workspace.players.count - 1) }
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .tint(BSKTheme.accent)
             .disabled(!isHandled(workspace.players[activeIndex].id) || isSaving)
             .frame(maxWidth: .infinity)
@@ -675,14 +754,17 @@ struct MatchEvaluationView: View {
 
 private struct ChoiceRow: View {
     let title: String
+    let systemImage: String
     let values: [String]
     let labels: [String]
     let selection: String?
     let select: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text(title).font(.subheadline.bold()).foregroundStyle(BSKTheme.secondary)
+        VStack(alignment: .leading, spacing: 11) {
+            Label(title, systemImage: systemImage)
+                .font(.subheadline.bold())
+                .foregroundStyle(BSKTheme.secondary)
             HStack(spacing: 7) {
                 ForEach(values.indices, id: \.self) { index in
                     choiceButton(value: values[index], label: labels[index])
@@ -699,11 +781,14 @@ private struct ChoiceRow: View {
                 .buttonStyle(.borderedProminent)
                 .tint(BSKTheme.accent)
                 .frame(maxWidth: .infinity)
+                .controlSize(.large)
         } else {
             Button(label) { select(value) }
                 .font(.caption.bold())
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
+                .controlSize(.large)
+                .tint(BSKTheme.secondary)
         }
     }
 }
