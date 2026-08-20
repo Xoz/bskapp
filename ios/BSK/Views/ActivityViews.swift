@@ -254,7 +254,12 @@ struct TodayList: View {
         let endOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.end ?? .now
         let lastDay = Self.dayFormatter.string(from: endOfWeek.addingTimeInterval(-1))
         return model.activities
-            .filter { $0.type == "match" && $0.date >= today && $0.date <= lastDay }
+            .filter {
+                $0.type == "match"
+                    && $0.isPrimaryMatch
+                    && $0.date >= today
+                    && $0.date <= lastDay
+            }
             .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
     }
 

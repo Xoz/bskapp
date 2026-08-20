@@ -87,6 +87,7 @@ export type MobileActivity = {
   theme: string;
   challengeContext: "safe" | "balanced" | "challenging";
   observationCount: number;
+  isPrimaryMatch: boolean;
 };
 
 export type MobileSelectionMatch = {
@@ -534,13 +535,31 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     theme: string;
     challenge_context: MobileActivity["challengeContext"];
     observation_count: number;
+    is_primary_match: boolean;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
-            COUNT(o.id) AS observation_count
+            COUNT(o.id) AS observation_count,
+            EXISTS (
+              SELECT 1
+              FROM player_competition_matches pcm
+              WHERE da.external_source = 'svenskalag_sanktan'
+                AND da.external_key = 'sanktan:' || pcm.external_id
+                AND pcm.source_team = 'Gul'
+            ) AS is_primary_match
      FROM development_activities da
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
+       AND (
+         da.activity_type <> 'match'
+         OR EXISTS (
+           SELECT 1
+           FROM player_competition_matches pcm
+           WHERE da.external_source = 'svenskalag_sanktan'
+             AND da.external_key = 'sanktan:' || pcm.external_id
+             AND pcm.source_team = 'Gul'
+         )
+       )
      GROUP BY da.id
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
@@ -556,6 +575,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     theme: row.theme,
     challengeContext: row.challenge_context,
     observationCount: Number(row.observation_count),
+    isPrimaryMatch: row.is_primary_match,
   }));
 }
 
