@@ -26,24 +26,21 @@ function endOfCurrentWeek(date: string) {
 export default async function ObservePage({
   searchParams,
 }: {
-  searchParams: Promise<{ aktivitet?: string; lag?: string }>;
+  searchParams: Promise<{ aktivitet?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("manage_evaluations")) redirect("/idag?behorighet=saknas");
-  const { aktivitet, lag } = await searchParams;
-  const selectedTeam = lag === "Gul" || lag === "Grön" ? lag : null;
-  const listHref = selectedTeam ? `/observera?lag=${encodeURIComponent(selectedTeam)}` : "/observera";
+  const { aktivitet } = await searchParams;
+  const listHref = "/observera";
 
   if (!aktivitet) {
     const weekEnd = endOfCurrentWeek(swedishToday());
     const activities = (await getCoreActivities(80, "sanktan"))
+      .filter((activity) => activity.source_team === "Gul")
       .filter((activity) => !activity.is_upcoming || activity.activity_date <= weekEnd);
-    const visibleActivities = selectedTeam
-      ? activities.filter((activity) => activity.source_team === selectedTeam)
-      : activities;
-    const upcomingActivities = visibleActivities.filter((activity) => activity.is_upcoming);
-    const playedActivities = visibleActivities.filter((activity) => !activity.is_upcoming);
+    const upcomingActivities = activities.filter((activity) => activity.is_upcoming);
+    const playedActivities = activities.filter((activity) => !activity.is_upcoming);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -51,25 +48,10 @@ export default async function ObservePage({
           <p className="core-kicker">Snabb registrering</p>
           <h1 className="core-title">Observera</h1>
           <p className="core-lead">
-            Spelade Sanktanmatcher samt den här veckans kommande matcher från Svenska Lag.
+            Gula lagets spelade Sanktanmatcher samt den här veckans kommande matcher från Svenska Lag.
           </p>
           </div>
         </header>
-        <nav className="core-team-filters" aria-label="Filtrera Sanktanmatcher efter lag">
-          <Link href="/observera" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
-            Alla <span>{activities.length}</span>
-          </Link>
-          {(["Gul", "Grön"] as const).map((team) => (
-            <Link
-              key={team}
-              href={`/observera?lag=${encodeURIComponent(team)}`}
-              className={`core-team-filter ${selectedTeam === team ? "core-team-filter-active" : ""}`}
-              data-team-tone={team === "Gul" ? "yellow" : "green"}
-            >
-              {team} <span>{activities.filter((activity) => activity.source_team === team).length}</span>
-            </Link>
-          ))}
-        </nav>
         {upcomingActivities.length > 0 && <section>
           <div className="core-section-head">
             <div><p className="core-section-eyebrow">Före match</p><h2 className="core-section-title">Den här veckan</h2></div>
@@ -80,7 +62,7 @@ export default async function ObservePage({
               <CoreActivityCard
                 key={activity.id}
                 activity={activity}
-                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
               />
             ))}
           </div>
@@ -95,7 +77,7 @@ export default async function ObservePage({
               <CoreActivityCard
                 key={activity.id}
                 activity={activity}
-                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
               />
             ))}
           </div>
@@ -105,9 +87,13 @@ export default async function ObservePage({
   }
 
   const detail = await getActivityDetail(aktivitet);
-  if (!detail) redirect("/observera");
+  if (
+    !detail ||
+    detail.activity.source_team !== "Gul" ||
+    detail.activity.external_source !== "svenskalag_sanktan"
+  ) redirect("/observera");
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
-  const teamTone = detail.activity.source_team === "Gul" ? "yellow" : detail.activity.source_team === "Grön" ? "green" : "blue";
+  const teamTone = "yellow";
   const isSanktan = detail.activity.external_source === "svenskalag_sanktan";
   const contextAction = saveActivityContext.bind(null, detail.activity.id);
   const observationAction = saveQuickObservations.bind(null, detail.activity.id);
