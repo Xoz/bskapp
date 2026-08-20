@@ -146,12 +146,18 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             da.theme, da.challenge_context,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present') AS accepted_callup_count,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent') AS declined_callup_count,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown') AS pending_callup_count,
+            COALESCE(
+              (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
+            ) AS accepted_callup_count,
+            COALESCE(
+              (SELECT s.declined_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent')
+            ) AS declined_callup_count,
+            COALESCE(
+              (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
+            ) AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -390,12 +396,18 @@ export async function getActivityDetail(activityId: string): Promise<{
     `SELECT da.*,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present') AS accepted_callup_count,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent') AS declined_callup_count,
-            (SELECT COUNT(*) FROM development_activity_callups dac
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown') AS pending_callup_count,
+            COALESCE(
+              (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
+            ) AS accepted_callup_count,
+            COALESCE(
+              (SELECT s.declined_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent')
+            ) AS declined_callup_count,
+            COALESCE(
+              (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
+              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
+            ) AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name

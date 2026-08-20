@@ -28,6 +28,11 @@ import { syncDevelopmentSourceRows } from "./developmentSync";
 import { erasePlayerData } from "./playerPrivacy";
 import { swedishToday } from "./dates";
 import {
+  callupTotalsCoverKnownPlayers,
+  type ImportedCallupPlayer,
+  type ImportedCallupTotals,
+} from "./callupSync";
+import {
   stepByKey,
   stepByOutcome,
   outcomeFromAreas,
@@ -1805,6 +1810,77 @@ export async function syncSanktanCallupHistory(formData: FormData) {
   await logActivity(importedBy, "Synkade historiska Sanktan-kallelser", `${season} · Gul · ${seen.size} matcher`);
   revalidatePath("/installningar"); revalidatePath("/spelare"); revalidatePath("/observera"); revalidatePath("/uttagning");
   redirect(`/installningar?sanktan_kallelser=ok&sanktan_kallelser_matcher=${seen.size}#trupp`);
+}
+
+export async function syncUpcomingSanktanCallups(formData: FormData) {
+  await requirePermission("manage_settings");
+  const raw = String(formData.get("callups") ?? "").trim();
+  type ImportedUpcomingMatch = {
+    id: string;
+    callups: ImportedCallupPlayer[];
+    totals: ImportedCallupTotals;
+  };
+  let imported: ImportedUpcomingMatch[];
+  try { imported = JSON.parse(raw) as ImportedUpcomingMatch[]; } catch { redirect("/installningar?sanktan_kommande=fel#trupp"); }
+  if (!Array.isArray(imported) || imported.length === 0) redirect("/installningar?sanktan_kommande=fel#trupp");
+
+  const externalIds = imported.map((match) => String(match?.id ?? ""));
+  if (new Set(externalIds).size !== externalIds.length || externalIds.some((id) => !/^\d+$/.test(id))) {
+    redirect("/installningar?sanktan_kommande=match#trupp");
+  }
+  const placeholders = externalIds.map(() => "?").join(", ");
+  const [players, matches] = await Promise.all([
+    all<{ id: number; name: string }>("SELECT id, name FROM players WHERE active = 1 ORDER BY name"),
+    all<{ activity_id: string; external_id: string }>(
+      `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
+       FROM development_activities da
+       WHERE da.external_source = 'svenskalag_sanktan'
+         AND da.activity_date >= ?
+         AND replace(da.external_key, 'sanktan:', '') IN (${placeholders})`,
+      [swedishToday(), ...externalIds]
+    ),
+  ]);
+  if (matches.length !== imported.length) redirect("/installningar?sanktan_kommande=match#trupp");
+
+  const playerByName = new Map(players.map((player) => [normalizePersonName(player.name), player] as const));
+  const activityByExternalId = new Map(matches.map((match) => [match.external_id, match.activity_id] as const));
+  const statements: { sql: string; args: (string | number)[] }[] = [];
+  for (const match of imported) {
+    if (!Array.isArray(match.callups)
+      || match.callups.some((callup) => !callup || !["accepted", "declined", "pending"].includes(callup.status))
+      || !match.totals
+      || !callupTotalsCoverKnownPlayers(match.totals, match.callups)) {
+      redirect("/installningar?sanktan_kommande=fel#trupp");
+    }
+    const activityId = activityByExternalId.get(String(match.id));
+    if (!activityId) redirect("/installningar?sanktan_kommande=match#trupp");
+    const seenPlayers = new Set<number>();
+    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [activityId] });
+    statements.push({
+      sql: `INSERT INTO development_activity_callup_summaries
+            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
+            VALUES (?, ?, ?, ?, 'svenskalag_callup', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
+              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
+              source = excluded.source, updated_at = excluded.updated_at`,
+      args: [activityId, match.totals.accepted, match.totals.declined, match.totals.pending],
+    });
+    for (const callup of match.callups) {
+      const player = playerByName.get(normalizePersonName(String(callup.name ?? "")));
+      if (!player || seenPlayers.has(player.id)) redirect("/installningar?sanktan_kommande=spelare#trupp");
+      seenPlayers.add(player.id);
+      const attendanceStatus = callup.status === "accepted" ? "present" : callup.status === "declined" ? "absent" : "unknown";
+      statements.push({
+        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
+        args: [activityId, player.id, attendanceStatus],
+      });
+    }
+  }
+  await batch(statements);
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  await logActivity(importedBy, "Synkade kommande Sanktan-kallelser", `${imported.length} matcher`);
+  revalidatePath("/installningar"); revalidatePath("/spelare"); revalidatePath("/observera"); revalidatePath("/uttagning");
+  redirect(`/installningar?sanktan_kommande=ok&sanktan_kommande_matcher=${imported.length}#trupp`);
 }
 
 export async function resetColors() {

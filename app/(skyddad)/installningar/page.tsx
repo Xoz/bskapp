@@ -11,6 +11,7 @@ import {
   syncSanktanMatchCounts,
   syncSanktanMatchHistory,
   syncSanktanCallupHistory,
+  syncUpcomingSanktanCallups,
   generatePlayerPin,
   generateCoachInvite,
   addCoachEmail,
@@ -77,6 +78,8 @@ export default async function SettingsPage({
     sanktan_spelare?: string;
     sanktan_historik?: string;
     sanktan_matcher?: string;
+    sanktan_kommande?: string;
+    sanktan_kommande_matcher?: string;
   }>;
 }) {
   const role = await getRole();
@@ -105,7 +108,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher } =
     await searchParams;
 
   return (
@@ -224,6 +227,18 @@ export default async function SettingsPage({
               {sanktan_historik === "avvikelse"
                 ? "Matchhistoriken stämde inte med de synkade totalsiffrorna. Ingen historik ändrades."
                 : "Kunde inte läsa den detaljerade Sanktan-historiken. Ingen historik ändrades."}
+            </div>
+          )}
+          {sanktan_kommande === "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--ok-bg)", color: "var(--success)" }}>
+              <IconCheck width={16} height={16} />
+              Kommande kallelser synkades för {sanktan_kommande_matcher ?? "0"} matcher.
+            </div>
+          )}
+          {sanktan_kommande != null && sanktan_kommande !== "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--warn-bg)", color: "var(--warning)" }}>
+              <IconAlert width={16} height={16} />
+              Kunde inte synka kommande kallelser. Ingen kallelsedata ändrades.
             </div>
           )}
         </div>
@@ -664,6 +679,21 @@ export default async function SettingsPage({
                     Underlaget valideras mot spelare vars primära lag är Gul och innehåller status ja, nej eller inväntar svar. Alla spelade Gul-matcher i säsongen måste finnas med; tidigare kallelser för dessa matcher ersätts.
                   </p>
                   <button type="submit" className="btn-secondary">Synka kallelser</button>
+                </ConfirmForm>
+              </details>
+              <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--primary)" }}>
+                  Synka kommande kallelser
+                </summary>
+                <ConfirmForm action={syncUpcomingSanktanCallups} message="Ersätt kallelser och svar för de angivna kommande Sanktanmatcherna?" className="mt-4 space-y-3">
+                  <div>
+                    <label className="label" htmlFor="sanktan_upcoming_callups">Kallelser (JSON)</label>
+                    <textarea id="sanktan_upcoming_callups" name="callups" rows={10} required className="input font-mono text-sm" />
+                  </div>
+                  <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                    Kortets totaler omfattar alla spelare i Svenska Lag. Individuell kallelsehistorik kopplas endast till aktiva spelarprofiler i appen.
+                  </p>
+                  <button type="submit" className="btn-secondary">Synka kommande kallelser</button>
                 </ConfirmForm>
               </details>
             </div>
