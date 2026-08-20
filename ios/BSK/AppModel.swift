@@ -1,10 +1,16 @@
 import Combine
 import Foundation
+import Network
 
 @MainActor
 final class AppModel: ObservableObject {
     enum ObservationSaveStatus: Equatable {
         case saved
+        case queued
+    }
+
+    enum MatchEvaluationSaveStatus {
+        case saved(MatchEvaluationWorkspace)
         case queued
     }
 
@@ -21,6 +27,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var selectionMatches: [SelectionMatchSummary] = []
     @Published private(set) var matchEvaluations: [MatchEvaluationSummary] = []
     @Published private(set) var queuedObservationCount = 0
+    @Published private(set) var queuedMatchEvaluationCount = 0
     @Published var errorMessage: String?
     @Published var isWorking = false
 
@@ -28,6 +35,10 @@ final class AppModel: ObservableObject {
     private let auth: NativeAuthService
     private var queuedObservations: [ObservationCommand]
     private let observationQueueURL: URL
+    private var queuedMatchEvaluations: [QueuedMatchEvaluation]
+    private let matchEvaluationQueueURL: URL
+    private let networkMonitor = NWPathMonitor()
+    private let networkMonitorQueue = DispatchQueue(label: "se.bsk2014.network-monitor")
 
     init() {
         let store = KeychainStore()
@@ -39,6 +50,18 @@ final class AppModel: ObservableObject {
         self.observationQueueURL = Self.makeObservationQueueURL()
         self.queuedObservations = Self.loadObservationQueue(from: observationQueueURL)
         self.queuedObservationCount = queuedObservations.count
+        self.matchEvaluationQueueURL = Self.makeMatchEvaluationQueueURL()
+        self.queuedMatchEvaluations = Self.loadMatchEvaluationQueue(from: matchEvaluationQueueURL)
+        self.queuedMatchEvaluationCount = queuedMatchEvaluations.count
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.phase == .signedIn else { return }
+                await self.flushMatchEvaluationQueue()
+                await self.loadCoreData()
+            }
+        }
+        networkMonitor.start(queue: networkMonitorQueue)
     }
 
     func restore() async {
@@ -76,6 +99,7 @@ final class AppModel: ObservableObject {
 
     func reload() async {
         await flushObservationQueue()
+        await flushMatchEvaluationQueue()
         await loadCoreData()
     }
 
@@ -112,13 +136,48 @@ final class AppModel: ObservableObject {
     }
 
     func matchEvaluation(id: Int) async throws -> MatchEvaluationWorkspace {
-        try await api.matchEvaluation(id: id)
+        do {
+            return try await api.matchEvaluation(id: id)
+        } catch let error as URLError {
+            guard Self.isConnectivityError(error),
+                  let queued = queuedMatchEvaluations.first(where: { $0.matchID == id }) else { throw error }
+            return queued.workspace
+        }
     }
 
-    func saveMatchEvaluation(id: Int, answers: [MatchEvaluationAnswer]) async throws -> MatchEvaluationWorkspace {
-        let workspace = try await api.saveMatchEvaluation(id: id, answers: answers)
-        matchEvaluations = try await api.matchEvaluations()
-        return workspace
+    func pendingMatchEvaluation(id: Int) -> (answers: [MatchEvaluationAnswer], activeIndex: Int)? {
+        guard let queued = queuedMatchEvaluations.first(where: { $0.matchID == id }) else { return nil }
+        return (queued.answers, queued.activeIndex)
+    }
+
+    func saveMatchEvaluation(
+        id: Int,
+        answers: [MatchEvaluationAnswer],
+        workspace: MatchEvaluationWorkspace,
+        activeIndex: Int
+    ) async throws -> MatchEvaluationSaveStatus {
+        do {
+            let updated = try await api.saveMatchEvaluation(id: id, answers: answers)
+            queuedMatchEvaluations.removeAll(where: { $0.matchID == id })
+            persistMatchEvaluationQueue()
+            matchEvaluations = try await api.matchEvaluations()
+            return .saved(updated)
+        } catch let error as URLError {
+            guard Self.isConnectivityError(error) else { throw error }
+            let queued = QueuedMatchEvaluation(
+                matchID: id,
+                workspace: workspace,
+                answers: answers,
+                activeIndex: activeIndex
+            )
+            if let index = queuedMatchEvaluations.firstIndex(where: { $0.matchID == id }) {
+                queuedMatchEvaluations[index] = queued
+            } else {
+                queuedMatchEvaluations.append(queued)
+            }
+            persistMatchEvaluationQueue()
+            return .queued
+        }
     }
 
     func saveObservation(
@@ -157,6 +216,8 @@ final class AppModel: ObservableObject {
         matchEvaluations = []
         queuedObservations = []
         persistObservationQueue()
+        queuedMatchEvaluations = []
+        persistMatchEvaluationQueue()
         errorMessage = nil
         phase = .signedOut
     }
@@ -197,6 +258,20 @@ final class AppModel: ObservableObject {
         persistObservationQueue()
     }
 
+    private func flushMatchEvaluationQueue() async {
+        guard !queuedMatchEvaluations.isEmpty else { return }
+        var remaining: [QueuedMatchEvaluation] = []
+        for queued in queuedMatchEvaluations {
+            do {
+                _ = try await api.saveMatchEvaluation(id: queued.matchID, answers: queued.answers)
+            } catch {
+                remaining.append(queued)
+            }
+        }
+        queuedMatchEvaluations = remaining
+        persistMatchEvaluationQueue()
+    }
+
     private func persistObservationQueue() {
         queuedObservationCount = queuedObservations.count
         do {
@@ -223,6 +298,32 @@ final class AppModel: ObservableObject {
         return (try? JSONDecoder().decode([ObservationCommand].self, from: data)) ?? []
     }
 
+    private func persistMatchEvaluationQueue() {
+        queuedMatchEvaluationCount = queuedMatchEvaluations.count
+        do {
+            let directory = matchEvaluationQueueURL.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let data = try JSONEncoder().encode(queuedMatchEvaluations)
+            try data.write(to: matchEvaluationQueueURL, options: .atomic)
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: matchEvaluationQueueURL.path
+            )
+        } catch {
+            errorMessage = "Utvärderingskön kunde inte sparas: \(error.localizedDescription)"
+        }
+    }
+
+    private static func makeMatchEvaluationQueueURL() -> URL {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return root.appending(path: "BSK/offline-match-evaluations.json")
+    }
+
+    private static func loadMatchEvaluationQueue(from url: URL) -> [QueuedMatchEvaluation] {
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        return (try? JSONDecoder().decode([QueuedMatchEvaluation].self, from: data)) ?? []
+    }
+
     private static func isConnectivityError(_ error: URLError) -> Bool {
         switch error.code {
         case .notConnectedToInternet, .networkConnectionLost, .timedOut, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
@@ -236,4 +337,11 @@ final class AppModel: ObservableObject {
         if error is CancellationError { return true }
         return (error as? URLError)?.code == .cancelled
     }
+}
+
+private struct QueuedMatchEvaluation: Codable {
+    let matchID: Int
+    let workspace: MatchEvaluationWorkspace
+    let answers: [MatchEvaluationAnswer]
+    let activeIndex: Int
 }

@@ -509,6 +509,11 @@ struct MatchEvaluationView: View {
             if let savedMessage {
                 Label(savedMessage, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(BSKTheme.accent)
             }
+            if model.queuedMatchEvaluationCount > 0 {
+                Label("\(model.queuedMatchEvaluationCount) utvärdering väntar på synkning", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption)
+                    .foregroundStyle(BSKTheme.warning)
+            }
         }
         .padding(16)
         .bskCardSurface()
@@ -627,10 +632,15 @@ struct MatchEvaluationView: View {
             let loaded = try await model.matchEvaluation(id: matchID)
             workspace = loaded
             answers = Dictionary(uniqueKeysWithValues: loaded.players.map { ($0.id, blankAnswer($0)) })
-            activeIndex = loaded.players.firstIndex(where: { player in
-                let answer = answers[player.id]
-                return answer == nil || !isHandled(answer!)
-            }) ?? max(0, loaded.players.count - 1)
+            if let pending = model.pendingMatchEvaluation(id: matchID) {
+                for answer in pending.answers { answers[answer.playerId] = answer }
+                activeIndex = min(pending.activeIndex, max(0, loaded.players.count - 1))
+                savedMessage = "Väntar på synkning"
+            } else {
+                activeIndex = loaded.players.firstIndex(where: { player in
+                    answers[player.id].map { !isHandled($0) } ?? true
+                }) ?? max(0, loaded.players.count - 1)
+            }
         } catch {
             model.errorMessage = error.localizedDescription
         }
@@ -641,8 +651,21 @@ struct MatchEvaluationView: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            workspace = try await model.saveMatchEvaluation(id: matchID, answers: Array(answers.values))
-            savedMessage = "Sparat"
+            guard let currentWorkspace = workspace else { return }
+            let nextIndex = advance ? min(activeIndex + 1, currentWorkspace.players.count - 1) : activeIndex
+            let status = try await model.saveMatchEvaluation(
+                id: matchID,
+                answers: Array(answers.values),
+                workspace: currentWorkspace,
+                activeIndex: nextIndex
+            )
+            switch status {
+            case .saved(let updated):
+                workspace = updated
+                savedMessage = "Sparat"
+            case .queued:
+                savedMessage = "Väntar på synkning"
+            }
             if advance { activeIndex += 1 }
         } catch {
             model.errorMessage = error.localizedDescription
