@@ -14,8 +14,9 @@ export default function BottomNav({
 }) {
   const pathname = usePathname();
   const items = filterNavItems(permissions, true);
+  const isFocusedEvaluation = /^\/matcher\/[^/]+\/utvardera\/?$/.test(pathname);
 
-  if (!staff || items.length === 0) return null;
+  if (!staff || items.length === 0 || isFocusedEvaluation) return null;
 
   return (
     <nav
