@@ -35,7 +35,9 @@ export type CoreActivity = {
   competition_level: number | null;
   participant_names: string[];
   called_player_names: string[];
+  accepted_player_names: string[];
   declined_player_names: string[];
+  pending_player_names: string[];
   accepted_callup_count: number;
   declined_callup_count: number;
   pending_callup_count: number;
@@ -178,9 +180,23 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               SELECT p2.name
               FROM development_activity_callups dac
               JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'
+              ORDER BY p2.name
+            ) AS accepted_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
               WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
               ORDER BY p2.name
             ) AS declined_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'
+              ORDER BY p2.name
+            ) AS pending_player_names,
             COUNT(DISTINCT o.id) AS observation_count,
             COUNT(DISTINCT CASE WHEN ap.attendance_status = 'present' THEN ap.player_id END) AS participant_count,
             COUNT(DISTINCT CASE WHEN sd.decision = 'selected' THEN sd.player_id END) AS selection_count
@@ -441,9 +457,23 @@ export async function getActivityDetail(activityId: string): Promise<{
               SELECT p2.name
               FROM development_activity_callups dac
               JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'
+              ORDER BY p2.name
+            ) AS accepted_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
               WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
               ORDER BY p2.name
             ) AS declined_player_names,
+            ARRAY(
+              SELECT p2.name
+              FROM development_activity_callups dac
+              JOIN players p2 ON p2.id = dac.player_id
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'
+              ORDER BY p2.name
+            ) AS pending_player_names,
             (SELECT COUNT(*) FROM development_observations o WHERE o.activity_id = da.id) AS observation_count,
             (SELECT COUNT(*) FROM development_activity_participation ap WHERE ap.activity_id = da.id AND ap.attendance_status = 'present') AS participant_count,
             (SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected') AS selection_count

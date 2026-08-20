@@ -151,25 +151,25 @@ export default async function ObservePage({
       )}
 
       {detail.activity.activity_type === "match" && detail.activity.is_upcoming && (
-        <section className="core-panel core-form-panel">
-          <div className="core-section-head">
-            <div><p className="core-kicker">Kallelse från Svenska Lag</p><h2 className="core-section-title mt-2">Kallade spelare</h2></div>
-            <span className="core-section-note">{Number(detail.activity.accepted_callup_count) + Number(detail.activity.declined_callup_count) + Number(detail.activity.pending_callup_count)} kallade · {detail.activity.accepted_callup_count} ja · {detail.activity.declined_callup_count} nej · {detail.activity.pending_callup_count} inväntar</span>
+        <section className="core-panel core-form-panel callup-roster">
+          <div className="callup-roster-head">
+            <div>
+              <p className="core-kicker">Kallelse från Svenska Lag</p>
+              <h2 className="core-section-title mt-2">Kallade spelare</h2>
+            </div>
+            <strong className="callup-roster-total">
+              {Number(detail.activity.accepted_callup_count) + Number(detail.activity.declined_callup_count) + Number(detail.activity.pending_callup_count)}
+              <span>kallade</span>
+            </strong>
           </div>
-          {detail.activity.called_player_names.length > 0 ? (
-            <div className="core-player-chips mt-4">
-              {detail.activity.called_player_names.map((name) => <span key={name} className="badge">{name}</span>)}
+          {Number(detail.activity.accepted_callup_count) + Number(detail.activity.declined_callup_count) + Number(detail.activity.pending_callup_count) > 0 ? (
+            <div className="callup-groups">
+              <CallupGroup label="Tackat ja" tone="accepted" total={detail.activity.accepted_callup_count} names={detail.activity.accepted_player_names} />
+              <CallupGroup label="Tackat nej" tone="declined" total={detail.activity.declined_callup_count} names={detail.activity.declined_player_names} />
+              <CallupGroup label="Inväntar svar" tone="pending" total={detail.activity.pending_callup_count} names={detail.activity.pending_player_names} />
             </div>
           ) : (
             <p className="body-small mt-4" style={{ color: "var(--ink-secondary)" }}>Ingen kallelse är registrerad ännu.</p>
-          )}
-          {detail.activity.declined_player_names.length > 0 && (
-            <div className="mt-5">
-              <p className="label" style={{ color: "var(--danger)" }}>Tackat nej ({detail.activity.declined_player_names.length})</p>
-              <div className="core-player-chips mt-2">
-                {detail.activity.declined_player_names.map((name) => <span key={name} className="badge">{name}</span>)}
-              </div>
-            </div>
           )}
         </section>
       )}
@@ -257,6 +257,37 @@ export default async function ObservePage({
         </section>
       )}
     </div>
+  );
+}
+
+function CallupGroup({
+  label,
+  tone,
+  total,
+  names,
+}: {
+  label: string;
+  tone: "accepted" | "declined" | "pending";
+  total: number;
+  names: string[];
+}) {
+  if (total === 0 && names.length === 0) return null;
+  const missingProfiles = Math.max(0, Number(total) - names.length);
+  return (
+    <article className="callup-group" data-callup-status={tone}>
+      <header className="callup-group-head">
+        <span><i aria-hidden />{label}</span>
+        <strong>{total}</strong>
+      </header>
+      <ul className="callup-player-list">
+        {names.map((name) => <li key={name}>{name}</li>)}
+        {missingProfiles > 0 && (
+          <li className="callup-player-unlinked">
+            {missingProfiles} {missingProfiles === 1 ? "kallad saknar" : "kallade saknar"} spelarprofil
+          </li>
+        )}
+      </ul>
+    </article>
   );
 }
 
