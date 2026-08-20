@@ -625,6 +625,12 @@ table.data-table tbody tr:hover {
   border-radius: 2px;
   background: var(--primary);
 }
+.selection-match-level { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); letter-spacing: 0; text-transform: none; }
+.selection-match-level strong { font-size: 10px; font-weight: 850; }
+.selection-match-level small { color: var(--ink-muted); font-size: 9px; font-weight: 700; }
+.selection-match-level[data-level="2"] { border-color: color-mix(in srgb, #F31260 45%, var(--border)); color: #FF70A0; }
+.selection-match-level[data-level="3"] { border-color: color-mix(in srgb, #F5A524 48%, var(--border)); color: #FFD45D; }
+.selection-match-level[data-level="4"] { border-color: color-mix(in srgb, #17C964 45%, var(--border)); color: #64E99B; }
 .core-title {
   margin-top: 8px;
   font-size: clamp(32px, 5vw, 42px);
