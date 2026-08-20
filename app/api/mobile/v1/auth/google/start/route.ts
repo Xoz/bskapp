@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { requestOrigin } from "@/lib/auth";
 import { createNativeOAuthState, validPkceChallenge } from "@/lib/mobileAuth";
 import { mobileResponse } from "@/lib/mobileApi";
@@ -5,7 +6,7 @@ import { mobileResponse } from "@/lib/mobileApi";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) return Response.json({ apiVersion: "1", error: { code: "not_configured", message: "Google-inloggning är inte konfigurerad." } }, { status: 503 });
   const body = await request.json().catch(() => null) as { codeChallenge?: unknown } | null;
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     return Response.json({ apiVersion: "1", error: { code: "invalid_pkce", message: "En giltig S256 PKCE challenge krävs." } }, { status: 400 });
   }
   const state = await createNativeOAuthState(body.codeChallenge);
-  const callback = `${requestOrigin(new (await import("next/server")).NextRequest(request))}/api/auth/callback/google`;
+  const callback = `${requestOrigin(request)}/api/auth/callback/google`;
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callback,
