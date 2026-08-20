@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var players: [PlayerSummary] = []
     @Published private(set) var activities: [ActivitySummary] = []
     @Published private(set) var selectionMatches: [SelectionMatchSummary] = []
+    @Published private(set) var matchEvaluations: [MatchEvaluationSummary] = []
     @Published private(set) var queuedObservationCount = 0
     @Published var errorMessage: String?
     @Published var isWorking = false
@@ -110,6 +111,16 @@ final class AppModel: ObservableObject {
         return workspace
     }
 
+    func matchEvaluation(id: Int) async throws -> MatchEvaluationWorkspace {
+        try await api.matchEvaluation(id: id)
+    }
+
+    func saveMatchEvaluation(id: Int, answers: [MatchEvaluationAnswer]) async throws -> MatchEvaluationWorkspace {
+        let workspace = try await api.saveMatchEvaluation(id: id, answers: answers)
+        matchEvaluations = try await api.matchEvaluations()
+        return workspace
+    }
+
     func saveObservation(
         activityID: String,
         playerID: Int,
@@ -143,6 +154,7 @@ final class AppModel: ObservableObject {
         players = []
         activities = []
         selectionMatches = []
+        matchEvaluations = []
         queuedObservations = []
         persistObservationQueue()
         errorMessage = nil
@@ -159,6 +171,11 @@ final class AppModel: ObservableObject {
                 selectionMatches = try await api.selectionMatches()
             } else {
                 selectionMatches = []
+            }
+            if user?.permissions.contains("manage_evaluations") == true {
+                matchEvaluations = try await api.matchEvaluations()
+            } else {
+                matchEvaluations = []
             }
         } catch {
             if Self.isCancellation(error) { return }

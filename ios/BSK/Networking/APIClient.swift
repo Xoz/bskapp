@@ -114,6 +114,24 @@ actor APIClient {
         )
     }
 
+    func matchEvaluations() async throws -> [MatchEvaluationSummary] {
+        try await perform(path: "/match-evaluations", method: "GET", body: nil, authorized: true)
+    }
+
+    func matchEvaluation(id: Int) async throws -> MatchEvaluationWorkspace {
+        try await perform(path: "/match-evaluations/\(id)", method: "GET", body: nil, authorized: true)
+    }
+
+    func saveMatchEvaluation(id: Int, answers: [MatchEvaluationAnswer]) async throws -> MatchEvaluationWorkspace {
+        struct Body: Encodable { let answers: [MatchEvaluationAnswer] }
+        return try await perform(
+            path: "/match-evaluations/\(id)",
+            method: "PUT",
+            body: encoder.encode(Body(answers: answers)),
+            authorized: true
+        )
+    }
+
     func logout() async {
         _ = try? await perform(path: "/auth/logout", method: "POST", body: nil, authorized: true) as EmptyResponse
         clearSession()

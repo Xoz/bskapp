@@ -430,3 +430,257 @@ struct SelectionDetail: View {
         }
     }
 }
+
+struct MatchEvaluationList: View {
+    @EnvironmentObject private var model: AppModel
+    @Binding var selection: Int?
+
+    var body: some View {
+        List(model.matchEvaluations, selection: $selection) { match in
+            NavigationLink(value: match.id) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\(match.homeAway == "home" ? "Hemma mot" : "Borta mot") \(match.opponent)")
+                        .fontWeight(.semibold)
+                    Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ProgressView(value: Double(match.handled), total: Double(max(match.total, 1)))
+                        .tint(match.handled == match.total && match.total > 0 ? BSKTheme.accent : BSKTheme.warning)
+                    Text("\(match.handled) av \(match.total) hanterade")
+                        .font(.caption2)
+                        .foregroundStyle(BSKTheme.muted)
+                }
+                .padding(.vertical, 5)
+            }
+        }
+        .navigationTitle("Utvärdera")
+        .bskListSurface()
+        .refreshable { await model.reload() }
+        .overlay {
+            if model.matchEvaluations.isEmpty {
+                ContentUnavailableView("Inga matcher att utvärdera", systemImage: "checklist", description: Text("Matcher från den senaste veckan visas här."))
+            }
+        }
+    }
+}
+
+struct MatchEvaluationView: View {
+    @EnvironmentObject private var model: AppModel
+    let matchID: Int
+    @State private var workspace: MatchEvaluationWorkspace?
+    @State private var answers: [Int: MatchEvaluationAnswer] = [:]
+    @State private var activeIndex = 0
+    @State private var isSaving = false
+    @State private var savedMessage: String?
+
+    var body: some View {
+        Group {
+            if let workspace, !workspace.players.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        progressCard(workspace)
+                        playerCard(workspace.players[activeIndex])
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 760)
+                    .frame(maxWidth: .infinity)
+                }
+                .background(BSKTheme.background)
+                .safeAreaInset(edge: .bottom) { navigationBar(workspace) }
+            } else if workspace != nil {
+                ContentUnavailableView("Ingen matchtrupp", systemImage: "person.3", description: Text("Lägg spelare i truppen före utvärderingen."))
+            } else {
+                ProgressView("Läser match…")
+            }
+        }
+        .navigationTitle(workspace?.match.opponent ?? "Utvärdera")
+        .task(id: matchID) { await load() }
+    }
+
+    private func progressCard(_ workspace: MatchEvaluationWorkspace) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("MATCHUTVÄRDERING").font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.accent)
+            HStack {
+                Text("Spelare \(activeIndex + 1) av \(workspace.players.count)").font(.headline)
+                Spacer()
+                Text("\(handledCount)/\(workspace.players.count)").foregroundStyle(BSKTheme.secondary)
+            }
+            ProgressView(value: Double(handledCount), total: Double(workspace.players.count)).tint(BSKTheme.accent)
+            if let savedMessage {
+                Label(savedMessage, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(BSKTheme.accent)
+            }
+        }
+        .padding(16)
+        .bskCardSurface()
+    }
+
+    private func playerCard(_ player: MatchEvaluationWorkspace.Player) -> some View {
+        let answer = answers[player.id] ?? blankAnswer(player)
+        return VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(player.name).font(.title.bold())
+                    Text(player.jerseyNumber.map { "#\($0)" } ?? "Spelare").foregroundStyle(.secondary)
+                }
+                Spacer()
+                if answer.skipped {
+                    Text("Överhoppad").font(.caption.bold()).foregroundStyle(BSKTheme.warning)
+                }
+            }
+
+            if answer.skipped {
+                Button("Bedöm spelaren istället") { update(player.id) { $0.skipped = false } }
+                    .buttonStyle(.bordered)
+            } else {
+                ChoiceRow(
+                    title: "Jämfört med sin vanliga nivå",
+                    values: ["below", "usual", "above"],
+                    labels: ["Sämre", "Som vanligt", "Bättre"],
+                    selection: answer.selfComparison
+                ) { value in update(player.id) { $0.selfComparison = value } }
+
+                ChoiceRow(
+                    title: "På den här matchnivån",
+                    values: ["struggled", "held", "influenced"],
+                    labels: ["Hade svårt", "Hängde med", "Påverkade"],
+                    selection: answer.matchImpact
+                ) { value in update(player.id) { $0.matchImpact = value } }
+
+                Picker("Orsakstagg", selection: Binding(
+                    get: { answers[player.id]?.reasonTag ?? "" },
+                    set: { value in update(player.id) { $0.reasonTag = value } }
+                )) {
+                    Text("Ingen orsakstagg").tag("")
+                    Text("Beslut").tag("decisions")
+                    Text("Försvar").tag("defence")
+                    Text("Anfall").tag("attack")
+                    Text("Arbetsinsats").tag("effort")
+                    Text("Självförtroende").tag("confidence")
+                }
+
+                Button("Hoppa över spelaren") {
+                    update(player.id) {
+                        $0.selfComparison = nil
+                        $0.matchImpact = nil
+                        $0.reasonTag = ""
+                        $0.skipped = true
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(20)
+        .bskCardSurface()
+    }
+
+    private func navigationBar(_ workspace: MatchEvaluationWorkspace) -> some View {
+        HStack(spacing: 10) {
+            Button("Föregående") {
+                activeIndex = max(0, activeIndex - 1)
+                savedMessage = nil
+            }
+            .buttonStyle(.bordered)
+            .disabled(activeIndex == 0 || isSaving)
+
+            Button(activeIndex == workspace.players.count - 1 ? "Slutför" : "Spara och nästa") {
+                Task { await save(advance: activeIndex < workspace.players.count - 1) }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(BSKTheme.accent)
+            .disabled(!isHandled(workspace.players[activeIndex].id) || isSaving)
+            .frame(maxWidth: .infinity)
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { Rectangle().fill(BSKTheme.border).frame(height: 1) }
+    }
+
+    private var handledCount: Int { answers.values.filter(isHandled).count }
+
+    private func isHandled(_ playerID: Int) -> Bool { answers[playerID].map(isHandled) ?? false }
+    private func isHandled(_ answer: MatchEvaluationAnswer) -> Bool {
+        answer.skipped || (answer.selfComparison != nil && answer.matchImpact != nil)
+    }
+
+    private func blankAnswer(_ player: MatchEvaluationWorkspace.Player) -> MatchEvaluationAnswer {
+        .init(
+            playerId: player.id,
+            selfComparison: player.selfComparison,
+            matchImpact: player.matchImpact,
+            reasonTag: player.reasonTag,
+            skipped: player.skipped
+        )
+    }
+
+    private func update(_ playerID: Int, change: (inout MatchEvaluationAnswer) -> Void) {
+        guard let player = workspace?.players.first(where: { $0.id == playerID }) else { return }
+        var answer = answers[playerID] ?? blankAnswer(player)
+        change(&answer)
+        savedMessage = nil
+        answers[playerID] = answer
+    }
+
+    @MainActor
+    private func load() async {
+        do {
+            let loaded = try await model.matchEvaluation(id: matchID)
+            workspace = loaded
+            answers = Dictionary(uniqueKeysWithValues: loaded.players.map { ($0.id, blankAnswer($0)) })
+            activeIndex = loaded.players.firstIndex(where: { player in
+                let answer = answers[player.id]
+                return answer == nil || !isHandled(answer!)
+            }) ?? max(0, loaded.players.count - 1)
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func save(advance: Bool) async {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            workspace = try await model.saveMatchEvaluation(id: matchID, answers: Array(answers.values))
+            savedMessage = "Sparat"
+            if advance { activeIndex += 1 }
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct ChoiceRow: View {
+    let title: String
+    let values: [String]
+    let labels: [String]
+    let selection: String?
+    let select: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title).font(.subheadline.bold()).foregroundStyle(BSKTheme.secondary)
+            HStack(spacing: 7) {
+                ForEach(values.indices, id: \.self) { index in
+                    choiceButton(value: values[index], label: labels[index])
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func choiceButton(value: String, label: String) -> some View {
+        if selection == value {
+            Button(label) { select(value) }
+                .font(.caption.bold())
+                .buttonStyle(.borderedProminent)
+                .tint(BSKTheme.accent)
+                .frame(maxWidth: .infinity)
+        } else {
+            Button(label) { select(value) }
+                .font(.caption.bold())
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+        }
+    }
+}

@@ -214,3 +214,48 @@ struct SelectionDecision: Encodable {
     let decision: String
     let position: String
 }
+
+struct MatchEvaluationSummary: Codable, Identifiable {
+    let id: Int
+    let opponent: String
+    let date: String
+    let startTime: String?
+    let level: String
+    let homeAway: String
+    let total: Int
+    let handled: Int
+}
+
+struct MatchEvaluationWorkspace: Codable {
+    struct Match: Codable {
+        let id: Int
+        let opponent: String
+        let date: String
+        let startTime: String?
+        let level: String
+        let homeAway: String
+        let activityId: String?
+    }
+
+    struct Player: Codable, Identifiable {
+        let id: Int
+        let name: String
+        let jerseyNumber: Int?
+        let level: String
+        let selfComparison: String?
+        let matchImpact: String?
+        let reasonTag: String
+        let skipped: Bool
+    }
+
+    let match: Match
+    let players: [Player]
+}
+
+struct MatchEvaluationAnswer: Codable {
+    let playerId: Int
+    var selfComparison: String?
+    var matchImpact: String?
+    var reasonTag: String
+    var skipped: Bool
+}

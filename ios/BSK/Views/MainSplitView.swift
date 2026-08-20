@@ -3,6 +3,7 @@ import SwiftUI
 private enum AppSection: String, CaseIterable, Identifiable {
     case today
     case observe
+    case evaluate
     case players
     case selection
     case settings
@@ -12,6 +13,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .today: return "Idag"
         case .observe: return "Observera"
+        case .evaluate: return "Utvärdera"
         case .players: return "Spelare"
         case .selection: return "Uttagning"
         case .settings: return "Inställningar"
@@ -21,6 +23,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .today: return "sun.max"
         case .observe: return "chart.xyaxis.line"
+        case .evaluate: return "checklist"
         case .players: return "person.3"
         case .selection: return "sportscourt"
         case .settings: return "gearshape"
@@ -33,6 +36,8 @@ private enum AppSection: String, CaseIterable, Identifiable {
         case .today:
             return ["admin", "head_coach", "coach", "leader"].contains(user.primaryRole)
         case .observe:
+            return user.permissions.contains("manage_evaluations")
+        case .evaluate:
             return user.permissions.contains("manage_evaluations")
         case .players:
             return user.permissions.contains("view_players")
@@ -50,6 +55,7 @@ struct MainSplitView: View {
     @State private var section: AppSection? = .today
     @State private var selectedPlayer: Int?
     @State private var selectedActivity: String?
+    @State private var selectedEvaluation: Int?
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
     private var availableSections: [AppSection] {
@@ -77,6 +83,8 @@ struct MainSplitView: View {
                 TodayList(selection: $selectedActivity)
             case .observe:
                 ActivityList(selection: $selectedActivity)
+            case .evaluate:
+                MatchEvaluationList(selection: $selectedEvaluation)
             case .players:
                 PlayerList(selection: $selectedPlayer)
             case .selection:
@@ -97,6 +105,12 @@ struct MainSplitView: View {
                     ActivityDetail(activity: activity)
                 } else {
                     ContentUnavailableView("Välj en aktivitet", systemImage: "chart.xyaxis.line")
+                }
+            case .evaluate:
+                if let selectedEvaluation {
+                    MatchEvaluationView(matchID: selectedEvaluation)
+                } else {
+                    ContentUnavailableView("Välj en match", systemImage: "checklist")
                 }
             case .players:
                 if let selectedPlayer {
@@ -131,6 +145,7 @@ struct MainSplitView: View {
                         section = item
                         selectedPlayer = nil
                         selectedActivity = nil
+                        selectedEvaluation = nil
                         columnVisibility = .doubleColumn
                     }
                 } label: {
