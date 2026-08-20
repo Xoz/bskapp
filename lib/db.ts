@@ -942,6 +942,11 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
       ON CONFLICT DO NOTHING
     `);
   } },
+  { id: "0006-skippable-match-evaluations", run: async () => {
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ALTER COLUMN self_comparison DROP NOT NULL");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ALTER COLUMN match_impact DROP NOT NULL");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ADD COLUMN IF NOT EXISTS skipped INTEGER NOT NULL DEFAULT 0");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

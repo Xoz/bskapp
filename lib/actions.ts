@@ -921,20 +921,23 @@ async function persistMatchEvaluations(matchId: number, contributorType: "coach"
   const players = workspace?.players ?? [];
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
   for (const player of players) {
+    const skipped = String(formData.get(`skip_${player.id}`) ?? "") === "1";
     const selfComparison = String(formData.get(`self_${player.id}`) ?? "");
     const matchImpact = String(formData.get(`impact_${player.id}`) ?? "");
     const requestedReason = String(formData.get(`reason_${player.id}`) ?? "");
-    if (!isSelfComparison(selfComparison) || !isMatchImpact(matchImpact)) continue;
+    if (!skipped && (!isSelfComparison(selfComparison) || !isMatchImpact(matchImpact))) continue;
     const reason = isReasonTag(requestedReason) ? requestedReason : "";
     statements.push({
       sql: `INSERT INTO match_player_evaluations
-              (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot, skipped)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(match_id, player_id, contributor_type, contributor_id) DO UPDATE SET
               self_comparison=excluded.self_comparison, match_impact=excluded.match_impact,
               reason_tag=excluded.reason_tag, player_level_snapshot=excluded.player_level_snapshot,
-              match_level_snapshot=excluded.match_level_snapshot, updated_at=now()`,
-      args: [matchId, player.id, contributorType, contributorId, selfComparison, matchImpact, reason, player.level, match.level],
+              match_level_snapshot=excluded.match_level_snapshot, skipped=excluded.skipped, updated_at=now()`,
+      args: [matchId, player.id, contributorType, contributorId,
+        skipped ? null : selfComparison, skipped ? null : matchImpact, skipped ? "" : reason,
+        player.level, match.level, skipped ? 1 : 0],
     });
   }
   if (statements.length) await batch(statements);

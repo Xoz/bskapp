@@ -22,7 +22,7 @@ export function matchEvaluationIsOpen(
 
 export type MatchEvaluationPlayer = {
   id: number; name: string; jersey_number: number | null; level: string;
-  self_comparison: SelfComparison | null; match_impact: MatchImpact | null; reason_tag: string;
+  self_comparison: SelfComparison | null; match_impact: MatchImpact | null; reason_tag: string; skipped: number;
 };
 export type MatchEvaluationWorkspace = {
   match: { id: number; opponent: string; date: string; start_time: string | null; level: string; home_away: string; activity_id: string | null };
@@ -50,7 +50,8 @@ export async function getMatchEvaluationWorkspace(matchId: number, contributorTy
        WHERE dac.attendance_status = 'present'
          AND NOT EXISTS (SELECT 1 FROM explicit_participants)
      )
-     SELECT p.id, p.name, p.jersey_number, p.level, e.self_comparison, e.match_impact, COALESCE(e.reason_tag, '') AS reason_tag
+     SELECT p.id, p.name, p.jersey_number, p.level, e.self_comparison, e.match_impact,
+            COALESCE(e.reason_tag, '') AS reason_tag, COALESCE(e.skipped, 0) AS skipped
      FROM participants part JOIN players p ON p.id = part.player_id AND p.active = 1
      LEFT JOIN match_player_evaluations e ON e.match_id = ? AND e.player_id = p.id
        AND e.contributor_type = ? AND e.contributor_id = ?
@@ -132,7 +133,8 @@ export async function getPlayerMatchEvaluationTrend(playerId: number): Promise<M
   const rows = await all<{ match_id: number; date: string; opponent: string; self_comparison: SelfComparison; match_impact: MatchImpact }>(
     `SELECT e.match_id, m.date, m.opponent, e.self_comparison, e.match_impact
      FROM match_player_evaluations e JOIN matches m ON m.id = e.match_id
-     WHERE e.player_id = ? ORDER BY m.date DESC, m.id DESC, e.id`, [playerId]
+     WHERE e.player_id = ? AND COALESCE(e.skipped, 0) = 0
+     ORDER BY m.date DESC, m.id DESC, e.id`, [playerId]
   );
   const grouped = new Map<number, typeof rows>();
   for (const row of rows) grouped.set(row.match_id, [...(grouped.get(row.match_id) ?? []), row]);
