@@ -20,23 +20,21 @@ function endOfCurrentWeek(date: string) {
 export default async function SelectionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aktivitet?: string; lag?: string }>;
+  searchParams: Promise<{ aktivitet?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("manage_squads")) redirect("/idag?behorighet=saknas");
-  const { aktivitet, lag } = await searchParams;
-  const selectedTeam = lag === "Gul" || lag === "Grön" ? lag : null;
-  const listHref = selectedTeam ? `/uttagning?lag=${encodeURIComponent(selectedTeam)}` : "/uttagning";
+  const { aktivitet } = await searchParams;
+  const listHref = "/uttagning";
 
   if (!aktivitet) {
-    const matches = (await getCoreActivities(100, "sanktan")).filter((activity) => activity.is_upcoming);
-    const visibleMatches = selectedTeam
-      ? matches.filter((activity) => activity.source_team === selectedTeam)
-      : matches;
+    const matches = (await getCoreActivities(100, "sanktan")).filter(
+      (activity) => activity.is_upcoming && activity.source_team === "Gul"
+    );
     const weekEnd = endOfCurrentWeek(swedishToday());
-    const thisWeek = visibleMatches.filter((activity) => activity.activity_date <= weekEnd);
-    const later = visibleMatches.filter((activity) => activity.activity_date > weekEnd);
+    const thisWeek = matches.filter((activity) => activity.activity_date <= weekEnd);
+    const later = matches.filter((activity) => activity.activity_date > weekEnd);
     return (
       <div className="core-page">
         <header className="core-header">
@@ -44,25 +42,10 @@ export default async function SelectionPage({
           <p className="core-kicker">Transparent beslutsstöd</p>
           <h1 className="core-title">Uttagning</h1>
           <p className="core-lead">
-            Öppna en match för att se kallelser och svar, eller skapa ett rättvist lagförslag.
+            Gula lagets kommande Sanktanmatcher. Öppna en match för att se kallelser och svar eller skapa ett rättvist lagförslag.
           </p>
           </div>
         </header>
-        <nav className="core-team-filters" aria-label="Filtrera kommande Sanktanmatcher efter lag">
-          <Link href="/uttagning" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
-            Alla <span>{matches.length}</span>
-          </Link>
-          {(["Gul", "Grön"] as const).map((team) => (
-            <Link
-              key={team}
-              href={`/uttagning?lag=${encodeURIComponent(team)}`}
-              className={`core-team-filter ${selectedTeam === team ? "core-team-filter-active" : ""}`}
-              data-team-tone={team === "Gul" ? "yellow" : "green"}
-            >
-              {team} <span>{matches.filter((activity) => activity.source_team === team).length}</span>
-            </Link>
-          ))}
-        </nav>
         {thisWeek.length > 0 && <section>
           <div className="core-section-head">
             <div><p className="core-section-eyebrow">Prioritera nu</p><h2 className="core-section-title">Den här veckan</h2></div>
@@ -73,7 +56,7 @@ export default async function SelectionPage({
               <CoreActivityCard
                 key={activity.id}
                 activity={activity}
-                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
               />
             ))}
           </div>
@@ -88,7 +71,7 @@ export default async function SelectionPage({
               <CoreActivityCard
                 key={activity.id}
                 activity={activity}
-                href={`${listHref}${selectedTeam ? "&" : "?"}aktivitet=${encodeURIComponent(activity.id)}`}
+                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
               />
             ))}
           </div>
@@ -98,7 +81,7 @@ export default async function SelectionPage({
   }
 
   const workspace = await getSelectionWorkspace(aktivitet);
-  if (!workspace) redirect("/uttagning");
+  if (!workspace || workspace.activity.source_team !== "Gul") redirect("/uttagning");
   const saveAction = saveDevelopmentSelection.bind(null, workspace.activity.id);
 
   return (
@@ -120,12 +103,7 @@ export default async function SelectionPage({
             <p className="core-lead">
               Kallade spelare är markerade och deras svar visas direkt i listan.
             </p>
-            {workspace.activity.source_team === "Gul" && (
-              <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
-            )}
-            {workspace.activity.source_team === "Grön" && (
-              <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Grön ansvarar för sin ordinarie trupp. Förslaget fördelar endast Gul-lån rättvist.</p>
-            )}
+            <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
           </div>
           <Link href={`/observera?aktivitet=${encodeURIComponent(workspace.activity.id)}`} className="btn-secondary">
             Sätt matchfokus
