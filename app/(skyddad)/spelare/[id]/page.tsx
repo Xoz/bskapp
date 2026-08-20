@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
-import { getPlayerCore, type Evidence } from "@/lib/developmentCore";
+import { getPlayerCore } from "@/lib/developmentCore";
 import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
@@ -12,8 +12,6 @@ import { getPlayerMatchEvaluationTrend } from "@/lib/matchEvaluation";
 import MatchEvaluationTrend from "@/components/MatchEvaluationTrend";
 
 export const dynamic = "force-dynamic";
-const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
-
 function formatMatchDate(value: string) {
   return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
     .format(new Date(`${value}T12:00:00`));
@@ -34,7 +32,7 @@ export default async function PlayerPage({ params, searchParams }: {
   ]);
   if (!core) notFound();
   const { mal } = await searchParams;
-  const { summary, goalHistory, observations, matchHistory } = core;
+  const { summary, goalHistory, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
@@ -127,17 +125,6 @@ export default async function PlayerPage({ params, searchParams }: {
             <div className="flex items-end"><button type="submit" className="btn-primary">Lägg till mål</button></div>
           </form>
         )}
-      </details>
-
-      <details className="core-panel core-form-panel" open>
-        <summary className="core-section-head cursor-pointer list-none"><div><p className="core-kicker">Evidens över tid</p><h2 className="core-section-title mt-2">Observationer</h2></div><div className="flex items-center gap-3"><span className="core-section-note">{observations.length} registrerade</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div></summary>
-        <div className="flex justify-end mt-4"><Link href="/observera" className="btn-secondary btn-sm">Registrera</Link></div>
-        {observations.length ? <div className="core-list mt-4">{observations.map((observation) => (
-          <article key={observation.id} className="core-panel p-4 flex items-start justify-between gap-4">
-            <div><p className="caption" style={{ color: "var(--ink-muted)" }}>{observation.activity_date} · {observation.activity_title}</p><h3 className="mt-1">{observation.goal_title ?? "Generell observation"}</h3>{observation.note && <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{observation.note}</p>}</div>
-            <span className="badge">{EVIDENCE_LABELS[observation.evidence]}</span>
-          </article>
-        ))}</div> : <div className="core-panel p-5 mt-4"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga observationer registrerade ännu.</p></div>}
       </details>
 
       {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel core-form-panel"><summary className="font-semibold cursor-pointer list-none flex items-center justify-between"><span>Tidigare mål</span><span aria-hidden="true" style={{ color: "var(--ink-muted)" }}>⌄</span></summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}

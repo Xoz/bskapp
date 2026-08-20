@@ -105,9 +105,6 @@ export default async function SelectionPage({
             </p>
             <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
           </div>
-          <Link href={`/observera?aktivitet=${encodeURIComponent(workspace.activity.id)}`} className="btn-secondary">
-            Sätt matchfokus
-          </Link>
         </div>
       </header>
 

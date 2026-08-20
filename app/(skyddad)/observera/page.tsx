@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
-import { saveActivityContext, saveQuickObservations } from "@/lib/coreActions";
+import { saveQuickObservations } from "@/lib/coreActions";
 import { swedishToday } from "@/lib/dates";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import CoreActivityCard from "@/components/CoreActivityCard";
@@ -55,7 +55,7 @@ export default async function ObservePage({
         {upcomingActivities.length > 0 && <section>
           <div className="core-section-head">
             <div><p className="core-section-eyebrow">Före match</p><h2 className="core-section-title">Den här veckan</h2></div>
-            <span className="core-section-note">Sätt fokus och kontrollera truppen</span>
+            <span className="core-section-note">Kontrollera kallelsen inför matchen</span>
           </div>
           <div className="core-list core-list-2">
             {upcomingActivities.map((activity) => (
@@ -95,7 +95,6 @@ export default async function ObservePage({
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
   const teamTone = "yellow";
   const isSanktan = detail.activity.external_source === "svenskalag_sanktan";
-  const contextAction = saveActivityContext.bind(null, detail.activity.id);
   const observationAction = saveQuickObservations.bind(null, detail.activity.id);
 
   return (
@@ -128,7 +127,7 @@ export default async function ObservePage({
         <div>
           <strong>{detail.activity.is_upcoming ? "Det här gör du här" : "Registrera bara det ni faktiskt såg"}</strong>
           <p>{detail.activity.is_upcoming
-            ? "Kontrollera vilka som är kallade i Uttagning och sätt sedan ett gemensamt fokus för matchen. Observationer registreras här efter att matchen är spelad."
+            ? "Kontrollera vilka som är kallade i Uttagning. Observationer kan registreras här efter att matchen är spelad."
             : "Matchtruppen är hämtad från Svenska Lag. Kontrollera spelarna nedan och koppla observationer till deras aktiva utvecklingsmål."}</p>
         </div>
         {detail.activity.is_upcoming && <Link href={`/uttagning?aktivitet=${encodeURIComponent(detail.activity.id)}`} className="btn-secondary btn-sm">Kontrollera uttagningen</Link>}
@@ -173,22 +172,6 @@ export default async function ObservePage({
           )}
         </section>
       )}
-
-      <form action={contextAction} className="core-panel core-form-panel grid md:grid-cols-[1fr_220px_auto] gap-4 items-end">
-        <label className="block">
-          <span className="label">{detail.activity.activity_type === "match" ? "Matchfokus" : "Aktivitetens fokus"}</span>
-          <input name="theme" className="input mt-1" defaultValue={detail.activity.theme} placeholder="Exempel: spelbarhet före mottagning" />
-        </label>
-        <label className="block">
-          <span className="label">Miljö</span>
-          <select name="challenge_context" className="input mt-1" defaultValue={detail.activity.challenge_context}>
-            <option value="safe">Trygg</option>
-            <option value="balanced">Balanserad</option>
-            <option value="challenging">Utmanande</option>
-          </select>
-        </label>
-        <button type="submit" className={detail.activity.is_upcoming ? "btn-primary" : "btn-secondary"}>Spara fokus</button>
-      </form>
 
       {!detail.activity.is_upcoming && <section>
         <div className="core-section-head">
