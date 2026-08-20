@@ -57,13 +57,14 @@ struct MainSplitView: View {
     @State private var selectedActivity: String?
     @State private var selectedEvaluation: Int?
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var preferredCompactColumn: NavigationSplitViewColumn = .content
 
     private var availableSections: [AppSection] {
         AppSection.allCases.filter { $0.isAvailable(to: model.user) }
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $preferredCompactColumn) {
             sidebar
         } content: {
             switch section ?? .today {
@@ -119,6 +120,16 @@ struct MainSplitView: View {
         .navigationSplitViewStyle(.balanced)
         .background(BSKTheme.canvas)
         .toolbarBackground(BSKTheme.background.opacity(0.94), for: .navigationBar)
+        .onAppear {
+            if horizontalSizeClass == .compact {
+                preferredCompactColumn = .content
+            }
+        }
+        .onChange(of: horizontalSizeClass) { _, sizeClass in
+            if sizeClass == .compact {
+                preferredCompactColumn = .content
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if horizontalSizeClass == .compact {
                 compactNavigation
@@ -241,7 +252,7 @@ struct MainSplitView: View {
                         selectedPlayer = nil
                         selectedActivity = nil
                         selectedEvaluation = nil
-                        columnVisibility = .doubleColumn
+                        preferredCompactColumn = .content
                     }
                 } label: {
                     VStack(spacing: 5) {
