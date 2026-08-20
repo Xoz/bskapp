@@ -6,6 +6,7 @@
 // tidigare mot Turso/libSQL, så actions.ts/queries.ts/live.ts är oförändrade.
 
 import postgres from "postgres";
+import { pendingSchemaMigrationIds } from "./schemaMigrations";
 
 export type SqlArgs = (string | number | boolean | null)[];
 
@@ -53,23 +54,7 @@ async function tryExec(sqlText: string) {
   }
 }
 
-// Bumpa vid VARJE schemaändring nedan (ny tabell/kolumn/migration). Grinden
-// nedan hoppar över all DDL när databasen redan är på denna version – annars
-// körs ~40 sekventiella satser mot Postgres vid varje kall serverless-start.
-const SCHEMA_VERSION = "2026-08-19-sanktan-callups-v4";
-
-async function init(): Promise<void> {
-  // Snabbväg: är schemat redan aktuellt? Hoppa över tabeller/migrationer/seed.
-  // OBS: rå-klienten används här – get/all/run anropar ready() → init() (rekursion).
-  try {
-    const res = await getClient().unsafe(
-      "SELECT value FROM settings WHERE key = 'schema_version'"
-    );
-    if (res[0]?.value === SCHEMA_VERSION) return;
-  } catch {
-    // settings-tabellen finns inte än (tom databas) – kör full init.
-  }
-
+async function applyBaselineSchema(): Promise<void> {
   const tables = [
     `CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -684,20 +669,22 @@ async function init(): Promise<void> {
   `);
 
   // Seed – inställningar
-  const settingsCount = await getClient().unsafe("SELECT COUNT(*) AS c FROM settings");
-  if (Number(settingsCount[0].c) === 0) {
-    const defaults: [string, string][] = [
-      ["club_name", "Bollstanäs SK"],
-      ["team_name", "BSK F2014"],
-      ["birth_year", "2014"],
-      ["primary_color", DEFAULT_COLORS.primary_color],
-      ["accent_color", DEFAULT_COLORS.accent_color],
-      ["coach_code", "TRANARE2014"],
-      ["season", "2026"],
-    ];
-    for (const [k, v] of defaults) {
-      await getClient().unsafe("INSERT INTO settings (key, value) VALUES ($1, $2)", [k, v]);
-    }
+  // Datamigrationer ovan kan redan ha lagt egna settings-nycklar även på en
+  // tom databas. Seeda därför varje standardnyckel individuellt.
+  const defaults: [string, string][] = [
+    ["club_name", "Bollstanäs SK"],
+    ["team_name", "BSK F2014"],
+    ["birth_year", "2014"],
+    ["primary_color", DEFAULT_COLORS.primary_color],
+    ["accent_color", DEFAULT_COLORS.accent_color],
+    ["coach_code", "TRANARE2014"],
+    ["season", "2026"],
+  ];
+  for (const [k, v] of defaults) {
+    await getClient().unsafe(
+      "INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING",
+      [k, v]
+    );
   }
   await getClient().unsafe(
     "INSERT INTO settings (key, value) VALUES ('calendar_url', '') ON CONFLICT (key) DO NOTHING"
@@ -778,11 +765,70 @@ async function init(): Promise<void> {
     );
   }
 
-  // Stämpla schemat som aktuellt så nästa kalla start hoppar över allt ovan.
-  await getClient().unsafe(
-    "INSERT INTO settings (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-    [SCHEMA_VERSION]
-  );
+}
+
+type SchemaMigration = {
+  id: string;
+  run: () => Promise<void>;
+};
+
+// Lägg aldrig ny DDL i baslinjen för en redan driftsatt installation. Lägg i
+// stället till en ny post sist i listan. Varje id journalförs efter lyckad körning.
+const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  { id: "0001-baseline-2026-08-20", run: applyBaselineSchema },
+];
+const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
+const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;
+
+async function init(): Promise<void> {
+  // Normal kallstart gör bara en billig läsning. Tabellen skapas enbart vid
+  // första starten; IF NOT EXISTS gör den samtidighetssäker före låsningen.
+  try {
+    await getClient().unsafe("SELECT 1 FROM schema_migrations LIMIT 1");
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "42P01")) throw error;
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`);
+  }
+
+  const lockConnection = await getClient().reserve();
+  try {
+    await lockConnection.unsafe("SELECT pg_advisory_lock($1, $2)", [...MIGRATION_LOCK_KEYS]);
+
+    let appliedRows = await getClient().unsafe("SELECT id FROM schema_migrations ORDER BY id");
+    const baselineId = SCHEMA_MIGRATIONS[0].id;
+    if (!appliedRows.some((row) => row.id === baselineId)) {
+      // Den befintliga produktionen hade redan hela baslinjen när journalen
+      // infördes. Markera den utan att återköra äldre seed-/speglingsteg.
+      let legacyVersion = "";
+      try {
+        const legacyRows = await getClient().unsafe("SELECT value FROM settings WHERE key = 'schema_version'");
+        legacyVersion = String(legacyRows[0]?.value ?? "");
+      } catch {
+        // Tom databas saknar settings och ska därför köra baslinjen.
+      }
+      if (legacyVersion === LEGACY_BASELINE_VERSION) {
+        await getClient().unsafe("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT DO NOTHING", [baselineId]);
+        appliedRows = await getClient().unsafe("SELECT id FROM schema_migrations ORDER BY id");
+      }
+    }
+
+    const appliedIds = new Set(appliedRows.map((row) => String(row.id)));
+    for (const id of pendingSchemaMigrationIds(SCHEMA_MIGRATIONS.map((migration) => migration.id), appliedIds)) {
+      const migration = SCHEMA_MIGRATIONS.find((candidate) => candidate.id === id);
+      if (!migration) throw new Error(`Schemamigration saknas: ${id}`);
+      await migration.run();
+      await getClient().unsafe("INSERT INTO schema_migrations (id) VALUES ($1)", [migration.id]);
+    }
+  } finally {
+    try {
+      await lockConnection.unsafe("SELECT pg_advisory_unlock($1, $2)", [...MIGRATION_LOCK_KEYS]);
+    } finally {
+      await lockConnection.release();
+    }
+  }
 }
 
 let readyPromise: Promise<void> | null = null;

@@ -69,7 +69,8 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **selectionSupport.ts**: rena, testade möjlighets-/varningsmeningar samt `recommendYellowSelection`, en deterministisk och osparad rekommendation som rättvisejämför spelare med primärt lag Gul; på Gulmatch används F15/Grön som utfyllnad och på Grönmatch föreslås bara rättvist fördelade Gul-lån.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvarohelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
 - **attendance.ts**: parser för Svenska Lag-filen `Närvarotillfällen per aktivitet & person`, inklusive datumtolkning, kategorisering och namnnormalisering.
-- **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**
+- **db.ts**: postgres.js-klient (Supabase) + ordnad migrationsrunner, `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). Baslinjeschema och nya numrerade migrationer bor här.
+- **schemaMigrations.ts**: ren validering av migrationsordning och beräkning av vilka migrations-id:n som återstår; används av `db.ts` och testas separat.
 - **live.ts**: getLiveState (publik eller rapporteringsdetaljer), recordEvent/undoLastEvent (egen ångra via reporter_key), recordSub/undoLastSub, setClock, togglePlayed, claimStats, finishMatch, clockSeconds.
 - **liveTypes.ts**: typer för live (`LiveState`, `LiveEvent`, `LivePlayer`, `LiveAction`…), formatClock/formatEventTime, OPPONENT_GOAL.
 - **liveAccess.ts**: validerar den matchspecifika capability-token som krävs för publik rapporteringsläsning och skrivning.
@@ -91,7 +92,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## DB-tabeller (definieras i lib/db.ts)
 
-`settings`, `players` (inkl. `selection_eligible` för generell tillgänglighet i automatiska uttagningsförslag), `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
+`schema_migrations` (journal över exakt en gång körda schemamigrationer), `settings`, `players` (inkl. `selection_eligible` för generell tillgänglighet i automatiska uttagningsförslag), `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
 `match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
 `player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
@@ -118,6 +119,7 @@ Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Pos
 - **Design "Dark Mono v2"**: allt går via CSS-variabler i `app/globals.css` (dark `:root` + `[data-theme="light"]`). Accenten är `--primary` (dynamisk per klubb, sätts på `<body>` i `layout.tsx`); möter ytor via `--primary-wash`/`--primary-line` (color-mix), aldrig stor solid yta. `--live` är fast signal, grain styrs av `--grain-blend`/`--grain-opacity`. Inga skuggor — djup via nivåer (`--bg`/`--bg2`/`--bg3`) + borders (`--line`/`--line-2`).
 - **Svensk tid**: använd `lib/dates.ts`. Vercel kör UTC — aldrig råa `toISOString`-datum.
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
+- **Schemaändring**: ändra aldrig en redan driftsatt baslinje. Lägg ett nytt, stigande id sist i `SCHEMA_MIGRATIONS`; journalen kör varje migration exakt en gång.
 - **Git**: `git push` direkt efter commit.
 - Öppna punkter samlas i `docs/BACKLOG.md`. GDPR-produktionsgrinden finns i `docs/GDPR-GRIND.md`. Större detaljspec finns i `docs/SPEC-matchbetyg.md`, `docs/SPEC-matchgrupper.md` (ersatt av den byggda gruppmodellen) och `docs/STAGING.md`.
 
