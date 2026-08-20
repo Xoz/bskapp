@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
 import { saveQuickObservations } from "@/lib/coreActions";
-import { swedishToday } from "@/lib/dates";
 import { matchEvaluationIsOpen } from "@/lib/matchEvaluation";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import CoreActivityCard from "@/components/CoreActivityCard";
@@ -17,13 +16,6 @@ const EVIDENCE: Array<{ value: Evidence; label: string; help: string }> = [
   { value: "revisit", label: "Nytt tillfälle", help: "Behöver observeras igen" },
 ];
 
-function endOfCurrentWeek(date: string) {
-  const current = new Date(`${date}T12:00:00Z`);
-  const daysUntilSunday = (7 - current.getUTCDay()) % 7;
-  current.setUTCDate(current.getUTCDate() + daysUntilSunday);
-  return current.toISOString().slice(0, 10);
-}
-
 export default async function ObservePage({
   searchParams,
 }: {
@@ -36,42 +28,24 @@ export default async function ObservePage({
   const listHref = "/observera";
 
   if (!aktivitet) {
-    const weekEnd = endOfCurrentWeek(swedishToday());
-    const activities = (await getCoreActivities(80, "sanktan"))
+    const playedActivities = (await getCoreActivities(80, "sanktan"))
       .filter((activity) => activity.source_team === "Gul")
-      .filter((activity) => !activity.is_upcoming || activity.activity_date <= weekEnd);
-    const upcomingActivities = activities.filter((activity) => activity.is_upcoming);
-    const playedActivities = activities.filter((activity) => !activity.is_upcoming);
+      .filter((activity) => !activity.is_upcoming);
     return (
       <div className="core-page">
         <header className="core-header">
           <div className="core-header-copy">
-          <p className="core-kicker">Snabb registrering</p>
+          <p className="core-kicker">Efter matchen</p>
           <h1 className="core-title">Observera</h1>
           <p className="core-lead">
-            Gula lagets spelade Sanktanmatcher samt den här veckans kommande matcher från Svenska Lag.
+            Utvärdera spelarna efter match och gå tillbaka till gula lagets spelade Sanktanmatcher.
           </p>
           </div>
         </header>
-        {upcomingActivities.length > 0 && <section>
+        {playedActivities.length > 0 ? <section>
           <div className="core-section-head">
-            <div><p className="core-section-eyebrow">Före match</p><h2 className="core-section-title">Den här veckan</h2></div>
-            <span className="core-section-note">Kontrollera kallelsen inför matchen</span>
-          </div>
-          <div className="core-list core-list-2">
-            {upcomingActivities.map((activity) => (
-              <CoreActivityCard
-                key={activity.id}
-                activity={activity}
-                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
-              />
-            ))}
-          </div>
-        </section>}
-        {playedActivities.length > 0 && <section>
-          <div className="core-section-head">
-            <div><p className="core-section-eyebrow">Efter match</p><h2 className="core-section-title">Spelade matcher</h2></div>
-            <span className="core-section-note">Öppna för att registrera det ni såg</span>
+            <div><p className="core-section-eyebrow">Gul · Sanktan</p><h2 className="core-section-title">Matchhistorik</h2></div>
+            <span className="core-section-note">Öppna en match för efterarbete</span>
           </div>
           <div className="core-list core-list-2">
             {playedActivities.map((activity) => (
@@ -82,6 +56,9 @@ export default async function ObservePage({
               />
             ))}
           </div>
+        </section> : <section className="core-panel p-6">
+          <h2>Inga spelade gula Sanktanmatcher ännu</h2>
+          <p className="body mt-2" style={{ color: "var(--ink-secondary)" }}>Efter en spelad match visas den här för utvärdering och historik.</p>
         </section>}
       </div>
     );

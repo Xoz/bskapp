@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
-  const [{ upcoming, recent, metrics }, pendingEvaluation] = await Promise.all([
+  const [{ upcoming }, pendingEvaluation] = await Promise.all([
     getCoreHome(),
     getPendingMatchEvaluation(),
   ]);
@@ -69,55 +69,13 @@ export default async function TodayPage() {
         </div>
       </section>}
 
-      <section>
-        <div className="core-section-head">
-          <div>
-            <p className="core-section-eyebrow">Gul · Sanktan</p>
-            <h2 className="core-section-title">Senaste matcher</h2>
-          </div>
-          <Link href="/observera" className="btn-secondary btn-sm">Visa historik</Link>
+      <section className="core-context-banner" data-tone="review">
+        <div>
+          <strong>Spelade matcher och utvärderingar</strong>
+          <p>Matchhistorik och efterarbete finns samlat under Observera.</p>
         </div>
-        {recent.length > 0 ? (
-          <div className="core-list core-list-2">
-            {recent.map((activity) => (
-              <CoreActivityCard
-                key={activity.id}
-                activity={activity}
-                href={`/observera?aktivitet=${encodeURIComponent(activity.id)}`}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="core-section-note">Inga spelade gula Sanktanmatcher finns i historiken ännu.</p>
-        )}
+        <Link href="/observera" className="btn-secondary btn-sm">Öppna Observera</Link>
       </section>
-
-      <details className="core-insights">
-        <summary>
-          <span><strong>Uppföljning senaste 28 dagar</strong><small>Mål, observationer och sparade uttagningar</small></span>
-          <span aria-hidden="true">⌄</span>
-        </summary>
-        <div className="core-metrics">
-          <Metric label="Spelare med mål" value={`${metrics.goalCoveragePercent}%`} detail={`${metrics.playersWithGoals}/${metrics.playerCount}`} />
-          <Metric label="Observerade aktiviteter" value={`${metrics.observedActivityPercent}%`} detail={`${metrics.observedActivityCount}/${metrics.recentActivityCount}`} />
-          <Metric label="Sparade uttagningar" value={String(metrics.selectionCount)} detail="matchtillfällen" />
-          <Metric
-            label="Under två minuter"
-            value={metrics.observationUnderTwoMinutesPercent == null ? "–" : `${metrics.observationUnderTwoMinutesPercent}%`}
-            detail={metrics.averageObservationSeconds == null ? "ingen tidmätning ännu" : `snitt ${metrics.averageObservationSeconds} sek`}
-          />
-        </div>
-      </details>
-    </div>
-  );
-}
-
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="core-metric">
-      <span className="core-metric-label">{label}</span>
-      <strong className="core-metric-value">{value}</strong>
-      <span className="core-metric-detail">{detail}</span>
     </div>
   );
 }
