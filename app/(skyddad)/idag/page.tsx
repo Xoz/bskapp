@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getCoreHome } from "@/lib/developmentCore";
 import { syncDevelopmentSources } from "@/lib/coreActions";
+import { getPendingMatchEvaluation } from "@/lib/matchEvaluation";
 import CoreActivityCard from "@/components/CoreActivityCard";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
-  const { nextActivity, upcoming, recent, metrics } = await getCoreHome();
+  const [{ nextActivity, upcoming, recent, metrics }, pendingEvaluation] = await Promise.all([
+    getCoreHome(),
+    getPendingMatchEvaluation(),
+  ]);
   const canSync = user.permissions.includes("manage_evaluations");
 
   return (
@@ -29,6 +33,19 @@ export default async function TodayPage() {
           </form>
         )}
       </header>
+
+      {pendingEvaluation && (
+        <Link href={`/matcher/${pendingEvaluation.id}/utvardera`} className="core-panel p-5 flex items-center justify-between gap-4 core-activity-card">
+          <div>
+            <p className="core-kicker">Efter matchen</p>
+            <h2 className="core-section-title mt-2">Utvärdera matchen mot {pendingEvaluation.opponent}</h2>
+            <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
+              {pendingEvaluation.evaluated} av {pendingEvaluation.total} spelare klara
+            </p>
+          </div>
+          <span className="badge badge-primary">{pendingEvaluation.evaluated ? "Fortsätt" : "Starta"}</span>
+        </Link>
+      )}
 
       {nextActivity ? (
         <section className="core-hero">

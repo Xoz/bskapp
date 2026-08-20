@@ -263,9 +263,9 @@ export default function GuidePage() {
                 <p>När du öppnar en match från Översikten kommer du direkt till laguttagningen, eftersom det oftast är nästa praktiska steg inför match.</p>
               </Topic>
 
-              <Topic title="Senaste matchen och Form just nu">
-                <p>Senaste matchen visar resultat, motståndare och eventuella målskyttar. Formpanelen bygger på tränarnas matchbetyg, inte enbart på mål och assist.</p>
-                <p><strong style={{ color: "var(--ink)" }}>På uppgång</strong> och <strong style={{ color: "var(--ink)" }}>Tappat senast</strong> beskriver förändring i spelarens matchform. Det ska användas som samtals- och observationsstöd, inte som en offentlig ranking.</p>
+              <Topic title="Senaste matchen och matchutveckling">
+                <p>Senaste matchen visar resultat, motståndare och eventuella målskyttar. Matchutvecklingen bygger på tränarnas två snabba bedömningar, inte på mål och assist.</p>
+                <p>Trenden beskriver om spelaren varit bättre, som vanligt eller sämre över tid. Den används som samtals- och observationsstöd, inte som en offentlig ranking.</p>
               </Topic>
 
               <Topic title="Att göra och Senaste aktivitet">
@@ -311,7 +311,7 @@ export default function GuidePage() {
                 <List>
                   <Item><strong style={{ color: "var(--ink)" }}>Självskattning</strong> visar hur spelaren själv upplever glädje, utveckling och laget.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Utvecklingsdiagram</strong> sammanfattar tränarnas utvärderingar över tid.</Item>
-                  <Item><strong style={{ color: "var(--ink)" }}>Matchform</strong> visar förändring baserad på matchbetyg.</Item>
+                  <Item><strong style={{ color: "var(--ink)" }}>Matchutveckling</strong> visar prestation mot egen normalnivå och på matchnivån.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Styrkor och utvecklingsmål</strong> kommer från senaste utvärderingen.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Matchstatistik</strong> visar både summering och match-för-match.</Item>
                 </List>
@@ -391,7 +391,7 @@ export default function GuidePage() {
                   <Item><strong style={{ color: "var(--ink)" }}>Liverapportering</strong> öppnar tränarens matchverktyg.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Föräldrarapportering</strong> kan öppnas eller stängas och har en separat delningslänk.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Livescore</strong> är den publika följvyn.</Item>
-                  <Item><strong style={{ color: "var(--ink)" }}>Matchbetyg</strong> används efter matchen för att uppdatera spelarnas form.</Item>
+                  <Item><strong style={{ color: "var(--ink)" }}>Matchutvärdering</strong> görs efter matchen med två val per spelare.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Rätta statistik</strong> ändrar registrerade siffror i efterhand.</Item>
                 </List>
               </Topic>
@@ -468,7 +468,7 @@ export default function GuidePage() {
                   <Step title="Markera matchen som avslutad" />
                   <Step title="Kontrollera resultat och händelseflöde" />
                   <Step title="Rätta eventuella fel på matchsidan" />
-                  <Step title="Sätt matchbetyg när tränarstaben har underlag" />
+                  <Step title="Utvärdera spelarna när tränarstaben har underlag" />
                 </Steps>
               </Topic>
             </Chapter>
@@ -541,10 +541,10 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
 
-              <Topic title="Matchbetyg och form">
-                <p>Efter matchen bedömer tränaren hur spelaren presterade i förhållande till förväntan. Systemet räknar sedan en löpande formkurva. Ett bra utfall mot tufft motstånd kan väga annorlunda än samma utfall i en lättare match.</p>
-                <p>Formen kan ge ett förslag om att se över spelarens satta nivå. Tränaren måste aktivt bekräfta en nivåändring; appen flyttar inte spelaren automatiskt.</p>
-                <Callout title="Form är färskvara">
+              <Topic title="Matchutvärdering och utveckling">
+                <p>Efter matchen väljer tränaren hur spelaren presterade mot sin vanliga nivå och hur väl spelaren fungerade på matchnivån. Inga poäng eller ELO-tal räknas.</p>
+                <p>En återkommande positiv trend kan ge skäl att se över spelarens satta nivå. Appen ändrar aldrig nivån automatiskt.</p>
+                <Callout title="Titta på flera matcher">
                   Använd kurvan för att upptäcka mönster och ställa frågor. Undvik att rangordna barn offentligt eller fatta beslut från en enda match.
                 </Callout>
               </Topic>
@@ -674,7 +674,7 @@ export default function GuidePage() {
                   <Step title="Avsluta rapporteringen och kontrollera resultatet" />
                   <Step title="Rätta tydliga statistikfel" />
                   <Step title="Kontrollera att deltagande spelare är rätt" />
-                  <Step title="Sätt matchbetyg när observationerna är färska" />
+                  <Step title="Utvärdera matchen när observationerna är färska" />
                   <Step title="Notera eventuella uppföljningar i tränarstaben" />
                 </Steps>
               </Topic>

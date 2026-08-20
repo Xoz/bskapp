@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad, getMatchRatings } from "@/lib/queries";
-import { deleteMatch, resetMatch, toggleMatchReporting } from "@/lib/actions";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
+import { createMatchEvaluationInvite, deleteMatch, resetMatch, revokeMatchEvaluationInvite, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
 import { FEATURES } from "@/lib/features";
-import { suggestOutcome, stepByOutcome } from "@/lib/rating";
-import MatchRatings, { type RatingPlayer } from "@/components/MatchRatings";
+import { getMatchEvaluationInvites, getMatchEvaluationStatus } from "@/lib/matchEvaluation";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
@@ -19,7 +18,10 @@ import { swedishToday, reportingAutoOpen } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
-export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MatchPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ evalLink?: string }>;
+}) {
   const role = await getRole();
   if (!role) redirect("/login");
 
@@ -27,15 +29,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [players, matchPlayers, events, reporters, squadIds, matchRatings] = await Promise.all([
+  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
     getMatchReporters(match.id),
     getMatchSquad(match.id),
-    getMatchRatings(match.id),
+    getMatchEvaluationStatus(match.id),
+    getMatchEvaluationInvites(match.id),
   ]);
-  const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
+  const { evalLink } = await searchParams;
   const mLevel = levelInfo(match.level);
   const today = swedishToday();
   const isUpcoming = match.date >= today;
@@ -43,43 +46,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // report_open är tränarens manuella override – effektivt öppen = endera.
   const reportAutoOpen = !match.finished && reportingAutoOpen(match.date, match.start_time);
   const reportOpen = !!match.report_open || reportAutoOpen;
-
-  // Betygsättning: en rad per spelare med speltid. Förslag räknas fram ur
-  // matchstatistik vägt mot position och nivåskillnad (tränaren justerar).
-  const ratingsByPlayer = new Map(matchRatings.map((r) => [r.player_id, r]));
-  const ratingPlayers: RatingPlayer[] = matchPlayers
-    .map((mp): RatingPlayer | null => {
-      const p = playersById[mp.player_id];
-      if (!p) return null;
-      const pLevel = levelInfo(p.level);
-      const levelDiff = pLevel && mLevel ? pLevel.rank - mLevel.rank : 0;
-      const outcome = suggestOutcome({
-        position: p.position,
-        goals: mp.goals,
-        assists: mp.assists,
-        saves: mp.saves,
-        interceptions: mp.interceptions,
-        conceded: match.opponent_score,
-        levelDiff,
-      });
-      const existing = ratingsByPlayer.get(mp.player_id);
-      return {
-        id: p.id,
-        name: p.name,
-        jersey_number: p.jersey_number,
-        position: p.position,
-        level: p.level,
-        goals: mp.goals,
-        assists: mp.assists,
-        saves: mp.saves,
-        interceptions: mp.interceptions,
-        suggested: stepByOutcome(outcome).key,
-        overall: existing?.overall ?? null,
-        scores: existing?.scores ?? {},
-      };
-    })
-    .filter((p): p is RatingPlayer => p !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -306,26 +272,46 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
-          {/* Betygsätt spelare – syns när matchen har spelare med speltid */}
-          {ratingPlayers.length > 0 && (
-            <details className="card overflow-hidden" open={!isUpcoming && matchRatings.length === 0}>
-              <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
-                <div className="flex items-baseline gap-3">
-                  <h2 className="font-semibold body">Betygsätt spelare</h2>
-                  {matchRatings.length > 0 && (
-                    <span className="caption" style={{ color: "var(--ink-muted)" }}>
-                      {matchRatings.length} betygsatta
-                    </span>
-                  )}
+          {evaluationStatus.total > 0 && (!isUpcoming || match.finished) && (
+            <section className="card p-5 md:p-6 space-y-5">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="font-semibold body">Matchutvärdering</p>
+                  <p className="caption mt-1" style={{ color: "var(--ink-secondary)" }}>
+                    {evaluationStatus.evaluated} av {evaluationStatus.total} spelare utvärderade
+                    {evaluationStatus.contributors > 0 ? ` · ${evaluationStatus.contributors} bedömare` : ""}
+                  </p>
                 </div>
-                <IconArrowRight width={14} height={14} className="details-chevron shrink-0" style={{ color: "var(--ink-muted)" }} />
-              </summary>
-              <div className="px-6 pb-6" style={{ borderTop: "1px solid var(--border)" }}>
-                <div className="pt-4">
-                  <MatchRatings matchId={match.id} players={ratingPlayers} />
-                </div>
+                <Link href={`/matcher/${match.id}/utvardera`} className="btn-primary">
+                  {evaluationStatus.evaluated ? "Fortsätt" : "Utvärdera match"}
+                </Link>
               </div>
-            </details>
+
+              <div style={{ borderTop: "1px solid var(--border)" }} className="pt-5">
+                <p className="label">Bjud in bedömare utan konto</p>
+                <form action={createMatchEvaluationInvite} className="flex gap-2 mt-2 flex-wrap">
+                  <input type="hidden" name="match_id" value={match.id} />
+                  <input className="input flex-1 min-w-48" name="label" required maxLength={80} placeholder="Exempel: Johan, assisterande tränare" />
+                  <button className="btn-secondary" type="submit">Skapa länk</button>
+                </form>
+                {evalLink && (
+                  <div className="core-panel p-4 mt-3 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="body-small">Länken är skapad och gäller i sju dagar.</p>
+                    <CopyLinkButton code={evalLink} path="matchutvardering" label="Kopiera utvärderingslänk" />
+                  </div>
+                )}
+                {evaluationInvites.length > 0 && <div className="space-y-2 mt-3">
+                  {evaluationInvites.map((invite) => <div key={invite.id} className="flex items-center justify-between gap-3 body-small">
+                    <span>{invite.label} · {invite.completed_count} svar {invite.revoked_at && "· återkallad"}</span>
+                    {!invite.revoked_at && <form action={revokeMatchEvaluationInvite}>
+                      <input type="hidden" name="match_id" value={match.id} />
+                      <input type="hidden" name="invite_id" value={invite.id} />
+                      <button className="body-small hover:underline cursor-pointer" style={{ color: "var(--danger)" }}>Återkalla</button>
+                    </form>}
+                  </div>)}
+                </div>}
+              </div>
+            </section>
           )}
 
           {FEATURES.matchStats && events.length > 0 && (

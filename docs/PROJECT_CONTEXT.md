@@ -1,5 +1,13 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-20: enkel matchutvärdering
+
+- Den oanvända ELO-prototypen är borttagen, inklusive `match_ratings`, `players.form_rating`, statistikförslag och formdiagram.
+- Varje spelare bedöms med två trestegsval: jämfört med sin vanliga nivå samt hur väl spelaren fungerade på matchnivån. Minuter och positionsjämförelser används inte.
+- Spelar- och matchnivå sparas som ögonblicksbilder. Flera bedömare sammanställs till en trendpunkt per spelare och match; stor spridning visas som “Olika bild”.
+- Inloggade tränare utvärderar under `/matcher/[id]/utvardera`. Matchsidan kan skapa separata, hashade och återkallningsbara länkar som gäller i sju dagar till publika `/matchutvardering/[token]`.
+- Den publika länken är capability-avgränsad till en match och visar bara matchmetadata, deltagarnas namn och utvärderingsfrågorna.
+
 ## Syfte
 
 BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling, matcher, live-rapportering och administration.

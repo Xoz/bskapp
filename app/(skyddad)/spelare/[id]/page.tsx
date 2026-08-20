@@ -8,6 +8,8 @@ import PilotStartField from "@/components/PilotStartField";
 import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
 import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
+import { getPlayerMatchEvaluationTrend } from "@/lib/matchEvaluation";
+import MatchEvaluationTrend from "@/components/MatchEvaluationTrend";
 
 export const dynamic = "force-dynamic";
 const EVIDENCE_LABELS: Record<Evidence, string> = { shown: "Visade", practicing: "Tränar på", revisit: "Nytt tillfälle" };
@@ -26,7 +28,10 @@ export default async function PlayerPage({ params, searchParams }: {
   const { id } = await params;
   const playerId = Number(id);
   if (!Number.isInteger(playerId)) notFound();
-  const core = await getPlayerCore(playerId);
+  const [core, matchEvaluationTrend] = await Promise.all([
+    getPlayerCore(playerId),
+    getPlayerMatchEvaluationTrend(playerId),
+  ]);
   if (!core) notFound();
   const { mal } = await searchParams;
   const { summary, goalHistory, observations, matchHistory } = core;
@@ -126,6 +131,8 @@ export default async function PlayerPage({ params, searchParams }: {
       </details>
 
       {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel core-form-panel"><summary className="font-semibold cursor-pointer list-none flex items-center justify-between"><span>Tidigare mål</span><span aria-hidden="true" style={{ color: "var(--ink-muted)" }}>⌄</span></summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
+
+      <MatchEvaluationTrend data={matchEvaluationTrend} />
 
       <details className="core-panel core-form-panel">
         <summary className="core-section-head cursor-pointer list-none">

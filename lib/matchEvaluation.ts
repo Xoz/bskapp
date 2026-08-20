@@ -1,0 +1,123 @@
+import crypto from "crypto";
+import { all, get } from "./db";
+import { canAccessGroup } from "./auth";
+import { swedishToday } from "./dates";
+
+export const SELF_COMPARISONS = ["below", "usual", "above"] as const;
+export const MATCH_IMPACTS = ["struggled", "held", "influenced"] as const;
+export const REASON_TAGS = ["", "decisions", "defence", "attack", "effort", "confidence"] as const;
+export type SelfComparison = (typeof SELF_COMPARISONS)[number];
+export type MatchImpact = (typeof MATCH_IMPACTS)[number];
+export const SELF_LABELS: Record<SelfComparison, string> = { below: "Sämre", usual: "Som vanligt", above: "Bättre" };
+export const IMPACT_LABELS: Record<MatchImpact, string> = { struggled: "Hade svårt", held: "Hängde med", influenced: "Påverkade matchen" };
+export const REASON_LABELS: Record<(typeof REASON_TAGS)[number], string> = {
+  "": "Ingen orsakstagg", decisions: "Beslut", defence: "Försvar", attack: "Anfall",
+  effort: "Arbetsinsats", confidence: "Självförtroende",
+};
+export const evaluationTokenHash = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+export const isSelfComparison = (value: string): value is SelfComparison => SELF_COMPARISONS.includes(value as SelfComparison);
+export const isMatchImpact = (value: string): value is MatchImpact => MATCH_IMPACTS.includes(value as MatchImpact);
+export const isReasonTag = (value: string): value is (typeof REASON_TAGS)[number] => REASON_TAGS.includes(value as (typeof REASON_TAGS)[number]);
+
+export type MatchEvaluationPlayer = {
+  id: number; name: string; jersey_number: number | null;
+  self_comparison: SelfComparison | null; match_impact: MatchImpact | null; reason_tag: string;
+};
+export type MatchEvaluationWorkspace = {
+  match: { id: number; opponent: string; date: string; level: string; home_away: string };
+  players: MatchEvaluationPlayer[];
+};
+export async function getMatchEvaluationWorkspace(matchId: number, contributorType: "coach" | "invite", contributorId: string): Promise<MatchEvaluationWorkspace | null> {
+  const match = await get<MatchEvaluationWorkspace["match"]>("SELECT id, opponent, date, level, home_away FROM matches WHERE id = ?", [matchId]);
+  if (!match) return null;
+  const players = await all<MatchEvaluationPlayer>(
+    `WITH participants AS (
+       SELECT player_id FROM match_squad WHERE match_id = ?
+       UNION SELECT player_id FROM match_players WHERE match_id = ?
+     )
+     SELECT p.id, p.name, p.jersey_number, e.self_comparison, e.match_impact, COALESCE(e.reason_tag, '') AS reason_tag
+     FROM participants part JOIN players p ON p.id = part.player_id AND p.active = 1
+     LEFT JOIN match_player_evaluations e ON e.match_id = ? AND e.player_id = p.id
+       AND e.contributor_type = ? AND e.contributor_id = ?
+     ORDER BY lower(p.name)`, [matchId, matchId, matchId, contributorType, contributorId]
+  );
+  return { match, players };
+}
+
+export type EvaluationInvite = { id: number; label: string; expires_at: string; revoked_at: string | null; completed_count: number };
+export async function getMatchEvaluationInvites(matchId: number): Promise<EvaluationInvite[]> {
+  return all<EvaluationInvite>(
+    `SELECT i.id, i.label, i.expires_at::text, i.revoked_at::text, COUNT(e.id)::int AS completed_count
+     FROM match_evaluation_invites i
+     LEFT JOIN match_player_evaluations e ON e.contributor_type = 'invite' AND e.contributor_id = i.id::text
+     WHERE i.match_id = ? GROUP BY i.id ORDER BY i.created_at DESC`, [matchId]
+  );
+}
+export async function getPublicEvaluationWorkspace(token: string): Promise<(MatchEvaluationWorkspace & { invite: EvaluationInvite }) | null> {
+  if (token.length < 32 || token.length > 128) return null;
+  const invite = await get<EvaluationInvite & { match_id: number }>(
+    `SELECT id, match_id, label, expires_at::text, revoked_at::text, 0 AS completed_count
+     FROM match_evaluation_invites WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > now()`,
+    [evaluationTokenHash(token)]
+  );
+  if (!invite) return null;
+  const workspace = await getMatchEvaluationWorkspace(invite.match_id, "invite", String(invite.id));
+  return workspace ? { ...workspace, invite } : null;
+}
+export async function getMatchEvaluationStatus(matchId: number) {
+  return (await get<{ total: number; evaluated: number; contributors: number }>(
+    `WITH participants AS (
+       SELECT player_id FROM match_squad WHERE match_id = ?
+       UNION SELECT player_id FROM match_players WHERE match_id = ?
+     )
+     SELECT COUNT(DISTINCT part.player_id)::int AS total, COUNT(DISTINCT e.player_id)::int AS evaluated,
+            COUNT(DISTINCT (e.contributor_type || ':' || e.contributor_id))::int AS contributors
+     FROM participants part LEFT JOIN match_player_evaluations e ON e.match_id = ? AND e.player_id = part.player_id`,
+    [matchId, matchId, matchId]
+  )) ?? { total: 0, evaluated: 0, contributors: 0 };
+}
+export async function getPendingMatchEvaluation(): Promise<null | { id: number; opponent: string; date: string; total: number; evaluated: number }> {
+  const matches = await all<{ id: number; opponent: string; date: string; group_id: number | null }>(
+    "SELECT id, opponent, date, group_id FROM matches WHERE date <= ? ORDER BY date DESC, id DESC LIMIT 8", [swedishToday()]
+  );
+  for (const match of matches) {
+    if (!(await canAccessGroup(match.group_id))) continue;
+    const status = await getMatchEvaluationStatus(match.id);
+    if (status.total > 0 && status.evaluated < status.total) return { ...match, ...status };
+  }
+  return null;
+}
+
+export type MatchEvaluationTrendPoint = {
+  match_id: number; date: string; opponent: string; self_comparison: SelfComparison;
+  match_impact: MatchImpact; disagreement: boolean; contributor_count: number;
+};
+const SELF_VALUE: Record<SelfComparison, number> = { below: -1, usual: 0, above: 1 };
+const IMPACT_VALUE: Record<MatchImpact, number> = { struggled: -1, held: 0, influenced: 1 };
+function consensusKey<T extends string>(values: T[], scores: Record<T, number>): T {
+  const average = values.reduce((sum, value) => sum + scores[value], 0) / values.length;
+  return [...values].sort((a, b) => {
+    const distance = Math.abs(scores[a] - average) - Math.abs(scores[b] - average);
+    return distance || Math.abs(scores[a]) - Math.abs(scores[b]);
+  })[0];
+}
+export async function getPlayerMatchEvaluationTrend(playerId: number): Promise<MatchEvaluationTrendPoint[]> {
+  const rows = await all<{ match_id: number; date: string; opponent: string; self_comparison: SelfComparison; match_impact: MatchImpact }>(
+    `SELECT e.match_id, m.date, m.opponent, e.self_comparison, e.match_impact
+     FROM match_player_evaluations e JOIN matches m ON m.id = e.match_id
+     WHERE e.player_id = ? ORDER BY m.date DESC, m.id DESC, e.id`, [playerId]
+  );
+  const grouped = new Map<number, typeof rows>();
+  for (const row of rows) grouped.set(row.match_id, [...(grouped.get(row.match_id) ?? []), row]);
+  return [...grouped.values()].slice(0, 12).map((group) => {
+    const self = group.map((row) => row.self_comparison);
+    const impact = group.map((row) => row.match_impact);
+    const selfSpread = Math.max(...self.map((v) => SELF_VALUE[v])) - Math.min(...self.map((v) => SELF_VALUE[v]));
+    const impactSpread = Math.max(...impact.map((v) => IMPACT_VALUE[v])) - Math.min(...impact.map((v) => IMPACT_VALUE[v]));
+    return {
+      match_id: group[0].match_id, date: group[0].date, opponent: group[0].opponent,
+      self_comparison: consensusKey(self, SELF_VALUE), match_impact: consensusKey(impact, IMPACT_VALUE),
+      disagreement: selfSpread >= 2 || impactSpread >= 2, contributor_count: group.length,
+    };
+  });
+}

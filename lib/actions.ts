@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -32,14 +33,7 @@ import {
   type ImportedCallupPlayer,
   type ImportedCallupTotals,
 } from "./callupSync";
-import {
-  stepByKey,
-  stepByOutcome,
-  outcomeFromAreas,
-  computeDelta,
-  seedRating,
-  RATING_AREAS,
-} from "./rating";
+import { evaluationTokenHash, isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluation";
 
 async function requirePermission(permission: Permission): Promise<void> {
   if (!(await hasPermission(permission))) redirect("/oversikt?behorighet=saknas");
@@ -794,7 +788,6 @@ export async function deleteCup(cupName: string, cupGroup: string) {
       ...idList.map((id) => ({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] })),
-      ...idList.map((id) => ({ sql: "DELETE FROM match_ratings WHERE match_id = ?", args: [id] })),
       { sql: "DELETE FROM matches WHERE cup_name = ? AND cup_group = ?", args: [cupName, cupGroup] },
     ]);
   }
@@ -920,95 +913,85 @@ export async function setMatchLevel(formData: FormData) {
   revalidatePath("/matcher");
 }
 
-// ---- Matchbetyg (ELO-form) ----
-// Sparar tränarens betyg per spelare för en match och uppdaterar varje spelares
-// löpande form-tal. Idempotent: betygsätter man om matchen ångras det förra
-// betygets delta först, så form-talet inte dubbelräknas. Se lib/rating.ts.
-export async function saveMatchRatings(formData: FormData) {
-  const matchId = Number(formData.get("match_id"));
-  if (!matchId) return;
-  await requireMatchPermission("manage_evaluations", matchId);
-
-  const match = await get<{ level: string; opponent: string }>(
-    "SELECT level, opponent FROM matches WHERE id = ?",
-    [matchId]
+async function persistMatchEvaluations(matchId: number, contributorType: "coach" | "invite", contributorId: string, formData: FormData) {
+  const match = await get<{ level: string }>("SELECT level FROM matches WHERE id = ?", [matchId]);
+  if (!match) return 0;
+  const players = await all<{ id: number; level: string }>(
+    `WITH participants AS (
+       SELECT player_id FROM match_squad WHERE match_id = ?
+       UNION SELECT player_id FROM match_players WHERE match_id = ?
+     ) SELECT p.id, p.level FROM participants part JOIN players p ON p.id = part.player_id AND p.active = 1`,
+    [matchId, matchId]
   );
-  if (!match) return;
-
-  const players = await all<{ id: number; level: string; form_rating: number | null }>(
-    `SELECT p.id, p.level, p.form_rating
-       FROM players p
-       JOIN match_players mp ON mp.player_id = p.id
-      WHERE mp.match_id = ? AND p.active = 1`,
-    [matchId]
-  );
-  const prevRatings = await all<{ player_id: number; delta: number }>(
-    "SELECT player_id, delta FROM match_ratings WHERE match_id = ?",
-    [matchId]
-  );
-  const prevDelta = new Map(prevRatings.map((r) => [r.player_id, r.delta]));
-
-  const stmts: { sql: string; args: (string | number | null)[] }[] = [];
-  let rated = 0;
-  for (const p of players) {
-    const advUsed = formData.get(`adv_${p.id}`) === "1";
-    let overallKey: string;
-    let outcome: number;
-    const scores: Record<string, number> = {};
-
-    if (advUsed) {
-      const areaOutcomes: number[] = [];
-      for (const area of RATING_AREAS) {
-        const step = stepByKey(formData.get(`area_${p.id}_${area.id}`)?.toString());
-        if (step) {
-          scores[area.id] = step.outcome;
-          areaOutcomes.push(step.outcome);
-        }
-      }
-      if (areaOutcomes.length === 0) continue;
-      outcome = outcomeFromAreas(areaOutcomes);
-      overallKey = stepByOutcome(outcome).key;
-    } else {
-      const step = stepByKey(formData.get(`overall_${p.id}`)?.toString());
-      if (!step) continue;
-      overallKey = step.key;
-      outcome = step.outcome;
-    }
-
-    const suggested = String(formData.get(`suggested_${p.id}`) ?? "");
-    const delta = computeDelta(match.level, outcome);
-
-    // Bas = nuvarande form-tal (seedat från nivå om spelaren aldrig betygsatts),
-    // minus ett ev. tidigare betyg för just denna match.
-    let base = p.form_rating ?? seedRating(p.level);
-    const prev = prevDelta.get(p.id);
-    if (prev != null) base -= prev;
-    const newRating = base + delta;
-
-    stmts.push({
-      sql: `INSERT INTO match_ratings (match_id, player_id, overall, scores, suggested, delta)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(match_id, player_id) DO UPDATE SET
-              overall = excluded.overall, scores = excluded.scores,
-              suggested = excluded.suggested, delta = excluded.delta`,
-      args: [matchId, p.id, overallKey, JSON.stringify(scores), suggested, delta],
+  const statements: { sql: string; args: (string | number | null)[] }[] = [];
+  for (const player of players) {
+    const selfComparison = String(formData.get(`self_${player.id}`) ?? "");
+    const matchImpact = String(formData.get(`impact_${player.id}`) ?? "");
+    const requestedReason = String(formData.get(`reason_${player.id}`) ?? "");
+    if (!isSelfComparison(selfComparison) || !isMatchImpact(matchImpact)) continue;
+    const reason = isReasonTag(requestedReason) ? requestedReason : "";
+    statements.push({
+      sql: `INSERT INTO match_player_evaluations
+              (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(match_id, player_id, contributor_type, contributor_id) DO UPDATE SET
+              self_comparison=excluded.self_comparison, match_impact=excluded.match_impact,
+              reason_tag=excluded.reason_tag, player_level_snapshot=excluded.player_level_snapshot,
+              match_level_snapshot=excluded.match_level_snapshot, updated_at=now()`,
+      args: [matchId, player.id, contributorType, contributorId, selfComparison, matchImpact, reason, player.level, match.level],
     });
-    stmts.push({
-      sql: "UPDATE players SET form_rating = ? WHERE id = ?",
-      args: [newRating, p.id],
-    });
-    rated++;
   }
+  if (statements.length) await batch(statements);
+  return statements.length;
+}
 
-  if (stmts.length === 0) return;
-  await batch(stmts);
-
-  const logName = (await getCoachName()) ?? "Tränare";
-  await logActivity(logName, "Betygsatte spelare", `${rated} st mot ${match.opponent}`);
-
+export async function saveCoachMatchEvaluations(matchId: number, formData: FormData) {
+  await requireMatchPermission("manage_evaluations", matchId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const saved = await persistMatchEvaluations(matchId, "coach", String(user.id), formData);
+  await logActivity(user.name || "Tränare", "Utvärderade match", `${saved} spelare`);
   revalidatePath(`/matcher/${matchId}`);
-  revalidatePath("/spelare");
-  revalidatePath("/oversikt");
+  revalidatePath("/idag");
+  redirect(`/matcher/${matchId}/utvardera?sparad=1`);
+}
+
+export async function createMatchEvaluationInvite(formData: FormData) {
+  const matchId = Number(formData.get("match_id"));
+  if (!Number.isInteger(matchId) || matchId <= 0) return;
+  await requireMatchPermission("manage_evaluations", matchId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const label = String(formData.get("label") ?? "").trim().slice(0, 80) || "Extern bedömare";
+  const token = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  await run("INSERT INTO match_evaluation_invites (match_id,label,token_hash,expires_at,created_by) VALUES (?,?,?,?,?)",
+    [matchId, label, evaluationTokenHash(token), expiresAt, user.id]);
+  await logActivity(user.name || "Tränare", "Skapade utvärderingslänk", label);
+  revalidatePath(`/matcher/${matchId}`);
+  redirect(`/matcher/${matchId}?evalLink=${encodeURIComponent(token)}`);
+}
+
+export async function revokeMatchEvaluationInvite(formData: FormData) {
+  const matchId = Number(formData.get("match_id"));
+  const inviteId = Number(formData.get("invite_id"));
+  if (!Number.isInteger(matchId) || !Number.isInteger(inviteId)) return;
+  await requireMatchPermission("manage_evaluations", matchId);
+  await run("UPDATE match_evaluation_invites SET revoked_at=now() WHERE id=? AND match_id=?", [inviteId, matchId]);
+  revalidatePath(`/matcher/${matchId}`);
+}
+
+export async function savePublicMatchEvaluations(token: string, formData: FormData) {
+  if (token.length < 32 || token.length > 128) return;
+  const invite = await get<{ id: number; match_id: number }>(
+    "SELECT id,match_id FROM match_evaluation_invites WHERE token_hash=? AND revoked_at IS NULL AND expires_at>now()",
+    [evaluationTokenHash(token)]
+  );
+  if (!invite) return;
+  await persistMatchEvaluations(invite.match_id, "invite", String(invite.id), formData);
+  revalidatePath(`/matcher/${invite.match_id}`);
+  revalidatePath("/idag");
+  redirect(`/matchutvardering/${token}?sparad=1`);
 }
 
 // Spara uttagen trupp för en match (ersätter tidigare urval). Om "apply_cup"

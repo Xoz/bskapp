@@ -63,10 +63,9 @@ Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan 
   Planlinjen samlar inte längre in `injured`/hälsostatus och migrerar äldre
   pilotvärden till vanlig frånvaro.
 
-- ~~**Matchbetyg – Fas 2**~~ – **KLART.** Formlistan visas på Översikt och
-  cupkorten visar bästa form i cupen. Nivåförslag och regelbaserade förslag från
-  matchstatistik är inkopplade. Skrivflödet är dessutom avgränsat till faktiska
-  `match_players`. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
+- ~~**Matchutvärdering**~~ – **KLART.** Två snabba val per spelare, nivåögonblick,
+  spelartrend och separata publika bedömarlänkar. Den oanvända ELO-prototypen och
+  statistikbaserade betygsförslag är borttagna. Se [SPEC-matchbetyg.md](SPEC-matchbetyg.md).
 
 - **Staging** – koden klar, manuella engångssteg kvar (Vercel-env, Google-redirect).
   `STAGING.md` är uppdaterad för Supabase/Postgres. Kvarvarande steg kräver ett

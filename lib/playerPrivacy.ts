@@ -3,12 +3,12 @@ import { all, batch, get, run } from "./db";
 export async function exportPlayerData(playerId: number, actor: string) {
   const player = await get<Record<string, unknown>>("SELECT * FROM players WHERE id = ?", [playerId]);
   if (!player) return null;
-  const [evaluations, evaluationScores, selfEvaluations, matchStatistics, matchRatings, attendance, skillStatuses, skillNotes, checkpoints, checkpointSkills, memberships, accountLinks] = await Promise.all([
+  const [evaluations, evaluationScores, selfEvaluations, matchStatistics, matchEvaluations, attendance, skillStatuses, skillNotes, checkpoints, checkpointSkills, memberships, accountLinks] = await Promise.all([
     all<Record<string, unknown>>("SELECT * FROM evaluations WHERE player_id = ? ORDER BY date, id", [playerId]),
     all<Record<string, unknown>>("SELECT es.* FROM evaluation_scores es JOIN evaluations e ON e.id=es.evaluation_id WHERE e.player_id = ? ORDER BY es.evaluation_id,es.skill_id", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM player_self_evals WHERE player_id = ? ORDER BY created_at,id", [playerId]),
     all<Record<string, unknown>>("SELECT mp.*,m.date,m.opponent,m.cup_name,m.cup_group FROM match_players mp JOIN matches m ON m.id=mp.match_id WHERE mp.player_id = ? ORDER BY m.date,m.id", [playerId]),
-    all<Record<string, unknown>>("SELECT mr.*,m.date,m.opponent FROM match_ratings mr JOIN matches m ON m.id=mr.match_id WHERE mr.player_id = ? ORDER BY m.date,m.id", [playerId]),
+    all<Record<string, unknown>>("SELECT me.*,m.date,m.opponent FROM match_player_evaluations me JOIN matches m ON m.id=me.match_id WHERE me.player_id = ? ORDER BY m.date,m.id", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM attendance_events WHERE player_id = ? ORDER BY activity_date,id", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM player_skill_status WHERE player_id = ? ORDER BY skill_id", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM player_skill_notes WHERE player_id = ?", [playerId]),
@@ -19,14 +19,14 @@ export async function exportPlayerData(playerId: number, actor: string) {
   ]);
   await run("INSERT INTO activity_log (coach_name,action,subject) VALUES (?, 'Exporterade spelarutdrag', ?)", [actor, `player:${playerId}`]);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     player,
     evaluations,
     evaluationScores,
     selfEvaluations,
     matchStatistics,
-    matchRatings,
+    matchEvaluations,
     attendance,
     skillStatuses,
     skillNotes,

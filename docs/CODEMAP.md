@@ -39,7 +39,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | **Cupgemensam laguttagning** (uttagna till cupen, default per match) | `components/CupSquadPicker.tsx`, `lib/actions.ts` (saveCupSquad → matchgruppens `player_group_memberships`), `lib/queries.ts` (getGroupMemberIds), `app/(skyddad)/matcher/cup/[slug]/page.tsx` + `…/matcher/[id]/laguttagning/page.tsx` (förväljer cupens trupp) |
 | **Spelarutveckling + avstämningar** | `lib/skillTrappan.ts` (gemensam färdighetsmodell), `components/UtvecklingChecklist.tsx` (aktuellt träd), `components/DevelopmentCheckinForm.tsx` (daterad avstämning), `lib/queries.ts` (getPlayerSkillStatuses/getDevelopmentCheckpoints/getLatestDevelopmentCheckpoint), `lib/actions.ts` (setSkillStatus/setSkillNote/createDevelopmentCheckpoint), `app/(skyddad)/spelare/[id]/utveckling/` (översikt + träd + historik), `…/utveckling/avstamning/` (ny avstämning), `…/utvardera/` (kompatibilitetsredirect), `app/(skyddad)/utveckling/` (lagvy), `app/mitt-utvecklingstrad/` (spelarens låsta läsvy) |
 | **Äldre SvFF-utvärderingar / självskattning** | `components/SkillRadar.tsx`, `components/DevelopmentChart.tsx`, `components/SelfEvalForm.tsx`, `lib/svff.ts`, `lib/actions.ts` (createEvaluation/submitSelfEval). Befintliga 1–4-utvärderingar visas som äldre historik på spelarprofilen och översätts inte automatiskt till trädet. |
-| **Matchbetyg / form (ELO)** | `lib/rating.ts`, `lib/actions.ts` (saveMatchRatings), `lib/queries.ts` (getMatchRatings/getPlayerFormTrend), `components/MatchRatings.tsx`, `components/FormTrendChart.tsx`, monteras i `app/(skyddad)/matcher/[id]/page.tsx` + `app/(skyddad)/spelare/[id]/page.tsx` |
+| **Matchutvärdering / utveckling över tid** | `lib/matchEvaluation.ts`, `lib/actions.ts` (saveCoachMatchEvaluations/createMatchEvaluationInvite/savePublicMatchEvaluations), `components/{MatchEvaluationForm,MatchEvaluationTrend}.tsx`, `app/(skyddad)/matcher/[id]/utvardera/`, publik `app/matchutvardering/[token]/`, status på matchsidan och `/idag`, trend på spelarprofilen |
 | **Utveckling över tid / diagram** | `components/DevelopmentChart.tsx`, `components/ParticipationChart.tsx`, `lib/queries.ts` (getPlayerDevelopment) |
 | **Närvaroimport / närvarotrend** | `lib/attendance.ts`, `lib/actions.ts` (importAttendanceWorkbook), `lib/queries.ts` (getLatestAttendanceImportSummary/getPlayerAttendance*), `components/AttendanceTrendChart.tsx`, `app/(skyddad)/installningar/page.tsx`, `app/(skyddad)/spelare/[id]/page.tsx` |
 | **Spelarutdrag och permanent radering** | `lib/playerPrivacy.ts`, `app/api/export/player/[id]/route.ts`, `lib/actions.ts` (erasePlayer), `app/(skyddad)/spelare/[id]/page.tsx`, `docs/GDPR-GRIND.md` |
@@ -62,7 +62,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## lib/ — exports per fil
 
-- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, Sanktan-match- och kallelsehistorik, inställningar, delningslänkar och administration.
+- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchutvärdering, närvaroimport, Sanktan-match- och kallelsehistorik, inställningar, delningslänkar och administration.
 - **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
 - **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering, kallelsesvar härledda från individuella kallelser samt uttagningsarbetsytan och 28-dagars pilotmått.
 - **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.
@@ -87,28 +87,27 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
-- **rating.ts**: matchbetyg/ELO-form — `EXPECTATION_STEPS`/`RATING_AREAS`, seedRating/kFactor/computeDelta, ratingBand, levelSuggestion (form vs satt nivå → nivåförslag), suggestOutcome (stats→förslag), outcomeFromAreas, stepByKey/stepByOutcome.
+- **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, konsensus/avvikelse och spelartrend utan poäng eller ELO.
 
 ---
 
 ## DB-tabeller (definieras i lib/db.ts)
 
 `schema_migrations` (journal över exakt en gång körda schemamigrationer), `settings`, `players` (inkl. `selection_eligible` för generell tillgänglighet i automatiska uttagningsförslag), `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
-`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_ratings`,
+`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_evaluation_invites`, `match_player_evaluations`,
 `player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
 `player_skill_status` (aktuellt utvecklingsträd, PK player_id+skill_id), `player_skill_notes`, `development_checkpoints` (daterad avstämning), `development_checkpoint_skills` (snapshot + föregående status + fokus per färdighet).
 Utvecklingskärnan använder `development_activities`, `player_development_goals` (max två aktiva slots),
 `development_activity_participation`, `development_observations`, `development_selection_decisions`
 och `development_pilot_events`. `development_activity_callups` håller Svenska Lag-kallelser separat från faktiskt matchdeltagande.
-(`players.form_rating` = löpande ELO-form-tal, sätts av matchbetygen.)
 
 ---
 
 ## Routes (app/)
 
 Skyddade primärvyer under `app/(skyddad)/`: `idag`, `observera`, `spelare` (+ `[id]`) och `uttagning`. `oversikt` omdirigerar till `idag`. Sekundära skyddade vyer: matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), äldre spelarutvärdering/utveckling, statistik, installningar, administration och mina-spelare.
-Publika: `/login`, `/invite`, `/guide`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`.
+Publika: `/login`, `/invite`, `/guide`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`, `/matchutvardering/[token]`.
 API: `app/api/auth/{google,callback/google,dev,coach-bridge}`, `app/api/live/[id]`, `app/api/export/player/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 
 Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). `scripts/reset-dev-match.mjs` återställer testmatchen till rent pågående tillstånd (behåller trupp/startelva). `scripts/test-live.sh` kör hela end-to-end-testprotokollet för liverapportering (se `docs/TESTPROTOKOLL-live.md`). Alla tre vägrar köra mot icke-lokal DB. Se `projects/bsk-app` i GBrain för uppsättning.
