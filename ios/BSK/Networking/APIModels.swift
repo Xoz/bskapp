@@ -115,3 +115,68 @@ struct ActivitySummary: Codable, Identifiable {
     let challengeContext: String
     let observationCount: Int
 }
+
+struct ObservationCommand: Codable, Identifiable {
+    let commandId: String
+    let activityId: String
+    let playerId: Int
+    let goalId: String
+    let evidence: String
+    let note: String
+
+    var id: String { commandId }
+}
+
+struct ObservationCommandResult: Decodable, Identifiable {
+    let commandId: String
+    let observationId: String
+    let status: String
+
+    var id: String { commandId }
+}
+
+struct SelectionMatchSummary: Codable, Identifiable {
+    let id: String
+    let date: String
+    let startTime: String?
+    let title: String
+    let sourceTeam: String
+    let competitionLevel: Int?
+    let acceptedCallupCount: Int
+    let declinedCallupCount: Int
+    let pendingCallupCount: Int
+    let selectionCount: Int
+}
+
+struct SelectionCandidate: Codable, Identifiable {
+    let playerId: Int
+    let name: String
+    let jerseyNumber: Int?
+    let position: String
+    let primaryPosition: String
+    let secondaryPosition: String
+    let primaryLevel: String
+    let secondaryLevel: String
+    let teamNames: [String]
+    let decision: String
+    let currentCallupStatus: String?
+    let selectedLastEight: Int
+    let selectedLastThree: Int
+    let matchCount: Int
+    let callupCount: Int
+    let plannedUpcomingCount: Int
+    let lastSelectedDate: String?
+
+    var id: Int { playerId }
+}
+
+struct SelectionWorkspace: Codable {
+    let match: SelectionMatchSummary
+    let candidates: [SelectionCandidate]
+}
+
+struct SelectionDecision: Encodable {
+    let playerId: Int
+    let decision: String
+    let position: String
+}

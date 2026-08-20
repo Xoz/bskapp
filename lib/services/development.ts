@@ -2,7 +2,7 @@ import "server-only";
 
 import crypto from "crypto";
 import type { CurrentUser, Permission } from "../auth";
-import { all, get, logActivity, run, type SqlArgs } from "../db";
+import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 
 export type MobileEvidence = "shown" | "practicing" | "revisit";
 
@@ -65,6 +65,50 @@ export type MobileActivity = {
   theme: string;
   challengeContext: "safe" | "balanced" | "challenging";
   observationCount: number;
+};
+
+export type MobileSelectionMatch = {
+  id: string;
+  date: string;
+  startTime: string | null;
+  title: string;
+  sourceTeam: string;
+  competitionLevel: number | null;
+  acceptedCallupCount: number;
+  declinedCallupCount: number;
+  pendingCallupCount: number;
+  selectionCount: number;
+};
+
+export type MobileSelectionCandidate = {
+  playerId: number;
+  name: string;
+  jerseyNumber: number | null;
+  position: string;
+  primaryPosition: string;
+  secondaryPosition: string;
+  primaryLevel: string;
+  secondaryLevel: string;
+  teamNames: string[];
+  decision: "selected" | "reserve" | "rested";
+  currentCallupStatus: "accepted" | "declined" | "pending" | null;
+  selectedLastEight: number;
+  selectedLastThree: number;
+  matchCount: number;
+  callupCount: number;
+  plannedUpcomingCount: number;
+  lastSelectedDate: string | null;
+};
+
+export type MobileSelectionWorkspace = {
+  match: MobileSelectionMatch;
+  candidates: MobileSelectionCandidate[];
+};
+
+export type MobileSelectionDecision = {
+  playerId: number;
+  decision: "selected" | "reserve" | "rested";
+  position: string;
 };
 
 export type CreateObservationCommand = {
@@ -332,6 +376,190 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     challengeContext: row.challenge_context,
     observationCount: Number(row.observation_count),
   }));
+}
+
+export async function listMobileSelectionMatches(actor: CurrentUser): Promise<MobileSelectionMatch[]> {
+  requirePermission(actor, "manage_squads");
+  const scope = activityScope(actor);
+  const rows = await all<{
+    id: string;
+    activity_date: string;
+    start_time: string | null;
+    title: string;
+    source_team: string;
+    competition_level: number | null;
+    accepted_callup_count: number;
+    declined_callup_count: number;
+    pending_callup_count: number;
+    selection_count: number;
+  }>(
+    `SELECT da.id, da.activity_date, da.start_time, da.title,
+            pcm.source_team,
+            pcm.level AS competition_level,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'), 0) AS accepted_callup_count,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected'), 0) AS selection_count
+     FROM development_activities da
+     JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
+     WHERE da.activity_type = 'match'
+       AND da.external_source = 'svenskalag_sanktan'
+       AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+       AND pcm.source_team = 'Gul'
+       AND ${scope.sql}
+     ORDER BY da.activity_date, da.start_time NULLS LAST, da.id
+     LIMIT 100`,
+    scope.args
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    date: row.activity_date,
+    startTime: row.start_time,
+    title: row.title,
+    sourceTeam: row.source_team,
+    competitionLevel: row.competition_level == null ? null : Number(row.competition_level),
+    acceptedCallupCount: Number(row.accepted_callup_count),
+    declinedCallupCount: Number(row.declined_callup_count),
+    pendingCallupCount: Number(row.pending_callup_count),
+    selectionCount: Number(row.selection_count),
+  }));
+}
+
+export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId: string): Promise<MobileSelectionWorkspace> {
+  const match = (await listMobileSelectionMatches(actor)).find((item) => item.id === activityId);
+  if (!match) throw new DevelopmentServiceError("not_found", "Uttagningen hittades inte.", 404);
+  const scope = playerScope(actor);
+  const rows = await all<{
+    player_id: number;
+    name: string;
+    jersey_number: number | null;
+    position: string;
+    preferred_position_primary: string;
+    preferred_position_secondary: string;
+    preferred_level_primary: string;
+    preferred_level_secondary: string;
+    team_names: string[];
+    saved_decision: MobileSelectionCandidate["decision"] | null;
+    callup_status: "present" | "absent" | "unknown" | null;
+    selected_last_eight: number;
+    selected_last_three: number;
+    match_count: number;
+    callup_count: number;
+    planned_upcoming_count: number;
+    last_selected_date: string | null;
+  }>(
+    `SELECT p.id AS player_id, p.name, p.jersey_number, p.position,
+            p.preferred_position_primary, p.preferred_position_secondary,
+            p.preferred_level_primary, p.preferred_level_secondary,
+            ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id ORDER BY g.name) AS team_names,
+            sd.decision AS saved_decision,
+            dac.attendance_status AS callup_status,
+            (SELECT COUNT(*) FROM (
+               SELECT hist.id FROM development_activities hist
+               JOIN development_activity_participation hap ON hap.activity_id = hist.id AND hap.player_id = p.id
+               WHERE hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan'
+                 AND hist.activity_date <= ? AND hist.id <> ? AND hap.attendance_status = 'present'
+               ORDER BY hist.activity_date DESC, hist.start_time DESC NULLS LAST, hist.id DESC LIMIT 8
+             ) recent8) AS selected_last_eight,
+            (SELECT COUNT(*) FROM (
+               SELECT hist.id FROM development_activities hist
+               JOIN development_activity_participation hap ON hap.activity_id = hist.id AND hap.player_id = p.id
+               WHERE hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan'
+                 AND hist.activity_date <= ? AND hist.id <> ? AND hap.attendance_status = 'present'
+               ORDER BY hist.activity_date DESC, hist.start_time DESC NULLS LAST, hist.id DESC LIMIT 3
+             ) recent3) AS selected_last_three,
+            (SELECT COUNT(*) FROM development_activity_participation ap JOIN development_activities mda ON mda.id = ap.activity_id WHERE ap.player_id = p.id AND ap.attendance_status = 'present' AND mda.activity_type = 'match') AS match_count,
+            (SELECT COUNT(*) FROM development_activity_callups ac WHERE ac.player_id = p.id) AS callup_count,
+            (SELECT COUNT(*) FROM development_selection_decisions future_sd JOIN development_activities future_da ON future_da.id = future_sd.activity_id WHERE future_sd.player_id = p.id AND future_sd.decision = 'selected' AND future_da.activity_date >= ? AND future_da.id <> ?) AS planned_upcoming_count,
+            (SELECT MAX(hist.activity_date) FROM development_activity_participation ap JOIN development_activities hist ON hist.id = ap.activity_id WHERE ap.player_id = p.id AND ap.attendance_status = 'present' AND hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan' AND hist.activity_date <= ?) AS last_selected_date
+     FROM players p
+     LEFT JOIN development_selection_decisions sd ON sd.activity_id = ? AND sd.player_id = p.id
+     LEFT JOIN development_activity_callups dac ON dac.activity_id = ? AND dac.player_id = p.id
+     WHERE p.active = 1 AND p.selection_eligible = 1 AND ${scope.sql}
+     ORDER BY CASE
+       WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
+       WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
+       WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
+       ELSE 3 END, lower(p.name)`,
+    [match.date, activityId, match.date, activityId, match.date, activityId, match.date, activityId, activityId, ...scope.args]
+  );
+  const hasSyncedCallups = match.acceptedCallupCount + match.declinedCallupCount + match.pendingCallupCount > 0;
+  return {
+    match,
+    candidates: rows.map((row) => {
+      const currentCallupStatus = row.callup_status === "present" ? "accepted"
+        : row.callup_status === "absent" ? "declined"
+        : row.callup_status === "unknown" ? "pending" : null;
+      return {
+        playerId: row.player_id,
+        name: row.name,
+        jerseyNumber: row.jersey_number,
+        position: row.position,
+        primaryPosition: row.preferred_position_primary,
+        secondaryPosition: row.preferred_position_secondary,
+        primaryLevel: row.preferred_level_primary,
+        secondaryLevel: row.preferred_level_secondary,
+        teamNames: row.team_names ?? [],
+        decision: hasSyncedCallups ? (currentCallupStatus ? "selected" : "rested") : (row.saved_decision ?? "rested"),
+        currentCallupStatus,
+        selectedLastEight: Number(row.selected_last_eight),
+        selectedLastThree: Number(row.selected_last_three),
+        matchCount: Number(row.match_count),
+        callupCount: Number(row.callup_count),
+        plannedUpcomingCount: Number(row.planned_upcoming_count),
+        lastSelectedDate: row.last_selected_date,
+      };
+    }),
+  };
+}
+
+export async function saveMobileSelection(
+  actor: CurrentUser,
+  activityId: string,
+  decisions: MobileSelectionDecision[]
+): Promise<MobileSelectionWorkspace> {
+  requirePermission(actor, "manage_squads");
+  const workspace = await getMobileSelectionWorkspace(actor, activityId);
+  const candidateIds = new Set(workspace.candidates.map((candidate) => candidate.playerId));
+  const byPlayer = new Map<number, MobileSelectionDecision>();
+  for (const decision of decisions) {
+    if (!candidateIds.has(decision.playerId) || byPlayer.has(decision.playerId) || !["selected", "reserve", "rested"].includes(decision.decision)) {
+      throw new DevelopmentServiceError("invalid", "Uttagningen innehåller ogiltiga spelare eller beslut.", 400);
+    }
+    const position = decision.position.trim();
+    if (position.length > 40) throw new DevelopmentServiceError("invalid", "Positionen är för lång.", 400);
+    byPlayer.set(decision.playerId, { ...decision, position });
+  }
+  const activity = await get<{ match_id: number | null }>("SELECT match_id FROM development_activities WHERE id = ?", [activityId]);
+  const statements: { sql: string; args: SqlArgs }[] = [];
+  if (activity?.match_id != null) {
+    statements.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [activity.match_id] });
+  }
+  for (const candidate of workspace.candidates) {
+    const input = byPlayer.get(candidate.playerId) ?? {
+      playerId: candidate.playerId,
+      decision: "rested" as const,
+      position: candidate.primaryPosition || candidate.position,
+    };
+    if (activity?.match_id != null && input.decision === "selected") {
+      statements.push({ sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT DO NOTHING", args: [activity.match_id, input.playerId] });
+    }
+    statements.push({
+      sql: `INSERT INTO development_selection_decisions (activity_id, player_id, decision, decided_by)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (activity_id, player_id) DO UPDATE SET decision = excluded.decision, rationale = '', decided_by = excluded.decided_by, decided_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
+      args: [activityId, input.playerId, input.decision, actor.name],
+    });
+    statements.push({
+      sql: `INSERT INTO development_activity_participation (activity_id, player_id, attendance_status, selected, position, source)
+            VALUES (?, ?, 'unknown', ?, ?, 'manual')
+            ON CONFLICT (activity_id, player_id) DO UPDATE SET selected = excluded.selected, position = excluded.position, source = 'manual', updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
+      args: [activityId, input.playerId, input.decision === "selected" ? 1 : 0, input.position],
+    });
+  }
+  await batch(statements);
+  await logActivity(actor.name, "sparade native-uttagning", `${[...byPlayer.values()].filter((item) => item.decision === "selected").length} uttagna`);
+  return getMobileSelectionWorkspace(actor, activityId);
 }
 
 function validateCommand(command: CreateObservationCommand): CreateObservationCommand {

@@ -57,6 +57,34 @@ actor APIClient {
         try await perform(path: "/activities", method: "GET", body: nil, authorized: true)
     }
 
+    func saveObservations(_ commands: [ObservationCommand], activityID: String) async throws -> [ObservationCommandResult] {
+        struct Body: Encodable { let commands: [ObservationCommand] }
+        return try await perform(
+            path: "/activities/\(activityID)/observations",
+            method: "POST",
+            body: encoder.encode(Body(commands: commands)),
+            authorized: true
+        )
+    }
+
+    func selectionMatches() async throws -> [SelectionMatchSummary] {
+        try await perform(path: "/selection", method: "GET", body: nil, authorized: true)
+    }
+
+    func selectionWorkspace(id: String) async throws -> SelectionWorkspace {
+        try await perform(path: "/selection/\(id)", method: "GET", body: nil, authorized: true)
+    }
+
+    func saveSelection(id: String, decisions: [SelectionDecision]) async throws -> SelectionWorkspace {
+        struct Body: Encodable { let decisions: [SelectionDecision] }
+        return try await perform(
+            path: "/selection/\(id)",
+            method: "PUT",
+            body: encoder.encode(Body(decisions: decisions)),
+            authorized: true
+        )
+    }
+
     func logout() async {
         _ = try? await perform(path: "/auth/logout", method: "POST", body: nil, authorized: true) as EmptyResponse
         clearSession()

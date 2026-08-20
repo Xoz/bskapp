@@ -2,25 +2,44 @@ import SwiftUI
 
 private enum AppSection: String, CaseIterable, Identifiable {
     case today
+    case observe
     case players
-    case activities
+    case selection
     case settings
 
     var id: String { rawValue }
     var title: String {
         switch self {
         case .today: return "Idag"
+        case .observe: return "Observera"
         case .players: return "Spelare"
-        case .activities: return "Aktiviteter"
+        case .selection: return "Uttagning"
         case .settings: return "Inställningar"
         }
     }
     var icon: String {
         switch self {
         case .today: return "sun.max"
+        case .observe: return "chart.xyaxis.line"
         case .players: return "person.3"
-        case .activities: return "sportscourt"
+        case .selection: return "sportscourt"
         case .settings: return "gearshape"
+        }
+    }
+
+    func isAvailable(to user: CurrentUser?) -> Bool {
+        guard let user else { return false }
+        switch self {
+        case .today:
+            return ["admin", "head_coach", "coach", "leader"].contains(user.primaryRole)
+        case .observe:
+            return user.permissions.contains("manage_evaluations")
+        case .players:
+            return user.permissions.contains("view_players")
+        case .selection:
+            return user.permissions.contains("manage_squads")
+        case .settings:
+            return true
         }
     }
 }
@@ -32,45 +51,68 @@ struct MainSplitView: View {
     @State private var selectedActivity: String?
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
+    private var availableSections: [AppSection] {
+        AppSection.allCases.filter { $0.isAvailable(to: model.user) }
+    }
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            List(AppSection.allCases, selection: $section) { item in
-                Label(item.title, systemImage: item.icon).tag(item)
+            List(selection: $section) {
+                Section {
+                    ForEach(availableSections.filter { $0 != .settings }) { item in
+                        Label(item.title, systemImage: item.icon).tag(item)
+                    }
+                }
+                Section {
+                    Label(AppSection.settings.title, systemImage: AppSection.settings.icon)
+                        .tag(AppSection.settings)
+                }
             }
             .navigationTitle("BSK")
         } content: {
             switch section ?? .today {
             case .today:
-                TodayList()
+                TodayList(selection: $selectedActivity)
+            case .observe:
+                ActivityList(selection: $selectedActivity)
             case .players:
                 PlayerList(selection: $selectedPlayer)
-            case .activities:
-                ActivityList(selection: $selectedActivity)
+            case .selection:
+                SelectionList(selection: $selectedActivity)
             case .settings:
                 SettingsList()
             }
         } detail: {
             switch section ?? .today {
             case .today:
-                TodayDetail()
+                if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
+                    ActivityDetail(activity: activity)
+                } else {
+                    TodayDetail()
+                }
+            case .observe:
+                if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
+                    ActivityDetail(activity: activity)
+                } else {
+                    ContentUnavailableView("Välj en aktivitet", systemImage: "chart.xyaxis.line")
+                }
             case .players:
                 if let selectedPlayer {
                     PlayerDetailView(playerID: selectedPlayer)
                 } else {
                     ContentUnavailableView("Välj en spelare", systemImage: "person.crop.circle")
                 }
-            case .activities:
-                if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                    ActivityDetail(activity: activity)
+            case .selection:
+                if let id = selectedActivity, let match = model.selectionMatches.first(where: { $0.id == id }) {
+                    SelectionDetail(match: match)
                 } else {
-                    ContentUnavailableView("Välj en aktivitet", systemImage: "sportscourt")
+                    ContentUnavailableView("Välj en match", systemImage: "sportscourt")
                 }
             case .settings:
                 AccountDetail()
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .task { await model.reload() }
     }
 }
 
