@@ -64,19 +64,7 @@ struct MainSplitView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            List(selection: $section) {
-                Section {
-                    ForEach(availableSections.filter { $0 != .settings }) { item in
-                        Label(item.title, systemImage: item.icon).tag(item)
-                    }
-                }
-                Section {
-                    Label(AppSection.settings.title, systemImage: AppSection.settings.icon)
-                        .tag(AppSection.settings)
-                }
-            }
-            .navigationTitle("BSK")
-            .bskListSurface()
+            sidebar
         } content: {
             switch section ?? .today {
             case .today:
@@ -129,7 +117,8 @@ struct MainSplitView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .background(BSKTheme.background)
+        .background(BSKTheme.canvas)
+        .toolbarBackground(BSKTheme.background.opacity(0.94), for: .navigationBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if horizontalSizeClass == .compact {
                 compactNavigation
@@ -137,8 +126,114 @@ struct MainSplitView: View {
         }
     }
 
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .fill(BSKTheme.accent)
+                    Text("B")
+                        .font(.system(size: 25, weight: .black, design: .rounded))
+                        .foregroundStyle(BSKTheme.backgroundDeep)
+                }
+                .frame(width: 48, height: 48)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("BSK F2014")
+                        .font(.headline.weight(.black))
+                    Text("MATCHCENTER")
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(1.7)
+                        .foregroundStyle(BSKTheme.accent)
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 22)
+            .padding(.bottom, 24)
+
+            Text("ARBETSYTOR")
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.5)
+                .foregroundStyle(BSKTheme.muted)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+
+            VStack(spacing: 7) {
+                ForEach(availableSections.filter { $0 != .settings }) { item in
+                    sidebarButton(item)
+                }
+            }
+            .padding(.horizontal, 10)
+
+            Spacer()
+
+            sidebarButton(.settings)
+                .padding(.horizontal, 10)
+
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(BSKTheme.accent.opacity(0.16))
+                    .overlay(Text(String(model.user?.name.prefix(1) ?? "B")).font(.caption.bold()).foregroundStyle(BSKTheme.accent))
+                    .frame(width: 34, height: 34)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(model.user?.name ?? "BSK-konto").font(.caption.bold()).lineLimit(1)
+                    Text("Redo för match").font(.caption2).foregroundStyle(BSKTheme.muted)
+                }
+                Spacer()
+                Circle().fill(BSKTheme.accent).frame(width: 7, height: 7)
+            }
+            .padding(14)
+            .background(BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(12)
+        }
+        .background {
+            LinearGradient(
+                colors: [BSKTheme.elevated, BSKTheme.backgroundDeep],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+        }
+        .overlay(alignment: .trailing) { Rectangle().fill(BSKTheme.border).frame(width: 1) }
+    }
+
+    private func sidebarButton(_ item: AppSection) -> some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.18)) {
+                section = item
+                selectedPlayer = nil
+                selectedActivity = nil
+                selectedEvaluation = nil
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 24)
+                Text(item.title).font(.subheadline.weight(.semibold))
+                Spacer()
+                if section == item {
+                    Circle().fill(BSKTheme.accent).frame(width: 6, height: 6)
+                }
+            }
+            .foregroundStyle(section == item ? .white : BSKTheme.secondary)
+            .padding(.horizontal, 12)
+            .frame(height: 46)
+            .background(
+                section == item ? BSKTheme.accent.opacity(0.13) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay(alignment: .leading) {
+                if section == item {
+                    Capsule().fill(BSKTheme.accent).frame(width: 3, height: 22).offset(x: -1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private var compactNavigation: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 4) {
             ForEach(availableSections.filter { $0 != .settings }) { item in
                 Button {
                     withAnimation(.easeOut(duration: 0.16)) {
@@ -149,17 +244,20 @@ struct MainSplitView: View {
                         columnVisibility = .doubleColumn
                     }
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 5) {
                         Image(systemName: item.icon)
-                            .font(.system(size: 19, weight: section == item ? .semibold : .regular))
+                            .font(.system(size: 18, weight: section == item ? .bold : .medium))
                         Text(item.title)
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 9, weight: .bold))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(section == item ? BSKTheme.accent : BSKTheme.muted)
+                    .foregroundStyle(section == item ? BSKTheme.backgroundDeep : BSKTheme.muted)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 9)
-                    .padding(.bottom, 6)
+                    .frame(height: 54)
+                    .background(
+                        section == item ? BSKTheme.accent : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -167,8 +265,12 @@ struct MainSplitView: View {
                 .accessibilityAddTraits(section == item ? .isSelected : [])
             }
         }
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) { Rectangle().fill(BSKTheme.border).frame(height: 1) }
+        .padding(6)
+        .background(BSKTheme.elevated.opacity(0.98), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.38), radius: 20, y: 8)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 5)
     }
 }
 
