@@ -120,6 +120,7 @@ Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Pos
 - **Svensk tid**: använd `lib/dates.ts`. Vercel kör UTC — aldrig råa `toISOString`-datum.
 - **Skriv = server action i actions.ts**, **läs = queries.ts**. Lågnivå-SQL via `lib/db.ts` (`all/get/run/batch`).
 - **Schemaändring**: ändra aldrig en redan driftsatt baslinje. Lägg ett nytt, stigande id sist i `SCHEMA_MIGRATIONS`; journalen kör varje migration exakt en gång.
+- **Primärt lag**: en aktiv spelare med exakt ett aktivt medlemskap i en ordinarie undergrupp får detta medlemskap primärmarkerat av migration `0002`; cup- och matchgrupper är alltid sekundära.
 - **Git**: `git push` direkt efter commit.
 - Öppna punkter samlas i `docs/BACKLOG.md`. GDPR-produktionsgrinden finns i `docs/GDPR-GRIND.md`. Större detaljspec finns i `docs/SPEC-matchbetyg.md`, `docs/SPEC-matchgrupper.md` (ersatt av den byggda gruppmodellen) och `docs/STAGING.md`.
 

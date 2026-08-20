@@ -772,10 +772,30 @@ type SchemaMigration = {
   run: () => Promise<void>;
 };
 
+async function markSoleSubgroupMembershipsPrimary(): Promise<void> {
+  await getClient().unsafe(`
+    UPDATE player_group_memberships pgm
+    SET is_primary = 1
+    FROM groups g
+    WHERE pgm.group_id = g.id
+      AND g.group_type = 'subgroup'
+      AND g.active = 1
+      AND pgm.player_id IN (
+        SELECT sole.player_id
+        FROM player_group_memberships sole
+        JOIN groups sole_group ON sole_group.id = sole.group_id
+        WHERE sole_group.group_type = 'subgroup' AND sole_group.active = 1
+        GROUP BY sole.player_id
+        HAVING COUNT(*) = 1
+      )
+  `);
+}
+
 // Lägg aldrig ny DDL i baslinjen för en redan driftsatt installation. Lägg i
 // stället till en ny post sist i listan. Varje id journalförs efter lyckad körning.
 const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
   { id: "0001-baseline-2026-08-20", run: applyBaselineSchema },
+  { id: "0002-primary-subgroup-memberships", run: markSoleSubgroupMembershipsPrimary },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;
