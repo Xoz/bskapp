@@ -30,7 +30,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | Vill ändra | Läs dessa filer |
 | --- | --- |
 | **Primär utvecklingsloop** (Idag → mål → observation → historik) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `components/{CoreActivityCard,PilotStartField}.tsx` |
-| **Transparent uttagningsstöd** (exponering, möjligheter, varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
+| **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
 | **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `app/api/live/[id]/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
@@ -64,9 +64,9 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 - **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchbetyg, närvaroimport, Sanktan-match- och kallelsehistorik, inställningar, delningslänkar och administration.
 - **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
-- **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering samt uttagningsarbetsytan och 28-dagars pilotmått.
+- **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering, kallelsesvar härledda från individuella kallelser samt uttagningsarbetsytan och 28-dagars pilotmått.
 - **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.
-- **selectionSupport.ts**: rena, testade möjlighets-/varningsmeningar samt `recommendYellowSelection`, en deterministisk och osparad trupprekommendation som rättvisejämför endast Gul och använder F15/Grön som utfyllnad.
+- **selectionSupport.ts**: rena, testade möjlighets-/varningsmeningar samt `recommendYellowSelection`, en deterministisk och osparad rekommendation som rättvisejämför spelare med primärt lag Gul; på Gulmatch används F15/Grön som utfyllnad och på Grönmatch föreslås bara rättvist fördelade Gul-lån.
 - **queries.ts** (läsande, typer): `Player`, `Evaluation`, `DevelopmentCheckpoint`, `Match` + spelar-/match-/cup-/statistik-/närvarohelpers. Utvecklingshistorik läses via getDevelopmentCheckpoints/getDevelopmentCheckpointSkills/getLatestDevelopmentCheckpoint.
 - **attendance.ts**: parser för Svenska Lag-filen `Närvarotillfällen per aktivitet & person`, inklusive datumtolkning, kategorisering och namnnormalisering.
 - **db.ts**: postgres.js-klient (Supabase) + `all/get/run/batch`, `getSetting/setSetting/getAllSettings`, `logActivity/getRecentActivity`, `DEFAULT_COLORS` (standardfärger – källa för seed + reset). **Schema (CREATE TABLE) bor här.**

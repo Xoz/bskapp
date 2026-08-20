@@ -82,6 +82,9 @@ export default async function SelectionPage({
             {workspace.activity.source_team === "Gul" && (
               <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
             )}
+            {workspace.activity.source_team === "Grön" && (
+              <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Grön ansvarar för sin ordinarie trupp. Förslaget fördelar endast Gul-lån rättvist.</p>
+            )}
           </div>
           <Link href={`/observera?aktivitet=${encodeURIComponent(workspace.activity.id)}`} className="btn-secondary">
             Observationer

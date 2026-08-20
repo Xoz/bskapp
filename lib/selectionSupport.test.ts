@@ -8,6 +8,7 @@ import {
 
 function candidate(overrides: Partial<RecommendationCandidate> & Pick<RecommendationCandidate, "id" | "name" | "teamNames">): RecommendationCandidate {
   return {
+    primaryTeamName: overrides.teamNames[0] ?? null,
     callupCount: 0,
     plannedUpcomingCount: 0,
     lastSelectedDate: null,
@@ -16,6 +17,7 @@ function candidate(overrides: Partial<RecommendationCandidate> & Pick<Recommenda
     primaryPosition: "Mittfält",
     secondaryPosition: "",
     selectionEligible: true,
+    currentlySelected: false,
     currentCallupStatus: null,
     ...overrides,
   };
@@ -144,5 +146,35 @@ describe("transparent uttagningsstöd", () => {
     });
     expect(result.selectedIds).toEqual([2]);
     expect(result.reasons[2]).toContain("Målvakt");
+  });
+
+  it("bevarar Gröns trupp och fyller bara med rättvist valda Gul-lån", () => {
+    const result = recommendYellowSelection({
+      sourceTeam: "Grön",
+      matchLevel: 3,
+      targetSize: 3,
+      candidates: [
+        candidate({ id: 1, name: "Grön kallad", teamNames: ["Grön"], currentCallupStatus: "accepted" }),
+        candidate({ id: 2, name: "Gul färre", teamNames: ["Gul"], callupCount: 2 }),
+        candidate({ id: 3, name: "Gul fler", teamNames: ["Gul"], callupCount: 5 }),
+        candidate({ id: 4, name: "F15", teamNames: ["F15"], callupCount: 0 }),
+      ],
+    });
+    expect(result.selectedIds).toEqual([1, 2, 3]);
+    expect(result.reasons[2]).toContain("Rättvist Gul-lån");
+    expect(result.selectedIds).not.toContain(4);
+  });
+
+  it("använder endast primärt lag för rättvisegruppen", () => {
+    const result = recommendYellowSelection({
+      matchLevel: 3,
+      targetSize: 1,
+      candidates: [
+        candidate({ id: 1, name: "Primär F15", teamNames: ["F15", "Gul"], primaryTeamName: "F15", callupCount: 0 }),
+        candidate({ id: 2, name: "Primär Gul", teamNames: ["Gul", "Grön"], primaryTeamName: "Gul", callupCount: 4 }),
+      ],
+    });
+    expect(result.selectedIds).toEqual([2]);
+    expect(result.yellowCount).toBe(1);
   });
 });

@@ -17,6 +17,7 @@ export type RecommendationCandidate = {
   id: number;
   name: string;
   teamNames: string[];
+  primaryTeamName: string | null;
   callupCount: number;
   plannedUpcomingCount: number;
   lastSelectedDate: string | null;
@@ -25,6 +26,7 @@ export type RecommendationCandidate = {
   primaryPosition: string;
   secondaryPosition: string;
   selectionEligible: boolean;
+  currentlySelected: boolean;
   currentCallupStatus: RecommendationCallupStatus;
 };
 
@@ -130,13 +132,15 @@ function fairnessOrder(matchLevel: number | null) {
 }
 
 /**
- * Ger ett transparent förslag för en Gulmatch. Endast ordinarie Gulspelare
- * rättvisejämförs. F15 och Grön används, i den ordningen, enbart som utfyllnad.
+ * Ger ett transparent förslag för en Sanktanmatch. Endast ordinarie Gulspelare
+ * rättvisejämförs. På Gulmatch används F15 och Grön som utfyllnad. På Grönmatch
+ * bevaras Gröns befintliga trupp och rättvist valda Gul-lån fyller vakanta platser.
  * Resultatet är deterministiskt och sparas aldrig av motorn själv.
  */
 export function recommendYellowSelection(input: {
   candidates: RecommendationCandidate[];
   matchLevel: number | null;
+  sourceTeam?: string | null;
   targetSize?: number;
 }): SelectionRecommendation {
   const targetSize = Math.max(1, input.targetSize ?? 9);
@@ -153,17 +157,35 @@ export function recommendYellowSelection(input: {
   const selectable = input.candidates
     .filter((candidate) => candidate.selectionEligible)
     .filter((candidate) => candidate.currentCallupStatus !== "declined")
-    .filter((candidate) => !(input.matchLevel === 4 && candidate.teamNames.includes("F15")));
+    .filter((candidate) => !(input.matchLevel === 4 && candidate.primaryTeamName === "F15"));
 
-  // Befintliga ja-/inväntande kallelser är verkligt skickade och bevaras i förslaget.
+  // Befintliga uttagningar och skickade ja-/inväntande kallelser bevaras.
   selectable
-    .filter((candidate) => candidate.currentCallupStatus === "accepted" || candidate.currentCallupStatus === "pending")
+    .filter((candidate) => candidate.currentlySelected
+      || candidate.currentCallupStatus === "accepted"
+      || candidate.currentCallupStatus === "pending")
     .sort((left, right) => left.name.localeCompare(right.name, "sv"))
-    .forEach((candidate) => add(candidate, "Redan kallad"));
+    .forEach((candidate) => add(candidate, candidate.currentlySelected ? "Redan uttagen" : "Redan kallad"));
 
   const yellow = selectable
-    .filter((candidate) => candidate.teamNames.includes("Gul") && levelFit(candidate, input.matchLevel).safe)
+    .filter((candidate) => candidate.primaryTeamName === "Gul" && levelFit(candidate, input.matchLevel).safe)
     .sort(fairnessOrder(input.matchLevel));
+
+  if (input.sourceTeam === "Grön") {
+    for (const candidate of yellow) {
+      if (selected.size >= targetSize) break;
+      const fit = levelFit(candidate, input.matchLevel);
+      add(candidate, `Rättvist Gul-lån · ${projectedCallups(candidate)} kallelser · ${fit.label}`);
+    }
+    const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
+    return {
+      selectedIds,
+      reasons,
+      yellowCount,
+      fillerCount: selectedIds.length - yellowCount,
+      targetSize,
+    };
+  }
 
   // Målvakt är det enda hårda positionskravet i första versionen.
   if (![...selected].some((id) => selectable.some((candidate) => candidate.id === id && isGoalkeeper(candidate)))) {
@@ -181,7 +203,7 @@ export function recommendYellowSelection(input: {
   for (const team of fillers) {
     if (selected.size >= targetSize) break;
     const pool = selectable
-      .filter((candidate) => candidate.teamNames.includes(team) && !selected.has(candidate.id))
+      .filter((candidate) => candidate.primaryTeamName === team && !selected.has(candidate.id))
       .filter((candidate) => !(team === "F15" && input.matchLevel === 4))
       .filter((candidate) => levelFit(candidate, input.matchLevel).safe)
       .sort((left, right) => {
@@ -194,7 +216,7 @@ export function recommendYellowSelection(input: {
     }
   }
 
-  const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.teamNames.includes("Gul")).length;
+  const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
   return {
     selectedIds,
     reasons,

@@ -1737,14 +1737,27 @@ export async function syncSanktanCallupHistory(formData: FormData) {
   const raw = String(formData.get("callups") ?? "").trim();
   if (!Number.isInteger(season) || season < 2020 || season > 2100 || !raw) redirect("/installningar?sanktan_kallelser=fel#trupp");
 
-  type ImportedCallup = { id: string; called: string[] };
+  type ImportedCallupStatus = "accepted" | "declined" | "pending";
+  type ImportedCallup = {
+    id: string;
+    callups?: { name: string; status: ImportedCallupStatus }[];
+    called?: string[];
+  };
   let imported: ImportedCallup[];
   try { imported = JSON.parse(raw) as ImportedCallup[]; } catch { redirect("/installningar?sanktan_kallelser=fel#trupp"); }
   if (!Array.isArray(imported) || imported.length === 0) redirect("/installningar?sanktan_kallelser=fel#trupp");
 
   const [yellowPlayers, historicalMatches] = await Promise.all([
     all<{ id: number; name: string }>(
-      "SELECT id, name FROM players WHERE active = 1 ORDER BY name"
+      `SELECT DISTINCT p.id, p.name
+       FROM players p
+       JOIN player_group_memberships pgm ON pgm.player_id = p.id AND pgm.is_primary = 1
+       JOIN groups g ON g.id = pgm.group_id
+       WHERE p.active = 1 AND g.active = 1 AND g.group_type = 'subgroup' AND g.name = 'Gul'
+         AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
+         AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
+       ORDER BY p.name`,
+      [swedishToday(), swedishToday()]
     ),
     all<{ activity_id: string; external_id: string }>(
       `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
@@ -1760,17 +1773,26 @@ export async function syncSanktanCallupHistory(formData: FormData) {
   const statements: { sql: string; args: (string | number)[] }[] = [];
   for (const match of imported) {
     const externalId = String(match?.id ?? "");
-    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !Array.isArray(match.called)) redirect("/installningar?sanktan_kallelser=match#trupp");
+    const importedPlayers = Array.isArray(match.callups)
+      ? match.callups
+      : Array.isArray(match.called)
+        ? match.called.map((name) => ({ name, status: "pending" as const }))
+        : null;
+    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !importedPlayers) redirect("/installningar?sanktan_kallelser=match#trupp");
     seen.add(externalId);
     const called = new Set<number>();
-    for (const name of match.called) {
-      const player = yellowByName.get(normalizePersonName(String(name)));
+    for (const importedPlayer of importedPlayers) {
+      const player = yellowByName.get(normalizePersonName(String(importedPlayer?.name ?? "")));
       if (!player || called.has(player.id)) redirect(`/installningar?sanktan_kallelser=spelare&sanktan_kallelse_match=${externalId}&sanktan_kallelse_index=${called.size}#trupp`);
+      if (!["accepted", "declined", "pending"].includes(importedPlayer.status)) redirect("/installningar?sanktan_kallelser=fel#trupp");
       called.add(player.id);
+      const attendanceStatus = importedPlayer.status === "accepted"
+        ? "present"
+        : importedPlayer.status === "declined" ? "absent" : "unknown";
       statements.push({
         sql: `INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
-              VALUES (?, ?, 'unknown') ON CONFLICT (activity_id, player_id) DO UPDATE SET attendance_status = 'unknown'`,
-        args: [activityByExternalId.get(externalId)!, player.id],
+              VALUES (?, ?, ?) ON CONFLICT (activity_id, player_id) DO UPDATE SET attendance_status = excluded.attendance_status`,
+        args: [activityByExternalId.get(externalId)!, player.id, attendanceStatus],
       });
     }
   }

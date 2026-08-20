@@ -72,7 +72,8 @@ export type DevelopmentObservation = {
 
 export type PlayerCoreSummary = {
   player: Player;
-  teams: { id: number; name: string }[];
+  teams: { id: number; name: string; isPrimary: boolean }[];
+  primaryTeam: { id: number; name: string } | null;
   goals: DevelopmentGoal[];
   lastObservation: DevelopmentObservation | null;
   trainingCount: number;
@@ -145,9 +146,12 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             da.theme, da.challenge_context,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
-            COALESCE(dacs.accepted_count, 0) AS accepted_callup_count,
-            COALESCE(dacs.declined_count, 0) AS declined_callup_count,
-            COALESCE(dacs.pending_count, 0) AS pending_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present') AS accepted_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent') AS declined_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown') AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -180,11 +184,9 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
      LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
-     LEFT JOIN development_activity_callup_summaries dacs ON dacs.activity_id = da.id
      WHERE ${scope.sql}
        ${sourceFilter}
-     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name,
-              dacs.accepted_count, dacs.declined_count, dacs.pending_count
+     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name
      ORDER BY
        CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
        CASE WHEN da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,
@@ -273,7 +275,9 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
               (SELECT COUNT(DISTINCT dac.activity_id)
                FROM development_activity_callups dac
                JOIN development_activities callup_da ON callup_da.id = dac.activity_id
-               WHERE dac.player_id = p.id AND callup_da.external_source = 'svenskalag_sanktan'
+               WHERE dac.player_id = p.id
+                 AND callup_da.external_source = 'svenskalag_sanktan'
+                 AND callup_da.activity_date LIKE ?
               ) AS callup_count,
               COUNT(DISTINCT CASE WHEN COALESCE(sd.decision, CASE WHEN ap.selected = 1 THEN 'selected' END) = 'selected' THEN da.id END) AS selected_count,
               COALESCE(SUM(ap.periods_played), 0) AS periods_played
@@ -283,10 +287,10 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
        LEFT JOIN development_selection_decisions sd ON sd.activity_id = da.id AND sd.player_id = p.id
        WHERE p.id IN (${idSql})
        GROUP BY p.id`,
-      ids
+      [`${today.slice(0, 4)}-%`, ...ids]
     ),
-    all<{ player_id: number; id: number; name: string }>(
-      `SELECT pgm.player_id, g.id, g.name
+    all<{ player_id: number; id: number; name: string; is_primary: number }>(
+      `SELECT pgm.player_id, g.id, g.name, pgm.is_primary
        FROM player_group_memberships pgm
        JOIN groups g ON g.id = pgm.group_id
        WHERE pgm.player_id IN (${idSql})
@@ -303,16 +307,23 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
   for (const goal of goals) goalsByPlayer.set(goal.player_id, [...(goalsByPlayer.get(goal.player_id) ?? []), goal]);
   const observationByPlayer = new Map(lastObservations.map((row) => [Number(row.player_id), row]));
   const exposureByPlayer = new Map(exposure.map((row) => [row.player_id, row]));
-  const teamsByPlayer = new Map<number, { id: number; name: string }[]>();
+  const teamsByPlayer = new Map<number, { id: number; name: string; isPrimary: boolean }[]>();
   for (const team of teamMemberships) {
-    teamsByPlayer.set(team.player_id, [...(teamsByPlayer.get(team.player_id) ?? []), { id: team.id, name: team.name }]);
+    teamsByPlayer.set(team.player_id, [...(teamsByPlayer.get(team.player_id) ?? []), {
+      id: team.id,
+      name: team.name,
+      isPrimary: Boolean(team.is_primary),
+    }]);
   }
 
   return players.map((player) => {
     const row = exposureByPlayer.get(player.id);
+    const teams = teamsByPlayer.get(player.id) ?? [];
+    const primaryTeam = teams.find((team) => team.isPrimary) ?? null;
     return {
       player,
-      teams: teamsByPlayer.get(player.id) ?? [],
+      teams,
+      primaryTeam: primaryTeam ? { id: primaryTeam.id, name: primaryTeam.name } : null,
       goals: goalsByPlayer.get(player.id) ?? [],
       lastObservation: observationByPlayer.get(player.id) ?? null,
       trainingCount: Number(row?.training_count ?? 0),
@@ -379,9 +390,12 @@ export async function getActivityDetail(activityId: string): Promise<{
     `SELECT da.*,
             COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
             COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
-            COALESCE(dacs.accepted_count, 0) AS accepted_callup_count,
-            COALESCE(dacs.declined_count, 0) AS declined_callup_count,
-            COALESCE(dacs.pending_count, 0) AS pending_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present') AS accepted_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent') AS declined_callup_count,
+            (SELECT COUNT(*) FROM development_activity_callups dac
+              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown') AS pending_callup_count,
             da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -411,7 +425,6 @@ export async function getActivityDetail(activityId: string): Promise<{
      LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
-     LEFT JOIN development_activity_callup_summaries dacs ON dacs.activity_id = da.id
      WHERE da.id = ?`,
     [activityId]
   );
@@ -477,12 +490,13 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     current_callup_status: RecommendationCallupStatus;
     decision: "selected" | "reserve" | "rested" | null;
   }>(
-    `WITH recent AS (
+     `WITH recent AS (
        SELECT id, activity_date,
               row_number() OVER (ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC) AS rn
        FROM development_activities
        WHERE activity_type = 'match'
          AND external_source = 'svenskalag_sanktan'
+         AND activity_date LIKE ?
          AND activity_date <= ? AND id <> ?
        ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC
        LIMIT 8
@@ -505,6 +519,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
                 AND future_sd.decision = 'selected'
                 AND future_da.activity_type = 'match'
                 AND future_da.external_source = 'svenskalag_sanktan'
+                AND future_da.activity_date LIKE ?
                 AND future_da.activity_date >= ?
                 AND future_da.id <> ?
                 AND NOT EXISTS (
@@ -533,8 +548,10 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
      WHERE p.id IN (${idSql})
      GROUP BY p.id, current_sd.decision`,
     [
+      `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
+      `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
       activityId,
@@ -543,7 +560,13 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     ]
   );
   const history = new Map(rows.map((row) => [row.player_id, row]));
-  const minimum = Math.min(...rows.map((row) => Number(row.selected_last_eight ?? 0)));
+  const yellowRows = candidateSummaries
+    .filter((summary) => summary.primaryTeam?.name === "Gul")
+    .map((summary) => history.get(summary.player.id))
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  const minimum = yellowRows.length
+    ? Math.min(...yellowRows.map((row) => Number(row.selected_last_eight ?? 0)))
+    : 0;
   const candidates: SelectionCandidate[] = candidateSummaries.map((summary) => {
     const row = history.get(summary.player.id);
     const signals = {
@@ -567,10 +590,9 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
   const orderedCandidates = detail.activity.source_team === "Gul"
     ? [...candidates].sort((left, right) => {
       const priority = (candidate: SelectionCandidate) => {
-        const teams = candidate.teams.map((team) => team.name);
-        if (teams.includes("Gul")) return 0;
-        if (teams.includes("F15")) return 1;
-        if (teams.includes("Grön")) return 2;
+        if (candidate.primaryTeam?.name === "Gul") return 0;
+        if (candidate.primaryTeam?.name === "F15") return 1;
+        if (candidate.primaryTeam?.name === "Grön") return 2;
         return 3;
       };
       return priority(left) - priority(right) || left.player.name.localeCompare(right.player.name, "sv");

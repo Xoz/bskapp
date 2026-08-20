@@ -19,7 +19,8 @@ type Candidate = {
     selection_eligible: number;
   };
   decision: "selected" | "reserve" | "rested";
-  teams: { id: number; name: string }[];
+  teams: { id: number; name: string; isPrimary: boolean }[];
+  primaryTeam: { id: number; name: string } | null;
   selectedLastEight: number;
   selectedLastThree: number;
   matchCount: number;
@@ -105,11 +106,13 @@ export default function SelectionEditor({
   function applyRecommendation() {
     const recommendation = recommendYellowSelection({
       matchLevel,
+      sourceTeam,
       targetSize: Math.max(9, selectedIds.size),
       candidates: candidates.map((candidate) => ({
         id: candidate.player.id,
         name: candidate.player.name,
         teamNames: candidate.teams.map((team) => team.name),
+        primaryTeamName: candidate.primaryTeam?.name ?? null,
         callupCount: candidate.callupCount,
         plannedUpcomingCount: candidate.plannedUpcomingCount,
         lastSelectedDate: candidate.lastSelectedDate,
@@ -118,6 +121,7 @@ export default function SelectionEditor({
         primaryPosition: candidate.player.preferred_position_primary || candidate.player.position || "",
         secondaryPosition: candidate.player.preferred_position_secondary,
         selectionEligible: Boolean(candidate.player.selection_eligible),
+        currentlySelected: selectedIds.has(candidate.player.id),
         currentCallupStatus: candidate.currentCallupStatus,
       })),
     });
@@ -171,10 +175,12 @@ export default function SelectionEditor({
             <p className="selection-toolbar-subtitle">Välj spelare och ange position vid behov</p>
           </div>
           <div className="selection-toolbar-tools">
-            {sourceTeam === "Gul" && (
+            {(sourceTeam === "Gul" || sourceTeam === "Grön") && (
               <button type="button" className="selection-recommend-button" onClick={applyRecommendation}>
                 <span className="selection-recommend-icon" aria-hidden="true">↻</span>
-                {recommendationSummary ? "Räkna om förslag" : "Föreslå rättvis trupp"}
+                {recommendationSummary
+                  ? "Räkna om förslag"
+                  : sourceTeam === "Grön" ? "Föreslå rättvisa Gul-lån" : "Föreslå rättvis trupp"}
               </button>
             )}
             <div className="selection-filter-group" role="group" aria-label="Filtrera spelare efter lag">

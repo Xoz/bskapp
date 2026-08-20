@@ -661,7 +661,7 @@ export default async function SettingsPage({
                     <textarea id="sanktan_callups" name="callups" rows={10} required className="input font-mono text-sm" />
                   </div>
                   <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                    Underlaget ska innehålla endast ordinarie Gul-spelare. Alla spelade Gul-matcher i säsongen måste finnas med; tidigare kallelser för dessa matcher ersätts.
+                    Underlaget valideras mot spelare vars primära lag är Gul och innehåller status ja, nej eller inväntar svar. Alla spelade Gul-matcher i säsongen måste finnas med; tidigare kallelser för dessa matcher ersätts.
                   </p>
                   <button type="submit" className="btn-secondary">Synka kallelser</button>
                 </ConfirmForm>
