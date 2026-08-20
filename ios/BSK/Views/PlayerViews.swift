@@ -2,36 +2,90 @@ import SwiftUI
 
 struct PlayerList: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: Int?
+    @State private var searchText = ""
+
+    private var filteredPlayers: [PlayerSummary] {
+        guard !searchText.isEmpty else { return model.players }
+        return model.players.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
 
     var body: some View {
-        List(model.players, selection: $selection) { player in
-            NavigationLink(value: player.id) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle().fill(BSKTheme.accent.opacity(0.13))
-                        Text(player.name.prefix(1)).font(.headline).foregroundStyle(BSKTheme.accent)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("TRUPPEN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                        Text("\(filteredPlayers.count) spelare").font(.largeTitle.bold())
                     }
-                    .frame(width: 42, height: 42)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(player.name).fontWeight(.semibold)
-                        Text(player.activeGoals.first?.title ?? "Inget aktivt fokus")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                    Spacer()
+                    Text("\(model.players.filter { !$0.activeGoals.isEmpty }.count) med fokus")
+                        .font(.caption.bold()).foregroundStyle(BSKTheme.accent)
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
+                    ForEach(filteredPlayers) { player in
+                        playerLink(player)
                     }
                 }
-                .padding(.vertical, 3)
             }
+            .padding(16)
+            .frame(maxWidth: 900)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Spelare")
-        .bskListSurface()
+        .searchable(text: $searchText, prompt: "Sök spelare")
+        .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
         .overlay {
             if model.players.isEmpty {
                 ContentUnavailableView("Ingen trupp", systemImage: "person.3", description: Text("Kontrollera gruppbehörigheten i BSK."))
             }
         }
+    }
+
+    @ViewBuilder
+    private func playerLink(_ player: PlayerSummary) -> some View {
+        if horizontalSizeClass == .compact {
+            NavigationLink { PlayerDetailView(playerID: player.id) } label: { playerCard(player) }
+                .buttonStyle(.plain)
+        } else {
+            Button { selection = player.id } label: { playerCard(player) }
+                .buttonStyle(.plain)
+        }
+    }
+
+    private func playerCard(_ player: PlayerSummary) -> some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(alignment: .top) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(BSKTheme.accent.opacity(0.14))
+                    Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)))
+                        .font(.title2.bold()).foregroundStyle(BSKTheme.accent)
+                }
+                .frame(width: 58, height: 58)
+                Spacer()
+                Circle()
+                    .fill(player.activeGoals.isEmpty ? BSKTheme.muted : BSKTheme.accent)
+                    .frame(width: 8, height: 8)
+            }
+            Text(player.name).font(.headline).foregroundStyle(.white).lineLimit(1)
+            Text(player.primaryPosition.isEmpty ? (player.position.isEmpty ? "Spelare" : player.position) : player.primaryPosition)
+                .font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+            Divider().overlay(BSKTheme.border)
+            Label(
+                player.activeGoals.first?.title ?? "Inget aktivt fokus",
+                systemImage: player.activeGoals.isEmpty ? "minus.circle" : "scope"
+            )
+            .font(.caption)
+            .foregroundStyle(player.activeGoals.isEmpty ? BSKTheme.muted : BSKTheme.accent)
+            .lineLimit(2)
+            .frame(minHeight: 32, alignment: .topLeading)
+        }
+        .padding(15)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(selection == player.id ? BSKTheme.accent : BSKTheme.border, lineWidth: selection == player.id ? 2 : 1))
     }
 }
 

@@ -169,32 +169,90 @@ private struct ObservationComposer: View {
 
 struct TodayList: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: String?
 
     var body: some View {
-        List(selection: $selection) {
+        ScrollView {
             if thisWeeksMatches.isEmpty {
                 ContentUnavailableView(
                     "Inga fler matcher den här veckan",
                     systemImage: "calendar",
                     description: Text("När nya matcher har hämtats visas de här.")
                 )
+                .frame(maxWidth: .infinity, minHeight: 420)
             } else {
-                Section("Den här veckan") {
-                    ForEach(thisWeeksMatches) { activity in
-                        NavigationLink(value: activity.id) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(activity.title).fontWeight(.semibold)
-                                Text(activitySchedule(activity)).font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("MATCHVECKAN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                        Text("Nästa uppgift").font(.largeTitle.bold())
+                    }
+                    matchLink(thisWeeksMatches[0], featured: true)
+                    if thisWeeksMatches.count > 1 {
+                        Text("Senare i veckan").font(.title3.bold())
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
+                            ForEach(Array(thisWeeksMatches.dropFirst())) { activity in
+                                matchLink(activity, featured: false)
                             }
                         }
                     }
                 }
+                .padding(18)
+                .frame(maxWidth: 840)
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Idag")
-        .bskListSurface()
+        .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
+    }
+
+    @ViewBuilder
+    private func matchLink(_ activity: ActivitySummary, featured: Bool) -> some View {
+        if horizontalSizeClass == .compact {
+            NavigationLink { ActivityDetail(activity: activity) } label: { matchCard(activity, featured: featured) }
+                .buttonStyle(.plain)
+        } else {
+            Button { selection = activity.id } label: { matchCard(activity, featured: featured) }
+                .buttonStyle(.plain)
+        }
+    }
+
+    private func matchCard(_ activity: ActivitySummary, featured: Bool) -> some View {
+        HStack(spacing: featured ? 18 : 13) {
+            ZStack {
+                RoundedRectangle(cornerRadius: featured ? 22 : 16, style: .continuous)
+                    .fill(featured ? BSKTheme.accent : BSKTheme.accent.opacity(0.14))
+                Image(systemName: "sportscourt.fill")
+                    .font(.system(size: featured ? 28 : 20, weight: .bold))
+                    .foregroundStyle(featured ? BSKTheme.backgroundDeep : BSKTheme.accent)
+            }
+            .frame(width: featured ? 76 : 52, height: featured ? 76 : 52)
+            VStack(alignment: .leading, spacing: featured ? 8 : 5) {
+                Text(featured ? "NÄSTA MATCH" : "MATCH")
+                    .font(.caption2.bold()).tracking(1.3).foregroundStyle(BSKTheme.accent)
+                Text(activity.title)
+                    .font(featured ? .title2.bold() : .headline)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+                Label(activitySchedule(activity), systemImage: "calendar")
+                    .font(.caption).foregroundStyle(BSKTheme.secondary)
+                if featured, !activity.theme.isEmpty {
+                    Text(activity.theme).font(.caption).foregroundStyle(BSKTheme.muted).lineLimit(2)
+                }
+            }
+            Spacer()
+            Image(systemName: "arrow.up.right")
+                .font(.caption.bold()).foregroundStyle(BSKTheme.accent).padding(9)
+                .background(BSKTheme.accent.opacity(0.1), in: Circle())
+        }
+        .padding(featured ? 22 : 16)
+        .background(
+            LinearGradient(colors: [BSKTheme.elevated, BSKTheme.surface], startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: featured ? 26 : 20, style: .continuous)
+        )
+        .overlay(RoundedRectangle(cornerRadius: featured ? 26 : 20, style: .continuous).stroke(featured ? BSKTheme.accent.opacity(0.45) : BSKTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(featured ? 0.28 : 0.14), radius: featured ? 20 : 10, y: 8)
     }
 
     private var thisWeeksMatches: [ActivitySummary] {
@@ -433,34 +491,76 @@ struct SelectionDetail: View {
 
 struct MatchEvaluationList: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: Int?
 
     var body: some View {
-        List(model.matchEvaluations, selection: $selection) { match in
-            NavigationLink(value: match.id) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("\(match.homeAway == "home" ? "Hemma mot" : "Borta mot") \(match.opponent)")
-                        .fontWeight(.semibold)
-                    Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    ProgressView(value: Double(match.handled), total: Double(max(match.total, 1)))
-                        .tint(match.handled == match.total && match.total > 0 ? BSKTheme.accent : BSKTheme.warning)
-                    Text("\(match.handled) av \(match.total) hanterade")
-                        .font(.caption2)
-                        .foregroundStyle(BSKTheme.muted)
+                    Text("EFTER MATCHEN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                    Text("Spelarnas insats").font(.largeTitle.bold())
+                    Text("Fortsätt där du slutade eller öppna en ny match.").foregroundStyle(BSKTheme.secondary)
                 }
-                .padding(.vertical, 5)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 245), spacing: 14)], spacing: 14) {
+                    ForEach(model.matchEvaluations) { match in
+                        evaluationLink(match)
+                    }
+                }
             }
+            .padding(18)
+            .frame(maxWidth: 900)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Utvärdera")
-        .bskListSurface()
+        .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
         .overlay {
             if model.matchEvaluations.isEmpty {
                 ContentUnavailableView("Inga matcher att utvärdera", systemImage: "checklist", description: Text("Matcher från den senaste veckan visas här."))
             }
         }
+    }
+
+    @ViewBuilder
+    private func evaluationLink(_ match: MatchEvaluationSummary) -> some View {
+        if horizontalSizeClass == .compact {
+            NavigationLink { MatchEvaluationView(matchID: match.id) } label: { evaluationCard(match) }
+                .buttonStyle(.plain)
+        } else {
+            Button { selection = match.id } label: { evaluationCard(match) }
+                .buttonStyle(.plain)
+        }
+    }
+
+    private func evaluationCard(_ match: MatchEvaluationSummary) -> some View {
+        let complete = match.total > 0 && match.handled == match.total
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(match.homeAway == "home" ? "HEMMA" : "BORTA")
+                        .font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.accent)
+                    Text(match.opponent).font(.title3.bold()).foregroundStyle(.white)
+                    Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(BSKTheme.secondary)
+                }
+                Spacer()
+                Image(systemName: complete ? "checkmark.seal.fill" : "figure.soccer")
+                    .font(.title2).foregroundStyle(complete ? BSKTheme.accent : BSKTheme.warning)
+            }
+            ProgressView(value: Double(match.handled), total: Double(max(match.total, 1)))
+                .tint(complete ? BSKTheme.accent : BSKTheme.warning)
+            HStack {
+                Text("\(match.handled) av \(match.total) spelare").font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+                Spacer()
+                Text(complete ? "KLAR" : match.handled > 0 ? "FORTSÄTT" : "STARTA")
+                    .font(.caption2.bold()).tracking(1.1)
+                    .foregroundStyle(complete ? BSKTheme.accent : BSKTheme.warning)
+            }
+        }
+        .padding(18)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(complete ? BSKTheme.accent.opacity(0.35) : BSKTheme.border, lineWidth: 1))
     }
 }
 
