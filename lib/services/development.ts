@@ -616,6 +616,9 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
               WHERE da.external_source = 'svenskalag_sanktan'
                 AND da.external_key = 'sanktan:' || pcm.external_id
                 AND pcm.source_team = 'Gul'
+            ) OR (
+              da.external_source = 'manual_match'
+              AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
             ) AS is_primary_match
      FROM development_activities da
      LEFT JOIN development_observations o ON o.activity_id = da.id
@@ -628,6 +631,10 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
            WHERE da.external_source = 'svenskalag_sanktan'
              AND da.external_key = 'sanktan:' || pcm.external_id
              AND pcm.source_team = 'Gul'
+         )
+         OR (
+           da.external_source = 'manual_match'
+           AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
          )
        )
      GROUP BY da.id
