@@ -1010,6 +1010,7 @@ struct TodayList: View {
             .filter {
                 $0.type == "match"
                     && $0.isPrimaryMatch
+                    && !$0.finished
                     && $0.date >= today
                     && $0.date <= lastDay
             }
@@ -1632,6 +1633,7 @@ struct MatchCenterView: View {
             state = updated
             loadedAt = Date()
             if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: updated) }
+            if updated.finished { await model.reload() }
         } catch { model.errorMessage = error.localizedDescription }
     }
 }

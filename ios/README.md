@@ -42,6 +42,8 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
 - Periodklockan fortsätter efter ordinarie periodtid tills tränaren pausar den;
   domarens tilläggstid kapas aldrig automatiskt. I sista perioden avslutas
   matchen uttryckligen med `Avsluta match`.
+- När matchen avslutas försvinner den direkt från Idag och visas under
+  Utvärdera för spelarbedömning.
 - Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.

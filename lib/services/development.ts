@@ -113,6 +113,7 @@ export type MobileActivity = {
   challengeContext: "safe" | "balanced" | "challenging";
   observationCount: number;
   isPrimaryMatch: boolean;
+  finished: boolean;
 };
 
 export type MobileSelectionMatch = {
@@ -759,6 +760,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     challenge_context: MobileActivity["challengeContext"];
     observation_count: number;
     is_primary_match: boolean;
+    finished: number;
   }>(
     `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
@@ -772,7 +774,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
             ) OR (
               da.external_source IN ('manual', 'manual_match')
               AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
-            ) AS is_primary_match
+            ) AS is_primary_match,
+            COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished
      FROM development_activities da
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
@@ -807,6 +810,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     challengeContext: row.challenge_context,
     observationCount: Number(row.observation_count),
     isPrimaryMatch: row.is_primary_match,
+    finished: Boolean(row.finished),
   }));
 }
 

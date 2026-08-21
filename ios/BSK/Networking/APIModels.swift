@@ -178,6 +178,7 @@ struct ActivitySummary: Codable, Identifiable {
     let challengeContext: String
     let observationCount: Int
     let isPrimaryMatch: Bool
+    let finished: Bool
 }
 
 struct LiveMatchState: Codable {
