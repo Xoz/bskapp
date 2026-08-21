@@ -5,6 +5,8 @@ const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
 const coreActions = readFileSync(new URL("./coreActions.ts", import.meta.url), "utf8");
 const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
+const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
+const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -42,13 +44,40 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).not.toContain("ensureManualMatchActivities");
   });
 
-  it("återanvänder äldre manuella matchaktiviteter och gör upsert på match-id", () => {
+  it("visar canonical Gul-matcher och gör upsert på match-id", () => {
     const saveMatchStart = actions.indexOf("export async function saveMatch");
     const cupStart = actions.indexOf("// ---- Cup-hantering", saveMatchStart);
     const saveMatch = actions.slice(saveMatchStart, cupStart);
 
-    expect(mobileDevelopment).toContain("da.external_source IN ('manual', 'manual_match')");
+    expect(mobileDevelopment).toContain("EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')");
     expect(saveMatch).toContain("ON CONFLICT (match_id) WHERE match_id IS NOT NULL DO UPDATE SET");
     expect(saveMatch).toContain("external_source = excluded.external_source");
+    expect(actions).toContain("UPDATE development_activities existing_activity");
+    expect(actions).toContain("SET match_id = NULL");
+  });
+
+  it("använder matches och match_players som enda produktkälla för spelade matcher", () => {
+    expect(mobileDevelopment).not.toContain("player_competition_match_players");
+    expect(mobileDevelopment).not.toContain("player_competition_match_counts");
+    expect(developmentCore).not.toContain("player_competition_match_players");
+    expect(developmentCore).not.toContain("player_competition_match_counts");
+    expect(mobileDevelopment).toContain("FROM match_players mp");
+    expect(developmentCore).toContain("FROM match_players mp");
+    expect(schema).toContain('id: "0007-canonical-played-matches"');
+    expect(schema).toContain("INSERT INTO match_players (match_id, player_id)");
+  });
+
+  it("läser normaliserad närvaro i spelarstatistik", () => {
+    const attendanceStart = queries.indexOf("export async function getPlayerAttendanceOverview");
+    const attendanceEnd = queries.indexOf("export async function getLatestSelfEval", attendanceStart);
+    const attendanceQueries = queries.slice(attendanceStart, attendanceEnd);
+
+    expect(attendanceQueries).toContain("FROM development_activity_participation dap");
+    expect(attendanceQueries).not.toContain("FROM attendance_events");
+    expect(attendanceQueries).not.toContain("FROM attendance_imports");
+  });
+
+  it("refererar inte den borttagna ELO-tabellen", () => {
+    expect(queries).not.toContain("FROM match_ratings");
   });
 });

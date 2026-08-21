@@ -209,43 +209,6 @@ export async function getCupScorers(): Promise<Map<string, CupScorerRow[]>> {
   return byCup;
 }
 
-export interface CupFormRow {
-  cup_name: string;
-  id: number;
-  name: string;
-  jersey_number: number | null;
-  form_delta: number;
-  rated_count: number;
-}
-
-// Bästa form i cupen: summan av matchbetygens delta per spelare över cupens
-// matcher (hur mycket spelaren rörde sin form *i* cupen, nivåjusterat mot
-// förväntan). Returnerar map cup_name → spelare sorterade på störst uppgång, för
-// "bästa form"-listan vid sidan av skytteligan. Bara de som höjt formen (delta >
-// 0) tas med. En query för alla cuper.
-export async function getCupFormLeaders(): Promise<Map<string, CupFormRow[]>> {
-  const userId = await restrictedUserId();
-  const rows = await all<CupFormRow>(
-    `SELECT m.cup_name, p.id, p.name, p.jersey_number,
-            COALESCE(SUM(r.delta), 0) AS form_delta,
-            COUNT(r.match_id) AS rated_count
-     FROM match_ratings r
-     JOIN matches m ON m.id = r.match_id AND m.cup_name <> ''
-     JOIN players p ON p.id = r.player_id
-     ${userId ? "WHERE EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
-     GROUP BY m.cup_name, p.id
-     HAVING COALESCE(SUM(r.delta), 0) > 0
-     ORDER BY m.cup_name, form_delta DESC, lower(p.name)`,
-    userId ? [userId] : []
-  );
-  const byCup = new Map<string, CupFormRow[]>();
-  for (const r of rows) {
-    if (!byCup.has(r.cup_name)) byCup.set(r.cup_name, []);
-    byCup.get(r.cup_name)!.push(r);
-  }
-  return byCup;
-}
-
 // Alla matcher i pågående cuper. En cup är pågående t.o.m. dagen efter dess
 // sista match (today <= sista dagen + 1  ⇔  sista dagen >= today − 1 = yesterday),
 // och först fr.o.m. dess första dag (första dagen <= today).
@@ -741,11 +704,11 @@ export interface PlayerAttendanceTrendRow {
 export async function getPlayerAttendanceOverview(playerId: number): Promise<PlayerAttendanceOverview | null> {
   const row = await get<PlayerAttendanceOverview>(
     `SELECT COUNT(*) AS total_activities,
-            COALESCE(SUM(present), 0) AS attended_activities,
-            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate
-     FROM attendance_events
-     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
-       AND player_id = ?`,
+            COUNT(*) FILTER (WHERE dap.attendance_status = 'present') AS attended_activities,
+            ROUND(100.0 * COUNT(*) FILTER (WHERE dap.attendance_status = 'present') / NULLIF(COUNT(*), 0), 1) AS attendance_rate
+     FROM development_activity_participation dap
+     JOIN development_activities da ON da.id = dap.activity_id
+     WHERE dap.source = 'svenskalag_attendance' AND dap.player_id = ?`,
     [playerId]
   );
   return row && row.total_activities > 0 ? row : null;
@@ -753,14 +716,14 @@ export async function getPlayerAttendanceOverview(playerId: number): Promise<Pla
 
 export async function getPlayerAttendanceByCategory(playerId: number): Promise<PlayerAttendanceCategoryRow[]> {
   return all<PlayerAttendanceCategoryRow>(
-    `SELECT category,
+    `SELECT da.activity_type AS category,
             COUNT(*) AS total_activities,
-            COALESCE(SUM(present), 0) AS attended_activities,
-            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate
-     FROM attendance_events
-     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
-       AND player_id = ?
-     GROUP BY category
+            COUNT(*) FILTER (WHERE dap.attendance_status = 'present') AS attended_activities,
+            ROUND(100.0 * COUNT(*) FILTER (WHERE dap.attendance_status = 'present') / NULLIF(COUNT(*), 0), 1) AS attendance_rate
+     FROM development_activity_participation dap
+     JOIN development_activities da ON da.id = dap.activity_id
+     WHERE dap.source = 'svenskalag_attendance' AND dap.player_id = ?
+     GROUP BY da.activity_type
      ORDER BY total_activities DESC, category ASC`,
     [playerId]
   );
@@ -768,22 +731,22 @@ export async function getPlayerAttendanceByCategory(playerId: number): Promise<P
 
 export async function getPlayerAttendanceTrend(playerId: number): Promise<PlayerAttendanceTrendRow[]> {
   return all<PlayerAttendanceTrendRow>(
-    `SELECT substr(activity_date, 1, 7) AS month,
+    `SELECT substr(da.activity_date, 1, 7) AS month,
             COUNT(*) AS total_activities,
-            COALESCE(SUM(present), 0) AS attended_activities,
-            ROUND(100.0 * COALESCE(SUM(present), 0) / NULLIF(COUNT(*), 0), 1) AS attendance_rate,
-            COALESCE(SUM(CASE WHEN category = 'training' THEN 1 ELSE 0 END), 0) AS training_total,
-            COALESCE(SUM(CASE WHEN category = 'training' THEN present ELSE 0 END), 0) AS training_attended,
+            COUNT(*) FILTER (WHERE dap.attendance_status = 'present') AS attended_activities,
+            ROUND(100.0 * COUNT(*) FILTER (WHERE dap.attendance_status = 'present') / NULLIF(COUNT(*), 0), 1) AS attendance_rate,
+            COUNT(*) FILTER (WHERE da.activity_type = 'training') AS training_total,
+            COUNT(*) FILTER (WHERE da.activity_type = 'training' AND dap.attendance_status = 'present') AS training_attended,
             ROUND(
-              100.0 * COALESCE(SUM(CASE WHEN category = 'training' THEN present ELSE 0 END), 0)
-              / NULLIF(SUM(CASE WHEN category = 'training' THEN 1 ELSE 0 END), 0),
+              100.0 * COUNT(*) FILTER (WHERE da.activity_type = 'training' AND dap.attendance_status = 'present')
+              / NULLIF(COUNT(*) FILTER (WHERE da.activity_type = 'training'), 0),
               1
             ) AS training_rate
-     FROM attendance_events
-     WHERE import_id = (SELECT id FROM attendance_imports ORDER BY id DESC LIMIT 1)
-       AND player_id = ?
-       AND activity_date IS NOT NULL
-     GROUP BY substr(activity_date, 1, 7)
+     FROM development_activity_participation dap
+     JOIN development_activities da ON da.id = dap.activity_id
+     WHERE dap.source = 'svenskalag_attendance' AND dap.player_id = ?
+       AND da.activity_date IS NOT NULL
+     GROUP BY substr(da.activity_date, 1, 7)
      ORDER BY month ASC`,
     [playerId]
   );

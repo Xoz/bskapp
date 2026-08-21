@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
-import { getMatches, getCupScorers, getCupFormLeaders, cupMatchCompare, cupRoundLabel, cupMootRounds, matchTitle, type Match as MatchType, type CupScorerRow, type CupFormRow } from "@/lib/queries";
+import { getMatches, getCupScorers, cupMatchCompare, cupRoundLabel, cupMootRounds, matchTitle, type Match as MatchType, type CupScorerRow } from "@/lib/queries";
 import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
@@ -19,10 +19,9 @@ export default async function MatchesPage() {
   const role = await getRole();
   if (!role) redirect("/login");
 
-  const [matches, cupScorers, cupForm] = await Promise.all([
+  const [matches, cupScorers] = await Promise.all([
     getMatches(),
     getCupScorers(),
-    getCupFormLeaders(),
   ]);
 
   return (
@@ -57,7 +56,7 @@ export default async function MatchesPage() {
           action={role === "coach" ? <Link href="/installningar" className="btn-secondary">Till Inställningar</Link> : undefined}
         />
       ) : (
-        <MatchSections matches={matches} role={role} cupScorers={cupScorers} cupForm={cupForm} />
+        <MatchSections matches={matches} role={role} cupScorers={cupScorers} />
       )}
 
       <p className="caption max-w-xl" style={{ color: "var(--ink-muted)" }}>
@@ -172,7 +171,6 @@ function CupCard({
   today,
   role,
   scorers,
-  formLeaders,
 }: {
   name: string;
   cupGroup: string;
@@ -180,7 +178,6 @@ function CupCard({
   today: string;
   role: string;
   scorers: CupScorerRow[];
-  formLeaders: CupFormRow[];
 }) {
   const first = matches[0].date;
   const last = matches[matches.length - 1].date;
@@ -292,26 +289,6 @@ function CupCard({
           </div>
         </div>
       )}
-      {/* Bästa form i cupen – störst uppgång i matchbetygens form (nivåjusterat) */}
-      {formLeaders.length > 0 && (
-        <div className="px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
-          <p className="caption font-semibold mb-2" style={{ color: "var(--ink-secondary)" }}>
-            Bästa form i cupen
-          </p>
-          <div className="space-y-1.5">
-            {formLeaders.slice(0, 3).map((f) => (
-              <div key={f.id} className="flex items-center gap-2 text-sm">
-                <span className="flex-1 min-w-0 truncate" style={{ color: "var(--ink)" }}>
-                  {f.name.replace(/^Exempel:\s*/, "").split(" ")[0]}
-                </span>
-                <span className="shrink-0 text-xs" style={{ color: "var(--ink-muted)" }}>
-                  <span className="stat-number" style={{ color: "var(--primary)" }}>+{f.form_delta}</span> form
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       <div>
         {matches.map((m) => {
           const hasResult = m.our_score != null && m.opponent_score != null;
@@ -360,13 +337,11 @@ function EntryView({
   role,
   today,
   cupScorers,
-  cupForm,
 }: {
   entry: Entry;
   role: string;
   today: string;
   cupScorers: Map<string, CupScorerRow[]>;
-  cupForm: Map<string, CupFormRow[]>;
 }) {
   if (entry.kind === "cup") {
     return (
@@ -377,7 +352,6 @@ function EntryView({
         today={today}
         role={role}
         scorers={cupScorers.get(entry.name) ?? []}
-        formLeaders={cupForm.get(entry.name) ?? []}
       />
     );
   }
@@ -388,12 +362,10 @@ function MatchSections({
   matches,
   role,
   cupScorers,
-  cupForm,
 }: {
   matches: MatchType[];
   role: string;
   cupScorers: Map<string, CupScorerRow[]>;
-  cupForm: Map<string, CupFormRow[]>;
 }) {
   const today = swedishToday();
   const entries = buildEntries(matches);
@@ -425,7 +397,7 @@ function MatchSections({
         ) : (
           <div className="grid gap-3">
             {upcoming.map((e) => (
-              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} cupForm={cupForm} />
+              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} />
             ))}
           </div>
         )}
@@ -441,7 +413,7 @@ function MatchSections({
           </div>
           <div className="grid gap-3">
             {past.map((e) => (
-              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} cupForm={cupForm} />
+              <EntryView key={e.key} entry={e} role={role} today={today} cupScorers={cupScorers} />
             ))}
           </div>
         </section>

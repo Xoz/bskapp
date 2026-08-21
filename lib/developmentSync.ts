@@ -2,12 +2,8 @@ import "server-only";
 
 import { run } from "./db";
 
-/** Speglar externa referenser till utvecklingskärnan utan att ta över källans ansvar. */
+/** Normaliserar externa importer till appens egna aktivitets- och matchtabeller. */
 export async function syncDevelopmentSourceRows(): Promise<void> {
-  // Sanktan importeras separat med detaljerad matchhistorik från Svenska Lag.
-  // Behåll den äldre speglingen inaktiv så att olika datakällor inte blandas.
-  return;
-
   await run(`
     INSERT INTO development_activities (
       id, activity_date, start_time, activity_type, title,
@@ -54,6 +50,84 @@ export async function syncDevelopmentSourceRows(): Promise<void> {
     ON CONFLICT (activity_id, player_id) DO UPDATE SET
       attendance_status = excluded.attendance_status, source = excluded.source,
       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+  `);
+  await run(`
+    INSERT INTO matches (
+      date, start_time, opponent, home_away, match_type, group_id,
+      source, external_uid, finished
+    )
+    SELECT da.activity_date, da.start_time,
+           regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'),
+           CASE WHEN da.title ~* '^Borta mot' THEN 'away' ELSE 'home' END,
+           'seriespel', da.group_id, 'svenskalag_attendance',
+           'attendance:' || replace(da.external_key, 'svenskalag:', ''), 1
+    FROM development_activities da
+    WHERE da.external_source = 'svenskalag_attendance'
+      AND da.activity_type = 'match'
+      AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+      AND EXISTS (
+        SELECT 1 FROM development_activity_participation ap
+        WHERE ap.activity_id = da.id AND ap.attendance_status = 'present'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM matches existing
+        WHERE existing.date = da.activity_date
+          AND COALESCE(existing.start_time, '') = COALESCE(da.start_time, '')
+          AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i'))
+              = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'))
+      )
+    ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
+      date = excluded.date, start_time = excluded.start_time,
+      opponent = excluded.opponent, home_away = excluded.home_away, finished = 1
+  `);
+  await run(`
+    INSERT INTO match_players (match_id, player_id)
+    SELECT linked.id, ap.player_id
+    FROM development_activities da
+    JOIN development_activity_participation ap
+      ON ap.activity_id = da.id AND ap.attendance_status = 'present'
+    CROSS JOIN LATERAL (
+      SELECT m.id FROM matches m
+      WHERE m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '')
+         OR (
+           m.date = da.activity_date
+           AND COALESCE(m.start_time, '') = COALESCE(da.start_time, '')
+           AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i'))
+               = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'))
+         )
+      ORDER BY CASE WHEN m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '') THEN 0 ELSE 1 END, m.id
+      LIMIT 1
+    ) linked
+    WHERE da.external_source = 'svenskalag_attendance' AND da.activity_type = 'match'
+      AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+    ON CONFLICT (match_id, player_id) DO NOTHING
+  `);
+  await run(`
+    WITH attendance_links AS (
+      SELECT da.id AS activity_id, linked.id AS match_id
+      FROM development_activities da
+      CROSS JOIN LATERAL (
+        SELECT m.id FROM matches m
+        WHERE m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '')
+           OR (
+             m.date = da.activity_date
+             AND COALESCE(m.start_time, '') = COALESCE(da.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i'))
+                 = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'))
+           )
+        ORDER BY CASE WHEN m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '') THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE da.external_source = 'svenskalag_attendance' AND da.activity_type = 'match'
+    )
+    UPDATE development_activities da
+    SET match_id = attendance_links.match_id
+    FROM attendance_links
+    WHERE da.id = attendance_links.activity_id
+      AND NOT EXISTS (
+        SELECT 1 FROM development_activities canonical_da
+        WHERE canonical_da.match_id = attendance_links.match_id AND canonical_da.id <> da.id
+      )
   `);
   await run(`
     INSERT INTO development_activity_participation

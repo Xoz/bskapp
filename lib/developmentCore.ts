@@ -92,7 +92,7 @@ export type PlayerCoreSummary = {
 export type CompetitionMatchHistory = {
   external_id: string;
   season: number;
-  source_team: "Gul" | "Grön";
+  source_team: string;
   level: number | null;
   match_date: string;
   start_time: string | null;
@@ -124,11 +124,11 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
          da.activity_type = 'match'
          AND da.external_source <> 'svenskalag_sanktan'
          AND EXISTS (
-           SELECT 1 FROM player_competition_matches preferred_pcm
-           WHERE preferred_pcm.competition = 'sanktan'
-             AND preferred_pcm.match_date = da.activity_date
-             AND COALESCE(preferred_pcm.start_time, '') = COALESCE(da.start_time, '')
-             AND lower(da.title) LIKE '%' || lower(preferred_pcm.opponent) || '%'
+           SELECT 1 FROM matches preferred_match
+           WHERE preferred_match.source = 'svenskalag_sanktan'
+             AND preferred_match.date = da.activity_date
+             AND COALESCE(preferred_match.start_time, '') = COALESCE(da.start_time, '')
+             AND lower(da.title) LIKE '%' || lower(preferred_match.opponent) || '%'
          )
        )
        AND NOT (
@@ -147,8 +147,8 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
     `SELECT da.id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.external_source, da.external_key, da.match_id, da.group_id,
             da.theme, da.challenge_context,
-            COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
-            COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
+            CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
+            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
             COALESCE(
               (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
@@ -204,12 +204,11 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
      LEFT JOIN development_observations o ON o.activity_id = da.id
      LEFT JOIN development_activity_participation ap ON ap.activity_id = da.id
      LEFT JOIN development_selection_decisions sd ON sd.activity_id = da.id
-     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE ${scope.sql}
        ${sourceFilter}
-     GROUP BY da.id, pcm.source_team, pcm.level, m.level, g.group_type, g.name
+     GROUP BY da.id, m.level, g.group_type, g.name
      ORDER BY
        CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
        CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,
@@ -284,29 +283,28 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
     }>(
       `SELECT p.id AS player_id,
               COUNT(DISTINCT CASE WHEN da.activity_type = 'training' AND ap.attendance_status = 'present' THEN da.id END) AS training_count,
-              COALESCE(
-                (SELECT SUM(pcmc.match_count)
-                 FROM player_competition_match_counts pcmc
-                 WHERE pcmc.player_id = p.id
-                   AND pcmc.competition = 'sanktan'
-                   AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')),
-                COUNT(DISTINCT CASE WHEN da.activity_type = 'match' AND ap.attendance_status = 'present' THEN da.id END)
-              ) AS match_count,
+              (SELECT COUNT(DISTINCT mp.match_id)
+               FROM match_players mp
+               JOIN matches played_match ON played_match.id = mp.match_id
+               WHERE mp.player_id = p.id AND (played_match.finished = 1 OR played_match.date <= ?)) AS match_count,
               EXISTS(
-                SELECT 1 FROM player_competition_match_counts pcmc
-                WHERE pcmc.player_id = p.id
-                  AND pcmc.competition = 'sanktan'
-                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+                SELECT 1 FROM match_players synced_mp
+                JOIN matches synced_match ON synced_match.id = synced_mp.match_id
+                WHERE synced_mp.player_id = p.id AND synced_match.source = 'svenskalag_sanktan'
               ) AS has_sanktan_sync,
               COALESCE((
-                SELECT SUM(pcmc.match_count) FROM player_competition_match_counts pcmc
-                WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Gul'
-                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+                SELECT COUNT(DISTINCT gul_mp.match_id)
+                FROM match_players gul_mp
+                JOIN matches gul_match ON gul_match.id = gul_mp.match_id
+                JOIN groups gul_group ON gul_group.id = gul_match.group_id
+                WHERE gul_mp.player_id = p.id AND gul_match.source = 'svenskalag_sanktan' AND gul_group.name = 'Gul'
               ), 0) AS sanktan_gul_count,
               COALESCE((
-                SELECT SUM(pcmc.match_count) FROM player_competition_match_counts pcmc
-                WHERE pcmc.player_id = p.id AND pcmc.competition = 'sanktan' AND pcmc.source_team = 'Grön'
-                  AND pcmc.season = (SELECT MAX(season) FROM player_competition_match_counts WHERE competition = 'sanktan')
+                SELECT COUNT(DISTINCT gron_mp.match_id)
+                FROM match_players gron_mp
+                JOIN matches gron_match ON gron_match.id = gron_mp.match_id
+                JOIN groups gron_group ON gron_group.id = gron_match.group_id
+                WHERE gron_mp.player_id = p.id AND gron_match.source = 'svenskalag_sanktan' AND gron_group.name = 'Grön'
               ), 0) AS sanktan_gron_count,
               (SELECT COUNT(DISTINCT dac.activity_id)
                FROM development_activity_callups dac
@@ -323,7 +321,7 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
        LEFT JOIN development_selection_decisions sd ON sd.activity_id = da.id AND sd.player_id = p.id
        WHERE p.id IN (${idSql})
        GROUP BY p.id`,
-      [`${today.slice(0, 4)}-%`, ...ids]
+      [today, `${today.slice(0, 4)}-%`, ...ids]
     ),
     all<{ player_id: number; id: number; name: string; is_primary: number }>(
       `SELECT pgm.player_id, g.id, g.name, pgm.is_primary
@@ -405,13 +403,17 @@ export async function getPlayerCore(playerId: number): Promise<{
       [playerId]
     ),
     all<CompetitionMatchHistory>(
-      `SELECT pcm.external_id, pcm.season, pcm.source_team, pcm.level, pcm.match_date,
-              pcm.start_time, pcm.opponent, pcm.home_away, pcm.location
-       FROM player_competition_match_players pcmp
-       JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
-       WHERE pcmp.player_id = ? AND pcm.competition = 'sanktan'
-       ORDER BY pcm.match_date DESC, pcm.start_time DESC NULLS LAST, pcm.external_id DESC`,
-      [playerId]
+      `SELECT m.id::text AS external_id, substring(m.date, 1, 4)::integer AS season,
+              COALESCE(g.name, '') AS source_team,
+              CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS level,
+              m.date AS match_date, m.start_time, m.opponent, m.home_away,
+              NULLIF(m.location, '') AS location
+       FROM match_players mp
+       JOIN matches m ON m.id = mp.match_id
+       LEFT JOIN groups g ON g.id = m.group_id
+       WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
+       ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id DESC`,
+      [playerId, swedishToday()]
     ),
   ]);
   return { summary, goalHistory, observations, matchHistory };
@@ -424,8 +426,8 @@ export async function getActivityDetail(activityId: string): Promise<{
 } | null> {
   const activity = await get<CoreActivity>(
     `SELECT da.*,
-            COALESCE(pcm.source_team, CASE WHEN g.group_type = 'subgroup' THEN g.name END) AS source_team,
-            COALESCE(pcm.level, CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END) AS competition_level,
+            CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
+            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
             COALESCE(
               (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
@@ -478,7 +480,6 @@ export async function getActivityDetail(activityId: string): Promise<{
             (SELECT COUNT(*) FROM development_activity_participation ap WHERE ap.activity_id = da.id AND ap.attendance_status = 'present') AS participant_count,
             (SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected') AS selection_count
      FROM development_activities da
-     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE da.id = ?`,

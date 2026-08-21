@@ -15,6 +15,7 @@ import {
 import { getPlayers } from "./queries";
 import { swedishToday } from "./dates";
 import { createDevelopmentObservations, type CreateObservationCommand } from "./services/development";
+import { syncDevelopmentSourceRows } from "./developmentSync";
 
 const EVIDENCE_VALUES = ["shown", "practicing", "revisit"] as const;
 const CHALLENGE_VALUES = ["safe", "balanced", "challenging"] as const;
@@ -159,6 +160,9 @@ export async function syncDevelopmentSources() {
       END,
       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
   `);
+
+  // Samma normalisering används av filimporten och den manuella synkknappen.
+  await syncDevelopmentSourceRows();
 
   await pilotEvent("source_sync", actor, null, null, 1);
   await logActivity(actor, "synkade utvecklingskällor", "Svenska Lag och matchreferenser");

@@ -51,7 +51,7 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
     startTime: string | null;
     opponent: string;
     homeAway: "home" | "away";
-    sourceTeam: "Gul" | "Grön";
+    sourceTeam: string;
     level: number | null;
   }[];
   goals: {
@@ -362,29 +362,17 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
       title: string;
       source_team: string;
     }>(
-      `WITH recent_matches AS (
-         SELECT pcmp.player_id, pcm.external_id, pcm.match_date, pcm.start_time,
-                'Mot ' || pcm.opponent AS title, pcm.source_team
-         FROM player_competition_match_players pcmp
-         JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
-         WHERE pcmp.player_id IN (${marks})
-           AND pcm.competition = 'sanktan'
-           AND pcm.match_date >= ? AND pcm.match_date <= ?
-         UNION ALL
-         SELECT ap.player_id, da.id AS external_id, da.activity_date AS match_date,
-                da.start_time, da.title, COALESCE(g.name, 'Gul') AS source_team
-         FROM development_activity_participation ap
-         JOIN development_activities da ON da.id = ap.activity_id
-         LEFT JOIN groups g ON g.id = da.group_id
-         WHERE ap.player_id IN (${marks})
-           AND ap.attendance_status = 'present'
-           AND da.activity_type = 'match'
-           AND da.external_source <> 'svenskalag_sanktan'
-           AND da.activity_date >= ? AND da.activity_date <= ?
-       )
-       SELECT * FROM recent_matches
-       ORDER BY match_date DESC, start_time DESC NULLS LAST, external_id`,
-      [...playerIds, cutoff, today, ...playerIds, cutoff, today]
+      `SELECT mp.player_id, m.id::text AS external_id, m.date AS match_date,
+              m.start_time, 'Mot ' || m.opponent AS title,
+              COALESCE(g.name, '') AS source_team
+       FROM match_players mp
+       JOIN matches m ON m.id = mp.match_id
+       LEFT JOIN groups g ON g.id = m.group_id
+       WHERE mp.player_id IN (${marks})
+         AND (m.finished = 1 OR m.date <= ?)
+         AND m.date >= ? AND m.date <= ?
+       ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id`,
+      [...playerIds, today, cutoff, today]
     ),
     all<{
       player_id: number;
@@ -396,14 +384,13 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
       status: "selected" | "accepted" | "pending";
     }>(
       `SELECT linked.player_id, da.id, da.activity_date, da.start_time, da.title,
-              COALESCE(pcm.source_team, g.name, 'Gul') AS source_team,
+              COALESCE(g.name, '') AS source_team,
               CASE
                 WHEN linked.in_squad OR linked.selected_decision THEN 'selected'
                 WHEN linked.callup_status = 'present' THEN 'accepted'
                 ELSE 'pending'
               END AS status
        FROM development_activities da
-       LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
        LEFT JOIN groups g ON g.id = da.group_id
        JOIN LATERAL (
          SELECT p.id AS player_id,
@@ -561,9 +548,11 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
     get<{ training_count: number; match_count: number; callup_count: number }>(
       `SELECT
          (SELECT COUNT(DISTINCT ap.activity_id) FROM development_activity_participation ap JOIN development_activities da ON da.id = ap.activity_id WHERE ap.player_id = ? AND ap.attendance_status = 'present' AND da.activity_type = 'training') AS training_count,
-         (SELECT COUNT(DISTINCT pcmp.match_external_id) FROM player_competition_match_players pcmp WHERE pcmp.player_id = ?) AS match_count,
+         (SELECT COUNT(DISTINCT mp.match_id)
+          FROM match_players mp JOIN matches m ON m.id = mp.match_id
+          WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)) AS match_count,
          (SELECT COUNT(DISTINCT dac.activity_id) FROM development_activity_callups dac WHERE dac.player_id = ?) AS callup_count`,
-      [playerId, playerId, playerId]
+      [playerId, playerId, swedishToday(), playerId]
     ),
     all<{
       external_id: string;
@@ -571,17 +560,19 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       start_time: string | null;
       opponent: string;
       home_away: "home" | "away";
-      source_team: "Gul" | "Grön";
+      source_team: string;
       level: number | null;
     }>(
-      `SELECT pcm.external_id, pcm.match_date, pcm.start_time, pcm.opponent,
-              pcm.home_away, pcm.source_team, pcm.level
-       FROM player_competition_match_players pcmp
-       JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
-       WHERE pcmp.player_id = ? AND pcm.competition = 'sanktan'
-       ORDER BY pcm.match_date DESC, pcm.start_time DESC NULLS LAST
+      `SELECT m.id::text AS external_id, m.date AS match_date, m.start_time,
+              m.opponent, m.home_away, COALESCE(g.name, '') AS source_team,
+              CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS level
+       FROM match_players mp
+       JOIN matches m ON m.id = mp.match_id
+       LEFT JOIN groups g ON g.id = m.group_id
+       WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
+       ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id DESC
        LIMIT 30`,
-      [playerId]
+      [playerId, swedishToday()]
     ),
     all<GoalRow>(
       `SELECT id, player_id, slot, title, evidence_hint, status, starts_on, review_on, ended_on
@@ -765,33 +756,15 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
             COUNT(o.id) AS observation_count,
-            EXISTS (
-              SELECT 1
-              FROM player_competition_matches pcm
-              WHERE da.external_source = 'svenskalag_sanktan'
-                AND da.external_key = 'sanktan:' || pcm.external_id
-                AND pcm.source_team = 'Gul'
-            ) OR (
-              da.external_source IN ('manual', 'manual_match')
-              AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
-            ) AS is_primary_match,
+            da.activity_type = 'match'
+              AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul') AS is_primary_match,
             COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished
      FROM development_activities da
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
        AND (
          da.activity_type <> 'match'
-         OR EXISTS (
-           SELECT 1
-           FROM player_competition_matches pcm
-           WHERE da.external_source = 'svenskalag_sanktan'
-             AND da.external_key = 'sanktan:' || pcm.external_id
-             AND pcm.source_team = 'Gul'
-         )
-         OR (
-           da.external_source IN ('manual', 'manual_match')
-           AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
-         )
+         OR EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
        )
      GROUP BY da.id
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
@@ -830,8 +803,8 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     selection_count: number;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.title,
-            COALESCE(pcm.source_team, g.name, 'Gul') AS source_team,
-            pcm.level AS competition_level,
+            COALESCE(g.name, '') AS source_team,
+            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'), 0) AS accepted_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
@@ -839,10 +812,9 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
      FROM development_activities da
      JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
-     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      WHERE da.activity_type = 'match'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-       AND COALESCE(pcm.source_team, g.name, 'Gul') = 'Gul'
+       AND g.name = 'Gul'
        AND ${scope.sql}
      ORDER BY da.activity_date, da.start_time NULLS LAST, da.id
      LIMIT 100`,
@@ -894,23 +866,36 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             ms.player_id IS NOT NULL AS in_match_squad,
             dac.attendance_status AS callup_status,
             (SELECT COUNT(*) FROM (
-               SELECT hist.id FROM development_activities hist
-               JOIN development_activity_participation hap ON hap.activity_id = hist.id AND hap.player_id = p.id
-               WHERE hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan'
-                 AND hist.activity_date <= ? AND hist.id <> ? AND hap.attendance_status = 'present'
-               ORDER BY hist.activity_date DESC, hist.start_time DESC NULLS LAST, hist.id DESC LIMIT 8
-             ) recent8) AS selected_last_eight,
+               SELECT history.id, EXISTS (
+                 SELECT 1 FROM match_players history_player
+                 WHERE history_player.match_id = history.id AND history_player.player_id = p.id
+               ) AS played
+               FROM matches history
+               WHERE history.group_id = target.group_id
+                 AND history.date <= ? AND history.id IS DISTINCT FROM target.match_id
+                 AND history.finished = 1
+               ORDER BY history.date DESC, history.start_time DESC NULLS LAST, history.id DESC LIMIT 8
+             ) recent8 WHERE recent8.played) AS selected_last_eight,
             (SELECT COUNT(*) FROM (
-               SELECT hist.id FROM development_activities hist
-               JOIN development_activity_participation hap ON hap.activity_id = hist.id AND hap.player_id = p.id
-               WHERE hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan'
-                 AND hist.activity_date <= ? AND hist.id <> ? AND hap.attendance_status = 'present'
-               ORDER BY hist.activity_date DESC, hist.start_time DESC NULLS LAST, hist.id DESC LIMIT 3
-             ) recent3) AS selected_last_three,
-            (SELECT COUNT(*) FROM development_activity_participation ap JOIN development_activities mda ON mda.id = ap.activity_id WHERE ap.player_id = p.id AND ap.attendance_status = 'present' AND mda.activity_type = 'match') AS match_count,
+               SELECT history.id, EXISTS (
+                 SELECT 1 FROM match_players history_player
+                 WHERE history_player.match_id = history.id AND history_player.player_id = p.id
+               ) AS played
+               FROM matches history
+               WHERE history.group_id = target.group_id
+                 AND history.date <= ? AND history.id IS DISTINCT FROM target.match_id
+                 AND history.finished = 1
+               ORDER BY history.date DESC, history.start_time DESC NULLS LAST, history.id DESC LIMIT 3
+             ) recent3 WHERE recent3.played) AS selected_last_three,
+            (SELECT COUNT(DISTINCT played_mp.match_id)
+             FROM match_players played_mp
+             WHERE played_mp.player_id = p.id) AS match_count,
             (SELECT COUNT(*) FROM development_activity_callups ac WHERE ac.player_id = p.id) AS callup_count,
             (SELECT COUNT(*) FROM development_selection_decisions future_sd JOIN development_activities future_da ON future_da.id = future_sd.activity_id WHERE future_sd.player_id = p.id AND future_sd.decision = 'selected' AND future_da.activity_date >= ? AND future_da.id <> ?) AS planned_upcoming_count,
-            (SELECT MAX(hist.activity_date) FROM development_activity_participation ap JOIN development_activities hist ON hist.id = ap.activity_id WHERE ap.player_id = p.id AND ap.attendance_status = 'present' AND hist.activity_type = 'match' AND hist.external_source = 'svenskalag_sanktan' AND hist.activity_date <= ?) AS last_selected_date
+            (SELECT MAX(history.date)
+             FROM match_players history_player
+             JOIN matches history ON history.id = history_player.match_id
+             WHERE history_player.player_id = p.id AND history.date <= ? AND history.finished = 1) AS last_selected_date
      FROM players p
      LEFT JOIN development_selection_decisions sd ON sd.activity_id = ? AND sd.player_id = p.id
      LEFT JOIN development_activity_callups dac ON dac.activity_id = ? AND dac.player_id = p.id
@@ -922,7 +907,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
        WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
        WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
        ELSE 3 END, lower(p.name)`,
-    [match.date, activityId, match.date, activityId, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
+    [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
   );
   const hasSavedSquad = rows.some((row) => row.in_match_squad);
   return {

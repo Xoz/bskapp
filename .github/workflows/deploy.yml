@@ -39,6 +39,7 @@ jobs:
             . /etc/bsk/bsk.env
             set +a
             npm run build
+            npm run db:audit
 
             cd /opt/bsk/bsk-f2014/coach-platform
             npm ci

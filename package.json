@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:audit": "node scripts/audit-data-model.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

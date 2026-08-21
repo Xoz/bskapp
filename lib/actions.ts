@@ -1695,6 +1695,7 @@ export async function syncSanktanMatchHistory(formData: FormData) {
   for (const match of imported) {
     const activityId = `sanktan-${match.id}`;
     const activityTitle = `${match.homeAway === "home" ? "Hemma" : "Borta"} mot ${match.opponent.trim()}`;
+    const playedMatch = match.date <= swedishToday() && match.players.length > 0 ? 1 : 0;
     statements.push({
       sql: `INSERT INTO player_competition_matches
             (external_id, season, competition, source_team, level, match_date, start_time, opponent, home_away, location, source_url, updated_at)
@@ -1715,29 +1716,48 @@ export async function syncSanktanMatchHistory(formData: FormData) {
               updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
       args: [activityId, match.date, match.time || null, activityTitle, `sanktan:${match.id}`, groupIdByName.get(match.sourceTeam) ?? null],
     });
-    if (match.sourceTeam === "Gul") {
-      const externalUid = `sanktan:${match.id}`;
-      statements.push({
+    const externalUid = `sanktan:${match.id}`;
+    const sourceGroupId = groupIdByName.get(match.sourceTeam) ?? null;
+    statements.push({
         sql: `INSERT INTO matches
-                (date, start_time, opponent, home_away, match_type, level, location, group_id, source, external_uid)
-              SELECT ?, ?, ?, ?, 'seriespel', ?, ?, ?, 'svenskalag_sanktan', ?
+                (date, start_time, opponent, home_away, match_type, level, location, group_id, source, external_uid, finished)
+              SELECT ?, ?, ?, ?, 'seriespel', ?, ?, ?, 'svenskalag_sanktan', ?, ?
               WHERE NOT EXISTS (
                 SELECT 1 FROM matches existing
                 WHERE existing.date = ?
                   AND COALESCE(existing.start_time, '') = COALESCE(?, '')
                   AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i')) = lower(?)
+                  AND existing.group_id IS NOT DISTINCT FROM ?
               )
               ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
                 date = excluded.date, start_time = excluded.start_time,
                 opponent = excluded.opponent, home_away = excluded.home_away,
-                level = excluded.level, location = excluded.location, group_id = excluded.group_id`,
+                level = excluded.level, location = excluded.location, group_id = excluded.group_id,
+                finished = GREATEST(matches.finished, excluded.finished)`,
         args: [
           match.date, match.time || null, match.opponent.trim(), match.homeAway, String(match.level),
-          match.location?.trim() || "", groupIdByName.get("Gul") ?? null, externalUid,
-          match.date, match.time || null, match.opponent.trim(),
+          match.location?.trim() || "", sourceGroupId, externalUid, playedMatch,
+          match.date, match.time || null, match.opponent.trim(), sourceGroupId,
         ],
-      });
-      statements.push({
+    });
+    statements.push({
+        sql: `UPDATE development_activities existing_activity
+              SET match_id = NULL
+              WHERE existing_activity.id <> ?
+                AND existing_activity.match_id = (
+                  SELECT m.id FROM matches m
+                  WHERE m.external_uid = ?
+                     OR (
+                       m.date = ? AND COALESCE(m.start_time, '') = COALESCE(?, '')
+                       AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(?)
+                       AND m.group_id IS NOT DISTINCT FROM ?
+                     )
+                  ORDER BY CASE WHEN m.external_uid = ? THEN 0 ELSE 1 END, m.id
+                  LIMIT 1
+                )`,
+        args: [activityId, externalUid, match.date, match.time || null, match.opponent.trim(), sourceGroupId, externalUid],
+    });
+    statements.push({
         sql: `UPDATE development_activities da
               SET match_id = (
                 SELECT m.id FROM matches m
@@ -1745,14 +1765,20 @@ export async function syncSanktanMatchHistory(formData: FormData) {
                    OR (
                      m.date = ? AND COALESCE(m.start_time, '') = COALESCE(?, '')
                      AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(?)
+                     AND m.group_id IS NOT DISTINCT FROM ?
                    )
                 ORDER BY CASE WHEN m.external_uid = ? THEN 0 ELSE 1 END, m.id
                 LIMIT 1
               )
               WHERE da.id = ?`,
-        args: [externalUid, match.date, match.time || null, match.opponent.trim(), externalUid, activityId],
-      });
-    }
+        args: [externalUid, match.date, match.time || null, match.opponent.trim(), sourceGroupId, externalUid, activityId],
+    });
+    statements.push({
+      sql: `UPDATE matches m SET finished = GREATEST(m.finished, ?)
+            FROM development_activities da
+            WHERE da.id = ? AND da.match_id = m.id`,
+      args: [playedMatch, activityId],
+    });
     for (const name of match.players) {
       const player = playersByName.get(normalizePersonName(name));
       if (!player) continue;
@@ -1760,6 +1786,7 @@ export async function syncSanktanMatchHistory(formData: FormData) {
         sql: "INSERT INTO player_competition_match_players (match_external_id, player_id) VALUES (?, ?)",
         args: [String(match.id), player.id],
       });
+      if (!playedMatch) continue;
       statements.push({
         sql: `INSERT INTO development_activity_participation
               (activity_id, player_id, attendance_status, selected, source, updated_at)
@@ -1768,6 +1795,13 @@ export async function syncSanktanMatchHistory(formData: FormData) {
                 attendance_status = 'present', selected = 1, source = 'svenskalag_sanktan',
                 updated_at = excluded.updated_at`,
         args: [activityId, player.id],
+      });
+      statements.push({
+        sql: `INSERT INTO match_players (match_id, player_id)
+              SELECT da.match_id, ? FROM development_activities da
+              WHERE da.id = ? AND da.match_id IS NOT NULL
+              ON CONFLICT (match_id, player_id) DO NOTHING`,
+        args: [player.id, activityId],
       });
     }
   }

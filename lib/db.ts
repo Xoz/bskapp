@@ -539,9 +539,9 @@ async function applyBaselineSchema(): Promise<void> {
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_observations_player ON development_observations(player_id, created_at DESC)`);
   await tryExec(`CREATE INDEX IF NOT EXISTS idx_development_observations_activity ON development_observations(activity_id, created_at DESC)`);
 
-  // Befintliga Svenska Lag-källor blir kontext i den nya kärnan. Ingen kalender,
-  // match eller närvaro kopieras till en ny sanningskälla; raderna nedan är
-  // stabila referenser som kan kompletteras med tema, observation och uttagning.
+  // Befintliga externa källor normaliseras till appens egna aktivitets- och
+  // matchobjekt. Importtabellerna är spårbar staging; produktvyer läser de
+  // kanoniska tabellerna nedan.
   await getClient().unsafe(`
     INSERT INTO development_activities (
       id, activity_date, start_time, activity_type, title,
@@ -946,6 +946,216 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("ALTER TABLE match_player_evaluations ALTER COLUMN self_comparison DROP NOT NULL");
     await getClient().unsafe("ALTER TABLE match_player_evaluations ALTER COLUMN match_impact DROP NOT NULL");
     await getClient().unsafe("ALTER TABLE match_player_evaluations ADD COLUMN IF NOT EXISTS skipped INTEGER NOT NULL DEFAULT 0");
+  } },
+  { id: "0007-canonical-played-matches", run: async () => {
+    // Svenska Lag-tabellerna är importlogg. Varje importerad spelad match får
+    // också en kanonisk matchrad, oavsett om den spelades med Gul eller Grön.
+    await getClient().unsafe(`
+      INSERT INTO matches (
+        date, start_time, opponent, home_away, match_type, level, location,
+        group_id, source, external_uid, finished
+      )
+      SELECT pcm.match_date, pcm.start_time, pcm.opponent, pcm.home_away,
+             'seriespel', pcm.level::text, COALESCE(pcm.location, ''),
+             g.id, 'svenskalag_sanktan', 'sanktan:' || pcm.external_id,
+             CASE WHEN pcm.match_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+                        AND EXISTS (
+                          SELECT 1 FROM player_competition_match_players played
+                          WHERE played.match_external_id = pcm.external_id
+                        )
+                  THEN 1 ELSE 0 END
+      FROM player_competition_matches pcm
+      LEFT JOIN groups g
+        ON g.group_type = 'subgroup' AND g.active = 1 AND g.name = pcm.source_team
+      WHERE pcm.competition = 'sanktan'
+        AND NOT EXISTS (
+          SELECT 1 FROM matches existing
+          WHERE existing.date = pcm.match_date
+            AND COALESCE(existing.start_time, '') = COALESCE(pcm.start_time, '')
+            AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+            AND existing.group_id IS NOT DISTINCT FROM g.id
+        )
+      ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
+        date = excluded.date, start_time = excluded.start_time,
+        opponent = excluded.opponent, home_away = excluded.home_away,
+        level = excluded.level, location = excluded.location,
+        group_id = excluded.group_id, finished = GREATEST(matches.finished, excluded.finished)
+    `);
+
+    // En match kan redan vara skapad via kalender eller manuellt. Behåll den
+    // raden och låt Svenska Lag-aktiviteten peka på samma match i stället för
+    // att skapa ett parallellt objekt.
+    await getClient().unsafe(`
+      UPDATE development_activities legacy_activity
+      SET match_id = NULL
+      FROM player_competition_matches pcm
+      LEFT JOIN groups g
+        ON g.group_type = 'subgroup' AND g.active = 1 AND g.name = pcm.source_team
+      CROSS JOIN LATERAL (
+        SELECT m.id
+        FROM matches m
+        WHERE m.external_uid = 'sanktan:' || pcm.external_id
+           OR (
+             m.date = pcm.match_date
+             AND COALESCE(m.start_time, '') = COALESCE(pcm.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+             AND m.group_id IS NOT DISTINCT FROM g.id
+           )
+        ORDER BY CASE WHEN m.external_uid = 'sanktan:' || pcm.external_id THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE legacy_activity.match_id = linked.id
+        AND legacy_activity.external_key <> 'sanktan:' || pcm.external_id
+        AND pcm.competition = 'sanktan'
+    `);
+    await getClient().unsafe(`
+      UPDATE development_activities da
+      SET match_id = linked.id
+      FROM player_competition_matches pcm
+      LEFT JOIN groups g
+        ON g.group_type = 'subgroup' AND g.active = 1 AND g.name = pcm.source_team
+      CROSS JOIN LATERAL (
+        SELECT m.id
+        FROM matches m
+        WHERE m.external_uid = 'sanktan:' || pcm.external_id
+           OR (
+             m.date = pcm.match_date
+             AND COALESCE(m.start_time, '') = COALESCE(pcm.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i')) = lower(pcm.opponent)
+             AND m.group_id IS NOT DISTINCT FROM g.id
+           )
+        ORDER BY CASE WHEN m.external_uid = 'sanktan:' || pcm.external_id THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE da.external_key = 'sanktan:' || pcm.external_id
+        AND pcm.competition = 'sanktan'
+    `);
+    await getClient().unsafe(`
+      UPDATE matches m SET finished = 1
+      FROM development_activities da
+      WHERE da.match_id = m.id AND da.external_source = 'svenskalag_sanktan'
+        AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+        AND EXISTS (
+          SELECT 1 FROM player_competition_match_players played
+          WHERE 'sanktan:' || played.match_external_id = da.external_key
+        )
+    `);
+    await getClient().unsafe(`
+      INSERT INTO match_players (match_id, player_id)
+      SELECT da.match_id, pcmp.player_id
+      FROM player_competition_match_players pcmp
+      JOIN development_activities da
+        ON da.external_key = 'sanktan:' || pcmp.match_external_id
+      WHERE da.match_id IS NOT NULL
+        AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+      ON CONFLICT (match_id, player_id) DO NOTHING
+    `);
+
+    // Även närvaroexportens spelade matcher går in i samma matchtabeller.
+    // Om detaljhistoriken redan har skapat matchen återanvänds den på identitet.
+    await getClient().unsafe(`
+      INSERT INTO matches (
+        date, start_time, opponent, home_away, match_type, group_id,
+        source, external_uid, finished
+      )
+      SELECT da.activity_date, da.start_time,
+             regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'),
+             CASE WHEN da.title ~* '^Borta mot' THEN 'away' ELSE 'home' END,
+             'seriespel', da.group_id, 'svenskalag_attendance',
+             'attendance:' || replace(da.external_key, 'svenskalag:', ''), 1
+      FROM development_activities da
+      WHERE da.external_source = 'svenskalag_attendance'
+        AND da.activity_type = 'match'
+        AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+        AND EXISTS (
+          SELECT 1 FROM development_activity_participation ap
+          WHERE ap.activity_id = da.id AND ap.attendance_status = 'present'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM matches existing
+          WHERE existing.date = da.activity_date
+            AND COALESCE(existing.start_time, '') = COALESCE(da.start_time, '')
+            AND lower(regexp_replace(existing.opponent, '^mot[[:space:]]+', '', 'i'))
+                = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'))
+        )
+      ON CONFLICT (external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET
+        date = excluded.date, start_time = excluded.start_time,
+        opponent = excluded.opponent, home_away = excluded.home_away, finished = 1
+    `);
+    await getClient().unsafe(`
+      INSERT INTO match_players (match_id, player_id)
+      SELECT linked.id, ap.player_id
+      FROM development_activities da
+      JOIN development_activity_participation ap
+        ON ap.activity_id = da.id AND ap.attendance_status = 'present'
+      CROSS JOIN LATERAL (
+        SELECT m.id FROM matches m
+        WHERE m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '')
+           OR (
+             m.date = da.activity_date
+             AND COALESCE(m.start_time, '') = COALESCE(da.start_time, '')
+             AND lower(regexp_replace(m.opponent, '^mot[[:space:]]+', '', 'i'))
+                 = lower(regexp_replace(da.title, '^(Match mot|Hemma mot|Borta mot)\\s+', '', 'i'))
+           )
+        ORDER BY CASE WHEN m.external_uid = 'attendance:' || replace(da.external_key, 'svenskalag:', '') THEN 0 ELSE 1 END, m.id
+        LIMIT 1
+      ) linked
+      WHERE da.external_source = 'svenskalag_attendance' AND da.activity_type = 'match'
+        AND da.activity_date <= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+      ON CONFLICT (match_id, player_id) DO NOTHING
+    `);
+  } },
+  { id: "0008-domain-invariants", run: async () => {
+    // Boolean-liknande heltal och domänvärden ska inte kunna driva iväg.
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_active_check CHECK (active IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_selection_eligible_check CHECK (selection_eligible IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE groups ADD CONSTRAINT groups_active_check CHECK (active IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE player_group_memberships ADD CONSTRAINT memberships_primary_check CHECK (is_primary IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE users ADD CONSTRAINT users_active_check CHECK (active IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE user_permissions ADD CONSTRAINT user_permissions_allowed_check CHECK (allowed IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_home_away_check CHECK (home_away IN ('home', 'away'))");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_type_check CHECK (match_type IN ('seriespel', 'cup', 'traningsmatch'))");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_scores_check CHECK ((our_score IS NULL OR our_score >= 0) AND (opponent_score IS NULL OR opponent_score >= 0))");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_flags_check CHECK (finished IN (0, 1) AND report_open IN (0, 1) AND clock_running IN (0, 1))");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_periods_check CHECK (periods BETWEEN 1 AND 9 AND period_minutes BETWEEN 1 AND 120 AND clock_period BETWEEN 1 AND 9 AND clock_offset >= 0)");
+    await getClient().unsafe(`ALTER TABLE match_players ADD CONSTRAINT match_players_nonnegative_check CHECK (
+      minutes >= 0 AND goals >= 0 AND assists >= 0 AND shots >= 0 AND shots_on_target >= 0
+      AND passes_completed >= 0 AND interceptions >= 0 AND saves >= 0
+      AND yellow_card >= 0 AND red_card >= 0
+    )`);
+    await getClient().unsafe("ALTER TABLE match_lineup ADD CONSTRAINT match_lineup_coordinates_check CHECK (x BETWEEN 0 AND 100 AND y BETWEEN 0 AND 100)");
+    await getClient().unsafe("ALTER TABLE match_subs ADD CONSTRAINT match_subs_distinct_players_check CHECK (off_player IS NULL OR on_player IS NULL OR off_player <> on_player)");
+    await getClient().unsafe("ALTER TABLE match_events ADD CONSTRAINT match_events_time_check CHECK ((match_second IS NULL OR match_second >= 0) AND (period IS NULL OR period BETWEEN 1 AND 9))");
+    await getClient().unsafe("ALTER TABLE player_self_evals ADD CONSTRAINT player_self_evals_ratings_check CHECK (fun_rating BETWEEN 1 AND 3 AND progress_rating BETWEEN 1 AND 3 AND team_rating BETWEEN 1 AND 3)");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ADD CONSTRAINT match_player_evaluations_skipped_check CHECK (skipped IN (0, 1))");
+    await getClient().unsafe(`ALTER TABLE match_player_evaluations ADD CONSTRAINT match_player_evaluations_answer_check CHECK (
+      (skipped = 1 AND self_comparison IS NULL AND match_impact IS NULL)
+      OR (skipped = 0 AND self_comparison IS NOT NULL AND match_impact IS NOT NULL)
+    )`);
+
+    // Vanliga bakåtriktade FK-läsningar behöver egna index. Ett barn får bara
+    // ha en primär grupptillhörighet även om det samtidigt tillhör flera lag.
+    await getClient().unsafe("CREATE UNIQUE INDEX idx_memberships_one_primary ON player_group_memberships(player_id) WHERE is_primary = 1");
+    await getClient().unsafe("CREATE INDEX idx_matches_group_date ON matches(group_id, date, start_time)");
+    await getClient().unsafe("CREATE INDEX idx_match_players_player ON match_players(player_id, match_id)");
+    await getClient().unsafe("CREATE INDEX idx_match_squad_player ON match_squad(player_id, match_id)");
+    await getClient().unsafe("CREATE INDEX idx_match_lineup_player ON match_lineup(player_id, match_id)");
+    await getClient().unsafe("CREATE INDEX idx_evaluations_player_date ON evaluations(player_id, date DESC)");
+    await getClient().unsafe("CREATE INDEX idx_player_self_evals_player ON player_self_evals(player_id, created_at DESC)");
+    await getClient().unsafe("CREATE INDEX idx_participation_player ON development_activity_participation(player_id, activity_id)");
+    await getClient().unsafe("CREATE INDEX idx_callups_player ON development_activity_callups(player_id, activity_id)");
+    await getClient().unsafe("CREATE INDEX idx_selection_decisions_player ON development_selection_decisions(player_id, activity_id)");
+    await getClient().unsafe("CREATE INDEX idx_competition_match_players_player ON player_competition_match_players(player_id, match_external_id)");
+    await getClient().unsafe("COMMENT ON TABLE matches IS 'Kanonisk matchtabell för manuella, kalender- och importerade matcher'");
+    await getClient().unsafe("COMMENT ON TABLE match_squad IS 'Publicerad planerad matchtrupp; inte bevis på spelad match'");
+    await getClient().unsafe("COMMENT ON TABLE match_players IS 'Kanoniskt faktiskt matchdeltagande och spelarstatistik'");
+    await getClient().unsafe("COMMENT ON TABLE match_events IS 'Tidsordnad matchlogg; match_players innehåller de aktuella aggregaten'");
+    await getClient().unsafe("COMMENT ON TABLE attendance_imports IS 'Importjournal för råa Svenska Lag-närvarofiler'");
+    await getClient().unsafe("COMMENT ON TABLE attendance_events IS 'Rå/staging från Svenska Lag; produktvyer läser normaliserade tabeller'");
+    await getClient().unsafe("COMMENT ON TABLE player_competition_match_counts IS 'Förväntade importkontrollsummor; aldrig produktkälla'");
+    await getClient().unsafe("COMMENT ON TABLE player_competition_matches IS 'Rå/staging för detaljerad Svenska Lag-matchimport; aldrig produktkälla'");
+    await getClient().unsafe("COMMENT ON TABLE player_competition_match_players IS 'Rå/staging för importerade deltagare; normaliseras till match_players'");
+    await getClient().unsafe("COMMENT ON TABLE development_activities IS 'Aktivitetskontext för planering och utveckling; match_id länkar matchaktiviteter till kanonisk match'");
   } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
