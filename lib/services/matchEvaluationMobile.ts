@@ -106,6 +106,18 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
      FROM matches m
      WHERE m.date BETWEEN to_char((now() AT TIME ZONE 'Europe/Stockholm')::date - 7, 'YYYY-MM-DD')
                       AND to_char((now() AT TIME ZONE 'Europe/Stockholm')::date + 1, 'YYYY-MM-DD')
+       AND EXISTS (
+         SELECT 1
+         FROM development_activities da
+         JOIN groups g ON g.id = da.group_id
+         WHERE da.match_id = m.id
+           AND da.external_source = 'svenskalag_sanktan'
+           AND g.group_type = 'subgroup'
+           AND lower(trim(g.name)) = 'gul'
+       )
+       AND (
+         m.date::date + COALESCE(NULLIF(m.start_time, '')::time, time '23:59')
+       ) <= (now() AT TIME ZONE 'Europe/Stockholm') + interval '15 minutes'
        AND ${scope.sql}
      ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id DESC
      LIMIT 20`,
