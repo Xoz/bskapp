@@ -55,6 +55,8 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
 - På iPhone visas de tre bedömningsvalen i bredd, orsakstaggarna i ett kompakt
   3×2-rutnät och åtgärderna på samma rad så hela formuläret ryms utan scroll.
   Föregående spelare nås med pilen i spelarhuvudet.
+- När sista spelaren sparas stängs det färdiga formuläret. Om en tidigare
+  spelare saknar bedömning öppnas i stället den första ofullständiga spelaren.
 - Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.

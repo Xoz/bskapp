@@ -177,7 +177,9 @@ struct MainSplitView: View {
             }
         case .evaluate:
             if let selectedEvaluation {
-                MatchEvaluationView(matchID: selectedEvaluation)
+                MatchEvaluationView(matchID: selectedEvaluation) {
+                    self.selectedEvaluation = nil
+                }
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Fortsätt eller starta en spelarutvärdering.", icon: "checklist")
             }

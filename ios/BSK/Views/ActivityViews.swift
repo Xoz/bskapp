@@ -1752,7 +1752,9 @@ struct MatchEvaluationList: View {
 struct MatchEvaluationView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
     let matchID: Int
+    var onComplete: (() -> Void)? = nil
     @State private var workspace: MatchEvaluationWorkspace?
     @State private var answers: [Int: MatchEvaluationAnswer] = [:]
     @State private var activeIndex = 0
@@ -2060,8 +2062,23 @@ struct MatchEvaluationView: View {
             case .queued:
                 savedMessage = "Väntar på synkning"
             }
+            finishAfterLastPlayerIfNeeded(in: currentWorkspace, advanced: advance)
         } catch {
             model.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func finishAfterLastPlayerIfNeeded(in workspace: MatchEvaluationWorkspace, advanced: Bool) {
+        guard !advanced, activeIndex == workspace.players.count - 1 else { return }
+        let incompleteIndices = workspace.players.indices.filter { index in
+            !isHandled(workspace.players[index].id)
+        }
+        if let firstIncomplete = incompleteIndices.first {
+            activeIndex = firstIncomplete
+            savedMessage = "(incompleteIndices.count) spelare kvar"
+        } else {
+            onComplete?()
+            dismiss()
         }
     }
 }
