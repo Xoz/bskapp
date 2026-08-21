@@ -21,8 +21,9 @@ export default async function TodayPage() {
     const ready = activity.has_confirmed_squad ? Number(activity.squad_count) : Number(activity.accepted_callup_count);
     return { activity, called, ready, missing: Math.max(0, 9 - ready) };
   });
-  const understaffed = staffing.filter((row) => (row.activity.has_confirmed_squad || row.called > 0) && row.missing > 0);
-  const unanswered = staffing.reduce((sum, row) => sum + Number(row.activity.pending_callup_count), 0);
+  const yellowStaffing = staffing.filter((row) => row.activity.source_team === "Gul");
+  const understaffed = yellowStaffing.filter((row) => (row.activity.has_confirmed_squad || row.called > 0) && row.missing > 0);
+  const unanswered = yellowStaffing.reduce((sum, row) => sum + Number(row.activity.pending_callup_count), 0);
   const highLoad = playerLoads.filter((player) => player.windowMatchCount >= 3).sort((a, b) => b.windowMatchCount - a.windowMatchCount);
 
   return (
@@ -51,7 +52,7 @@ export default async function TodayPage() {
         <Link href="#att-gora" className="core-panel p-4 md:p-5">
           <span className="caption" style={{ color: "var(--ink-muted)" }}>Inväntar svar</span>
           <strong className="mt-2 block text-2xl tabular-nums">{unanswered}</strong>
-          <small style={{ color: "var(--ink-secondary)" }}>spelarsvar totalt</small>
+          <small style={{ color: "var(--ink-secondary)" }}>spelarsvar för Gul</small>
         </Link>
         <Link href="#belastning" className="core-panel p-4 md:p-5">
           <span className="caption" style={{ color: "var(--ink-muted)" }}>Hög belastning</span>

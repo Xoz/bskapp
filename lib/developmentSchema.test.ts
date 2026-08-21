@@ -112,6 +112,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain('Text("VECKANS LÄGE")');
     expect(nativeActivityViews).toContain("activity.hasConfirmedSquad ? activity.squadCount : activity.acceptedCallupCount");
     expect(nativeActivityViews).toContain('$0.sourceTeam == "Gul" || $0.sourceTeam == "Grön"');
+    expect(todayPage).toContain('row.activity.source_team === "Gul"');
+    expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');
   });
 
   it("refererar inte den borttagna ELO-tabellen", () => {

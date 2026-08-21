@@ -833,7 +833,7 @@ struct TodayList: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                         statusCard(title: "Matcher", value: thisWeeksMatches.count, note: "kvar i veckan", warning: false)
                         statusCard(title: "Underbemannade", value: understaffedMatches.count, note: "färre än 9 klara", warning: !understaffedMatches.isEmpty)
-                        statusCard(title: "Inväntar svar", value: unansweredCount, note: "spelarsvar", warning: unansweredCount > 0)
+                        statusCard(title: "Inväntar svar", value: unansweredCount, note: "spelarsvar för Gul", warning: unansweredCount > 0)
                         statusCard(title: "Hög belastning", value: highLoadPlayers.count, note: "minst 3 matcher", warning: !highLoadPlayers.isEmpty)
                     }
                 }
@@ -950,11 +950,12 @@ struct TodayList: View {
     }
 
     private var unansweredCount: Int {
-        thisWeeksMatches.reduce(0) { $0 + $1.pendingCallupCount }
+        thisWeeksMatches.filter { $0.sourceTeam == "Gul" }.reduce(0) { $0 + $1.pendingCallupCount }
     }
 
     private var understaffedMatches: [ActivitySummary] {
         thisWeeksMatches.filter { activity in
+            guard activity.sourceTeam == "Gul" else { return false }
             let called = activity.acceptedCallupCount + activity.declinedCallupCount + activity.pendingCallupCount
             return (activity.hasConfirmedSquad || called > 0) && readyCount(activity) < 9
         }
