@@ -79,6 +79,7 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
 
 export type MobileActivity = {
   id: string;
+  matchId: number | null;
   date: string;
   startTime: string | null;
   type: "training" | "match" | "other";
@@ -595,6 +596,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
   const scope = activityScope(actor);
   const rows = await all<{
     id: string;
+    match_id: number | null;
     activity_date: string;
     start_time: string | null;
     activity_type: MobileActivity["type"];
@@ -605,7 +607,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     observation_count: number;
     is_primary_match: boolean;
   }>(
-    `SELECT da.id, da.activity_date, da.start_time, da.activity_type, da.title,
+    `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
             COUNT(o.id) AS observation_count,
             EXISTS (
@@ -635,6 +637,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
   );
   return rows.map((row) => ({
     id: row.id,
+    matchId: row.match_id,
     date: row.activity_date,
     startTime: row.start_time,
     type: row.activity_type,
