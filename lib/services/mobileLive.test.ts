@@ -17,6 +17,7 @@ describe("parseMobileLiveAction", () => {
       idempotencyKey: "opp-key-123",
     });
     expect(parseMobileLiveAction({ type: "undo" })).toEqual({ type: "undo" });
+    expect(parseMobileLiveAction({ type: "finish_match" })).toEqual({ type: "finish_match" });
   });
 
   it("avvisar ogiltiga klockoperationer och målkommandon", () => {

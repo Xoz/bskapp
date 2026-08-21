@@ -1,6 +1,6 @@
 import { type CurrentUser } from "../auth";
 import { all, get } from "../db";
-import { getLiveState, recordEvent, setClock, undoLastEvent } from "../live";
+import { finishMatch, getLiveState, recordEvent, setClock, undoLastEvent } from "../live";
 import { OPPONENT_GOAL } from "../liveTypes";
 import { DevelopmentServiceError } from "./development";
 
@@ -8,7 +8,8 @@ export type MobileLiveAction =
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "goal"; playerId: number; idempotencyKey: string }
   | { type: "opponent_goal"; idempotencyKey: string }
-  | { type: "undo" };
+  | { type: "undo" }
+  | { type: "finish_match" };
 
 const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,80}$/;
 const CLOCK_OPERATIONS = new Set(["start", "pause", "reset", "next_period"]);
@@ -40,6 +41,7 @@ export function parseMobileLiveAction(input: unknown): MobileLiveAction {
     return { type: "opponent_goal", idempotencyKey: action.idempotencyKey };
   }
   if (action.type === "undo") return { type: "undo" };
+  if (action.type === "finish_match") return { type: "finish_match" };
   throw new DevelopmentServiceError("invalid", "Okänd matchåtgärd.", 400);
 }
 
@@ -103,6 +105,8 @@ export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number,
     await recordEvent(matchId, null, OPPONENT_GOAL, actor.name, `mobile-${actor.id}`, action.idempotencyKey);
   } else if (action.type === "undo") {
     await undoLastEvent(matchId, null, true);
+  } else if (action.type === "finish_match") {
+    await finishMatch(matchId);
   } else {
     throw new DevelopmentServiceError("invalid", "Okänd matchåtgärd.", 400);
   }

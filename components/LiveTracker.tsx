@@ -62,7 +62,6 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
   const [queuedCount, setQueuedCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
   const reclaimedRef = useRef(false);
-  const autoFinishedRef = useRef(false);
   const reporterIdRef = useRef("");
   // Sortering "mest aktiva först" – frusen medan man trycker så knapparna inte hoppar
   const lastTapRef = useRef(0);
@@ -254,16 +253,6 @@ export default function LiveTracker({ code, initial, isCoach = false, coachName 
   const uncoveredFields = STAT_FIELDS.filter((f) => !coveredStats.has(f.id));
   // Matchen har inte startat ännu (period 1, klockan orörd och stillastående).
   const isMatchStart = !live.clockRunning && live.clockSeconds === 0 && live.period === 1;
-
-  // Auto-avslut: 5 min efter sista periodens sluttid
-  useEffect(() => {
-    if (!isCoach || live.finished || autoFinishedRef.current) return;
-    const autoFinishThreshold = live.periodMinutes * 60 + 300;
-    if (live.period >= live.periods && clockNow >= autoFinishThreshold) {
-      autoFinishedRef.current = true;
-      post({ type: "finish_match" });
-    }
-  }, [isCoach, live.finished, live.period, live.periods, live.periodMinutes, clockNow, post]);
 
   // Automatisk halvtid/periodpaus-sammanfattning när perioden ökar
   useEffect(() => {

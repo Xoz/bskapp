@@ -1340,6 +1340,7 @@ struct MatchCenterView: View {
     @State private var isMutating = false
     @State private var showScorers = false
     @State private var showReset = false
+    @State private var showFinish = false
 
     var body: some View {
         Group {
@@ -1375,13 +1376,19 @@ struct MatchCenterView: View {
             Button("Nollställ matchklockan", role: .destructive) { Task { await send(.clock("reset")) } }
             Button("Avbryt", role: .cancel) {}
         }
+        .confirmationDialog("Avsluta matchen?", isPresented: $showFinish, titleVisibility: .visible) {
+            Button("Avsluta match", role: .destructive) { Task { await send(.finish) } }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Matchklockan stoppas och rapporteringen stängs för alla.")
+        }
     }
 
     private func scoreCard(_ state: LiveMatchState) -> some View {
         VStack(spacing: 13) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("LIVE MATCH").font(.system(size: 10, weight: .black)).tracking(1.5).foregroundStyle(BSKTheme.accent)
+                    Text(state.finished ? "MATCH SLUT" : "LIVE MATCH").font(.system(size: 10, weight: .black)).tracking(1.5).foregroundStyle(BSKTheme.accent)
                     Text(title).font(.headline).foregroundStyle(.white).lineLimit(1)
                 }
                 Spacer()
@@ -1415,7 +1422,7 @@ struct MatchCenterView: View {
                 Label("Period \(state.period)", systemImage: "timer").font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
                 Spacer()
                 Circle().fill(state.clockRunning ? BSKTheme.accent : BSKTheme.muted).frame(width: 7, height: 7)
-                Text(state.clockRunning ? "IGÅNG" : elapsed >= limit ? "PERIOD KLAR" : "PAUS")
+                Text(state.finished ? "MATCH SLUT" : state.clockRunning ? (elapsed >= limit ? "TILLÄGGSTID" : "IGÅNG") : "PAUS")
                     .font(.system(size: 9, weight: .black)).tracking(1).foregroundStyle(BSKTheme.secondary)
             }
             Text(clockText(elapsed))
@@ -1429,7 +1436,7 @@ struct MatchCenterView: View {
                     Label(state.clockRunning ? "Pausa" : "Starta", systemImage: state.clockRunning ? "pause.fill" : "play.fill")
                         .font(.caption.bold()).frame(maxWidth: .infinity).frame(height: 34)
                 }
-                .buttonStyle(.borderedProminent).tint(BSKTheme.accent).disabled(isMutating || state.finished || elapsed >= limit)
+                .buttonStyle(.borderedProminent).tint(BSKTheme.accent).disabled(isMutating || state.finished)
 
                 if state.period < state.periods {
                     Button { Task { await send(.clock("next_period")) } } label: {
@@ -1444,13 +1451,17 @@ struct MatchCenterView: View {
                 .buttonStyle(.bordered).tint(BSKTheme.secondary).disabled(isMutating || state.finished)
                 .accessibilityLabel("Nollställ klockan")
             }
+            if state.period >= state.periods, !state.finished {
+                Button { showFinish = true } label: {
+                    Label("Avsluta match", systemImage: "checkered.flag")
+                        .font(.caption.bold()).frame(maxWidth: .infinity).frame(height: 34)
+                }
+                .buttonStyle(.bordered).tint(BSKTheme.danger).disabled(isMutating)
+            }
         }
         .padding(10)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
-        .onChange(of: elapsed) { _, seconds in
-            if seconds >= limit, state.clockRunning, !isMutating { Task { await send(.clock("pause")) } }
-        }
     }
 
     private func goalControls(_ state: LiveMatchState) -> some View {
@@ -1548,7 +1559,7 @@ struct MatchCenterView: View {
 
     private func displayedSeconds(_ state: LiveMatchState, at date: Date) -> Int {
         let live = state.clockRunning ? max(0, Int(date.timeIntervalSince(loadedAt))) : 0
-        return min(state.clockSeconds + live, state.periodMinutes * 60)
+        return state.clockSeconds + live
     }
 
     private func clockText(_ seconds: Int) -> String {

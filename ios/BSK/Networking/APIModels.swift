@@ -247,6 +247,7 @@ struct LiveMatchCommand: Encodable {
     }
 
     static let undo = Self(type: "undo", op: nil, playerId: nil, idempotencyKey: nil)
+    static let finish = Self(type: "finish_match", op: nil, playerId: nil, idempotencyKey: nil)
 }
 
 struct ObservationCommand: Codable, Identifiable {

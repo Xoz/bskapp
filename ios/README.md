@@ -39,6 +39,9 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
   avspark. Den visar då `SAMLING` och räknar ned till matchstart.
 - När matchcentret är öppet hämtas serverns läge var tionde sekund, så ändringar
   från en annan tränare når denna enhets matchcenter och Live Activity.
+- Periodklockan fortsätter efter ordinarie periodtid tills tränaren pausar den;
+  domarens tilläggstid kapas aldrig automatiskt. I sista perioden avslutas
+  matchen uttryckligen med `Avsluta match`.
 - Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.
