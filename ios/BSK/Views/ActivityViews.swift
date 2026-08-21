@@ -1772,7 +1772,6 @@ struct MatchEvaluationView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .background(BSKTheme.background)
-                .safeAreaInset(edge: .bottom) { navigationBar(workspace) }
             } else if workspace != nil {
                 ContentUnavailableView("Ingen matchtrupp", systemImage: "person.3", description: Text("Lägg spelare i truppen före utvärderingen."))
             } else {
@@ -1857,8 +1856,8 @@ struct MatchEvaluationView: View {
 
     private func playerCard(_ player: MatchEvaluationWorkspace.Player) -> some View {
         let answer = answers[player.id] ?? blankAnswer(player)
-        return VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 16 : 24) {
-            HStack(spacing: 16) {
+        return VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 9 : 24) {
+            HStack(spacing: horizontalSizeClass == .compact ? 10 : 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(LinearGradient(colors: [BSKTheme.accent, BSKTheme.accent.opacity(0.68)], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -1866,7 +1865,7 @@ struct MatchEvaluationView: View {
                         .font(.title.bold())
                         .foregroundStyle(.black.opacity(0.78))
                 }
-                .frame(width: horizontalSizeClass == .compact ? 52 : 68, height: horizontalSizeClass == .compact ? 52 : 68)
+                .frame(width: horizontalSizeClass == .compact ? 44 : 68, height: horizontalSizeClass == .compact ? 44 : 68)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("BEDÖM SPELAREN").font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.muted)
@@ -1876,6 +1875,22 @@ struct MatchEvaluationView: View {
                     }
                 }
                 Spacer()
+                if activeIndex > 0 {
+                    Button {
+                        activeIndex -= 1
+                        savedMessage = nil
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(BSKTheme.secondary)
+                            .frame(width: 36, height: 36)
+                            .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(BSKTheme.border))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSaving)
+                    .accessibilityLabel("Föregående spelare")
+                }
                 if answer.skipped {
                     Label("Överhoppad", systemImage: "forward.fill")
                         .font(.caption.bold())
@@ -1914,94 +1929,68 @@ struct MatchEvaluationView: View {
                     update(player.id) { $0.reasonTag = value }
                 }
 
-                Button {
-                    Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
-                } label: {
-                    HStack(spacing: 9) {
-                        if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
-                        Text(activeIndex < (workspace?.players.count ?? 1) - 1 ? "Spara och nästa spelare" : "Spara utvärderingen")
-                        Image(systemName: activeIndex < (workspace?.players.count ?? 1) - 1 ? "arrow.right.circle.fill" : "checkmark.circle.fill")
+                Group {
+                    if horizontalSizeClass == .compact {
+                        HStack(spacing: 8) {
+                            saveButton
+                            skipButton(player.id)
+                        }
+                    } else {
+                        VStack(spacing: 10) {
+                            saveButton
+                            skipButton(player.id)
+                        }
                     }
-                    .font(.headline)
-                    .foregroundStyle(BSKTheme.backgroundDeep)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 }
-                .buttonStyle(.plain)
-                .disabled(isSaving)
-                .opacity(isSaving ? 0.5 : 1)
-
-                Button {
-                    update(player.id) {
-                        $0.selfComparison = nil
-                        $0.matchImpact = nil
-                        $0.reasonTag = ""
-                        $0.skipped = true
-                    }
-                    Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
-                } label: {
-                    Label(
-                        activeIndex < (workspace?.players.count ?? 1) - 1 ? "Hoppa över och gå vidare" : "Hoppa över spelaren",
-                        systemImage: "forward.fill"
-                    )
-                        .font(.subheadline.bold())
-                        .foregroundStyle(BSKTheme.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
-                }
-                .buttonStyle(.plain)
-                .disabled(isSaving)
-                .opacity(isSaving ? 0.5 : 1)
             }
         }
-        .padding(horizontalSizeClass == .compact ? 14 : 22)
+        .padding(horizontalSizeClass == .compact ? 11 : 22)
         .background(BSKTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
     }
 
-    private func navigationBar(_ workspace: MatchEvaluationWorkspace) -> some View {
-        HStack(spacing: 10) {
-            Button {
-                activeIndex = max(0, activeIndex - 1)
-                savedMessage = nil
-            } label: {
-                Label("Föregående", systemImage: "chevron.left")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(BSKTheme.secondary)
-                    .padding(.horizontal, 14)
-                    .frame(height: 50)
-                    .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(BSKTheme.border))
+    private var saveButton: some View {
+        Button {
+            Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
+        } label: {
+            HStack(spacing: 6) {
+                if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
+                Text(activeIndex < (workspace?.players.count ?? 1) - 1 ? "Spara & nästa" : "Spara")
+                Image(systemName: activeIndex < (workspace?.players.count ?? 1) - 1 ? "arrow.right.circle.fill" : "checkmark.circle.fill")
             }
-            .buttonStyle(.plain)
-            .disabled(activeIndex == 0 || isSaving)
-            .opacity(activeIndex == 0 || isSaving ? 0.42 : 1)
-
-            Button {
-                Task { await save(advance: activeIndex < workspace.players.count - 1) }
-            } label: {
-                HStack(spacing: 8) {
-                    if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
-                    Text(activeIndex == workspace.players.count - 1 ? "Slutför" : "Nästa spelare")
-                    Image(systemName: activeIndex == workspace.players.count - 1 ? "checkmark.circle.fill" : "arrow.right.circle.fill")
-                }
-                .font(.subheadline.bold())
-                .foregroundStyle(BSKTheme.backgroundDeep)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(isSaving)
-            .opacity(isSaving ? 0.42 : 1)
+            .font(.subheadline.bold())
+            .foregroundStyle(BSKTheme.backgroundDeep)
+            .frame(maxWidth: .infinity)
+            .frame(height: 46)
+            .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) { Rectangle().fill(BSKTheme.border).frame(height: 1) }
+        .buttonStyle(.plain)
+        .disabled(isSaving)
+        .opacity(isSaving ? 0.5 : 1)
+    }
+
+    private func skipButton(_ playerID: Int) -> some View {
+        Button {
+            update(playerID) {
+                $0.selfComparison = nil
+                $0.matchImpact = nil
+                $0.reasonTag = ""
+                $0.skipped = true
+            }
+            Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
+        } label: {
+            Label("Hoppa över", systemImage: "forward.fill")
+                .font(.subheadline.bold())
+                .foregroundStyle(BSKTheme.secondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
+        }
+        .buttonStyle(.plain)
+        .disabled(isSaving)
+        .opacity(isSaving ? 0.5 : 1)
     }
 
     private var handledCount: Int { answers.values.filter(isHandled).count }
@@ -2078,6 +2067,7 @@ struct MatchEvaluationView: View {
 }
 
 private struct ChoiceRow: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let title: String
     let systemImage: String
     let values: [String]
@@ -2086,13 +2076,23 @@ private struct ChoiceRow: View {
     let select: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 6 : 11) {
             Label(title, systemImage: systemImage)
                 .font(.subheadline.bold())
                 .foregroundStyle(BSKTheme.secondary)
-            VStack(spacing: 8) {
-                ForEach(values.indices, id: \.self) { index in
-                    choiceButton(value: values[index], label: labels[index])
+            Group {
+                if horizontalSizeClass == .compact {
+                    HStack(spacing: 6) {
+                        ForEach(values.indices, id: \.self) { index in
+                            choiceButton(value: values[index], label: labels[index])
+                        }
+                    }
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(values.indices, id: \.self) { index in
+                            choiceButton(value: values[index], label: labels[index])
+                        }
+                    }
                 }
             }
         }
@@ -2102,17 +2102,17 @@ private struct ChoiceRow: View {
     private func choiceButton(value: String, label: String) -> some View {
         let selected = selection == value
         Button { select(value) } label: {
-            HStack(spacing: 11) {
+            HStack(spacing: horizontalSizeClass == .compact ? 5 : 11) {
                 Image(systemName: selected ? "checkmark.square.fill" : "square")
-                    .font(.title3.bold())
+                    .font((horizontalSizeClass == .compact ? Font.body : Font.title3).bold())
                     .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
                 Text(label)
-                    .font(.subheadline.bold())
+                    .font(horizontalSizeClass == .compact ? .caption.bold() : .subheadline.bold())
                     .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
-                Spacer()
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 48)
+            .padding(.horizontal, horizontalSizeClass == .compact ? 7 : 14)
+            .frame(maxWidth: .infinity, minHeight: horizontalSizeClass == .compact ? 40 : 48)
             .background(selected ? BSKTheme.accent.opacity(0.13) : BSKTheme.elevated)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
@@ -2126,6 +2126,7 @@ private struct ChoiceRow: View {
 }
 
 private struct ReasonTagChoices: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let options = [
         ("", "Ingen särskild"),
         ("decisions", "Beslut"),
@@ -2138,26 +2139,29 @@ private struct ReasonTagChoices: View {
     let select: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 6 : 11) {
             Label("Vad påverkade mest?", systemImage: "scope")
                 .font(.subheadline.bold())
                 .foregroundStyle(BSKTheme.secondary)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: horizontalSizeClass == .compact ? 3 : 2),
+                spacing: horizontalSizeClass == .compact ? 6 : 8
+            ) {
                 ForEach(options, id: \.0) { value, label in
                     let selected = selection == value
                     Button { select(value) } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: horizontalSizeClass == .compact ? 4 : 8) {
                             Image(systemName: selected ? "checkmark.square.fill" : "square")
-                                .font(.body.bold())
+                                .font((horizontalSizeClass == .compact ? Font.caption : Font.body).bold())
                                 .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
                             Text(label)
-                                .font(.caption.bold())
+                                .font(horizontalSizeClass == .compact ? .system(size: 10, weight: .bold) : .caption.bold())
                                 .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, 11)
-                        .frame(minHeight: 44)
+                        .padding(.horizontal, horizontalSizeClass == .compact ? 5 : 11)
+                        .frame(minHeight: horizontalSizeClass == .compact ? 36 : 44)
                         .background(selected ? BSKTheme.accent.opacity(0.13) : BSKTheme.elevated)
                         .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                         .overlay(
