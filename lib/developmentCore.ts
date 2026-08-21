@@ -207,6 +207,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
      LEFT JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE ${scope.sql}
+       AND (da.activity_type <> 'match' OR da.match_id IS NOT NULL)
        ${sourceFilter}
      GROUP BY da.id, m.level, g.group_type, g.name
      ORDER BY

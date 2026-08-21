@@ -42,6 +42,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment.slice(activitiesStart, selectionStart)).not.toContain("await run(");
     expect(mobileDevelopment.slice(selectionStart, workspaceStart)).not.toContain("await run(");
     expect(mobileDevelopment).not.toContain("ensureManualMatchActivities");
+    expect(mobileDevelopment.slice(activitiesStart, selectionStart)).toContain("da.match_id IS NOT NULL");
   });
 
   it("visar canonical Gul-matcher och gör upsert på match-id", () => {
@@ -64,6 +65,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).toContain("FROM match_players mp");
     expect(developmentCore).toContain("FROM match_players mp");
     expect(schema).toContain('id: "0007-canonical-played-matches"');
+    expect(schema).toContain('id: "0009-correct-erikslund-group"');
     expect(schema).toContain("INSERT INTO match_players (match_id, player_id)");
   });
 

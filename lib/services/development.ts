@@ -764,7 +764,10 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      WHERE ${scope.sql}
        AND (
          da.activity_type <> 'match'
-         OR EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
+         OR (
+           da.match_id IS NOT NULL
+           AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
+         )
        )
      GROUP BY da.id
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST

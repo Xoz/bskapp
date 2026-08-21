@@ -1157,6 +1157,28 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("COMMENT ON TABLE player_competition_match_players IS 'Rå/staging för importerade deltagare; normaliseras till match_players'");
     await getClient().unsafe("COMMENT ON TABLE development_activities IS 'Aktivitetskontext för planering och utveckling; match_id länkar matchaktiviteter till kanonisk match'");
   } },
+  { id: "0009-correct-erikslund-group", run: async () => {
+    // Den borttagna kalenderhändelsen låg kvar som Gul trots att den tillhör
+    // Grön. Behåll matchhistoriken men korrigera ägarskapet enligt lagbeslutet.
+    await getClient().unsafe(`
+      UPDATE matches match
+      SET group_id = green_group.id
+      FROM groups green_group
+      WHERE green_group.name = 'Grön'
+        AND green_group.group_type = 'subgroup'
+        AND green_group.active = 1
+        AND match.external_uid = 'cal20024467-40600@svenskalag.se'
+        AND match.date = '2026-08-21'
+    `);
+    await getClient().unsafe(`
+      UPDATE development_activities activity
+      SET group_id = match.group_id
+      FROM matches match
+      WHERE activity.match_id = match.id
+        AND match.external_uid = 'cal20024467-40600@svenskalag.se'
+        AND match.date = '2026-08-21'
+    `);
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;
