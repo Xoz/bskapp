@@ -44,6 +44,10 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
   matchen uttryckligen med `Avsluta match`.
 - När matchen avslutas försvinner den direkt från Idag och visas under
   Utvärdera för spelarbedömning.
+- Utvärderingen använder synliga kryssval för nivå, matchpåverkan och orsak;
+  inga dropdown-menyer behövs i spelarflödet.
+- `Nästa spelare` går alltid att använda; ett ofullständigt svar ligger kvar i
+  utkastet och kan slutföras när tränaren går tillbaka.
 - Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.

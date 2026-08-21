@@ -1884,8 +1884,15 @@ struct MatchEvaluationView: View {
             }
 
             if answer.skipped {
-                Button("Bedöm spelaren istället") { update(player.id) { $0.skipped = false } }
-                    .buttonStyle(.bordered)
+                Button { update(player.id) { $0.skipped = false } } label: {
+                    Label("Bedöm spelaren istället", systemImage: "arrow.uturn.backward.circle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.backgroundDeep)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
             } else {
                 ChoiceRow(
                     title: "Jämfört med sin vanliga nivå",
@@ -1903,39 +1910,27 @@ struct MatchEvaluationView: View {
                     selection: answer.matchImpact
                 ) { value in update(player.id) { $0.matchImpact = value } }
 
-                HStack {
-                    Label("Vad påverkade mest?", systemImage: "scope")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(BSKTheme.secondary)
-                    Spacer()
-                    Picker("Orsakstagg", selection: Binding(
-                        get: { answers[player.id]?.reasonTag ?? "" },
-                        set: { value in update(player.id) { $0.reasonTag = value } }
-                    )) {
-                        Text("Ingen tagg").tag("")
-                        Text("Beslut").tag("decisions")
-                        Text("Försvar").tag("defence")
-                        Text("Anfall").tag("attack")
-                        Text("Arbetsinsats").tag("effort")
-                        Text("Självförtroende").tag("confidence")
-                    }
-                    .tint(BSKTheme.accent)
+                ReasonTagChoices(selection: answer.reasonTag) { value in
+                    update(player.id) { $0.reasonTag = value }
                 }
-                .padding(14)
-                .background(BSKTheme.elevated)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                Button("Hoppa över spelaren") {
+                Button {
                     update(player.id) {
                         $0.selfComparison = nil
                         $0.matchImpact = nil
                         $0.reasonTag = ""
                         $0.skipped = true
                     }
+                } label: {
+                    Label("Hoppa över spelaren", systemImage: "forward.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
                 }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
-                .tint(BSKTheme.muted)
+                .buttonStyle(.plain)
             }
         }
         .padding(horizontalSizeClass == .compact ? 14 : 22)
@@ -1946,22 +1941,39 @@ struct MatchEvaluationView: View {
 
     private func navigationBar(_ workspace: MatchEvaluationWorkspace) -> some View {
         HStack(spacing: 10) {
-            Button("Föregående") {
+            Button {
                 activeIndex = max(0, activeIndex - 1)
                 savedMessage = nil
+            } label: {
+                Label("Föregående", systemImage: "chevron.left")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(BSKTheme.secondary)
+                    .padding(.horizontal, 14)
+                    .frame(height: 50)
+                    .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(BSKTheme.border))
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .disabled(activeIndex == 0 || isSaving)
+            .opacity(activeIndex == 0 || isSaving ? 0.42 : 1)
 
-            Button(activeIndex == workspace.players.count - 1 ? "Slutför" : "Spara och nästa") {
+            Button {
                 Task { await save(advance: activeIndex < workspace.players.count - 1) }
+            } label: {
+                HStack(spacing: 8) {
+                    if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
+                    Text(activeIndex == workspace.players.count - 1 ? "Slutför" : "Nästa spelare")
+                    Image(systemName: activeIndex == workspace.players.count - 1 ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+                }
+                .font(.subheadline.bold())
+                .foregroundStyle(BSKTheme.backgroundDeep)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(BSKTheme.accent)
-            .disabled(!isHandled(workspace.players[activeIndex].id) || isSaving)
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.plain)
+            .disabled((activeIndex == workspace.players.count - 1 && !isHandled(workspace.players[activeIndex].id)) || isSaving)
+            .opacity((activeIndex == workspace.players.count - 1 && !isHandled(workspace.players[activeIndex].id)) || isSaving ? 0.42 : 1)
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -2053,7 +2065,7 @@ private struct ChoiceRow: View {
             Label(title, systemImage: systemImage)
                 .font(.subheadline.bold())
                 .foregroundStyle(BSKTheme.secondary)
-            HStack(spacing: 7) {
+            VStack(spacing: 8) {
                 ForEach(values.indices, id: \.self) { index in
                     choiceButton(value: values[index], label: labels[index])
                 }
@@ -2063,20 +2075,75 @@ private struct ChoiceRow: View {
 
     @ViewBuilder
     private func choiceButton(value: String, label: String) -> some View {
-        if selection == value {
-            Button(label) { select(value) }
-                .font(.caption.bold())
-                .buttonStyle(.borderedProminent)
-                .tint(BSKTheme.accent)
-                .frame(maxWidth: .infinity)
-                .controlSize(.large)
-        } else {
-            Button(label) { select(value) }
-                .font(.caption.bold())
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
-                .controlSize(.large)
-                .tint(BSKTheme.secondary)
+        let selected = selection == value
+        Button { select(value) } label: {
+            HStack(spacing: 11) {
+                Image(systemName: selected ? "checkmark.square.fill" : "square")
+                    .font(.title3.bold())
+                    .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
+                Text(label)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .background(selected ? BSKTheme.accent.opacity(0.13) : BSKTheme.elevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(selected ? BSKTheme.accent.opacity(0.65) : BSKTheme.border, lineWidth: selected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct ReasonTagChoices: View {
+    private let options = [
+        ("", "Ingen särskild"),
+        ("decisions", "Beslut"),
+        ("defence", "Försvar"),
+        ("attack", "Anfall"),
+        ("effort", "Arbetsinsats"),
+        ("confidence", "Självförtroende"),
+    ]
+    let selection: String
+    let select: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label("Vad påverkade mest?", systemImage: "scope")
+                .font(.subheadline.bold())
+                .foregroundStyle(BSKTheme.secondary)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(options, id: \.0) { value, label in
+                    let selected = selection == value
+                    Button { select(value) } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: selected ? "checkmark.square.fill" : "square")
+                                .font(.body.bold())
+                                .foregroundStyle(selected ? BSKTheme.accent : BSKTheme.muted)
+                            Text(label)
+                                .font(.caption.bold())
+                                .foregroundStyle(selected ? Color.white : BSKTheme.secondary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 11)
+                        .frame(minHeight: 44)
+                        .background(selected ? BSKTheme.accent.opacity(0.13) : BSKTheme.elevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .stroke(selected ? BSKTheme.accent.opacity(0.65) : BSKTheme.border)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
         }
     }
 }
