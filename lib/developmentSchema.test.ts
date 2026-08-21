@@ -104,4 +104,12 @@ describe("utvecklingskärnans kontrakt", () => {
   it("refererar inte den borttagna ELO-tabellen", () => {
     expect(queries).not.toContain("FROM match_ratings");
   });
+
+  it("städar bort oanvända framtida kalendermatcher som försvunnit ur källan", () => {
+    expect(actions).toContain("m.external_uid NOT IN (${marks})");
+    expect(actions).toContain("m.source = 'calendar'");
+    expect(actions).toContain("NOT EXISTS (SELECT 1 FROM match_squad");
+    expect(actions).toContain("DELETE FROM development_activities da");
+    expect(schema).toContain('id: "0011-remove-stale-erikslund-calendar-match"');
+  });
 });

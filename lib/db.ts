@@ -1220,6 +1220,38 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("COMMENT ON COLUMN players.level_assessed_at IS 'Tidpunkt då normal- eller utmaningsnivån senast bedömdes explicit'");
     await getClient().unsafe("COMMENT ON COLUMN players.level_assessed_by IS 'Tränaren som senast bedömde normal- eller utmaningsnivån'");
   } },
+  { id: "0011-remove-stale-erikslund-calendar-match", run: async () => {
+    // Svenska Lag tog bort denna händelse ur kalenderflödet innan matchdagen.
+    // Den saknar trupp och all match-/utvecklingsdata och är därför inte historik.
+    await getClient().unsafe(`
+      DELETE FROM development_activities activity
+      USING matches match
+      WHERE activity.match_id = match.id
+        AND match.source = 'calendar'
+        AND match.external_uid = 'cal20024467-40600@svenskalag.se'
+        AND match.date = '2026-08-21'
+        AND NOT EXISTS (SELECT 1 FROM development_observations x WHERE x.activity_id = activity.id)
+        AND NOT EXISTS (SELECT 1 FROM development_activity_participation x WHERE x.activity_id = activity.id)
+        AND NOT EXISTS (SELECT 1 FROM development_activity_callups x WHERE x.activity_id = activity.id)
+        AND NOT EXISTS (SELECT 1 FROM development_selection_decisions x WHERE x.activity_id = activity.id)
+        AND NOT EXISTS (SELECT 1 FROM development_pilot_events x WHERE x.activity_id = activity.id)
+    `);
+    await getClient().unsafe(`
+      DELETE FROM matches match
+      WHERE match.source = 'calendar'
+        AND match.external_uid = 'cal20024467-40600@svenskalag.se'
+        AND match.date = '2026-08-21'
+        AND NOT EXISTS (SELECT 1 FROM development_activities x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_squad x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_players x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_events x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_lineup x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_subs x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_reporters x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_evaluation_invites x WHERE x.match_id = match.id)
+        AND NOT EXISTS (SELECT 1 FROM match_player_evaluations x WHERE x.match_id = match.id)
+    `);
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

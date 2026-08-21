@@ -1273,6 +1273,53 @@ export async function importCalendarMatches() {
     const ownNames = [await getSetting("team_name"), await getSetting("club_name")].filter(Boolean);
     const matches = extractMatches(ics, ownNames);
 
+    // Kalendern är facit även när en framtida händelse tas bort i Svenska Lag.
+    // Städa bara helt oanvända kalendermatcher; allt med trupp, matchdata eller
+    // utvecklingsdata lämnas orört så att faktisk historik aldrig försvinner.
+    const activeUids = [...new Set(matches.map((match) => match.uid).filter(Boolean))];
+    if (activeUids.length > 0) {
+      const marks = activeUids.map(() => "?").join(", ");
+      const staleMatches = await all<{ id: number }>(
+        `SELECT m.id FROM matches m
+         WHERE m.source = 'calendar' AND m.external_uid IS NOT NULL
+           AND m.date >= ? AND m.external_uid NOT IN (${marks})
+           AND NOT EXISTS (SELECT 1 FROM match_squad x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_players x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_events x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_lineup x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_subs x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_reporters x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_evaluation_invites x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_player_evaluations x WHERE x.match_id = m.id)`,
+        [swedishToday(), ...activeUids]
+      );
+      for (const stale of staleMatches) {
+        await run(
+          `DELETE FROM development_activities da
+           WHERE da.match_id = ?
+             AND NOT EXISTS (SELECT 1 FROM development_observations x WHERE x.activity_id = da.id)
+             AND NOT EXISTS (SELECT 1 FROM development_activity_participation x WHERE x.activity_id = da.id)
+             AND NOT EXISTS (SELECT 1 FROM development_activity_callups x WHERE x.activity_id = da.id)
+             AND NOT EXISTS (SELECT 1 FROM development_selection_decisions x WHERE x.activity_id = da.id)
+             AND NOT EXISTS (SELECT 1 FROM development_pilot_events x WHERE x.activity_id = da.id)`,
+          [stale.id]
+        );
+        await run(
+          `DELETE FROM matches m WHERE m.id = ?
+             AND NOT EXISTS (SELECT 1 FROM development_activities da WHERE da.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_squad x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_players x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_events x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_lineup x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_subs x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_reporters x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_evaluation_invites x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_player_evaluations x WHERE x.match_id = m.id)`,
+          [stale.id]
+        );
+      }
+    }
+
     // Flera egna lag kan vara anmälda till samma cup (skiljs åt av teamVariant, t.ex.
     // "Friendly 1"/"Friendly 2"). Varje variant får en egen matchgrupp så att laguttagning
     // inte blandas ihop mellan lagen; huvud-/tävlingslaget (teamVariant null) använder
