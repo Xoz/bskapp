@@ -510,10 +510,11 @@ private struct ActivityWorkspaceList: View {
                     )
                     .frame(maxWidth: .infinity, minHeight: 360)
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 270), spacing: 14)], spacing: 14) {
-                        ForEach(model.activities) { activity in
-                            activityLink(activity)
-                        }
+                    if !upcomingMatches.isEmpty {
+                        matchSection(title: "Kommande", matches: upcomingMatches)
+                    }
+                    if !playedMatches.isEmpty {
+                        matchSection(title: "Spelade", matches: playedMatches)
                     }
                 }
             }
@@ -524,6 +525,26 @@ private struct ActivityWorkspaceList: View {
         .navigationTitle("")
         .background(BSKBackdrop())
         .refreshable { await model.reload() }
+    }
+
+    private func matchSection(title: String, matches: [ActivitySummary]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .bottom) {
+                Text(title)
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(matches.count) \(matches.count == 1 ? "match" : "matcher")")
+                    .font(.caption)
+                    .foregroundStyle(BSKTheme.muted)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 11)], spacing: 11) {
+                ForEach(matches) { activity in
+                    activityLink(activity)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -538,50 +559,94 @@ private struct ActivityWorkspaceList: View {
     }
 
     private func activityCard(_ activity: ActivitySummary) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(BSKTheme.accent.opacity(0.13))
-                    Image(systemName: activity.type == "match" ? "sportscourt.fill" : "figure.run")
-                        .font(.title3.bold())
-                        .foregroundStyle(BSKTheme.accent)
-                }
-                .frame(width: 50, height: 50)
-                Spacer()
-                BSKStatusChip(title: activity.sourceTeam.isEmpty ? "Match" : activity.sourceTeam)
-            }
-
+        HStack(spacing: 13) {
+            dateTile(activity.date)
             VStack(alignment: .leading, spacing: 6) {
-                Text(activity.title).font(.title3.bold()).foregroundStyle(.white).lineLimit(2)
-                Label([activity.date, activity.startTime].compactMap { $0 }.joined(separator: " · "), systemImage: "calendar")
-                    .font(.caption)
-                    .foregroundStyle(BSKTheme.secondary)
-                if !activity.theme.isEmpty {
-                    Text(activity.theme).font(.caption).foregroundStyle(BSKTheme.muted).lineLimit(2)
+                HStack(spacing: 7) {
+                    Text(activity.sourceTeam.isEmpty ? "MATCH" : activity.sourceTeam.uppercased())
+                        .font(.system(size: 10, weight: .black))
+                        .tracking(0.8)
+                        .foregroundStyle(BSKTheme.backgroundDeep)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(BSKTheme.accent, in: Capsule())
+                    Spacer(minLength: 2)
+                    Text(activity.startTime ?? "--:--")
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
                 }
+
+                Text(activity.title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
                 if !activity.loanedPlayerNames.isEmpty {
                     Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
-                        .font(.caption.bold())
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(BSKTheme.accent)
-                        .lineLimit(3)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                } else {
+                    Text(activity.finished ? "Avslutad" : "Ingen Gulspelare utlånad")
+                        .font(.caption)
+                        .foregroundStyle(BSKTheme.muted)
                 }
             }
 
-            HStack {
-                Text("ÖPPNA ARBETSYTA").font(.system(size: 10, weight: .black)).tracking(1.2)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.caption.bold())
-            }
-            .foregroundStyle(BSKTheme.accent)
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(BSKTheme.muted)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
-        .background(BSKTheme.hero, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(13)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(selection == activity.id ? BSKTheme.accent : BSKTheme.border, lineWidth: selection == activity.id ? 2 : 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func dateTile(_ date: String) -> some View {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        let day = parts.count == 3 ? parts[2] : 0
+        let month = parts.count == 3 ? parts[1] : 0
+        let year = parts.count == 3 ? parts[0] % 100 : 0
+        let months = ["JAN", "FEB", "MAR", "APR", "MAJ", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
+        let monthText = (1...12).contains(month) ? months[month - 1] : ""
+
+        return VStack(spacing: 1) {
+            Text(String(format: "%02d", day))
+                .font(.system(size: 21, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+            Text("\(monthText) \(String(format: "%02d", year))")
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.6)
+                .foregroundStyle(BSKTheme.muted)
+        }
+        .frame(width: 58, height: 64)
+        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
+    }
+
+    private var upcomingMatches: [ActivitySummary] {
+        model.activities
+            .filter { !$0.finished }
+            .sorted(by: ascendingMatchOrder)
+    }
+
+    private var playedMatches: [ActivitySummary] {
+        model.activities
+            .filter(\.finished)
+            .sorted { ascendingMatchOrder($1, $0) }
+    }
+
+    private func ascendingMatchOrder(_ lhs: ActivitySummary, _ rhs: ActivitySummary) -> Bool {
+        lhs.date == rhs.date
+            ? (lhs.startTime ?? "") < (rhs.startTime ?? "")
+            : lhs.date < rhs.date
     }
 }
 
