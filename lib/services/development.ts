@@ -126,6 +126,8 @@ export type MobileActivity = {
   pendingCallupCount: number;
   squadCount: number;
   hasConfirmedSquad: boolean;
+  squadPlayerNames: string[];
+  acceptedPlayerNames: string[];
 };
 
 export type MobileSelectionMatch = {
@@ -787,6 +789,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     pending_callup_count: number;
     squad_count: number;
     has_confirmed_squad: boolean;
+    squad_player_names: string;
+    accepted_player_names: string;
   }>(
     `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
@@ -847,7 +851,17 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
             (
               EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = da.match_id)
               OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
-            ) AS has_confirmed_squad
+            ) AS has_confirmed_squad,
+            COALESCE((
+              SELECT string_agg(p.name, E'\\x1f' ORDER BY lower(p.name))
+              FROM match_squad squad JOIN players p ON p.id = squad.player_id
+              WHERE squad.match_id = da.match_id
+            ), '') AS squad_player_names,
+            COALESCE((
+              SELECT string_agg(p.name, E'\\x1f' ORDER BY lower(p.name))
+              FROM development_activity_callups callup JOIN players p ON p.id = callup.player_id
+              WHERE callup.activity_id = da.id AND callup.attendance_status = 'present'
+            ), '') AS accepted_player_names
      FROM development_activities da
      JOIN matches linked_match ON linked_match.id = da.match_id
      JOIN groups match_group ON match_group.id = da.group_id AND match_group.name IN ('Gul', 'Grön')
@@ -880,6 +894,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     pendingCallupCount: Number(row.pending_callup_count),
     squadCount: Number(row.squad_count),
     hasConfirmedSquad: row.has_confirmed_squad,
+    squadPlayerNames: row.squad_player_names ? row.squad_player_names.split("\u001f") : [],
+    acceptedPlayerNames: row.accepted_player_names ? row.accepted_player_names.split("\u001f") : [],
   }));
 }
 
@@ -915,7 +931,7 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE da.activity_type = 'match'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-       AND g.name IN ('Gul', 'Grön')
+       AND g.name = 'Gul'
        AND ${scope.sql}
      ORDER BY da.activity_date, da.start_time NULLS LAST, da.id
      LIMIT 100`,
@@ -1024,18 +1040,9 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
      LEFT JOIN match_squad ms ON ms.match_id = target.match_id AND ms.player_id = p.id
      WHERE p.active = 1 AND p.selection_eligible = 1 AND ${scope.sql}
      ORDER BY CASE
-       WHEN EXISTS (
-         SELECT 1 FROM player_group_memberships pgm
-         WHERE pgm.player_id = p.id AND pgm.group_id = target.group_id AND pgm.is_primary = 1
-       ) THEN 0
-       WHEN EXISTS (
-         SELECT 1 FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id
-         WHERE pgm.player_id = p.id AND pgm.is_primary = 1 AND g.name = 'Gul'
-       ) THEN 1
-       WHEN EXISTS (
-         SELECT 1 FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id
-         WHERE pgm.player_id = p.id AND pgm.is_primary = 1 AND g.name = 'F15'
-       ) THEN 2
+       WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
+       WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
+       WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
        ELSE 3 END, lower(p.name)`,
     [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
   );

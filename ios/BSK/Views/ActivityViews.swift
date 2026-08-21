@@ -66,6 +66,13 @@ struct ActivityList: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    let roster = activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
+                    if !roster.isEmpty {
+                        Text("\(activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"): \(roster.joined(separator: ", "))")
+                            .font(.caption)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .lineLimit(2)
+                    }
                     if !activity.loanedPlayerNames.isEmpty {
                         Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
                             .font(.caption.bold())

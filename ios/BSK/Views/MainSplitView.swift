@@ -588,13 +588,24 @@ private struct ActivityWorkspaceList: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
+                if !displayedRoster(activity).isEmpty {
+                    Text("\(rosterLabel(activity)): \(displayedRoster(activity).joined(separator: ", "))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(BSKTheme.secondary)
+                        .lineLimit(2)
+                } else {
+                    Text("Ingen trupp registrerad")
+                        .font(.caption)
+                        .foregroundStyle(BSKTheme.muted)
+                }
+
                 if !activity.loanedPlayerNames.isEmpty {
                     Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(BSKTheme.accent)
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
-                } else {
+                } else if activity.finished || activity.date < today {
                     Text(matchStatus(activity))
                         .font(.caption)
                         .foregroundStyle(BSKTheme.muted)
@@ -606,7 +617,7 @@ private struct ActivityWorkspaceList: View {
                 .foregroundStyle(BSKTheme.muted)
         }
         .padding(13)
-        .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 122, alignment: .leading)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -662,6 +673,14 @@ private struct ActivityWorkspaceList: View {
         if activity.finished { return "Avslutad" }
         if activity.date < today { return "Ej avslutad" }
         return "Ingen Gulspelare utlånad"
+    }
+
+    private func displayedRoster(_ activity: ActivitySummary) -> [String] {
+        activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
+    }
+
+    private func rosterLabel(_ activity: ActivitySummary) -> String {
+        activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"
     }
 
     private func levelColor(_ level: String?) -> Color {

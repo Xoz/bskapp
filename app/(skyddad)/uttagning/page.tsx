@@ -30,7 +30,7 @@ export default async function SelectionPage({
 
   if (!aktivitet) {
     const matches = (await getCoreActivities(100, "sanktan")).filter(
-      (activity) => activity.is_upcoming && (activity.source_team === "Gul" || activity.source_team === "Grön")
+      (activity) => activity.is_upcoming && activity.source_team === "Gul"
     );
     const weekEnd = endOfCurrentWeek(swedishToday());
     const thisWeek = matches.filter((activity) => activity.activity_date <= weekEnd);
@@ -42,7 +42,7 @@ export default async function SelectionPage({
           <p className="core-kicker">Transparent beslutsstöd</p>
           <h1 className="core-title">Uttagning</h1>
           <p className="core-lead">
-            Gul och Gröns kommande Sanktanmatcher. Öppna en match för att se kallelser, svar och hela matchtruppen.
+            Gula lagets kommande Sanktanmatcher. Öppna en match för att se kallelser och svar eller skapa ett rättvist lagförslag.
           </p>
           </div>
         </header>
@@ -81,7 +81,7 @@ export default async function SelectionPage({
   }
 
   const workspace = await getSelectionWorkspace(aktivitet);
-  if (!workspace || (workspace.activity.source_team !== "Gul" && workspace.activity.source_team !== "Grön")) redirect("/uttagning");
+  if (!workspace || workspace.activity.source_team !== "Gul") redirect("/uttagning");
   const saveAction = saveDevelopmentSelection.bind(null, workspace.activity.id);
 
   return (
@@ -103,11 +103,7 @@ export default async function SelectionPage({
             <p className="core-lead">
               Kallade spelare är markerade och deras svar visas direkt i listan.
             </p>
-            <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>
-              {workspace.activity.source_team === "Grön"
-                ? "Gröns egna spelare visas först, följt av möjliga Gul-lån."
-                : "Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån."}
-            </p>
+            <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
           </div>
         </div>
       </header>

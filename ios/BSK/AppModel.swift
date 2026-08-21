@@ -149,7 +149,9 @@ final class AppModel: ObservableObject {
                 declinedCallupCount: 2,
                 pendingCallupCount: 1,
                 squadCount: 0,
-                hasConfirmedSquad: false
+                hasConfirmedSquad: false,
+                squadPlayerNames: [],
+                acceptedPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
             )
         ]
         phase = .signedIn

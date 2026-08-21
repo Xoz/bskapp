@@ -190,6 +190,8 @@ struct ActivitySummary: Codable, Identifiable {
     let pendingCallupCount: Int
     let squadCount: Int
     let hasConfirmedSquad: Bool
+    let squadPlayerNames: [String]
+    let acceptedPlayerNames: [String]
 }
 
 struct LiveMatchState: Codable {

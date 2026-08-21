@@ -10,8 +10,6 @@ const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
 const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView.swift", import.meta.url), "utf8");
 const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
-const selectionPage = readFileSync(new URL("../app/(skyddad)/uttagning/page.tsx", import.meta.url), "utf8");
-const observePage = readFileSync(new URL("../app/(skyddad)/observera/page.tsx", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -155,12 +153,17 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain("match.hasConfirmedSquad ? match.squadCount : match.acceptedCallupCount");
   });
 
-  it("ger Grön samma matchtrupp och detaljer utan att skapa Gul-ansvar", () => {
+  it("visar truppen på Gul- och Grönkort men håller Uttagning till Gul", () => {
+    const activitiesStart = mobileDevelopment.indexOf("export async function listMobileActivities");
     const selectionStart = mobileDevelopment.indexOf("export async function listMobileSelectionMatches");
     const workspaceStart = mobileDevelopment.indexOf("export async function getMobileSelectionWorkspace", selectionStart);
-    expect(mobileDevelopment.slice(selectionStart, workspaceStart)).toContain("g.name IN ('Gul', 'Grön')");
-    expect(selectionPage).toContain('activity.source_team === "Gul" || activity.source_team === "Grön"');
-    expect(observePage).toContain('["Gul", "Grön"].includes');
+    const activities = mobileDevelopment.slice(activitiesStart, selectionStart);
+    expect(activities).toContain("match_group.name IN ('Gul', 'Grön')");
+    expect(activities).toContain("squad_player_names");
+    expect(activities).toContain("accepted_player_names");
+    expect(mobileDevelopment.slice(selectionStart, workspaceStart)).toContain("g.name = 'Gul'");
+    expect(nativeMainSplitView).toContain('activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"');
+    expect(nativeMainSplitView).toContain("activity.acceptedPlayerNames");
     expect(todayPage).toContain('row.activity.source_team === "Gul"');
     expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');
   });
