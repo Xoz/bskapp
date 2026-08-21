@@ -38,19 +38,10 @@ async function requireAccessibleMatch(actor: CurrentUser, matchId: number) {
 
 async function getMobileLiveState(matchId: number) {
   const state = await getLiveState(matchId, true);
-  const decisions = await all<{ player_id: number; decision: "selected" | "reserve" | "rested" }>(
-    `SELECT DISTINCT sd.player_id, sd.decision
-       FROM development_selection_decisions sd
-       JOIN development_activities da ON da.id = sd.activity_id
-      WHERE da.match_id = ?`,
+  const squad = (await all<{ player_id: number }>(
+    "SELECT player_id FROM match_squad WHERE match_id = ?",
     [matchId]
-  );
-  const squad = decisions.length > 0
-    ? decisions.filter((row) => row.decision === "selected").map((row) => row.player_id)
-    : (await all<{ player_id: number }>(
-        "SELECT player_id FROM match_squad WHERE match_id = ?",
-        [matchId]
-      )).map((row) => row.player_id);
+  )).map((row) => row.player_id);
   const allowed = new Set(squad);
 
   return {

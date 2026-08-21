@@ -712,6 +712,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
     preferred_level_secondary: string;
     team_names: string[];
     saved_decision: MobileSelectionCandidate["decision"] | null;
+    in_match_squad: boolean;
     callup_status: "present" | "absent" | "unknown" | null;
     selected_last_eight: number;
     selected_last_three: number;
@@ -725,6 +726,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             p.preferred_level_primary, p.preferred_level_secondary,
             ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id ORDER BY g.name) AS team_names,
             sd.decision AS saved_decision,
+            ms.player_id IS NOT NULL AS in_match_squad,
             dac.attendance_status AS callup_status,
             (SELECT COUNT(*) FROM (
                SELECT hist.id FROM development_activities hist
@@ -747,15 +749,17 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
      FROM players p
      LEFT JOIN development_selection_decisions sd ON sd.activity_id = ? AND sd.player_id = p.id
      LEFT JOIN development_activity_callups dac ON dac.activity_id = ? AND dac.player_id = p.id
+     LEFT JOIN development_activities target ON target.id = ?
+     LEFT JOIN match_squad ms ON ms.match_id = target.match_id AND ms.player_id = p.id
      WHERE p.active = 1 AND p.selection_eligible = 1 AND ${scope.sql}
      ORDER BY CASE
        WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
        WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
        WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
        ELSE 3 END, lower(p.name)`,
-    [match.date, activityId, match.date, activityId, match.date, activityId, match.date, activityId, activityId, ...scope.args]
+    [match.date, activityId, match.date, activityId, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
   );
-  const hasSyncedCallups = match.acceptedCallupCount + match.declinedCallupCount + match.pendingCallupCount > 0;
+  const hasSavedSquad = rows.some((row) => row.in_match_squad);
   return {
     match,
     candidates: rows.map((row) => {
@@ -772,7 +776,9 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         primaryLevel: row.preferred_level_primary,
         secondaryLevel: row.preferred_level_secondary,
         teamNames: row.team_names ?? [],
-        decision: hasSyncedCallups ? (currentCallupStatus ? "selected" : "rested") : (row.saved_decision ?? "rested"),
+        decision: hasSavedSquad
+          ? (row.in_match_squad ? "selected" : (row.saved_decision === "reserve" ? "reserve" : "rested"))
+          : (currentCallupStatus ? "selected" : (row.saved_decision ?? "rested")),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),
