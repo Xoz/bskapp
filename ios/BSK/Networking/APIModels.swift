@@ -293,6 +293,8 @@ struct SelectionMatchSummary: Codable, Identifiable {
     let acceptedCallupCount: Int
     let declinedCallupCount: Int
     let pendingCallupCount: Int
+    let squadCount: Int
+    let hasConfirmedSquad: Bool
     let selectionCount: Int
 }
 

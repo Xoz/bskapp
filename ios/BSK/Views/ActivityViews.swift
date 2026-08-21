@@ -1192,7 +1192,7 @@ struct SelectionList: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 8) {
-                        if match.selectionCount > 0 { Text("\(match.selectionCount) valda") }
+                        if match.hasConfirmedSquad { Text("\(match.squadCount) i truppen") }
                         let called = match.acceptedCallupCount + match.declinedCallupCount + match.pendingCallupCount
                         if called > 0 { Text("\(called) kallade") }
                     }

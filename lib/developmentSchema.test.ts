@@ -127,4 +127,14 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain('team == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent');
     expect(nativeActivityViews).toContain('activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent');
   });
+
+  it("använder match_squad som facit efter bekräftad uttagning", () => {
+    expect(mobileDevelopment).toContain("FROM match_squad squad WHERE squad.match_id = m.id");
+    expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
+    expect(mobileDevelopment).toContain('currentCallupStatus === "accepted" ? "selected"');
+    const saveStart = mobileDevelopment.indexOf("export async function saveMobileSelection");
+    const saveEnd = mobileDevelopment.indexOf("function validateCommand", saveStart);
+    expect(mobileDevelopment.slice(saveStart, saveEnd)).not.toContain("INSERT INTO development_activity_participation");
+    expect(nativeMainSplitView).toContain("match.hasConfirmedSquad ? match.squadCount : match.acceptedCallupCount");
+  });
 });

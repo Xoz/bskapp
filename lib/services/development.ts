@@ -133,6 +133,9 @@ export type MobileSelectionMatch = {
   acceptedCallupCount: number;
   declinedCallupCount: number;
   pendingCallupCount: number;
+  squadCount: number;
+  hasConfirmedSquad: boolean;
+  /** @deprecated Använd squadCount. Behålls för äldre native-klienter. */
   selectionCount: number;
 };
 
@@ -870,7 +873,8 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     accepted_callup_count: number;
     declined_callup_count: number;
     pending_callup_count: number;
-    selection_count: number;
+    squad_count: number;
+    has_confirmed_squad: boolean;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.title,
             COALESCE(g.name, '') AS source_team,
@@ -878,7 +882,11 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'), 0) AS accepted_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
-            COALESCE((SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected'), 0) AS selection_count
+            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
+            (
+              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
+              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
+            ) AS has_confirmed_squad
      FROM development_activities da
      JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
@@ -900,7 +908,9 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     acceptedCallupCount: Number(row.accepted_callup_count),
     declinedCallupCount: Number(row.declined_callup_count),
     pendingCallupCount: Number(row.pending_callup_count),
-    selectionCount: Number(row.selection_count),
+    squadCount: Number(row.squad_count),
+    hasConfirmedSquad: row.has_confirmed_squad,
+    selectionCount: Number(row.squad_count),
   }));
 }
 
@@ -1016,7 +1026,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         teamNames: row.team_names ?? [],
         decision: hasSavedSquad
           ? (row.in_match_squad ? "selected" : (row.saved_decision === "reserve" ? "reserve" : "rested"))
-          : (currentCallupStatus ? "selected" : (row.saved_decision ?? "rested")),
+          : (currentCallupStatus === "accepted" ? "selected" : (row.saved_decision ?? "rested")),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),
@@ -1066,12 +1076,6 @@ export async function saveMobileSelection(
             VALUES (?, ?, ?, ?)
             ON CONFLICT (activity_id, player_id) DO UPDATE SET decision = excluded.decision, rationale = '', decided_by = excluded.decided_by, decided_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
       args: [activityId, input.playerId, input.decision, actor.name],
-    });
-    statements.push({
-      sql: `INSERT INTO development_activity_participation (activity_id, player_id, attendance_status, selected, position, source)
-            VALUES (?, ?, 'unknown', ?, ?, 'manual')
-            ON CONFLICT (activity_id, player_id) DO UPDATE SET selected = excluded.selected, position = excluded.position, source = 'manual', updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, input.playerId, input.decision === "selected" ? 1 : 0, input.position],
     });
   }
   await batch(statements);

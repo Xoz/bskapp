@@ -779,7 +779,9 @@ private struct PremiumSelectionList: View {
 
     private func matchRow(_ match: SelectionMatchSummary) -> some View {
         let called = match.acceptedCallupCount + match.declinedCallupCount + match.pendingCallupCount
-        let missing = called > 0 ? max(0, 9 - match.acceptedCallupCount) : 0
+        let effectiveCount = match.hasConfirmedSquad ? match.squadCount : match.acceptedCallupCount
+        let missing = (match.hasConfirmedSquad || called > 0) ? max(0, 9 - effectiveCount) : 0
+        let extra = max(0, effectiveCount - 9)
 
         return HStack(spacing: 13) {
             dateTile(match.date)
@@ -809,6 +811,17 @@ private struct PremiumSelectionList: View {
                             .padding(.horizontal, 7)
                             .padding(.vertical, 4)
                             .background(BSKTheme.warning.opacity(0.12), in: Capsule())
+                    } else if extra > 0 {
+                        Text("\(extra) extra")
+                            .font(.caption2.bold())
+                            .foregroundStyle(BSKTheme.warning)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(BSKTheme.warning.opacity(0.12), in: Capsule())
+                    } else if match.hasConfirmedSquad {
+                        Text("Trupp klar")
+                            .font(.caption2.bold())
+                            .foregroundStyle(BSKTheme.accent)
                     }
 
                     Text(match.startTime ?? "--:--")
@@ -822,7 +835,19 @@ private struct PremiumSelectionList: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
-                if called > 0 {
+                if match.hasConfirmedSquad {
+                    HStack(spacing: 8) {
+                        Text("\(match.squadCount) i truppen").foregroundStyle(.white)
+                        if called > 0 {
+                            Text("\(match.acceptedCallupCount) ja").foregroundStyle(BSKTheme.accent)
+                            Text("\(match.declinedCallupCount) nej").foregroundStyle(BSKTheme.danger)
+                            Text("\(match.pendingCallupCount) väntar").foregroundStyle(BSKTheme.muted)
+                        }
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                } else if called > 0 {
                     HStack(spacing: 8) {
                         Text("\(called) kallade").foregroundStyle(BSKTheme.secondary)
                         Text("\(match.acceptedCallupCount) ja").foregroundStyle(BSKTheme.accent)
