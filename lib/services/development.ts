@@ -591,8 +591,37 @@ export async function updateMobilePlayerPreferences(
   return getMobilePlayer(actor, playerId);
 }
 
+async function ensureManualMatchActivities() {
+  await run(
+    `INSERT INTO development_activities (
+       id, activity_date, start_time, activity_type, title,
+       external_source, external_key, match_id, group_id
+     )
+     SELECT
+       'manual-match-' || m.id::text,
+       m.date,
+       m.start_time,
+       'match',
+       CASE WHEN m.home_away = 'away' THEN 'Borta mot ' ELSE 'Hemma mot ' END || m.opponent,
+       'manual_match',
+       'manual:match:' || m.id::text,
+       m.id,
+       m.group_id
+     FROM matches m
+     WHERE m.source = 'manual' AND m.group_id IS NOT NULL
+     ON CONFLICT (external_key) DO UPDATE SET
+       activity_date = excluded.activity_date,
+       start_time = excluded.start_time,
+       title = excluded.title,
+       match_id = excluded.match_id,
+       group_id = excluded.group_id,
+       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`
+  );
+}
+
 export async function listMobileActivities(actor: CurrentUser): Promise<MobileActivity[]> {
   requirePermission(actor, "view_players");
+  await ensureManualMatchActivities();
   const scope = activityScope(actor);
   const rows = await all<{
     id: string;
@@ -659,6 +688,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
 
 export async function listMobileSelectionMatches(actor: CurrentUser): Promise<MobileSelectionMatch[]> {
   requirePermission(actor, "manage_squads");
+  await ensureManualMatchActivities();
   const scope = activityScope(actor);
   const rows = await all<{
     id: string;
