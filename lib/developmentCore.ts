@@ -41,6 +41,8 @@ export type CoreActivity = {
   accepted_callup_count: number;
   declined_callup_count: number;
   pending_callup_count: number;
+  squad_count: number;
+  has_confirmed_squad: boolean;
   is_upcoming: boolean;
 };
 
@@ -161,6 +163,11 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
             ) AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
+            (
+              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
+              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
+            ) AS has_confirmed_squad,
             da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name
@@ -227,16 +234,15 @@ export async function getCoreHome() {
   const daysUntilSunday = (7 - currentDate.getUTCDay()) % 7;
   currentDate.setUTCDate(currentDate.getUTCDate() + daysUntilSunday);
   const weekEnd = currentDate.toISOString().slice(0, 10);
-  const yellowSanktanMatches = activities.filter((activity) =>
+  const teamMatches = activities.filter((activity) =>
     activity.activity_type === "match"
-    && activity.external_source === "svenskalag_sanktan"
-    && activity.source_team === "Gul"
+    && (activity.source_team === "Gul" || activity.source_team === "Grön")
   );
-  const upcoming = yellowSanktanMatches
+  const upcoming = teamMatches
     .filter((activity) => activity.activity_date >= today && activity.activity_date <= weekEnd)
     .sort((a, b) => a.activity_date.localeCompare(b.activity_date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
-    .slice(0, 6);
-  const recent = yellowSanktanMatches
+    .slice(0, 20);
+  const recent = teamMatches
     .filter((activity) => activity.activity_date < today)
     .sort((a, b) => b.activity_date.localeCompare(a.activity_date) || (b.start_time ?? "").localeCompare(a.start_time ?? ""))
     .slice(0, 6);
@@ -441,6 +447,11 @@ export async function getActivityDetail(activityId: string): Promise<{
               (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
               (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
             ) AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
+            (
+              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
+              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
+            ) AS has_confirmed_squad,
             da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
             ARRAY(
               SELECT p2.name

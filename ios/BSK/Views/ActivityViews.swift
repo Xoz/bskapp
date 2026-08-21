@@ -823,6 +823,52 @@ struct TodayList: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("VECKANS LÄGE").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                        Text("Överblick").font(.title.bold())
+                        Text("Matcher, bemanning, svar och belastning")
+                            .font(.caption).foregroundStyle(BSKTheme.muted)
+                    }
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        statusCard(title: "Matcher", value: thisWeeksMatches.count, note: "kvar i veckan", warning: false)
+                        statusCard(title: "Underbemannade", value: understaffedMatches.count, note: "färre än 9 klara", warning: !understaffedMatches.isEmpty)
+                        statusCard(title: "Inväntar svar", value: unansweredCount, note: "spelarsvar", warning: unansweredCount > 0)
+                        statusCard(title: "Hög belastning", value: highLoadPlayers.count, note: "minst 3 matcher", warning: !highLoadPlayers.isEmpty)
+                    }
+                }
+
+                if !understaffedMatches.isEmpty || !pendingEvaluations.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("ATT GÖRA").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.warning)
+                            Text("Prioriterat just nu").font(.title2.bold())
+                        }
+                        ForEach(understaffedMatches) { activity in
+                            NavigationLink { ActivityDetail(activity: activity) } label: {
+                                taskRow(
+                                    icon: "person.3.fill",
+                                    title: "\(activity.sourceTeam) · \(activity.title)",
+                                    note: "\(readyCount(activity)) klara · saknar \(missingCount(activity)) till 9",
+                                    tone: BSKTheme.warning
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        ForEach(pendingEvaluations) { match in
+                            NavigationLink { MatchEvaluationView(matchID: match.id) } label: {
+                                taskRow(
+                                    icon: "checklist",
+                                    title: "Utvärdera matchen mot \(match.opponent)",
+                                    note: "\(match.handled) av \(match.total) spelare klara",
+                                    tone: BSKTheme.accent
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("MATCHVECKAN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
@@ -895,6 +941,64 @@ struct TodayList: View {
         }
     }
 
+    private var pendingEvaluations: [MatchEvaluationSummary] {
+        model.matchEvaluations.filter { $0.total > 0 && $0.handled < $0.total }
+    }
+
+    private var highLoadPlayers: [PlayerMatchLoad] {
+        model.playerMatchLoads.filter { $0.windowMatchCount >= 3 }
+    }
+
+    private var unansweredCount: Int {
+        thisWeeksMatches.reduce(0) { $0 + $1.pendingCallupCount }
+    }
+
+    private var understaffedMatches: [ActivitySummary] {
+        thisWeeksMatches.filter { activity in
+            let called = activity.acceptedCallupCount + activity.declinedCallupCount + activity.pendingCallupCount
+            return (activity.hasConfirmedSquad || called > 0) && readyCount(activity) < 9
+        }
+    }
+
+    private func readyCount(_ activity: ActivitySummary) -> Int {
+        activity.hasConfirmedSquad ? activity.squadCount : activity.acceptedCallupCount
+    }
+
+    private func missingCount(_ activity: ActivitySummary) -> Int {
+        max(0, 9 - readyCount(activity))
+    }
+
+    private func hasStaffingData(_ activity: ActivitySummary) -> Bool {
+        activity.hasConfirmedSquad || activity.acceptedCallupCount + activity.declinedCallupCount + activity.pendingCallupCount > 0
+    }
+
+    private func statusCard(title: String, value: Int, note: String, warning: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title.uppercased()).font(.system(size: 9, weight: .bold)).tracking(0.8).foregroundStyle(BSKTheme.muted)
+            Text("\(value)").font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(warning ? BSKTheme.warning : .white)
+            Text(note).font(.caption2).foregroundStyle(BSKTheme.secondary).lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+        .padding(14)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(warning ? BSKTheme.warning.opacity(0.35) : BSKTheme.border))
+    }
+
+    private func taskRow(icon: String, title: String, note: String, tone: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).font(.headline).foregroundStyle(tone).frame(width: 34, height: 34).background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                Text(note).font(.caption).foregroundStyle(BSKTheme.secondary)
+            }
+            Spacer(minLength: 5)
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(14)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(BSKTheme.border))
+    }
+
     private func playerLoadRow(_ player: PlayerMatchLoad) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -957,6 +1061,15 @@ struct TodayList: View {
                     .multilineTextAlignment(.leading)
                 Label(activitySchedule(activity), systemImage: "calendar")
                     .font(.caption).foregroundStyle(BSKTheme.secondary)
+                HStack(spacing: 8) {
+                    Text(activity.sourceTeam).font(.caption2.bold()).foregroundStyle(activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent)
+                    if hasStaffingData(activity) {
+                        Text("\(readyCount(activity)) klara").font(.caption2).foregroundStyle(BSKTheme.secondary)
+                        if missingCount(activity) > 0 {
+                            Text("Saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning)
+                        }
+                    }
+                }
                 if featured, !activity.theme.isEmpty {
                     Text(activity.theme).font(.caption).foregroundStyle(BSKTheme.muted).lineLimit(2)
                 }
@@ -983,7 +1096,13 @@ struct TodayList: View {
                 Text(featured ? "NÄSTA MATCH" : "MATCH")
                     .font(.system(size: 9, weight: .black)).tracking(1.2).foregroundStyle(BSKTheme.accent)
                 Text(activity.title).font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
-                if !activity.theme.isEmpty { Text(activity.theme).font(.caption2).foregroundStyle(BSKTheme.muted).lineLimit(1) }
+                HStack(spacing: 6) {
+                    Text(activity.sourceTeam).font(.caption2.bold()).foregroundStyle(activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent)
+                    if hasStaffingData(activity) {
+                        Text("\(readyCount(activity)) klara").font(.caption2).foregroundStyle(BSKTheme.muted)
+                        if missingCount(activity) > 0 { Text("Saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning) }
+                    }
+                }
             }
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 8) {
@@ -1018,7 +1137,7 @@ struct TodayList: View {
         return model.activities
             .filter {
                 $0.type == "match"
-                    && $0.isPrimaryMatch
+                    && ($0.sourceTeam == "Gul" || $0.sourceTeam == "Grön")
                     && !$0.finished
                     && $0.date >= today
                     && $0.date <= lastDay

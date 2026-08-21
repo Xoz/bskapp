@@ -103,7 +103,7 @@ export async function getMatchEvaluationStatus(matchId: number) {
     [matchId, matchId, matchId, matchId]
   )) ?? { total: 0, evaluated: 0, contributors: 0 };
 }
-export async function getPendingMatchEvaluation(): Promise<null | { id: number; opponent: string; date: string; total: number; evaluated: number }> {
+export async function getPendingMatchEvaluations(limit = 6): Promise<{ id: number; opponent: string; date: string; total: number; evaluated: number }[]> {
   const today = swedishToday();
   const nowMinutes = swedishMinutesSinceMidnight();
   const cutoffDate = new Date(`${today}T12:00:00Z`);
@@ -120,13 +120,19 @@ export async function getPendingMatchEvaluation(): Promise<null | { id: number; 
      ORDER BY m.date DESC, m.id DESC
      LIMIT 20`, [recentCutoff, today]
   );
+  const pending: { id: number; opponent: string; date: string; total: number; evaluated: number }[] = [];
   for (const match of matches) {
     if (!matchEvaluationIsOpen(match.date, match.start_time, today, nowMinutes)) continue;
     if (!(await canAccessGroup(match.group_id))) continue;
     const status = await getMatchEvaluationStatus(match.id);
-    if (status.total > 0 && status.evaluated < status.total) return { ...match, ...status };
+    if (status.total > 0 && status.evaluated < status.total) pending.push({ ...match, ...status });
+    if (pending.length >= limit) break;
   }
-  return null;
+  return pending;
+}
+
+export async function getPendingMatchEvaluation(): Promise<null | { id: number; opponent: string; date: string; total: number; evaluated: number }> {
+  return (await getPendingMatchEvaluations(1))[0] ?? null;
 }
 
 export type MatchEvaluationTrendPoint = {

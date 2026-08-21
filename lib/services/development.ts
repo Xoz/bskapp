@@ -121,6 +121,11 @@ export type MobileActivity = {
   matchLevel: "Extra svår" | "Svår" | "Medel" | "Lätt" | "Extra lätt" | "Öppen klass";
   loanedPlayerNames: string[];
   finished: boolean;
+  acceptedCallupCount: number;
+  declinedCallupCount: number;
+  pendingCallupCount: number;
+  squadCount: number;
+  hasConfirmedSquad: boolean;
 };
 
 export type MobileSelectionMatch = {
@@ -777,6 +782,11 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     match_level: MobileActivity["matchLevel"];
     loaned_player_names: string;
     finished: number;
+    accepted_callup_count: number;
+    declined_callup_count: number;
+    pending_callup_count: number;
+    squad_count: number;
+    has_confirmed_squad: boolean;
   }>(
     `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
             da.group_id, da.theme, da.challenge_context,
@@ -829,7 +839,15 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
                   ))
                 )
             ), '') AS loaned_player_names,
-            COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished
+            COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'present'), 0) AS accepted_callup_count,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'absent'), 0) AS declined_callup_count,
+            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'unknown'), 0) AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = da.match_id), 0) AS squad_count,
+            (
+              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = da.match_id)
+              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
+            ) AS has_confirmed_squad
      FROM development_activities da
      JOIN matches linked_match ON linked_match.id = da.match_id
      JOIN groups match_group ON match_group.id = da.group_id AND match_group.name IN ('Gul', 'Grön')
@@ -857,6 +875,11 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     matchLevel: row.match_level,
     loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
     finished: Boolean(row.finished),
+    acceptedCallupCount: Number(row.accepted_callup_count),
+    declinedCallupCount: Number(row.declined_callup_count),
+    pendingCallupCount: Number(row.pending_callup_count),
+    squadCount: Number(row.squad_count),
+    hasConfirmedSquad: row.has_confirmed_squad,
   }));
 }
 

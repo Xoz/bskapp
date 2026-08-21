@@ -22,11 +22,10 @@ export default function CoreActivityCard({
   const calledCount = Number(activity.accepted_callup_count)
     + Number(activity.declined_callup_count)
     + Number(activity.pending_callup_count);
-  const needsMoreAccepted = activity.is_upcoming
-    && isSanktan
-    && calledCount > 0
-    && activity.accepted_callup_count < 9;
-  const playersMissing = Math.max(0, 9 - activity.accepted_callup_count);
+  const readyCount = activity.has_confirmed_squad ? Number(activity.squad_count) : Number(activity.accepted_callup_count);
+  const hasStaffingData = activity.has_confirmed_squad || calledCount > 0;
+  const needsMoreAccepted = activity.is_upcoming && hasStaffingData && readyCount < 9;
+  const playersMissing = Math.max(0, 9 - readyCount);
   return (
     <Link href={href} className="core-activity">
       <time className="core-date" dateTime={activity.activity_date}>
@@ -58,6 +57,7 @@ export default function CoreActivityCard({
               <span className={needsMoreAccepted ? "core-callup-accepted core-callup-accepted-warning" : "core-callup-accepted"}>{activity.accepted_callup_count} ja</span>
               <span className="core-callup-declined">{activity.declined_callup_count} nej</span>
               <span>{activity.pending_callup_count} inväntar svar</span>
+              {activity.has_confirmed_squad && <span><strong>{activity.squad_count}</strong> i truppen</span>}
             </div>
           ) : <p className="core-activity-sub">Ingen kallelse registrerad ännu</p>
         ) : activity.activity_type === "match" ? (

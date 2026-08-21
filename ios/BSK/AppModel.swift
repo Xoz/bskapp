@@ -144,7 +144,12 @@ final class AppModel: ObservableObject {
                 sourceTeam: "Gul",
                 matchLevel: "Medel",
                 loanedPlayerNames: [],
-                finished: false
+                finished: false,
+                acceptedCallupCount: 7,
+                declinedCallupCount: 2,
+                pendingCallupCount: 1,
+                squadCount: 0,
+                hasConfirmedSquad: false
             )
         ]
         phase = .signedIn

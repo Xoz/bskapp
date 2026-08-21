@@ -9,6 +9,7 @@ const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
 const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView.swift", import.meta.url), "utf8");
+const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -100,6 +101,17 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).toContain("windowMatchCount: recentMatches.length +");
     expect(nativeActivityViews).toContain('Text("Belastning ±7 dagar")');
     expect(nativeActivityViews).not.toContain('Text("\\(player.capacity) %")');
+  });
+
+  it("samlar veckans operativa signaler på Idag-vyn", () => {
+    for (const label of ["Underbemannade", "Inväntar svar", "Hög belastning", "Att göra"]) {
+      expect(todayPage).toContain(label);
+    }
+    expect(todayPage).toContain("activity.has_confirmed_squad ? Number(activity.squad_count)");
+    expect(mobileDevelopment).toContain("acceptedCallupCount: Number(row.accepted_callup_count)");
+    expect(nativeActivityViews).toContain('Text("VECKANS LÄGE")');
+    expect(nativeActivityViews).toContain("activity.hasConfirmedSquad ? activity.squadCount : activity.acceptedCallupCount");
+    expect(nativeActivityViews).toContain('$0.sourceTeam == "Gul" || $0.sourceTeam == "Grön"');
   });
 
   it("refererar inte den borttagna ELO-tabellen", () => {
