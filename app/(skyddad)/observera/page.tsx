@@ -29,7 +29,7 @@ export default async function ObservePage({
 
   if (!aktivitet) {
     const playedActivities = (await getCoreActivities(80, "sanktan"))
-      .filter((activity) => activity.source_team === "Gul")
+      .filter((activity) => activity.source_team === "Gul" || activity.source_team === "Grön")
       .filter((activity) => !activity.is_upcoming);
     return (
       <div className="core-page">
@@ -38,13 +38,13 @@ export default async function ObservePage({
           <p className="core-kicker">Efter matchen</p>
           <h1 className="core-title">Observera</h1>
           <p className="core-lead">
-            Utvärdera spelarna efter match och gå tillbaka till gula lagets spelade Sanktanmatcher.
+            Se matchdetaljer och utvärdera spelare efter Gul- och Grönmatcher.
           </p>
           </div>
         </header>
         {playedActivities.length > 0 ? <section>
           <div className="core-section-head">
-            <div><p className="core-section-eyebrow">Gul · Sanktan</p><h2 className="core-section-title">Matchhistorik</h2></div>
+            <div><p className="core-section-eyebrow">Gul och Grön · Sanktan</p><h2 className="core-section-title">Matchhistorik</h2></div>
             <span className="core-section-note">Öppna en match för efterarbete</span>
           </div>
           <div className="core-list core-list-2">
@@ -57,7 +57,7 @@ export default async function ObservePage({
             ))}
           </div>
         </section> : <section className="core-panel p-6">
-          <h2>Inga spelade gula Sanktanmatcher ännu</h2>
+          <h2>Inga spelade Sanktanmatcher ännu</h2>
           <p className="body mt-2" style={{ color: "var(--ink-secondary)" }}>Efter en spelad match visas den här för utvärdering och historik.</p>
         </section>}
       </div>
@@ -67,11 +67,11 @@ export default async function ObservePage({
   const detail = await getActivityDetail(aktivitet);
   if (
     !detail ||
-    detail.activity.source_team !== "Gul" ||
+    !["Gul", "Grön"].includes(detail.activity.source_team ?? "") ||
     detail.activity.external_source !== "svenskalag_sanktan"
   ) redirect("/observera");
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
-  const teamTone = "yellow";
+  const teamTone = detail.activity.source_team === "Gul" ? "yellow" : "green";
   const isSanktan = detail.activity.external_source === "svenskalag_sanktan";
   const evaluationOpen = matchEvaluationIsOpen(detail.activity.activity_date, detail.activity.start_time);
   const isPostMatch = evaluationOpen || !detail.activity.is_upcoming;

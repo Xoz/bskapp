@@ -690,12 +690,13 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       support: selectionSupport(signals),
     };
   });
-  const orderedCandidates = detail.activity.source_team === "Gul"
+  const orderedCandidates = (detail.activity.source_team === "Gul" || detail.activity.source_team === "Grön")
     ? [...candidates].sort((left, right) => {
       const priority = (candidate: SelectionCandidate) => {
-        if (candidate.primaryTeam?.name === "Gul") return 0;
-        if (candidate.primaryTeam?.name === "F15") return 1;
-        if (candidate.primaryTeam?.name === "Grön") return 2;
+        if (candidate.primaryTeam?.name === detail.activity.source_team) return 0;
+        if (candidate.primaryTeam?.name === "Gul") return 1;
+        if (candidate.primaryTeam?.name === "F15") return 2;
+        if (candidate.primaryTeam?.name === "Grön") return 3;
         return 3;
       };
       return priority(left) - priority(right) || left.player.name.localeCompare(right.player.name, "sv");

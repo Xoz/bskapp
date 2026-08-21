@@ -794,7 +794,7 @@ private struct PremiumSelectionList: View {
                         .foregroundStyle(BSKTheme.backgroundDeep)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(BSKTheme.accent, in: Capsule())
+                        .background(match.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent, in: Capsule())
 
                     if let level = levelLabel(match.competitionLevel) {
                         Text(level)

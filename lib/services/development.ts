@@ -915,7 +915,7 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE da.activity_type = 'match'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-       AND g.name = 'Gul'
+       AND g.name IN ('Gul', 'Grön')
        AND ${scope.sql}
      ORDER BY da.activity_date, da.start_time NULLS LAST, da.id
      LIMIT 100`,
@@ -1024,9 +1024,18 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
      LEFT JOIN match_squad ms ON ms.match_id = target.match_id AND ms.player_id = p.id
      WHERE p.active = 1 AND p.selection_eligible = 1 AND ${scope.sql}
      ORDER BY CASE
-       WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
-       WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
-       WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
+       WHEN EXISTS (
+         SELECT 1 FROM player_group_memberships pgm
+         WHERE pgm.player_id = p.id AND pgm.group_id = target.group_id AND pgm.is_primary = 1
+       ) THEN 0
+       WHEN EXISTS (
+         SELECT 1 FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id
+         WHERE pgm.player_id = p.id AND pgm.is_primary = 1 AND g.name = 'Gul'
+       ) THEN 1
+       WHEN EXISTS (
+         SELECT 1 FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id
+         WHERE pgm.player_id = p.id AND pgm.is_primary = 1 AND g.name = 'F15'
+       ) THEN 2
        ELSE 3 END, lower(p.name)`,
     [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
   );
