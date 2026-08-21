@@ -149,18 +149,31 @@ final class AppModel: ObservableObject {
 
     func restore() async {
         guard phase == .loading else { return }
-        guard await api.hasStoredSession() else {
-            phase = .signedOut
-            return
-        }
-        do {
-            user = try await api.currentUser()
-            await reload()
-            phase = .signedIn
-        } catch {
-            if Self.isCancellation(error) { return }
-            await api.clearSession()
-            phase = .signedOut
+        var retryDelay = 1.0
+        while phase == .loading {
+            do {
+                guard try await api.hasStoredSession() else {
+                    phase = .signedOut
+                    return
+                }
+                user = try await api.currentUser()
+                await reload()
+                phase = .signedIn
+                return
+            } catch {
+                if Self.isCancellation(error) { return }
+                if case APIClientError.unauthorized = error {
+                    await api.clearSession()
+                    phase = .signedOut
+                    return
+                }
+
+                // Ett tillfälligt nät-, server- eller Keychain-fel är inte en
+                // utloggning. Behåll sessionen och försök igen när appen lever.
+                errorMessage = error.localizedDescription
+                try? await Task.sleep(for: .seconds(retryDelay))
+                retryDelay = min(retryDelay * 2, 10)
+            }
         }
     }
 

@@ -19,17 +19,20 @@ actor APIClient {
     private let store: KeychainStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var refreshTask: Task<TokenPair, Error>?
 
     init(baseURL: URL, store: KeychainStore) {
         self.baseURL = baseURL
         self.store = store
     }
 
-    func hasStoredSession() -> Bool {
-        (try? store.loadTokens()) != nil
+    func hasStoredSession() throws -> Bool {
+        try store.loadTokens() != nil
     }
 
     func clearSession() {
+        refreshTask?.cancel()
+        refreshTask = nil
         try? store.deleteTokens()
     }
 
@@ -159,6 +162,23 @@ actor APIClient {
     }
 
     private func refresh() async throws -> TokenPair {
+        if let refreshTask {
+            return try await refreshTask.value
+        }
+
+        let task = Task<TokenPair, Error> { try await self.rotateRefreshToken() }
+        refreshTask = task
+        do {
+            let tokens = try await task.value
+            refreshTask = nil
+            return tokens
+        } catch {
+            refreshTask = nil
+            throw error
+        }
+    }
+
+    private func rotateRefreshToken() async throws -> TokenPair {
         guard let current = try? store.loadTokens() else { throw APIClientError.unauthorized }
         struct Body: Encodable { let refreshToken: String }
         let tokens: TokenPair = try await perform(

@@ -41,4 +41,16 @@ describe("säkerhetskontrakt", () => {
     expect(implementation).toContain('formData.get("confirmation")');
     expect(implementation).toContain("erasePlayerData");
   });
+
+  it("samordnar native token-refresh och loggar inte ut vid tillfälliga fel", () => {
+    const client = read("ios/BSK/Networking/APIClient.swift");
+    const appModel = read("ios/BSK/AppModel.swift");
+    const keychain = read("ios/BSK/Auth/KeychainStore.swift");
+    expect(client).toContain("private var refreshTask: Task<TokenPair, Error>?");
+    expect(client).toContain("if let refreshTask");
+    expect(client).toContain("self.rotateRefreshToken()");
+    expect(appModel).toContain("if case APIClientError.unauthorized = error");
+    expect(appModel).toContain("Ett tillfälligt nät-, server- eller Keychain-fel är inte en");
+    expect(keychain).toContain("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly");
+  });
 });

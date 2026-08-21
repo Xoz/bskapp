@@ -42,7 +42,9 @@ struct KeychainStore: Sendable {
         ]
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            // Sessionen måste kunna återställas efter en bakgrundsstart när
+            // telefonen har låsts, men får aldrig lämna den här enheten.
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         let update = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
         if update == errSecItemNotFound {
