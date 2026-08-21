@@ -683,10 +683,11 @@ export async function saveMatch(formData: FormData) {
        external_source, external_key, match_id, group_id
      )
      VALUES (?, ?, ?, 'match', ?, 'manual_match', ?, ?, ?)
-     ON CONFLICT (external_key) DO UPDATE SET
+     ON CONFLICT (match_id) WHERE match_id IS NOT NULL DO UPDATE SET
        activity_date = excluded.activity_date,
        start_time = excluded.start_time,
        title = excluded.title,
+       external_source = excluded.external_source,
        match_id = excluded.match_id,
        group_id = excluded.group_id,
        updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
