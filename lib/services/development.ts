@@ -666,18 +666,19 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     selection_count: number;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.title,
-            pcm.source_team,
+            COALESCE(pcm.source_team, g.name, 'Gul') AS source_team,
             pcm.level AS competition_level,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'), 0) AS accepted_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected'), 0) AS selection_count
      FROM development_activities da
-     JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
+     JOIN matches m ON m.id = da.match_id
+     LEFT JOIN groups g ON g.id = da.group_id
+     LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
      WHERE da.activity_type = 'match'
-       AND da.external_source = 'svenskalag_sanktan'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-       AND pcm.source_team = 'Gul'
+       AND COALESCE(pcm.source_team, g.name, 'Gul') = 'Gul'
        AND ${scope.sql}
      ORDER BY da.activity_date, da.start_time NULLS LAST, da.id
      LIMIT 100`,

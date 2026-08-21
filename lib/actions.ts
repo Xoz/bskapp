@@ -677,6 +677,30 @@ export async function saveMatch(formData: FormData) {
 
   await savePlayerStats(matchId, formData);
 
+  await run(
+    `INSERT INTO development_activities (
+       id, activity_date, start_time, activity_type, title,
+       external_source, external_key, match_id, group_id
+     )
+     VALUES (?, ?, ?, 'match', ?, 'manual_match', ?, ?, ?)
+     ON CONFLICT (external_key) DO UPDATE SET
+       activity_date = excluded.activity_date,
+       start_time = excluded.start_time,
+       title = excluded.title,
+       match_id = excluded.match_id,
+       group_id = excluded.group_id,
+       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
+    [
+      `manual-match-${matchId}`,
+      date,
+      startTime,
+      `${homeAway === "home" ? "Hemma mot" : "Borta mot"} ${opponent}`,
+      `manual:match:${matchId}`,
+      matchId,
+      groupId,
+    ]
+  );
+
   const logName = (await getCoachName()) ?? "Tränare";
   await logActivity(logName, id ? "Uppdaterade match" : "Lade till match", opponent);
 
