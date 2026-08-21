@@ -28,7 +28,17 @@ final class AppModel: ObservableObject {
     @Published private(set) var matchEvaluations: [MatchEvaluationSummary] = []
     @Published private(set) var queuedObservationCount = 0
     @Published private(set) var queuedMatchEvaluationCount = 0
-    @Published var errorMessage: String?
+    @Published var errorMessage: String? {
+        didSet {
+            if let errorMessage {
+                if Self.isCancellationDescription(errorMessage) {
+                    self.errorMessage = nil
+                    return
+                }
+                print("[BSK] \(errorMessage)")
+            }
+        }
+    }
     @Published var isWorking = false
 
     private let api: APIClient
@@ -137,6 +147,14 @@ final class AppModel: ObservableObject {
         let workspace = try await api.saveSelection(id: id, decisions: decisions)
         selectionMatches = try await api.selectionMatches()
         return workspace
+    }
+
+    func liveMatch(id: Int) async throws -> LiveMatchState {
+        try await api.liveMatch(id: id)
+    }
+
+    func updateLiveMatch(id: Int, command: LiveMatchCommand) async throws -> LiveMatchState {
+        try await api.updateLiveMatch(id: id, command: command)
     }
 
     func matchEvaluation(id: Int) async throws -> MatchEvaluationWorkspace {
@@ -269,9 +287,28 @@ final class AppModel: ObservableObject {
             } else {
                 matchEvaluations = []
             }
+            await syncLiveActivitiesNearKickoff()
         } catch {
             if Self.isCancellation(error) { return }
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func syncLiveActivitiesNearKickoff() async {
+        guard user?.permissions.contains("report_matches") == true else { return }
+        let candidates = activities.filter { activity in
+            activity.type == "match"
+                && activity.matchId != nil
+                && MatchLiveActivityManager.shouldSync(date: activity.date, time: activity.startTime)
+        }
+        for activity in candidates.prefix(3) {
+            guard let matchID = activity.matchId else { continue }
+            do {
+                let state = try await api.liveMatch(id: matchID)
+                await MatchLiveActivityManager.sync(matchID: matchID, title: activity.title, state: state)
+            } catch {
+                print("[BSK] Kunde inte synka Live Activity för match \(matchID): \(error.localizedDescription)")
+            }
         }
     }
 
@@ -366,7 +403,19 @@ final class AppModel: ObservableObject {
 
     private static func isCancellation(_ error: Error) -> Bool {
         if error is CancellationError { return true }
-        return (error as? URLError)?.code == .cancelled
+        if (error as? URLError)?.code == .cancelled { return true }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorCancelled { return true }
+        return isCancellationDescription(error.localizedDescription)
+    }
+
+    private static func isCancellationDescription(_ message: String) -> Bool {
+        let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "avbruten"
+            || normalized == "cancelled"
+            || normalized == "canceled"
+            || normalized == "the operation was cancelled."
+            || normalized == "the operation was canceled."
     }
 }
 

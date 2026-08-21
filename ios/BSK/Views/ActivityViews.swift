@@ -69,45 +69,45 @@ struct ActivityList: View {
 
 struct ActivityDetail: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let activity: ActivitySummary
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 12 : 18) {
                 matchHero
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 12)], spacing: 12) {
-                    metricCard(
-                        eyebrow: "AVSPARK",
-                        value: activity.startTime ?? "Tid saknas",
-                        systemImage: "clock.fill"
-                    )
-                    metricCard(
-                        eyebrow: "OBSERVATIONER",
-                        value: activity.observationCount == 1 ? "1 sparad" : "\(activity.observationCount) sparade",
-                        systemImage: "checkmark.seal.fill"
-                    )
+                if activity.type == "match", let matchID = activity.matchId {
+                    NavigationLink {
+                        MatchCenterView(matchID: matchID, title: activity.title)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "scoreboard.fill")
+                                .font(.title3.bold())
+                                .foregroundStyle(BSKTheme.backgroundDeep)
+                                .frame(width: 44, height: 44)
+                                .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("MATCHCENTER").font(.system(size: 9, weight: .black)).tracking(1.4).foregroundStyle(BSKTheme.accent)
+                                Text("Klocka, period och mål").font(.headline).foregroundStyle(.white)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+                        }
+                        .padding(12)
+                        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.accent.opacity(0.38)))
+                    }
+                    .buttonStyle(.plain)
                 }
 
-                if !activity.theme.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("Matchens fokus", systemImage: "scope")
-                            .font(.caption.bold())
-                            .tracking(1.1)
-                            .foregroundStyle(BSKTheme.accent)
-                        Text(activity.theme)
-                            .font(.title3.bold())
-                            .foregroundStyle(Color.white)
-                    }
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+                if let matchID = activity.matchId {
+                    MatchLineupBoard(matchID: matchID)
                 }
 
                 MatchObservationBoard(activity: activity)
             }
-            .padding(18)
+            .padding(horizontalSizeClass == .compact ? 12 : 18)
             .frame(maxWidth: 820)
             .frame(maxWidth: .infinity)
         }
@@ -135,7 +135,7 @@ struct ActivityDetail: View {
                 Text(activity.title)
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
-                Text("Förbered observationerna före avspark")
+                Text("Laguppställning och matchcenter")
                     .font(.subheadline)
                     .foregroundStyle(BSKTheme.secondary)
             }
@@ -147,7 +147,7 @@ struct ActivityDetail: View {
                 }
             }
         }
-        .padding(22)
+        .padding(horizontalSizeClass == .compact ? 15 : 22)
         .background(
             LinearGradient(
                 colors: [BSKTheme.elevated, BSKTheme.surface],
@@ -169,27 +169,83 @@ struct ActivityDetail: View {
             .background(BSKTheme.backgroundDeep.opacity(0.68), in: Capsule())
     }
 
-    private func metricCard(eyebrow: String, value: String, systemImage: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.headline)
-                .foregroundStyle(BSKTheme.accent)
-                .frame(width: 40, height: 40)
-                .background(BSKTheme.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(eyebrow)
-                    .font(.system(size: 9, weight: .bold))
-                    .tracking(1)
-                    .foregroundStyle(BSKTheme.muted)
-                Text(value)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.white)
+}
+
+private struct MatchLineupBoard: View {
+    @EnvironmentObject private var model: AppModel
+    let matchID: Int
+    @State private var state: LiveMatchState?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("LAGUPPSTÄLLNING")
+                        .font(.system(size: 10, weight: .black))
+                        .tracking(1.4)
+                        .foregroundStyle(BSKTheme.accent)
+                    Text(state?.hasLineup == true ? "Startelva" : "Matchtrupp")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+                if let state {
+                    Text("\(state.players.count) SPELARE")
+                        .font(.system(size: 9, weight: .black))
+                        .tracking(0.8)
+                        .foregroundStyle(BSKTheme.secondary)
+                }
             }
-            Spacer(minLength: 0)
+
+            if let state {
+                lineupGrid(state.hasLineup ? state.players.filter { state.onField.contains($0.id) } : state.players)
+                if state.hasLineup {
+                    Text("AVBYTARE")
+                        .font(.system(size: 9, weight: .black))
+                        .tracking(1.2)
+                        .foregroundStyle(BSKTheme.muted)
+                        .padding(.top, 2)
+                    lineupGrid(state.players.filter { !state.onField.contains($0.id) })
+                }
+            } else {
+                HStack(spacing: 9) {
+                    ProgressView().tint(BSKTheme.accent)
+                    Text("Hämtar laguppställning…").font(.subheadline).foregroundStyle(BSKTheme.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 10)
+            }
         }
         .padding(15)
-        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+        .task(id: matchID) { await load() }
+    }
+
+    private func lineupGrid(_ players: [LiveMatchState.Player]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            ForEach(players) { player in
+                HStack(spacing: 9) {
+                    Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)))
+                        .font(.caption.bold())
+                        .foregroundStyle(BSKTheme.backgroundDeep)
+                        .frame(width: 30, height: 30)
+                        .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    Text(player.name)
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .padding(7)
+                .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+    }
+
+    @MainActor private func load() async {
+        do { state = try await model.liveMatch(id: matchID) }
+        catch { model.errorMessage = error.localizedDescription }
     }
 }
 
@@ -1105,6 +1161,309 @@ struct SelectionDetail: View {
         default: return "Inväntar"
         }
     }
+}
+
+struct MatchCenterView: View {
+    @EnvironmentObject private var model: AppModel
+    let matchID: Int
+    let title: String
+
+    @State private var state: LiveMatchState?
+    @State private var loadedAt = Date()
+    @State private var isMutating = false
+    @State private var showScorers = false
+    @State private var showReset = false
+
+    var body: some View {
+        Group {
+            if let state {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            scoreCard(state)
+                            clockCard(state, at: context.date)
+                            goalControls(state)
+                            recentGoals(state)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: 620)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .refreshable { await load() }
+                }
+            } else {
+                ProgressView("Öppnar matchcenter…")
+            }
+        }
+        .background(BSKBackdrop())
+        .navigationTitle("Matchcenter")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: matchID) { await pollLiveState() }
+        .sheet(isPresented: $showScorers) {
+            scorerPicker
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog("Nollställ klockan?", isPresented: $showReset, titleVisibility: .visible) {
+            Button("Nollställ matchklockan", role: .destructive) { Task { await send(.clock("reset")) } }
+            Button("Avbryt", role: .cancel) {}
+        }
+    }
+
+    private func scoreCard(_ state: LiveMatchState) -> some View {
+        VStack(spacing: 13) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("LIVE MATCH").font(.system(size: 10, weight: .black)).tracking(1.5).foregroundStyle(BSKTheme.accent)
+                    Text(title).font(.headline).foregroundStyle(.white).lineLimit(1)
+                }
+                Spacer()
+                Text("P\(state.period) AV \(state.periods)")
+                    .font(.system(size: 10, weight: .black)).tracking(1).foregroundStyle(BSKTheme.secondary)
+            }
+            HStack(spacing: 18) {
+                scoreTeam("BSK", score: state.ourScore)
+                Text("–").font(.title.bold()).foregroundStyle(BSKTheme.muted)
+                scoreTeam(state.opponent, score: state.oppScore)
+            }
+        }
+        .padding(12)
+        .background(BSKTheme.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.accent.opacity(0.3)))
+    }
+
+    private func scoreTeam(_ name: String, score: Int) -> some View {
+        VStack(spacing: 3) {
+            Text(String(score)).font(.system(size: 34, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(.white)
+            Text(name).font(.caption.bold()).foregroundStyle(BSKTheme.secondary).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func clockCard(_ state: LiveMatchState, at date: Date) -> some View {
+        let elapsed = displayedSeconds(state, at: date)
+        let limit = max(1, state.periodMinutes * 60)
+        return VStack(spacing: 9) {
+            HStack {
+                Label("Period \(state.period)", systemImage: "timer").font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+                Spacer()
+                Circle().fill(state.clockRunning ? BSKTheme.accent : BSKTheme.muted).frame(width: 7, height: 7)
+                Text(state.clockRunning ? "IGÅNG" : elapsed >= limit ? "PERIOD KLAR" : "PAUS")
+                    .font(.system(size: 9, weight: .black)).tracking(1).foregroundStyle(BSKTheme.secondary)
+            }
+            Text(clockText(elapsed))
+                .font(.system(size: 44, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(.white)
+                .contentTransition(.numericText())
+            ProgressView(value: Double(elapsed), total: Double(limit)).tint(BSKTheme.accent)
+            HStack(spacing: 9) {
+                Button {
+                    Task { await send(.clock(state.clockRunning ? "pause" : "start")) }
+                } label: {
+                    Label(state.clockRunning ? "Pausa" : "Starta", systemImage: state.clockRunning ? "pause.fill" : "play.fill")
+                        .font(.caption.bold()).frame(maxWidth: .infinity).frame(height: 34)
+                }
+                .buttonStyle(.borderedProminent).tint(BSKTheme.accent).disabled(isMutating || state.finished || elapsed >= limit)
+
+                if state.period < state.periods {
+                    Button { Task { await send(.clock("next_period")) } } label: {
+                        Image(systemName: "forward.end.fill").font(.caption.bold()).frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.bordered).tint(BSKTheme.secondary).disabled(isMutating || state.finished)
+                    .accessibilityLabel("Nästa period")
+                }
+                Button { showReset = true } label: {
+                    Image(systemName: "arrow.counterclockwise").font(.caption.bold()).frame(width: 32, height: 32)
+                }
+                .buttonStyle(.bordered).tint(BSKTheme.secondary).disabled(isMutating || state.finished)
+                .accessibilityLabel("Nollställ klockan")
+            }
+        }
+        .padding(10)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
+        .onChange(of: elapsed) { _, seconds in
+            if seconds >= limit, state.clockRunning, !isMutating { Task { await send(.clock("pause")) } }
+        }
+    }
+
+    private func goalControls(_ state: LiveMatchState) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("REGISTRERA MÅL").font(.system(size: 10, weight: .black)).tracking(1.4).foregroundStyle(BSKTheme.accent)
+            HStack(spacing: 8) {
+                Button { showScorers = true } label: {
+                    Label("Mål BSK", systemImage: "plus.circle.fill").font(.caption.bold()).frame(maxWidth: .infinity).frame(height: 36)
+                }
+                .buttonStyle(.borderedProminent).tint(BSKTheme.accent).disabled(isMutating || state.finished)
+                Button { Task { await send(.opponentGoal()) } } label: {
+                    Label("Motståndare", systemImage: "plus.circle").font(.caption.bold()).frame(maxWidth: .infinity).frame(height: 36)
+                }
+                .buttonStyle(.bordered).tint(BSKTheme.danger).disabled(isMutating || state.finished)
+            }
+            Button { Task { await send(.undo) } } label: {
+                Label("Ångra senaste målhändelsen", systemImage: "arrow.uturn.backward")
+                    .font(.caption2.bold())
+            }
+            .buttonStyle(.plain).foregroundStyle(BSKTheme.secondary).disabled(isMutating || goalEvents(state).isEmpty)
+        }
+        .padding(12)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
+    }
+
+    @ViewBuilder
+    private func recentGoals(_ state: LiveMatchState) -> some View {
+        let goals = Array(goalMoments(state).prefix(3))
+        if !goals.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("SENASTE MÅLEN").font(.system(size: 10, weight: .black)).tracking(1.4).foregroundStyle(BSKTheme.accent).padding(.bottom, 7)
+                ForEach(goals) { goal in
+                    HStack {
+                        Text(goal.event.statId == "opponent_goal" ? state.opponent : (goal.event.playerName ?? "BSK"))
+                            .font(.subheadline.bold()).foregroundStyle(.white)
+                        Spacer()
+                        Text(eventTime(goal.event)).font(.caption).monospacedDigit().foregroundStyle(BSKTheme.secondary)
+                        scoreAfterGoal(goal)
+                    }
+                    .padding(.vertical, 6)
+                    Divider().overlay(BSKTheme.hairline)
+                }
+            }
+            .padding(12)
+            .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
+    private var scorerPicker: some View {
+        ZStack {
+            Rectangle().fill(BSKTheme.canvas).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("MÅL BSK").font(.system(size: 10, weight: .black)).tracking(1.4).foregroundStyle(BSKTheme.accent)
+                        Text("Välj målskytt").font(.title2.bold()).foregroundStyle(.white)
+                    }
+                    Spacer()
+                    Button { showScorers = false } label: {
+                        Image(systemName: "xmark").font(.caption.bold()).frame(width: 34, height: 34)
+                            .background(BSKTheme.elevated, in: Circle())
+                    }
+                    .foregroundStyle(BSKTheme.secondary)
+                }
+
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        ForEach(state?.players ?? []) { player in
+                            Button {
+                                showScorers = false
+                                Task { await send(.goal(playerID: player.id)) }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)))
+                                        .font(.headline.bold())
+                                        .foregroundStyle(BSKTheme.backgroundDeep)
+                                        .frame(width: 34, height: 34)
+                                        .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    Text(player.name).font(.caption.bold()).foregroundStyle(.white).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(8)
+                                .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    private func displayedSeconds(_ state: LiveMatchState, at date: Date) -> Int {
+        let live = state.clockRunning ? max(0, Int(date.timeIntervalSince(loadedAt))) : 0
+        return min(state.clockSeconds + live, state.periodMinutes * 60)
+    }
+
+    private func clockText(_ seconds: Int) -> String {
+        String(format: "%02d:%02d", max(0, seconds) / 60, max(0, seconds) % 60)
+    }
+
+    private func goalEvents(_ state: LiveMatchState) -> [LiveMatchState.Event] {
+        state.events.filter { $0.statId == "goals" || $0.statId == "opponent_goal" }
+    }
+
+    private func goalMoments(_ state: LiveMatchState) -> [GoalMoment] {
+        var ourScore = state.ourScore
+        var opponentScore = state.oppScore
+        return goalEvents(state).map { event in
+            let moment = GoalMoment(event: event, ourScore: ourScore, opponentScore: opponentScore)
+            if event.statId == "opponent_goal" { opponentScore = max(0, opponentScore - 1) }
+            else { ourScore = max(0, ourScore - 1) }
+            return moment
+        }
+    }
+
+    private func scoreAfterGoal(_ goal: GoalMoment) -> some View {
+        HStack(spacing: 1) {
+            Text("\(goal.ourScore)")
+                .foregroundStyle(goal.event.statId == "goals" ? BSKTheme.accent : .white)
+            Text("–").foregroundStyle(BSKTheme.muted)
+            Text("\(goal.opponentScore)")
+                .foregroundStyle(goal.event.statId == "opponent_goal" ? BSKTheme.danger : .white)
+        }
+        .font(.system(.headline, design: .rounded, weight: .black))
+        .monospacedDigit()
+        .padding(.leading, 7)
+    }
+
+    private func eventTime(_ event: LiveMatchState.Event) -> String {
+        guard let seconds = event.matchSecond else { return "–" }
+        return "P\(event.period ?? 1) \(clockText(seconds))"
+    }
+
+    @MainActor private func pollLiveState() async {
+        await load()
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: .seconds(10))
+            } catch {
+                return
+            }
+            guard !isMutating else { continue }
+            await load(reportErrors: false)
+        }
+    }
+
+    @MainActor private func load(reportErrors: Bool = true) async {
+        do {
+            let loaded = try await model.liveMatch(id: matchID)
+            state = loaded
+            loadedAt = Date()
+            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: loaded) }
+        } catch {
+            if reportErrors { model.errorMessage = error.localizedDescription }
+        }
+    }
+
+    @MainActor private func send(_ command: LiveMatchCommand) async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
+        do {
+            let updated = try await model.updateLiveMatch(id: matchID, command: command)
+            state = updated
+            loadedAt = Date()
+            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: updated) }
+        } catch { model.errorMessage = error.localizedDescription }
+    }
+}
+
+private struct GoalMoment: Identifiable {
+    let event: LiveMatchState.Event
+    let ourScore: Int
+    let opponentScore: Int
+
+    var id: Int { event.id }
 }
 
 struct MatchEvaluationList: View {

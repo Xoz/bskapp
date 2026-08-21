@@ -1,5 +1,5 @@
 import { DevelopmentServiceError } from "@/lib/services/development";
-import { getMobileLiveMatch, updateMobileLiveMatch, type MobileLiveAction } from "@/lib/services/mobileLive";
+import { getMobileLiveMatch, parseMobileLiveAction, updateMobileLiveMatch } from "@/lib/services/mobileLive";
 import { mobileError, mobileResponse, requireMobileActor } from "@/lib/mobileApi";
 
 export const runtime = "nodejs";
@@ -23,10 +23,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const actor = await requireMobileActor(request);
-    const action = await request.json() as MobileLiveAction;
-    if (!action || typeof action.type !== "string") {
-      throw new DevelopmentServiceError("invalid", "Matchåtgärd saknas.", 400);
-    }
+    const action = parseMobileLiveAction(await request.json());
     return mobileResponse(await updateMobileLiveMatch(actor, parseMatchId((await context.params).id), action));
   } catch (error) {
     return mobileError(error);

@@ -118,6 +118,19 @@ actor APIClient {
         )
     }
 
+    func liveMatch(id: Int) async throws -> LiveMatchState {
+        try await perform(path: "/matches/\(id)/live", method: "GET", body: nil, authorized: true)
+    }
+
+    func updateLiveMatch(id: Int, command: LiveMatchCommand) async throws -> LiveMatchState {
+        try await perform(
+            path: "/matches/\(id)/live",
+            method: "POST",
+            body: encoder.encode(command),
+            authorized: true
+        )
+    }
+
     func matchEvaluations() async throws -> [MatchEvaluationSummary] {
         try await perform(path: "/match-evaluations", method: "GET", body: nil, authorized: true)
     }

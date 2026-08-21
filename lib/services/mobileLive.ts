@@ -1,14 +1,47 @@
-import { type CurrentUser } from "@/lib/auth";
-import { all, get } from "@/lib/db";
-import { getLiveState, recordEvent, setClock, undoLastEvent } from "@/lib/live";
-import { OPPONENT_GOAL } from "@/lib/liveTypes";
-import { DevelopmentServiceError } from "@/lib/services/development";
+import { type CurrentUser } from "../auth";
+import { all, get } from "../db";
+import { getLiveState, recordEvent, setClock, undoLastEvent } from "../live";
+import { OPPONENT_GOAL } from "../liveTypes";
+import { DevelopmentServiceError } from "./development";
 
 export type MobileLiveAction =
   | { type: "clock"; op: "start" | "pause" | "reset" | "next_period" }
   | { type: "goal"; playerId: number; idempotencyKey: string }
   | { type: "opponent_goal"; idempotencyKey: string }
   | { type: "undo" };
+
+const IDEMPOTENCY_KEY = /^[a-zA-Z0-9_-]{8,80}$/;
+const CLOCK_OPERATIONS = new Set(["start", "pause", "reset", "next_period"]);
+
+export function parseMobileLiveAction(input: unknown): MobileLiveAction {
+  if (!input || typeof input !== "object") {
+    throw new DevelopmentServiceError("invalid", "Matchåtgärd saknas.", 400);
+  }
+  const action = input as Record<string, unknown>;
+  if (action.type === "clock") {
+    if (typeof action.op !== "string" || !CLOCK_OPERATIONS.has(action.op)) {
+      throw new DevelopmentServiceError("invalid", "Ogiltig klockåtgärd.", 400);
+    }
+    return { type: "clock", op: action.op as "start" | "pause" | "reset" | "next_period" };
+  }
+  if (action.type === "goal") {
+    if (!Number.isInteger(action.playerId) || Number(action.playerId) < 1) {
+      throw new DevelopmentServiceError("invalid", "Ogiltig målskytt.", 400);
+    }
+    if (typeof action.idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(action.idempotencyKey)) {
+      throw new DevelopmentServiceError("invalid", "Ogiltig idempotensnyckel.", 400);
+    }
+    return { type: "goal", playerId: Number(action.playerId), idempotencyKey: action.idempotencyKey };
+  }
+  if (action.type === "opponent_goal") {
+    if (typeof action.idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(action.idempotencyKey)) {
+      throw new DevelopmentServiceError("invalid", "Ogiltig idempotensnyckel.", 400);
+    }
+    return { type: "opponent_goal", idempotencyKey: action.idempotencyKey };
+  }
+  if (action.type === "undo") return { type: "undo" };
+  throw new DevelopmentServiceError("invalid", "Okänd matchåtgärd.", 400);
+}
 
 function requireReporting(actor: CurrentUser) {
   if (!actor.permissions.includes("report_matches")) {

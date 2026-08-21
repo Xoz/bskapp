@@ -13,6 +13,8 @@ Appen innehåller:
 - trupp, spelardetalj, utvecklingsmål och aktiviteter från `/api/mobile/v1`,
 - skrivande observationer med lokal kö vid nätverksavbrott,
 - matchutvärderingar med lokal kö och transparent uttagningsstöd,
+- serverstyrt matchcenter med periodklocka, mål, målskytt, ångra och laguppställning,
+- Live Activity för samling, avsparksnedräkning och pågående match,
 - logout som återkallar enhetssessionen.
 
 Servern måste ha native auth-migrationen och routesen deployade. Callback-schemat
@@ -30,6 +32,16 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
   `v0.003`/build `3` och så vidare.
 - Simulatorbyggen utan installation räknas inte som deploy.
 - Version och build visas under Konto i appen.
+
+## Matchcenter och Live Activity
+
+- Live Activity kan startas när appen öppnas eller synkar inom 45 minuter före
+  avspark. Den visar då `SAMLING` och räknar ned till matchstart.
+- När matchcentret är öppet hämtas serverns läge var tionde sekund, så ändringar
+  från en annan tränare når denna enhets matchcenter och Live Activity.
+- Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
+  inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
+  stängd. Det är ett separat framtida driftsteg.
 
 ## Verifierat 2026-08-20
 

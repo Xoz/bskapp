@@ -31,7 +31,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | --- | --- |
 | **Primär utvecklingsloop** (Idag → mål → observation → historik) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `components/{CoreActivityCard,PilotStartField}.tsx` |
 | **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
-| **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `app/api/live/[id]/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx` |
+| **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
 | **Match: skapa/redigera/ta bort, cup, nivå** | `lib/actions.ts` (save/delete/updateCup/setMatchLevel…), `components/MatchForm.tsx`, `app/(skyddad)/matcher/` |
@@ -168,6 +168,8 @@ grep -E "CREATE TABLE" lib/db.ts
   Keychain-kontraktet finns i `docs/NATIVE_AUTH.md`.
 - `app/api/mobile/v1/players/` och `app/api/mobile/v1/activities/` exponerar
   trupp, spelardetalj, aktiviteter och skrivning av observationer.
+- `lib/services/mobileLive.ts` och `app/api/mobile/v1/matches/[id]/live/`
+  exponerar behörighetsstyrd matchklocka, mål och ångra för nativeklienten.
 - API-kontraktet finns i `docs/MOBILE_API_V1.yaml`. Planlinjen är uttryckligen
   utanför nuvarande scope; `docs/MOBILE_DATA_MAPPING.md` är endast en parkerad
   framtidsreferens.
@@ -179,4 +181,6 @@ grep -E "CREATE TABLE" lib/db.ts
   redigerbart original i `ios/Design`. Kör- och konfigurationsnoter finns i
   `ios/README.md`. Nativeversioner börjar på `v0.001`/build `1` och räknas upp
   ett steg vid varje faktisk installation eller distribution, inte vid rena
-  simulatorbyggen.
+  simulatorbyggen. Live Activity startas när appen körs inom 45 minuter före
+  avspark, visar samling/nedräkning och uppdateras från matchcentret; exakt start
+  med helt stängd app kräver framtida APNs-stöd.

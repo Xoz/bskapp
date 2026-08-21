@@ -140,6 +140,7 @@ struct PlayerDetail: Codable, Identifiable {
 
 struct ActivitySummary: Codable, Identifiable {
     let id: String
+    let matchId: Int?
     let date: String
     let startTime: String?
     let type: String
@@ -149,6 +150,75 @@ struct ActivitySummary: Codable, Identifiable {
     let challengeContext: String
     let observationCount: Int
     let isPrimaryMatch: Bool
+}
+
+struct LiveMatchState: Codable {
+    struct Player: Codable, Identifiable {
+        let id: Int
+        let name: String
+        let jerseyNumber: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case id, name
+            case jerseyNumber = "jersey_number"
+        }
+    }
+
+    struct Event: Codable, Identifiable {
+        let id: Int
+        let playerId: Int?
+        let playerName: String?
+        let statId: String
+        let matchSecond: Int?
+        let period: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case id, period
+            case playerId = "player_id"
+            case playerName = "player_name"
+            case statId = "stat_id"
+            case matchSecond = "match_second"
+        }
+    }
+
+    let matchId: Int
+    let opponent: String
+    let homeAway: String
+    let date: String
+    let startTime: String?
+    let periods: Int
+    let periodMinutes: Int
+    let ourScore: Int
+    let oppScore: Int
+    let clockRunning: Bool
+    let clockSeconds: Int
+    let period: Int
+    let players: [Player]
+    let events: [Event]
+    let finished: Bool
+    let onField: [Int]
+    let hasLineup: Bool
+}
+
+struct LiveMatchCommand: Encodable {
+    let type: String
+    let op: String?
+    let playerId: Int?
+    let idempotencyKey: String?
+
+    static func clock(_ operation: String) -> Self {
+        .init(type: "clock", op: operation, playerId: nil, idempotencyKey: nil)
+    }
+
+    static func goal(playerID: Int) -> Self {
+        .init(type: "goal", op: nil, playerId: playerID, idempotencyKey: UUID().uuidString)
+    }
+
+    static func opponentGoal() -> Self {
+        .init(type: "opponent_goal", op: nil, playerId: nil, idempotencyKey: UUID().uuidString)
+    }
+
+    static let undo = Self(type: "undo", op: nil, playerId: nil, idempotencyKey: nil)
 }
 
 struct ObservationCommand: Codable, Identifiable {
