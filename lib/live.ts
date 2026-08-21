@@ -332,10 +332,14 @@ export async function recordEvent(
   await batch(stmts);
 }
 
-export async function undoLastEvent(matchId: number, reporterKey: string | null = null) {
+export async function undoLastEvent(
+  matchId: number,
+  reporterKey: string | null = null,
+  goalsOnly = false
+) {
   const last = await get<{ id: number; player_id: number | null; stat_id: string }>(
     `SELECT * FROM match_events
-     WHERE match_id = ?${reporterKey ? " AND reporter_key = ?" : ""}
+     WHERE match_id = ?${reporterKey ? " AND reporter_key = ?" : ""}${goalsOnly ? " AND stat_id IN ('goals', 'opponent_goal')" : ""}
      ORDER BY id DESC LIMIT 1`,
     reporterKey ? [matchId, reporterKey] : [matchId]
   );

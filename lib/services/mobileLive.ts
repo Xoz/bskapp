@@ -54,7 +54,7 @@ export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number,
   } else if (action.type === "opponent_goal") {
     await recordEvent(matchId, null, OPPONENT_GOAL, actor.name, `mobile-${actor.id}`, action.idempotencyKey);
   } else if (action.type === "undo") {
-    await undoLastEvent(matchId);
+    await undoLastEvent(matchId, null, true);
   } else {
     throw new DevelopmentServiceError("invalid", "Okänd matchåtgärd.", 400);
   }
