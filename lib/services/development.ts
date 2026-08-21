@@ -85,6 +85,8 @@ export type MobilePlayerMatchLoad = {
   playerId: number;
   name: string;
   jerseyNumber: number | null;
+  windowMatchCount: number;
+  /** @deprecated Behålls tillfälligt för äldre native-klienter. */
   capacity: number;
   recentMatches: {
     id: string;
@@ -342,6 +344,7 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
   const scope = playerScope(actor);
   const today = swedishToday();
   const cutoff = swedishDateOffset(-7);
+  const windowEnd = swedishDateOffset(7);
   const players = await all<{ id: number; name: string; jersey_number: number | null }>(
     `SELECT p.id, p.name, p.jersey_number
      FROM players p
@@ -394,6 +397,7 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
                 ELSE 'pending'
               END AS status
        FROM development_activities da
+       LEFT JOIN matches linked_match ON linked_match.id = da.match_id
        LEFT JOIN groups g ON g.id = da.group_id
        JOIN LATERAL (
          SELECT p.id AS player_id,
@@ -410,9 +414,11 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
            AND (linked.selected_decision OR linked.callup_status IN ('present', 'unknown'))
          )
        )
-       WHERE da.activity_type = 'match' AND da.activity_date >= ?
+       WHERE da.activity_type = 'match'
+         AND da.activity_date >= ? AND da.activity_date <= ?
+         AND COALESCE(linked_match.finished, 0) = 0
        ORDER BY da.activity_date, da.start_time NULLS LAST, da.id`,
-      [...playerIds, today]
+      [...playerIds, today, windowEnd]
     ),
   ]);
 
@@ -445,12 +451,13 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
         playerId: player.id,
         name: player.name,
         jerseyNumber: player.jersey_number,
+        windowMatchCount: recentMatches.length + (upcomingByPlayer.get(player.id) ?? []).length,
         capacity: matchCapacity(recentMatches, nowMs, swedishWallClockToEpoch),
         recentMatches,
         upcomingMatches: upcomingByPlayer.get(player.id) ?? [],
       };
     })
-    .sort((left, right) => right.capacity - left.capacity || left.name.localeCompare(right.name, "sv"));
+    .sort((left, right) => left.windowMatchCount - right.windowMatchCount || left.name.localeCompare(right.name, "sv"));
 }
 
 export async function listMobileActivityPlayers(actor: CurrentUser, activityId: string): Promise<MobilePlayerSummary[]> {

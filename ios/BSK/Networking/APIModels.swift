@@ -88,6 +88,7 @@ struct PlayerMatchLoad: Codable, Identifiable {
     let playerId: Int
     let name: String
     let jerseyNumber: Int?
+    let windowMatchCount: Int
     let capacity: Int
     let recentMatches: [Match]
     let upcomingMatches: [UpcomingMatch]

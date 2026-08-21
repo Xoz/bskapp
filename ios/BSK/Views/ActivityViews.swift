@@ -832,8 +832,8 @@ struct TodayList: View {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("GULSPELARE").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                        Text("Mest matchutrymme").font(.title2.bold())
-                        Text("Spelade matcher de senaste sju dagarna")
+                        Text("Belastning ±7 dagar").font(.title2.bold())
+                        Text("Spelade och planerade matcher runt idag")
                             .font(.caption)
                             .foregroundStyle(BSKTheme.muted)
                     }
@@ -877,7 +877,7 @@ struct TodayList: View {
 
     private var sortedPlayerLoads: [PlayerMatchLoad] {
         model.playerMatchLoads.sorted {
-            $0.capacity > $1.capacity || ($0.capacity == $1.capacity && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
+            $0.windowMatchCount < $1.windowMatchCount || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
         }
     }
 
@@ -885,32 +885,27 @@ struct TodayList: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(player.name).font(.subheadline.bold()).foregroundStyle(.white)
-                Text(player.recentMatches.count == 1 ? "1 match senaste 7 dagarna" : "\(player.recentMatches.count) matcher senaste 7 dagarna")
+                Text("\(player.recentMatches.count) spelade · \(player.upcomingMatches.count) planerade")
                     .font(.caption2)
                     .foregroundStyle(BSKTheme.muted)
             }
             Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 6) {
-                Text("\(player.capacity) %")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(capacityColor(player.capacity))
-                ProgressView(value: Double(player.capacity), total: 100)
-                    .tint(capacityColor(player.capacity))
-                    .frame(width: horizontalSizeClass == .compact ? 92 : 130)
-            }
+            Text(player.windowMatchCount == 1 ? "1 match" : "\(player.windowMatchCount) matcher")
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(loadColor(player.windowMatchCount))
             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(player.name), \(player.capacity) procent matchutrymme, \(player.recentMatches.count) matcher senaste sju dagarna")
+        .accessibilityLabel("\(player.name), \(player.windowMatchCount) matcher inom sju dagar bakåt och framåt")
     }
 
-    private func capacityColor(_ capacity: Int) -> Color {
-        if capacity >= 75 { return BSKTheme.accent }
-        if capacity >= 40 { return BSKTheme.warning }
+    private func loadColor(_ count: Int) -> Color {
+        if count <= 1 { return BSKTheme.accent }
+        if count == 2 { return BSKTheme.warning }
         return BSKTheme.danger
     }
 
@@ -1038,21 +1033,41 @@ private struct PlayerMatchLoadDetail: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("MATCHUTRYMME").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                    Text("BELASTNING ±7 DAGAR").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
                     HStack(alignment: .firstTextBaseline) {
                         Text(player.name).font(.largeTitle.bold())
                         Spacer()
-                        Text("\(player.capacity) %")
-                            .font(.title.bold()).monospacedDigit().foregroundStyle(capacityColor)
+                        Text(player.windowMatchCount == 1 ? "1 match" : "\(player.windowMatchCount) matcher")
+                            .font(.title.bold()).monospacedDigit().foregroundStyle(loadColor)
                     }
-                    ProgressView(value: Double(player.capacity), total: 100)
-                        .tint(capacityColor)
-                    Text(player.recentMatches.count == 1 ? "1 spelad match de senaste sju dagarna" : "\(player.recentMatches.count) spelade matcher de senaste sju dagarna")
+                    Text("Sju dagar bakåt och sju dagar framåt från idag")
                         .font(.caption).foregroundStyle(BSKTheme.muted)
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Kommande matcher").font(.title3.bold())
+                    Text("Spelade senaste 7 dagarna").font(.title3.bold())
+                    if player.recentMatches.isEmpty {
+                        Text("Inga spelade matcher")
+                            .font(.subheadline).foregroundStyle(BSKTheme.secondary)
+                    } else {
+                        ForEach(player.recentMatches) { match in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(match.title).font(.subheadline.bold())
+                                    Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(BSKTheme.muted)
+                                }
+                                Spacer()
+                                Text(match.sourceTeam).font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+                            }
+                            .padding(14)
+                            .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Planerade kommande 7 dagarna").font(.title3.bold())
                     if player.upcomingMatches.isEmpty {
                         Label("Inga kommande matcher registrerade", systemImage: "calendar.badge.checkmark")
                             .font(.subheadline)
@@ -1098,9 +1113,9 @@ private struct PlayerMatchLoadDetail: View {
         }
     }
 
-    private var capacityColor: Color {
-        if player.capacity >= 75 { return BSKTheme.accent }
-        if player.capacity >= 40 { return BSKTheme.warning }
+    private var loadColor: Color {
+        if player.windowMatchCount <= 1 { return BSKTheme.accent }
+        if player.windowMatchCount == 2 { return BSKTheme.warning }
         return BSKTheme.danger
     }
 

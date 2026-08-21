@@ -7,6 +7,7 @@ const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
+const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -88,6 +89,14 @@ describe("utvecklingskärnans kontrakt", () => {
     }
     expect(schema).toContain('id: "0010-canonical-coach-assessment"');
     expect(schema).toContain("players_assessed_level_check");
+  });
+
+  it("visar mobil belastning som antal spelade och planerade matcher ±7 dagar", () => {
+    expect(mobileDevelopment).toContain("const windowEnd = swedishDateOffset(7)");
+    expect(mobileDevelopment).toContain("da.activity_date >= ? AND da.activity_date <= ?");
+    expect(mobileDevelopment).toContain("windowMatchCount: recentMatches.length +");
+    expect(nativeActivityViews).toContain('Text("Belastning ±7 dagar")');
+    expect(nativeActivityViews).not.toContain('Text("\\(player.capacity) %")');
   });
 
   it("refererar inte den borttagna ELO-tabellen", () => {
