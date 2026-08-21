@@ -94,7 +94,10 @@ struct BSKMatchLiveActivityWidget: Widget {
     @ViewBuilder
     private func activityTime(_ state: BSKMatchLiveActivityAttributes.ContentState) -> some View {
         if state.phase == "countdown", let matchStartAt = state.matchStartAt {
-            Text(matchStartAt, style: .timer)
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                let minutes = max(0, Int(ceil(matchStartAt.timeIntervalSince(timeline.date) / 60)))
+                Text("Avspark om \(minutes) \(minutes == 1 ? "minut" : "minuter")")
+            }
         } else if state.phase == "ready" {
             Text("STARTA KLOCKAN")
         } else {
