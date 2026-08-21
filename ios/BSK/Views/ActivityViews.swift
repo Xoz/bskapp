@@ -1972,8 +1972,8 @@ struct MatchEvaluationView: View {
                 .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
             }
             .buttonStyle(.plain)
-            .disabled((activeIndex == workspace.players.count - 1 && !isHandled(workspace.players[activeIndex].id)) || isSaving)
-            .opacity((activeIndex == workspace.players.count - 1 && !isHandled(workspace.players[activeIndex].id)) || isSaving ? 0.42 : 1)
+            .disabled(isSaving)
+            .opacity(isSaving ? 0.42 : 1)
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -2027,11 +2027,13 @@ struct MatchEvaluationView: View {
 
     @MainActor
     private func save(advance: Bool) async {
+        guard !isSaving else { return }
         isSaving = true
         defer { isSaving = false }
         do {
             guard let currentWorkspace = workspace else { return }
             let nextIndex = advance ? min(activeIndex + 1, currentWorkspace.players.count - 1) : activeIndex
+            if advance { activeIndex = nextIndex }
             let status = try await model.saveMatchEvaluation(
                 id: matchID,
                 answers: Array(answers.values),
@@ -2045,7 +2047,6 @@ struct MatchEvaluationView: View {
             case .queued:
                 savedMessage = "Väntar på synkning"
             }
-            if advance { activeIndex += 1 }
         } catch {
             model.errorMessage = error.localizedDescription
         }
