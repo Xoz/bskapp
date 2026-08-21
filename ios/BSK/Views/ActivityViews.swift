@@ -48,6 +48,9 @@ struct ActivityList: View {
                             .foregroundStyle(BSKTheme.accent)
                         Text(activity.title).fontWeight(.semibold)
                         if !activity.sourceTeam.isEmpty { BSKStatusChip(title: activity.sourceTeam) }
+                        Text(activity.matchLevel)
+                            .font(.caption2.bold())
+                            .foregroundStyle(.secondary)
                     }
                     HStack {
                         Text(activity.date)

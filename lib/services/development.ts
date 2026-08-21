@@ -118,6 +118,7 @@ export type MobileActivity = {
   observationCount: number;
   isPrimaryMatch: boolean;
   sourceTeam: string;
+  matchLevel: "Extra svår" | "Svår" | "Medel" | "Lätt" | "Extra lätt" | "Öppen klass";
   loanedPlayerNames: string[];
   finished: boolean;
 };
@@ -770,6 +771,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     observation_count: number;
     is_primary_match: boolean;
     source_team: string;
+    match_level: MobileActivity["matchLevel"];
     loaned_player_names: string;
     finished: number;
   }>(
@@ -779,6 +781,14 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
             da.activity_type = 'match'
               AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul') AS is_primary_match,
             COALESCE(match_group.name, '') AS source_team,
+            CASE
+              WHEN linked_match.level IN ('1', 'extra_svar') THEN 'Extra svår'
+              WHEN linked_match.level IN ('2', 'svar') THEN 'Svår'
+              WHEN linked_match.level IN ('3', 'medel') THEN 'Medel'
+              WHEN linked_match.level IN ('4', 'latt') THEN 'Lätt'
+              WHEN linked_match.level IN ('5', 'extra_latt') THEN 'Extra lätt'
+              ELSE 'Öppen klass'
+            END AS match_level,
             COALESCE((
               SELECT string_agg(loaned.name, E'\\x1f' ORDER BY lower(loaned.name))
               FROM players loaned
@@ -823,7 +833,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
        AND da.activity_type = 'match'
-     GROUP BY da.id, match_group.name, linked_match.finished
+     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
     scope.args
@@ -841,6 +851,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     observationCount: Number(row.observation_count),
     isPrimaryMatch: row.is_primary_match,
     sourceTeam: row.source_team,
+    matchLevel: row.match_level,
     loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
     finished: Boolean(row.finished),
   }));

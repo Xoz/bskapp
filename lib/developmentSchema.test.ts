@@ -112,4 +112,13 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(actions).toContain("DELETE FROM development_activities da");
     expect(schema).toContain('id: "0011-remove-stale-erikslund-calendar-match"');
   });
+
+  it("normaliserar matchkortens nivå och visar tom nivå som öppen klass", () => {
+    expect(mobileDevelopment).toContain("THEN 'Extra svår'");
+    expect(mobileDevelopment).toContain("THEN 'Svår'");
+    expect(mobileDevelopment).toContain("THEN 'Medel'");
+    expect(mobileDevelopment).toContain("THEN 'Lätt'");
+    expect(mobileDevelopment).toContain("ELSE 'Öppen klass'");
+    expect(nativeActivityViews).toContain("Text(activity.matchLevel)");
+  });
 });

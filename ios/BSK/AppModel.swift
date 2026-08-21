@@ -142,6 +142,7 @@ final class AppModel: ObservableObject {
                 observationCount: 3,
                 isPrimaryMatch: true,
                 sourceTeam: "Gul",
+                matchLevel: "Medel",
                 loanedPlayerNames: [],
                 finished: false
             )

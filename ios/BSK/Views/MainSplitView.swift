@@ -570,6 +570,12 @@ private struct ActivityWorkspaceList: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
                         .background(BSKTheme.accent, in: Capsule())
+                    Text(activity.matchLevel)
+                        .font(.caption2.bold())
+                        .foregroundStyle(levelColor(activity.matchLevel))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(levelColor(activity.matchLevel).opacity(0.12), in: Capsule())
                     Spacer(minLength: 2)
                     Text(activity.startTime ?? "--:--")
                         .font(.system(size: 20, weight: .black, design: .rounded))
@@ -656,6 +662,15 @@ private struct ActivityWorkspaceList: View {
         if activity.finished { return "Avslutad" }
         if activity.date < today { return "Ej avslutad" }
         return "Ingen Gulspelare utlånad"
+    }
+
+    private func levelColor(_ level: String?) -> Color {
+        switch level {
+        case "Lätt", "Extra lätt": return BSKTheme.accent
+        case "Medel": return BSKTheme.warning
+        case "Svår", "Extra svår": return BSKTheme.danger
+        default: return BSKTheme.muted
+        }
     }
 
     private func ascendingMatchOrder(_ lhs: ActivitySummary, _ rhs: ActivitySummary) -> Bool {

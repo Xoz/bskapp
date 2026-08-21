@@ -199,7 +199,7 @@ components:
               status: { type: string, enum: [selected, accepted, pending] }
     Activity:
       type: object
-      required: [id, date, type, title, theme, challengeContext, observationCount, finished]
+      required: [id, date, type, title, theme, challengeContext, observationCount, isPrimaryMatch, sourceTeam, matchLevel, loanedPlayerNames, finished]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -210,6 +210,12 @@ components:
         theme: { type: string }
         challengeContext: { type: string, enum: [safe, balanced, challenging] }
         observationCount: { type: integer, minimum: 0 }
+        isPrimaryMatch: { type: boolean }
+        sourceTeam: { type: string, enum: [Gul, Grön] }
+        matchLevel: { type: string, enum: [Extra svår, Svår, Medel, Lätt, Extra lätt, Öppen klass] }
+        loanedPlayerNames:
+          type: array
+          items: { type: string }
         finished: { type: boolean }
     ObservationCommand:
       type: object

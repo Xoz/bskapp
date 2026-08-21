@@ -182,6 +182,7 @@ struct ActivitySummary: Codable, Identifiable {
     let observationCount: Int
     let isPrimaryMatch: Bool
     let sourceTeam: String
+    let matchLevel: String
     let loanedPlayerNames: [String]
     let finished: Bool
 }
