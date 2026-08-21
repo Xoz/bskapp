@@ -1915,14 +1915,36 @@ struct MatchEvaluationView: View {
                 }
 
                 Button {
+                    Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
+                } label: {
+                    HStack(spacing: 9) {
+                        if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
+                        Text(activeIndex < (workspace?.players.count ?? 1) - 1 ? "Spara och nästa spelare" : "Spara utvärderingen")
+                        Image(systemName: activeIndex < (workspace?.players.count ?? 1) - 1 ? "arrow.right.circle.fill" : "checkmark.circle.fill")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(BSKTheme.backgroundDeep)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(isSaving)
+                .opacity(isSaving ? 0.5 : 1)
+
+                Button {
                     update(player.id) {
                         $0.selfComparison = nil
                         $0.matchImpact = nil
                         $0.reasonTag = ""
                         $0.skipped = true
                     }
+                    Task { await save(advance: activeIndex < (workspace?.players.count ?? 1) - 1) }
                 } label: {
-                    Label("Hoppa över spelaren", systemImage: "forward.fill")
+                    Label(
+                        activeIndex < (workspace?.players.count ?? 1) - 1 ? "Hoppa över och gå vidare" : "Hoppa över spelaren",
+                        systemImage: "forward.fill"
+                    )
                         .font(.subheadline.bold())
                         .foregroundStyle(BSKTheme.secondary)
                         .frame(maxWidth: .infinity)
@@ -1931,6 +1953,8 @@ struct MatchEvaluationView: View {
                         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
                 }
                 .buttonStyle(.plain)
+                .disabled(isSaving)
+                .opacity(isSaving ? 0.5 : 1)
             }
         }
         .padding(horizontalSizeClass == .compact ? 14 : 22)

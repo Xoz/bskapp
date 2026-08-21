@@ -50,6 +50,8 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
   utkastet och kan slutföras när tränaren går tillbaka.
 - Nästa spelare öppnas direkt medan utkastet sparas; klienten blockerar inte
   längre navigeringen utifrån sin lokala bedömning av svarets fullständighet.
+- Spelarkortet har egna tydliga åtgärder för `Spara och nästa spelare` och
+  `Hoppa över och gå vidare`; båda sparar statusen och öppnar nästa spelare.
 - Appen använder ännu inte APNs push-token för Live Activity. Därför kan iOS
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.
