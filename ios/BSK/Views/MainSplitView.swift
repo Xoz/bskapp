@@ -589,7 +589,7 @@ private struct ActivityWorkspaceList: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                 } else {
-                    Text(activity.finished ? "Avslutad" : "Ingen Gulspelare utlånad")
+                    Text(matchStatus(activity))
                         .font(.caption)
                         .foregroundStyle(BSKTheme.muted)
                 }
@@ -633,14 +633,29 @@ private struct ActivityWorkspaceList: View {
 
     private var upcomingMatches: [ActivitySummary] {
         model.activities
-            .filter { !$0.finished }
+            .filter { !$0.finished && $0.date >= today }
             .sorted(by: ascendingMatchOrder)
     }
 
     private var playedMatches: [ActivitySummary] {
         model.activities
-            .filter(\.finished)
+            .filter { $0.finished || $0.date < today }
             .sorted { ascendingMatchOrder($1, $0) }
+    }
+
+    private var today: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }
+
+    private func matchStatus(_ activity: ActivitySummary) -> String {
+        if activity.finished { return "Avslutad" }
+        if activity.date < today { return "Ej avslutad" }
+        return "Ingen Gulspelare utlånad"
     }
 
     private func ascendingMatchOrder(_ lhs: ActivitySummary, _ rhs: ActivitySummary) -> Bool {
