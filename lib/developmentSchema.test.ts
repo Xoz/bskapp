@@ -8,6 +8,7 @@ const mobileDevelopment = readFileSync(new URL("./services/development.ts", impo
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
+const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView.swift", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -120,5 +121,10 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).toContain("THEN 'Lätt'");
     expect(mobileDevelopment).toContain("ELSE 'Öppen klass'");
     expect(nativeActivityViews).toContain("Text(activity.matchLevel)");
+  });
+
+  it("färgkodar Gul och Grön på matchkorten", () => {
+    expect(nativeMainSplitView).toContain('team == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent');
+    expect(nativeActivityViews).toContain('activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent');
   });
 });

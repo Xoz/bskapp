@@ -569,7 +569,7 @@ private struct ActivityWorkspaceList: View {
                         .foregroundStyle(BSKTheme.backgroundDeep)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(BSKTheme.accent, in: Capsule())
+                        .background(teamColor(activity.sourceTeam), in: Capsule())
                     Text(activity.matchLevel)
                         .font(.caption2.bold())
                         .foregroundStyle(levelColor(activity.matchLevel))
@@ -671,6 +671,10 @@ private struct ActivityWorkspaceList: View {
         case "Svår", "Extra svår": return BSKTheme.danger
         default: return BSKTheme.muted
         }
+    }
+
+    private func teamColor(_ team: String) -> Color {
+        team == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent
     }
 
     private func ascendingMatchOrder(_ lhs: ActivitySummary, _ rhs: ActivitySummary) -> Bool {

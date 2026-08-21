@@ -47,7 +47,12 @@ struct ActivityList: View {
                         Image(systemName: activity.type == "match" ? "sportscourt.fill" : "figure.run")
                             .foregroundStyle(BSKTheme.accent)
                         Text(activity.title).fontWeight(.semibold)
-                        if !activity.sourceTeam.isEmpty { BSKStatusChip(title: activity.sourceTeam) }
+                        if !activity.sourceTeam.isEmpty {
+                            BSKStatusChip(
+                                title: activity.sourceTeam,
+                                color: activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent
+                            )
+                        }
                         Text(activity.matchLevel)
                             .font(.caption2.bold())
                             .foregroundStyle(.secondary)

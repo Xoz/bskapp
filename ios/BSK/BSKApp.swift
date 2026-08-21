@@ -7,6 +7,7 @@ enum BSKTheme {
     static let elevated = Color(red: 27 / 255, green: 36 / 255, blue: 45 / 255)
     static let border = Color(red: 39 / 255, green: 50 / 255, blue: 61 / 255)
     static let accent = Color(red: 23 / 255, green: 201 / 255, blue: 100 / 255)
+    static let teamYellow = Color(red: 250 / 255, green: 204 / 255, blue: 21 / 255)
     static let secondary = Color(red: 170 / 255, green: 180 / 255, blue: 194 / 255)
     static let muted = Color(red: 124 / 255, green: 135 / 255, blue: 152 / 255)
     static let warning = Color(red: 245 / 255, green: 165 / 255, blue: 36 / 255)
