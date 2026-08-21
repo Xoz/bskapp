@@ -35,6 +35,7 @@ import {
 } from "./callupSync";
 import { evaluationTokenHash, getMatchEvaluationWorkspace } from "./matchEvaluation";
 import { isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluationTypes";
+import { importSvenskaLagCallupWorkbooks } from "./services/callupWorkbookImport";
 
 async function requirePermission(permission: Permission): Promise<void> {
   if (!(await hasPermission(permission))) redirect("/oversikt?behorighet=saknas");
@@ -1587,6 +1588,34 @@ export async function importAttendanceWorkbook(formData: FormData) {
   redirect(
     `/installningar?narvaro=ok&narvaro_spelare=${parsed.players.length}&narvaro_aktiviteter=${parsed.activities.length}&narvaro_matchade=${matchedPlayers}`
   );
+}
+
+export async function importSvenskaLagCallupFiles(formData: FormData) {
+  await requirePermission("manage_settings");
+  const files = formData.getAll("callup_files").filter((value): value is File => value instanceof File && value.size > 0);
+  if (files.length === 0) redirect("/installningar?kallelsefil=fil#trupp");
+  if (files.length > 2 || files.some((file) => !/\.xlsx$/i.test(file.name) || file.size > 5 * 1024 * 1024)) {
+    redirect("/installningar?kallelsefil=fel#trupp");
+  }
+
+  try {
+    const importedBy = (await getCoachName()) ?? "Tränare";
+    const result = await importSvenskaLagCallupWorkbooks(
+      await Promise.all(files.map(async (file) => ({ name: file.name, buffer: await file.arrayBuffer() }))),
+      importedBy,
+    );
+    await logActivity(importedBy, "Importerade Svenska Lag-filer", `${result.matchedMatches} matcher · ${result.callups} kallelser`);
+    revalidatePath("/installningar");
+    revalidatePath("/spelare");
+    revalidatePath("/idag");
+    revalidatePath("/observera");
+    revalidatePath("/uttagning");
+    redirect(`/installningar?kallelsefil=ok&kallelsefil_matcher=${result.matchedMatches}&kallelsefil_kallelser=${result.callups}&kallelsefil_omatchade=${result.skippedUnmatchedMatches}#trupp`);
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    console.error("Kunde inte importera Svenska Lag-kallelser", error);
+    redirect("/installningar?kallelsefil=fel#trupp");
+  }
 }
 
 export async function syncSanktanMatchCounts(formData: FormData) {

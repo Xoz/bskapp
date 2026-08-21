@@ -112,6 +112,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(actions).toContain("NOT EXISTS (SELECT 1 FROM match_squad");
     expect(actions).toContain("DELETE FROM development_activities da");
     expect(schema).toContain('id: "0011-remove-stale-erikslund-calendar-match"');
+    expect(schema).toContain('id: "0012-svenskalag-file-imports"');
   });
 
   it("normaliserar matchkortens nivå och visar tom nivå som öppen klass", () => {

@@ -8,6 +8,7 @@ import {
   updateCoachProfile,
   importCalendarMatches,
   importAttendanceWorkbook,
+  importSvenskaLagCallupFiles,
   syncSanktanMatchCounts,
   syncSanktanMatchHistory,
   syncSanktanCallupHistory,
@@ -80,6 +81,10 @@ export default async function SettingsPage({
     sanktan_matcher?: string;
     sanktan_kommande?: string;
     sanktan_kommande_matcher?: string;
+    kallelsefil?: string;
+    kallelsefil_matcher?: string;
+    kallelsefil_kallelser?: string;
+    kallelsefil_omatchade?: string;
   }>;
 }) {
   const role = await getRole();
@@ -108,7 +113,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher, kallelsefil, kallelsefil_matcher, kallelsefil_kallelser, kallelsefil_omatchade } =
     await searchParams;
 
   return (
@@ -239,6 +244,20 @@ export default async function SettingsPage({
             <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--warn-bg)", color: "var(--warning)" }}>
               <IconAlert width={16} height={16} />
               Kunde inte synka kommande kallelser. Ingen kallelsedata ändrades.
+            </div>
+          )}
+          {kallelsefil === "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--ok-bg)", color: "var(--success)" }}>
+              <IconCheck width={16} height={16} />
+              {`${kallelsefil_matcher ?? "0"} matcher och ${kallelsefil_kallelser ?? "0"} spelarkallelser uppdaterades från Excel.${Number(kallelsefil_omatchade ?? 0) > 0 ? ` ${kallelsefil_omatchade} aktiviteter kunde inte kopplas säkert och hoppades över.` : ""}`}
+            </div>
+          )}
+          {kallelsefil != null && kallelsefil !== "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--warn-bg)", color: "var(--warning)" }}>
+              <IconAlert width={16} height={16} />
+              {kallelsefil === "fil"
+                ? "Välj minst en Svenska Lag-fil innan du importerar."
+                : "Kunde inte läsa filerna. Använd exporten Kallelser, svar & närvaro för F2014-Gul och F2014-Grön."}
             </div>
           )}
         </div>
@@ -610,14 +629,36 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="font-semibold">Sanktanmatcher från Svenska Lag</h2>
                   <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                    Synka spelade Sanktanmatcher från Guls och Gröns statistik. Summan visas på spelarkorten; cuper och träningsmatcher räknas inte.
+                    Ladda upp exporten <strong>Kallelser, svar &amp; närvaro</strong> för Gul och Grön. Appen kopplar säkra matchningar och uppdaterar belastning, kallelsesvar och faktiskt deltagande.
                   </p>
                 </div>
               </div>
+              <form action={importSvenskaLagCallupFiles} className="space-y-3 rounded-2xl p-4" style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}>
+                <div>
+                  <label className="label" htmlFor="callup_files">Excel-filer för Gul och Grön</label>
+                  <input
+                    id="callup_files"
+                    name="callup_files"
+                    type="file"
+                    accept=".xlsx"
+                    multiple
+                    required
+                    className="input h-auto cursor-pointer py-3"
+                  />
+                </div>
+                <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Välj en eller båda filerna. Endast aktiva spelarprofiler importeras. Bekräftade trupper och uttagningsbeslut ändras aldrig.
+                </p>
+                <button type="submit" className="btn-primary">Importera Svenska Lag-data</button>
+              </form>
+              <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--ink-muted)" }}>
+                  Äldre manuella importverktyg
+                </summary>
               <ConfirmForm
                 action={syncSanktanMatchCounts}
                 message="Ersätt befintliga Sanktan-siffror för den valda säsongen?"
-                className="space-y-3"
+                className="mt-4 space-y-3"
               >
                 <div>
                   <label className="label" htmlFor="sanktan_season">Säsong</label>
@@ -695,6 +736,7 @@ export default async function SettingsPage({
                   </p>
                   <button type="submit" className="btn-secondary">Synka kommande kallelser</button>
                 </ConfirmForm>
+              </details>
               </details>
             </div>
 
