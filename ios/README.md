@@ -23,6 +23,14 @@ Appen använder filbaserade lokala köer för observationer och matchutvärderin
 men har ingen generell offline-databas. Verifiering av signerat Release-bygge,
 Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-släpp.
 
+## Versionsnumrering
+
+- Första deploybara nativeversionen är `v0.001` med buildnummer `1`.
+- Varje faktisk installation/deploy höjer båda värdena: `v0.002`/build `2`,
+  `v0.003`/build `3` och så vidare.
+- Simulatorbyggen utan installation räknas inte som deploy.
+- Version och build visas under Konto i appen.
+
 ## Verifierat 2026-08-20
 
 - Debug simulatorbuild passerar för iPhone 17 Pro med iOS 27.

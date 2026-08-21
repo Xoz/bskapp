@@ -442,6 +442,8 @@ private struct AccountDetail: View {
                     accountRow("Status", value: "Synkroniserad", icon: "checkmark.icloud.fill")
                     Divider().overlay(BSKTheme.hairline)
                     accountRow("Åtkomst", value: "Behörighetsstyrd", icon: "lock.shield.fill")
+                    Divider().overlay(BSKTheme.hairline)
+                    accountRow("Version", value: appVersion, icon: "number.circle.fill")
                 }
                 .padding(.horizontal, 16)
                 .bskCardSurface()
@@ -463,6 +465,13 @@ private struct AccountDetail: View {
         }
         .navigationTitle("Konto")
         .background(BSKBackdrop())
+    }
+
+    private var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "0.000"
+        let build = info?["CFBundleVersion"] as? String ?? "0"
+        return "v\(version) (\(build))"
     }
 
     private func accountRow(_ title: String, value: String, icon: String) -> some View {

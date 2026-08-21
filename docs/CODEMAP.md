@@ -177,4 +177,6 @@ grep -E "CREATE TABLE" lib/db.ts
   använder separata adaptiva flöden för kompakt navigation och
   `NavigationSplitView`. Appikonen ligger i `ios/BSK/Assets.xcassets` med
   redigerbart original i `ios/Design`. Kör- och konfigurationsnoter finns i
-  `ios/README.md`.
+  `ios/README.md`. Nativeversioner börjar på `v0.001`/build `1` och räknas upp
+  ett steg vid varje faktisk installation eller distribution, inte vid rena
+  simulatorbyggen.
