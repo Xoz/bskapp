@@ -5,7 +5,7 @@ import PilotStartField from "@/components/PilotStartField";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
-const SELECTION_GRID = "2rem minmax(12rem, 1fr) 6.5rem 6.75rem 6.75rem 5rem 5.5rem 6.5rem 8.25rem";
+const SELECTION_GRID = "2rem minmax(12rem, 1fr) 6.5rem 7.5rem 6rem 6.5rem 8.25rem";
 
 type Candidate = {
   player: {
@@ -26,6 +26,7 @@ type Candidate = {
   matchCount: number;
   callupCount: number;
   plannedUpcomingCount: number;
+  windowMatchCount: number;
   lastSelectedDate: string | null;
   currentCallupStatus: "accepted" | "declined" | "pending" | null;
   goals: { id: string; title: string }[];
@@ -58,10 +59,9 @@ export default function SelectionEditor({
   );
   const warnings = useMemo(
     () => squadBalanceWarnings(selected.map((candidate) => ({
-      position: positions[candidate.player.id] ?? "",
-      selectedLastThree: candidate.selectedLastThree,
+      windowMatchCount: candidate.windowMatchCount,
     }))),
-    [positions, selected]
+    [selected]
   );
   const teamOptions = useMemo(() => {
     const unique = new Set<string>();
@@ -127,13 +127,10 @@ export default function SelectionEditor({
         name: candidate.player.name,
         teamNames: candidate.teams.map((team) => team.name),
         primaryTeamName: candidate.primaryTeam?.name ?? null,
-        callupCount: candidate.callupCount,
-        plannedUpcomingCount: candidate.plannedUpcomingCount,
+        windowMatchCount: candidate.windowMatchCount,
         lastSelectedDate: candidate.lastSelectedDate,
         primaryLevel: candidate.player.preferred_level_primary,
         secondaryLevel: candidate.player.preferred_level_secondary,
-        primaryPosition: candidate.player.preferred_position_primary || candidate.player.position || "",
-        secondaryPosition: candidate.player.preferred_position_secondary,
         selectionEligible: Boolean(candidate.player.selection_eligible),
         currentlySelected: selectedIds.has(candidate.player.id),
         currentCallupStatus: candidate.currentCallupStatus,
@@ -232,9 +229,7 @@ export default function SelectionEditor({
               <span>Spelare</span>
               <span>Lag</span>
               <span>Pos 1</span>
-              <span>Pos 2</span>
-              <span className="selection-number">Matcher</span>
-              <span className="selection-number">Kallelser</span>
+              <span className="selection-number">Matcher ±7 dagar</span>
               <span>Svar</span>
               <span>Vald position</span>
             </div>
@@ -294,14 +289,8 @@ export default function SelectionEditor({
                   <span className="selection-preference" title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}>
                     {candidate.player.preferred_position_primary || "—"}
                   </span>
-                  <span className="selection-preference" title={`Val 2: ${candidate.player.preferred_position_secondary || "Ej satt"}`}>
-                    {candidate.player.preferred_position_secondary || "—"}
-                  </span>
                   <span className="selection-number tabular-nums">
-                    {candidate.matchCount}
-                  </span>
-                  <span className="selection-number tabular-nums">
-                    {candidate.callupCount}
+                    {candidate.windowMatchCount}
                   </span>
                   {candidate.currentCallupStatus ? (
                     <span className="selection-callup-status" data-callup-status={candidate.currentCallupStatus}>

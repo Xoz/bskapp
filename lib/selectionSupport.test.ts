@@ -9,13 +9,10 @@ import {
 function candidate(overrides: Partial<RecommendationCandidate> & Pick<RecommendationCandidate, "id" | "name" | "teamNames">): RecommendationCandidate {
   return {
     primaryTeamName: overrides.teamNames[0] ?? null,
-    callupCount: 0,
-    plannedUpcomingCount: 0,
+    windowMatchCount: 0,
     lastSelectedDate: null,
     primaryLevel: "3",
     secondaryLevel: "",
-    primaryPosition: "Mittfält",
-    secondaryPosition: "",
     selectionEligible: true,
     currentlySelected: false,
     currentCallupStatus: null,
@@ -27,41 +24,38 @@ describe("transparent uttagningsstöd", () => {
   it("lyfter låg exponering och aktiva mål utan poäng", () => {
     expect(
       selectionSupport({
-        selectedLastEight: 0,
-        selectedLastThree: 0,
-        teamMinimumLastEight: 0,
+        windowMatchCount: 0,
+        teamMinimumWindow: 0,
         activeGoalCount: 1,
         lastSelectedDate: null,
       })
     ).toEqual({
       opportunities: [
-        "Ingen spelad Sanktanmatch bland de senaste åtta matchtillfällena",
+        "Ingen match under perioden ±7 dagar",
         "Har ett aktivt utvecklingsmål att observera",
       ],
       cautions: [],
     });
   });
 
-  it("varnar för tre raka Sanktanmatcher", () => {
+  it("varnar för minst tre matcher inom sjudagarsfönstret", () => {
     const result = selectionSupport({
-      selectedLastEight: 5,
-      selectedLastThree: 3,
-      teamMinimumLastEight: 1,
+      windowMatchCount: 3,
+      teamMinimumWindow: 1,
       activeGoalCount: 0,
       lastSelectedDate: "2026-08-15",
     });
-    expect(result.cautions).toContain("Har spelat tre Sanktanmatcher i följd");
+    expect(result.cautions).toContain("3 matcher under perioden ±7 dagar");
   });
 
   it("visar lagbalans som varningar, inte automatval", () => {
     expect(
       squadBalanceWarnings([
-        { position: "Försvar", selectedLastThree: 3 },
-        { position: "Mittfält", selectedLastThree: 3 },
+        { windowMatchCount: 3 },
+        { windowMatchCount: 4 },
       ])
     ).toEqual([
-      "Truppen saknar registrerat målvaktsalternativ",
-      "Minst halva truppen har redan tre uttagningar i följd",
+      "Minst halva truppen har tre eller fler matcher inom ±7 dagar",
     ]);
   });
 
@@ -70,10 +64,10 @@ describe("transparent uttagningsstöd", () => {
       matchLevel: 3,
       targetSize: 2,
       candidates: [
-        candidate({ id: 1, name: "Gul låg", teamNames: ["Gul"], callupCount: 1 }),
-        candidate({ id: 2, name: "Gul hög", teamNames: ["Gul"], callupCount: 4 }),
-        candidate({ id: 3, name: "F15 noll", teamNames: ["F15"], callupCount: 0 }),
-        candidate({ id: 4, name: "Grön noll", teamNames: ["Grön"], callupCount: 0 }),
+        candidate({ id: 1, name: "Gul låg", teamNames: ["Gul"], windowMatchCount: 1 }),
+        candidate({ id: 2, name: "Gul hög", teamNames: ["Gul"], windowMatchCount: 4 }),
+        candidate({ id: 3, name: "F15 noll", teamNames: ["F15"], windowMatchCount: 0 }),
+        candidate({ id: 4, name: "Grön noll", teamNames: ["Grön"], windowMatchCount: 0 }),
       ],
     });
     expect(result.selectedIds).toEqual([1, 2]);
@@ -81,18 +75,18 @@ describe("transparent uttagningsstöd", () => {
     expect(result.fillerCount).toBe(0);
   });
 
-  it("räknar redan planerade uttagningar i rättvisan och använder nivå som utslagsregel", () => {
+  it("använder periodens matchantal och nivå som utslagsregel", () => {
     const result = recommendYellowSelection({
       matchLevel: 3,
       targetSize: 1,
       candidates: [
-        candidate({ id: 1, name: "Redan planerad", teamNames: ["Gul"], callupCount: 2, plannedUpcomingCount: 1, primaryLevel: "3" }),
-        candidate({ id: 2, name: "Rätt nivå", teamNames: ["Gul"], callupCount: 2, primaryLevel: "3" }),
-        candidate({ id: 3, name: "Sekundär nivå", teamNames: ["Gul"], callupCount: 2, primaryLevel: "2", secondaryLevel: "3" }),
+        candidate({ id: 1, name: "Högre belastning", teamNames: ["Gul"], windowMatchCount: 3, primaryLevel: "3" }),
+        candidate({ id: 2, name: "Rätt nivå", teamNames: ["Gul"], windowMatchCount: 2, primaryLevel: "3" }),
+        candidate({ id: 3, name: "Utmaningsnivå", teamNames: ["Gul"], windowMatchCount: 2, primaryLevel: "2", secondaryLevel: "3" }),
       ],
     });
     expect(result.selectedIds).toEqual([2]);
-    expect(result.reasons[2]).toContain("primär nivå");
+    expect(result.reasons[2]).toContain("normal nivå");
   });
 
   it("bevarar skickade kallelser och väljer inte spelare som tackat nej", () => {
@@ -114,8 +108,8 @@ describe("transparent uttagningsstöd", () => {
       matchLevel: 3,
       targetSize: 1,
       candidates: [
-        candidate({ id: 1, name: "Ej tillgänglig", teamNames: ["Gul"], selectionEligible: false, callupCount: 0 }),
-        candidate({ id: 2, name: "Tillgänglig", teamNames: ["Gul"], callupCount: 4 }),
+        candidate({ id: 1, name: "Ej tillgänglig", teamNames: ["Gul"], selectionEligible: false, windowMatchCount: 0 }),
+        candidate({ id: 2, name: "Tillgänglig", teamNames: ["Gul"], windowMatchCount: 4 }),
       ],
     });
     expect(result.selectedIds).toEqual([2]);
@@ -135,17 +129,16 @@ describe("transparent uttagningsstöd", () => {
     expect(result.reasons[3]).toContain("Grön-utfyllnad");
   });
 
-  it("prioriterar registrerad Gulmålvakt som hårt positionskrav", () => {
+  it("tar inte hänsyn till position i rekommendationen", () => {
     const result = recommendYellowSelection({
       matchLevel: 3,
       targetSize: 1,
       candidates: [
-        candidate({ id: 1, name: "Utespelare", teamNames: ["Gul"], callupCount: 0 }),
-        candidate({ id: 2, name: "Målvakt", teamNames: ["Gul"], callupCount: 5, primaryPosition: "Målvakt" }),
+        candidate({ id: 1, name: "Utespelare", teamNames: ["Gul"], windowMatchCount: 0 }),
+        candidate({ id: 2, name: "Målvakt", teamNames: ["Gul"], windowMatchCount: 5 }),
       ],
     });
-    expect(result.selectedIds).toEqual([2]);
-    expect(result.reasons[2]).toContain("Målvakt");
+    expect(result.selectedIds).toEqual([1]);
   });
 
   it("bevarar Gröns trupp och fyller bara med rättvist valda Gul-lån", () => {
@@ -155,9 +148,9 @@ describe("transparent uttagningsstöd", () => {
       targetSize: 3,
       candidates: [
         candidate({ id: 1, name: "Grön kallad", teamNames: ["Grön"], currentCallupStatus: "accepted" }),
-        candidate({ id: 2, name: "Gul färre", teamNames: ["Gul"], callupCount: 2 }),
-        candidate({ id: 3, name: "Gul fler", teamNames: ["Gul"], callupCount: 5 }),
-        candidate({ id: 4, name: "F15", teamNames: ["F15"], callupCount: 0 }),
+        candidate({ id: 2, name: "Gul färre", teamNames: ["Gul"], windowMatchCount: 2 }),
+        candidate({ id: 3, name: "Gul fler", teamNames: ["Gul"], windowMatchCount: 5 }),
+        candidate({ id: 4, name: "F15", teamNames: ["F15"], windowMatchCount: 0 }),
       ],
     });
     expect(result.selectedIds).toEqual([1, 2, 3]);
@@ -170,8 +163,8 @@ describe("transparent uttagningsstöd", () => {
       matchLevel: 3,
       targetSize: 1,
       candidates: [
-        candidate({ id: 1, name: "Primär F15", teamNames: ["F15", "Gul"], primaryTeamName: "F15", callupCount: 0 }),
-        candidate({ id: 2, name: "Primär Gul", teamNames: ["Gul", "Grön"], primaryTeamName: "Gul", callupCount: 4 }),
+        candidate({ id: 1, name: "Primär F15", teamNames: ["F15", "Gul"], primaryTeamName: "F15", windowMatchCount: 0 }),
+        candidate({ id: 2, name: "Primär Gul", teamNames: ["Gul", "Grön"], primaryTeamName: "Gul", windowMatchCount: 4 }),
       ],
     });
     expect(result.selectedIds).toEqual([2]);

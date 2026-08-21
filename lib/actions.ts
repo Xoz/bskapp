@@ -503,7 +503,9 @@ export async function setPlayerLevel(formData: FormData) {
   const level = String(formData.get("level") ?? "");
   if (!id || !level) return;
   await requirePlayerPermission("manage_evaluations", id);
-  await run("UPDATE players SET level = ? WHERE id = ?", [level, id]);
+  const sanktanLevel = level === "svar" ? "2" : level === "medel" ? "3" : level === "latt" ? "4" : "";
+  if (!sanktanLevel) return;
+  await run("UPDATE players SET level = ?, preferred_level_primary = ? WHERE id = ?", [level, sanktanLevel, id]);
   revalidatePath(`/spelare/${id}`);
   revalidatePath("/spelare");
 }

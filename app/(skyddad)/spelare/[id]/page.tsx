@@ -37,11 +37,15 @@ export default async function PlayerPage({ params, searchParams }: {
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
   const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
-  const positionSummary = [summary.player.preferred_position_primary, summary.player.preferred_position_secondary].filter(Boolean).join(" / ");
-  const levelSummary = [summary.player.preferred_level_primary, summary.player.preferred_level_secondary]
-    .filter(Boolean)
-    .map((level) => sanktanLevelLabel(Number(level)))
-    .join(" / ");
+  const positionSummary = summary.player.preferred_position_primary || summary.player.position || "";
+  const normalLevel = sanktanLevelLabel(Number(summary.player.preferred_level_primary));
+  const challengeLevel = sanktanLevelLabel(Number(summary.player.preferred_level_secondary));
+  const levelSummary = normalLevel
+    ? `Normal: ${normalLevel}${challengeLevel ? ` · Utmaning: ${challengeLevel}` : ""}`
+    : "";
+  const assessmentMeta = summary.player.level_assessed_at
+    ? `Senast bedömd ${formatMatchDate(summary.player.level_assessed_at.slice(0, 10))}${summary.player.level_assessed_by ? ` av ${summary.player.level_assessed_by}` : ""}`
+    : "Ingen daterad nivåbedömning ännu";
 
   return (
     <div className="core-page">
@@ -70,23 +74,25 @@ export default async function PlayerPage({ params, searchParams }: {
 
       <details className="core-panel core-form-panel">
         <summary className="core-section-head cursor-pointer list-none">
-          <div><p className="core-kicker">Matchpreferenser</p><h2 className="core-section-title mt-2">Position och Sanktan-nivå</h2></div>
+          <div><p className="core-kicker">Tränarbedömning</p><h2 className="core-section-title mt-2">Primär position och Sanktan-nivå</h2></div>
           <div className="flex items-center gap-3"><span className="core-section-note">{positionSummary || "Position saknas"} · {levelSummary || "Nivå saknas"}</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
         </summary>
         {canSetSelectionPreferences ? (
-          <PlayerSelectionPreferencesForm action={savePreferences} defaults={{
-            positionPrimary: summary.player.preferred_position_primary,
-            positionSecondary: summary.player.preferred_position_secondary,
-            levelPrimary: summary.player.preferred_level_primary,
-            levelSecondary: summary.player.preferred_level_secondary,
-            selectionEligible: Boolean(summary.player.selection_eligible),
-          }} />
+          <>
+            <PlayerSelectionPreferencesForm action={savePreferences} defaults={{
+              positionPrimary: summary.player.preferred_position_primary,
+              positionSecondary: summary.player.preferred_position_secondary,
+              levelPrimary: summary.player.preferred_level_primary,
+              levelSecondary: summary.player.preferred_level_secondary,
+              selectionEligible: Boolean(summary.player.selection_eligible),
+            }} />
+            <p className="caption mt-3" style={{ color: "var(--ink-muted)" }}>{assessmentMeta}</p>
+          </>
         ) : (
           <div className="core-player-chips mt-4">
-            <span className="badge">Position 1: {summary.player.preferred_position_primary || "Ej satt"}</span>
-            <span className="badge">Position 2: {summary.player.preferred_position_secondary || "Ej satt"}</span>
-            <span className="badge">Nivå 1: {sanktanLevelLabel(Number(summary.player.preferred_level_primary)) || "Ej satt"}</span>
-            <span className="badge">Nivå 2: {sanktanLevelLabel(Number(summary.player.preferred_level_secondary)) || "Ej satt"}</span>
+            <span className="badge">Primär position: {positionSummary || "Ej satt"}</span>
+            <span className="badge">Normal nivå: {normalLevel || "Ej satt"}</span>
+            <span className="badge">Utmaningsnivå: {challengeLevel || "Ej satt"}</span>
             <span className="badge">Uttagning: {summary.player.selection_eligible ? "Kan föreslås" : "Ej tillgänglig"}</span>
           </div>
         )}

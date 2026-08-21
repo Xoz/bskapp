@@ -22,13 +22,14 @@ export type PlayerDirectoryItem = {
 const TEAM_TONES: Record<string, "yellow" | "green" | "blue"> = { Gul: "yellow", Grön: "green", F15: "blue" };
 
 function preferenceSummary(player: PlayerDirectoryItem) {
-  const positions = [player.positionPrimary, player.positionSecondary].filter(Boolean).join(" / ");
-  const levels = [player.levelPrimary, player.levelSecondary]
-    .filter(Boolean)
-    .map((level) => sanktanLevelLabel(Number(level)))
-    .join(" / ");
-  if (!positions && !levels) return "Matchpreferenser saknas";
-  return [positions && `Position: ${positions}`, levels && `Nivå: ${levels}`].filter(Boolean).join(" · ");
+  const normalLevel = sanktanLevelLabel(Number(player.levelPrimary));
+  const challengeLevel = sanktanLevelLabel(Number(player.levelSecondary));
+  if (!player.positionPrimary && !normalLevel) return "Tränarbedömning saknas";
+  return [
+    player.positionPrimary && `Position: ${player.positionPrimary}`,
+    normalLevel && `Normal nivå: ${normalLevel}`,
+    challengeLevel && `Utmaning: ${challengeLevel}`,
+  ].filter(Boolean).join(" · ");
 }
 
 export default function PlayerDirectory({ players }: { players: PlayerDirectoryItem[] }) {

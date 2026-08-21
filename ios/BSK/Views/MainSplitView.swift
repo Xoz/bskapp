@@ -987,7 +987,7 @@ private struct PremiumSelectionDetail: View {
                             Circle().fill(status == "accepted" ? BSKTheme.accent : status == "declined" ? BSKTheme.danger : BSKTheme.warning).frame(width: 6, height: 6)
                             Text(callupLabel(status)).font(.caption2).foregroundStyle(BSKTheme.muted)
                         }
-                        Text("\(candidate.selectedLastEight)/8").font(.caption2).foregroundStyle(BSKTheme.muted)
+                        Text("\(candidate.windowMatchCount) matcher ±7 dagar").font(.caption2).foregroundStyle(BSKTheme.muted)
                     }
                 }
                 Spacer(minLength: 4)
@@ -1075,7 +1075,7 @@ private struct PremiumSelectionDetail: View {
                 decisionButton(candidate, value: "reserve", title: "Reserv")
                 decisionButton(candidate, value: "rested", title: "Vilar")
             }
-            Text("\(candidate.selectedLastEight) av senaste 8 uttagningar · \(candidate.callupCount) kallelser")
+            Text("\(candidate.windowMatchCount) matcher under perioden ±7 dagar")
                 .font(.caption2).foregroundStyle(BSKTheme.muted)
         }
         .padding(16)

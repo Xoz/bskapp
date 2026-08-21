@@ -17,6 +17,8 @@ export interface Player {
   preferred_position_secondary: string;
   preferred_level_primary: string;
   preferred_level_secondary: string;
+  level_assessed_at: string | null;
+  level_assessed_by: string;
   selection_eligible: number;
   share_token: string | null;
   share_expires: number | null;
@@ -505,7 +507,8 @@ export interface PlayerLevelRow {
 export async function getPlayersLevelInfo(): Promise<PlayerLevelRow[]> {
   const userId = await restrictedUserId();
   return all<PlayerLevelRow>(
-    `SELECT p.id, p.name, p.jersey_number, p.position, p.level,
+    `SELECT p.id, p.name, p.jersey_number, p.position,
+            CASE p.preferred_level_primary WHEN '2' THEN 'svar' WHEN '3' THEN 'medel' WHEN '4' THEN 'latt' ELSE '' END AS level,
             (SELECT AVG(es.level) FROM evaluation_scores es
                WHERE es.evaluation_id = (
                  SELECT e.id FROM evaluations e WHERE e.player_id = p.id

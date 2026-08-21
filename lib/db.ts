@@ -69,6 +69,8 @@ async function applyBaselineSchema(): Promise<void> {
       preferred_position_secondary TEXT NOT NULL DEFAULT '',
       preferred_level_primary TEXT NOT NULL DEFAULT '',
       preferred_level_secondary TEXT NOT NULL DEFAULT '',
+      level_assessed_at TIMESTAMPTZ,
+      level_assessed_by TEXT NOT NULL DEFAULT '',
       selection_eligible INTEGER NOT NULL DEFAULT 1,
       active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
@@ -435,6 +437,8 @@ async function applyBaselineSchema(): Promise<void> {
     `ALTER TABLE players ADD COLUMN preferred_position_secondary TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN preferred_level_primary TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN preferred_level_secondary TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE players ADD COLUMN level_assessed_at TIMESTAMPTZ`,
+    `ALTER TABLE players ADD COLUMN level_assessed_by TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE players ADD COLUMN selection_eligible INTEGER NOT NULL DEFAULT 1`,
     `WITH first_run AS (
        INSERT INTO settings (key, value)
@@ -1178,6 +1182,43 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
         AND match.external_uid = 'cal20024467-40600@svenskalag.se'
         AND match.date = '2026-08-21'
     `);
+  } },
+  { id: "0010-canonical-coach-assessment", run: async () => {
+    await getClient().unsafe("ALTER TABLE players ADD COLUMN IF NOT EXISTS level_assessed_at TIMESTAMPTZ");
+    await getClient().unsafe("ALTER TABLE players ADD COLUMN IF NOT EXISTS level_assessed_by TEXT NOT NULL DEFAULT ''");
+    // Återanvänd tidigare uttryckliga tränarnivåer när den nya Sanktan-
+    // bedömningen saknas. Kolumnnamnen är legacy men semantiken är nu låst:
+    // primary = normal nivå, secondary = frivillig utmaningsnivå.
+    await getClient().unsafe(`
+      UPDATE players
+      SET preferred_level_primary = CASE level
+        WHEN 'svar' THEN '2'
+        WHEN 'medel' THEN '3'
+        WHEN 'latt' THEN '4'
+        ELSE preferred_level_primary
+      END
+      WHERE preferred_level_primary = '' AND level IN ('svar', 'medel', 'latt')
+    `);
+    await getClient().unsafe(`
+      UPDATE players
+      SET preferred_position_primary = CASE position
+        WHEN 'malvakt' THEN 'Målvakt'
+        WHEN 'forsvar' THEN 'Back'
+        WHEN 'mittfalt' THEN 'Mittfält'
+        WHEN 'anfall' THEN 'Anfall'
+        ELSE preferred_position_primary
+      END
+      WHERE preferred_position_primary = ''
+        AND position IN ('malvakt', 'forsvar', 'mittfalt', 'anfall')
+    `);
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_assessed_level_check CHECK (preferred_level_primary IN ('', '2', '3', '4'))");
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_challenge_level_check CHECK (preferred_level_secondary IN ('', '2', '3', '4') AND (preferred_level_secondary = '' OR preferred_level_secondary IS DISTINCT FROM preferred_level_primary))");
+    await getClient().unsafe("COMMENT ON COLUMN players.preferred_level_primary IS 'Kanonisk tränarbedömd normal Sanktan-nivå: 2 svår, 3 medel, 4 lätt'");
+    await getClient().unsafe("COMMENT ON COLUMN players.preferred_level_secondary IS 'Frivillig utmaningsnivå; legacy-kolumnnamn secondary behålls för API-kompatibilitet'");
+    await getClient().unsafe("COMMENT ON COLUMN players.preferred_position_primary IS 'Primär position för profil och manuell uppställning; används inte av rekommendationsmotorn'");
+    await getClient().unsafe("COMMENT ON COLUMN players.preferred_position_secondary IS 'Utfasat legacyfält; används inte av rekommendationsmotorn'");
+    await getClient().unsafe("COMMENT ON COLUMN players.level_assessed_at IS 'Tidpunkt då normal- eller utmaningsnivån senast bedömdes explicit'");
+    await getClient().unsafe("COMMENT ON COLUMN players.level_assessed_by IS 'Tränaren som senast bedömde normal- eller utmaningsnivån'");
   } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";

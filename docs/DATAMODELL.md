@@ -15,6 +15,7 @@ och felsöka själva filimporten.
 | Domän | Kanoniskt facit | Betydelse |
 |---|---|---|
 | Spelare | `players` | En identitet per spelare |
+| Tränarbedömning | `players.preferred_level_primary`, `players.preferred_level_secondary` | Normal Sanktan-nivå och frivillig utmaningsnivå; legacy-kolumnnamnen behålls för API-kompatibilitet |
 | Organisation | `groups`, `player_group_memberships` | Lag och aktuell grupptillhörighet |
 | Match | `matches` | En match oavsett om den skapats manuellt, via kalender eller import |
 | Planerad trupp | `match_squad` | Publicerat uttagningsbeslut, inte bevis på deltagande |
@@ -49,6 +50,21 @@ Svenska Lag-normaliseringen gör följande:
   dataauditen synliggör detta utan att använda loggen som facit.
 - Cupplatshållare kan vara stängda utan deltagare när en slutspelsgren inte ska
   spelas. De räknas aldrig som spelade eftersom de saknar `match_players`.
+
+## Uttagningsunderlag
+
+- `preferred_level_primary` är tränarens kanoniska normalnivå: 2 Svår,
+  3 Medel eller 4 Lätt. `preferred_level_secondary` är en frivillig
+  utmaningsnivå. Tidpunkt och tränare sparas i `level_assessed_at` och
+  `level_assessed_by`.
+- Endast `preferred_position_primary` används i profil och manuell uppställning.
+  Position påverkar inte den automatiska rekommendationen.
+- Belastning är antalet unika faktiska eller planerade matcher från sju dagar
+  före till sju dagar efter målmatchens datum, inklusive målmatchen när spelaren
+  redan är uttagen eller kallad. Den visas som ett heltal, aldrig procent.
+- Rekommendationen är deterministisk och transparent. Den prioriterar
+  tillgänglighet, lägre belastning, normal-/utmaningsnivå och rättvis fördelning;
+  tränaren måste alltid bekräfta och spara förslaget.
 
 ## Driftkontroll
 

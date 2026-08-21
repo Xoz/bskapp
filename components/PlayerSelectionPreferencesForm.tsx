@@ -29,6 +29,8 @@ function PreferenceRows({
   secondary,
   onPrimaryChange,
   onSecondaryChange,
+  primaryLabel = "Normal",
+  secondaryLabel = "Utmaning",
 }: {
   title: string;
   choices: Choice[];
@@ -36,14 +38,16 @@ function PreferenceRows({
   secondary: string;
   onPrimaryChange: (value: string) => void;
   onSecondaryChange: (value: string) => void;
+  primaryLabel?: string;
+  secondaryLabel?: string;
 }) {
   return (
     <fieldset className="min-w-0">
       <legend className="mb-2 text-sm font-semibold">{title}</legend>
       <div className="grid grid-cols-[minmax(0,1fr)_2.5rem_2.5rem] items-center gap-x-2 gap-y-1">
         <span className="caption" style={{ color: "var(--ink-muted)" }}>Val</span>
-        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>1:a</span>
-        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>2:a</span>
+        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>{primaryLabel}</span>
+        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>{secondaryLabel}</span>
         {choices.map((choice) => {
           const primaryId = `${title}-${choice.value}-primary`;
           const secondaryId = `${title}-${choice.value}-secondary`;
@@ -59,6 +63,31 @@ function PreferenceRows({
             </div>
           );
         })}
+      </div>
+    </fieldset>
+  );
+}
+
+function SingleChoiceRows({ title, choices, selected, onChange }: {
+  title: string;
+  choices: Choice[];
+  selected: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <fieldset className="min-w-0">
+      <legend className="mb-2 text-sm font-semibold">{title}</legend>
+      <div className="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-x-2 gap-y-1">
+        <span className="caption" style={{ color: "var(--ink-muted)" }}>Position</span>
+        <span className="caption text-center" style={{ color: "var(--ink-muted)" }}>Primär</span>
+        {choices.map((choice) => (
+          <div key={choice.value} className="contents">
+            <span className="body-small py-1">{choice.label}</span>
+            <label className="flex justify-center cursor-pointer py-1">
+              <input type="checkbox" checked={selected === choice.value} onChange={() => onChange(selected === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)]" aria-label={`${choice.label}, primär position`} />
+            </label>
+          </div>
+        ))}
       </div>
     </fieldset>
   );
@@ -104,8 +133,8 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
         </span>
       </label>
       <div className="grid gap-5 rounded-xl border p-3 md:grid-cols-2 md:gap-8" style={{ borderColor: "var(--border)", background: "var(--elevated)" }}>
-        <PreferenceRows title="Position" choices={POSITIONS.map((value) => ({ value, label: value }))} primary={positionPrimary} secondary={positionSecondary} onPrimaryChange={(value) => setPosition("primary", value)} onSecondaryChange={(value) => setPosition("secondary", value)} />
-        <PreferenceRows title="Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
+        <SingleChoiceRows title="Primär position" choices={POSITIONS.map((value) => ({ value, label: value }))} selected={positionPrimary} onChange={(value) => setPosition("primary", value)} />
+        <PreferenceRows title="Tränarbedömd Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
       </div>
       <div className="flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>
     </form>

@@ -134,8 +134,18 @@ struct PlayerDetailView: View {
                             .background(BSKTheme.accent.opacity(0.14), in: Circle())
                         VStack(alignment: .leading, spacing: 5) {
                             Text(detail.name).font(horizontalSizeClass == .compact ? .title.bold() : .largeTitle.bold())
-                            Text([detail.primaryPosition, detail.position].filter { !$0.isEmpty }.joined(separator: " · "))
+                            Text(detail.primaryPosition.isEmpty ? (detail.position.isEmpty ? "Position saknas" : detail.position) : detail.primaryPosition)
                                 .foregroundStyle(.secondary)
+                            if !detail.preferences.primaryLevel.isEmpty {
+                                Text("Normal nivå: \(assessmentLevelLabel(detail.preferences.primaryLevel))" + (detail.preferences.secondaryLevel.isEmpty ? "" : " · Utmaning: \(assessmentLevelLabel(detail.preferences.secondaryLevel))"))
+                                    .font(.caption.bold())
+                                    .foregroundStyle(BSKTheme.accent)
+                                if let assessedAt = detail.preferences.assessedAt {
+                                    Text("Bedömd \(String(assessedAt.prefix(10)))" + (detail.preferences.assessedBy.isEmpty ? "" : " av \(detail.preferences.assessedBy)"))
+                                        .font(.caption2)
+                                        .foregroundStyle(BSKTheme.muted)
+                                }
+                            }
                             HStack(spacing: 6) {
                                 ForEach(detail.teams) { team in
                                     Text(team.name)
@@ -297,6 +307,10 @@ struct PlayerDetailView: View {
         default: return "Behöver följas upp"
         }
     }
+
+    private func assessmentLevelLabel(_ value: String) -> String {
+        value == "2" ? "Svår" : value == "3" ? "Medel" : value == "4" ? "Lätt" : "Ej satt"
+    }
 }
 
 private struct ProfileMetric: View {
@@ -380,12 +394,11 @@ private struct PlayerPreferencesSheet: View {
         NavigationStack {
             Form {
                 Section("Position") {
-                    positionPicker("Förstaval", selection: $primaryPosition)
-                    positionPicker("Andraval", selection: $secondaryPosition)
+                    positionPicker("Primär position", selection: $primaryPosition)
                 }
-                Section("Sanktan-nivå") {
-                    levelPicker("Förstaval", selection: $primaryLevel)
-                    levelPicker("Andraval", selection: $secondaryLevel)
+                Section("Tränarbedömd Sanktan-nivå") {
+                    levelPicker("Normal nivå", selection: $primaryLevel)
+                    levelPicker("Utmaningsnivå", selection: $secondaryLevel)
                 }
                 Section { Toggle("Kan föreslås till uttagning", isOn: $selectionEligible) }
                 if let errorMessage { Text(errorMessage).foregroundStyle(BSKTheme.danger) }
@@ -404,6 +417,8 @@ private struct PlayerPreferencesSheet: View {
                                     secondaryPosition: secondaryPosition,
                                     primaryLevel: primaryLevel,
                                     secondaryLevel: secondaryLevel,
+                                    assessedAt: nil,
+                                    assessedBy: "",
                                     selectionEligible: selectionEligible
                                 ))
                                 dismiss()
@@ -428,7 +443,7 @@ private struct PlayerPreferencesSheet: View {
     private func levelPicker(_ title: String, selection: Binding<String>) -> some View {
         Picker(title, selection: selection) {
             Text("Ej satt").tag("")
-            ForEach(["2", "3", "4", "5"], id: \.self) { Text("Sanktan \($0)").tag($0) }
+            ForEach(["2", "3", "4"], id: \.self) { Text("Sanktan \($0)").tag($0) }
         }
     }
 }

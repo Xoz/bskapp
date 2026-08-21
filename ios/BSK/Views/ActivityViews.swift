@@ -1267,7 +1267,7 @@ struct SelectionDetail: View {
                 }
             }
 
-            Text("\(candidate.selectedLastEight) av senaste 8 · \(candidate.callupCount) kallelser")
+            Text("\(candidate.windowMatchCount) matcher under perioden ±7 dagar")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

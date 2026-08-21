@@ -520,6 +520,7 @@ export type SelectionCandidate = PlayerCoreSummary & {
   selectedLastThree: number;
   lastSelectedDate: string | null;
   plannedUpcomingCount: number;
+  windowMatchCount: number;
   currentCallupStatus: RecommendationCallupStatus;
   support: SelectionSupport;
 };
@@ -545,6 +546,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     selected_last_three: number;
     last_selected_date: string | null;
     planned_upcoming_count: number;
+    window_match_count: number;
     current_callup_status: RecommendationCallupStatus;
     decision: "selected" | "reserve" | "rested" | null;
   }>(
@@ -569,6 +571,29 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
             MAX(CASE
               WHEN ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.activity_date
             END) AS last_selected_date,
+            (
+              SELECT COUNT(DISTINCT window_match.id)
+              FROM matches window_match
+              WHERE window_match.date::date BETWEEN (?::date - INTERVAL '7 days') AND (?::date + INTERVAL '7 days')
+                AND (
+                  EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
+                  OR EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = window_match.id AND squad.player_id = p.id)
+                  OR EXISTS (
+                    SELECT 1 FROM development_activities window_activity
+                    JOIN development_selection_decisions window_selection
+                      ON window_selection.activity_id = window_activity.id
+                    WHERE window_activity.match_id = window_match.id
+                      AND window_selection.player_id = p.id AND window_selection.decision = 'selected'
+                  )
+                  OR EXISTS (
+                    SELECT 1 FROM development_activities window_activity
+                    JOIN development_activity_callups window_callup
+                      ON window_callup.activity_id = window_activity.id
+                    WHERE window_activity.match_id = window_match.id
+                      AND window_callup.player_id = p.id AND window_callup.attendance_status <> 'absent'
+                  )
+                )
+            ) AS window_match_count,
             (
               SELECT COUNT(DISTINCT future_sd.activity_id)
               FROM development_selection_decisions future_sd
@@ -609,6 +634,8 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
+      detail.activity.activity_date,
+      detail.activity.activity_date,
       `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
@@ -626,14 +653,13 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     .map((summary) => history.get(summary.player.id))
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
   const minimum = yellowRows.length
-    ? Math.min(...yellowRows.map((row) => Number(row.selected_last_eight ?? 0)))
+    ? Math.min(...yellowRows.map((row) => Number(row.window_match_count ?? 0)))
     : 0;
   const candidates: SelectionCandidate[] = candidateSummaries.map((summary) => {
     const row = history.get(summary.player.id);
     const signals = {
-      selectedLastEight: Number(row?.selected_last_eight ?? 0),
-      selectedLastThree: Number(row?.selected_last_three ?? 0),
-      teamMinimumLastEight: Number.isFinite(minimum) ? minimum : 0,
+      windowMatchCount: Number(row?.window_match_count ?? 0),
+      teamMinimumWindow: Number.isFinite(minimum) ? minimum : 0,
       activeGoalCount: summary.goals.length,
       lastSelectedDate: row?.last_selected_date ?? null,
     };
@@ -644,10 +670,11 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
         row?.current_callup_status ?? null,
         row?.decision ?? null
       ),
-      selectedLastEight: signals.selectedLastEight,
-      selectedLastThree: signals.selectedLastThree,
+      selectedLastEight: Number(row?.selected_last_eight ?? 0),
+      selectedLastThree: Number(row?.selected_last_three ?? 0),
       lastSelectedDate: signals.lastSelectedDate,
       plannedUpcomingCount: Number(row?.planned_upcoming_count ?? 0),
+      windowMatchCount: signals.windowMatchCount,
       currentCallupStatus: row?.current_callup_status ?? null,
       support: selectionSupport(signals),
     };
@@ -669,8 +696,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     candidates: orderedCandidates,
     warnings: squadBalanceWarnings(
       selected.map((candidate) => ({
-        position: candidate.player.position,
-        selectedLastThree: candidate.selectedLastThree,
+        windowMatchCount: candidate.windowMatchCount,
       }))
     ),
   };

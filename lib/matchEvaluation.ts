@@ -50,7 +50,9 @@ export async function getMatchEvaluationWorkspace(matchId: number, contributorTy
        WHERE dac.attendance_status = 'present'
          AND NOT EXISTS (SELECT 1 FROM explicit_participants)
      )
-     SELECT p.id, p.name, p.jersey_number, p.level, e.self_comparison, e.match_impact,
+     SELECT p.id, p.name, p.jersey_number,
+            CASE p.preferred_level_primary WHEN '2' THEN 'svar' WHEN '3' THEN 'medel' WHEN '4' THEN 'latt' ELSE '' END AS level,
+            e.self_comparison, e.match_impact,
             COALESCE(e.reason_tag, '') AS reason_tag, COALESCE(e.skipped, 0) AS skipped
      FROM participants part JOIN players p ON p.id = part.player_id AND p.active = 1
      LEFT JOIN match_player_evaluations e ON e.match_id = ? AND e.player_id = p.id

@@ -345,23 +345,24 @@ export async function savePlayerSelectionPreferences(playerId: number, formData:
   await requireCorePermission("manage_squads");
   if (!(await canAccessPlayer(playerId))) redirect("/spelare");
   const primaryPosition = enumValue(formData.get("preferred_position_primary"), POSITION_VALUES);
-  const secondaryPosition = enumValue(formData.get("preferred_position_secondary"), POSITION_VALUES);
   const primaryLevel = enumValue(formData.get("preferred_level_primary"), SANKTAN_LEVEL_VALUES);
   const secondaryLevel = enumValue(formData.get("preferred_level_secondary"), SANKTAN_LEVEL_VALUES);
   const selectionEligible = formData.get("selection_eligible") === "1" ? 1 : 0;
-  if (primaryPosition === null || secondaryPosition === null || primaryLevel === null || secondaryLevel === null) return;
+  if (primaryPosition === null || primaryLevel === null || secondaryLevel === null) return;
+  const assessedBy = (await getCoachName()) ?? "Tränare";
 
   await run(
     `UPDATE players
-     SET preferred_position_primary = ?, preferred_position_secondary = ?,
+     SET preferred_position_primary = ?,
          preferred_level_primary = ?, preferred_level_secondary = ?,
+         level_assessed_at = now(), level_assessed_by = ?,
          selection_eligible = ?
      WHERE id = ?`,
     [
       primaryPosition,
-      secondaryPosition === primaryPosition ? "" : secondaryPosition,
       primaryLevel,
       secondaryLevel === primaryLevel ? "" : secondaryLevel,
+      assessedBy,
       selectionEligible,
       playerId,
     ]

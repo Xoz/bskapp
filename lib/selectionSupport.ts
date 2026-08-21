@@ -1,7 +1,6 @@
 export type SelectionSignals = {
-  selectedLastEight: number;
-  selectedLastThree: number;
-  teamMinimumLastEight: number;
+  windowMatchCount: number;
+  teamMinimumWindow: number;
   activeGoalCount: number;
   lastSelectedDate: string | null;
 };
@@ -18,13 +17,10 @@ export type RecommendationCandidate = {
   name: string;
   teamNames: string[];
   primaryTeamName: string | null;
-  callupCount: number;
-  plannedUpcomingCount: number;
+  windowMatchCount: number;
   lastSelectedDate: string | null;
   primaryLevel: string;
   secondaryLevel: string;
-  primaryPosition: string;
-  secondaryPosition: string;
   selectionEligible: boolean;
   currentlySelected: boolean;
   currentCallupStatus: RecommendationCallupStatus;
@@ -46,10 +42,10 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
   const opportunities: string[] = [];
   const cautions: string[] = [];
 
-  if (signals.selectedLastEight === 0) {
-    opportunities.push("Ingen spelad Sanktanmatch bland de senaste åtta matchtillfällena");
-  } else if (signals.selectedLastEight <= signals.teamMinimumLastEight + 1) {
-    opportunities.push("Har spelat färre Sanktanmatcher än många lagkamrater i den senaste perioden");
+  if (signals.windowMatchCount === 0) {
+    opportunities.push("Ingen match under perioden ±7 dagar");
+  } else if (signals.windowMatchCount <= signals.teamMinimumWindow + 1) {
+    opportunities.push("Färre matcher än många lagkamrater under perioden ±7 dagar");
   }
 
   if (signals.activeGoalCount > 0) {
@@ -60,35 +56,23 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
     );
   }
 
-  if (signals.selectedLastThree >= 3) {
-    cautions.push("Har spelat tre Sanktanmatcher i följd");
+  if (signals.windowMatchCount >= 3) {
+    cautions.push(`${signals.windowMatchCount} matcher under perioden ±7 dagar`);
   }
 
   return { opportunities, cautions };
 }
 
 export function squadBalanceWarnings(
-  selected: Array<{ position: string; selectedLastThree: number }>
+  selected: Array<{ windowMatchCount: number }>
 ): string[] {
   if (selected.length === 0) return ["Ingen spelare är uttagen ännu"];
 
   const warnings: string[] = [];
-  const normalized = selected.map((row) => row.position.trim().toLowerCase());
-  if (!normalized.some((position) => position === "målvakt")) {
-    warnings.push("Truppen saknar registrerat målvaktsalternativ");
-  }
-  if (selected.filter((row) => row.selectedLastThree >= 3).length >= Math.ceil(selected.length / 2)) {
-    warnings.push("Minst halva truppen har redan tre uttagningar i följd");
+  if (selected.filter((row) => row.windowMatchCount >= 3).length >= Math.ceil(selected.length / 2)) {
+    warnings.push("Minst halva truppen har tre eller fler matcher inom ±7 dagar");
   }
   return warnings;
-}
-
-function normalized(value: string): string {
-  return value.trim().toLocaleLowerCase("sv");
-}
-
-function projectedCallups(candidate: RecommendationCandidate): number {
-  return candidate.callupCount + candidate.plannedUpcomingCount;
 }
 
 function preferredLevels(candidate: RecommendationCandidate): number[] {
@@ -101,8 +85,8 @@ function levelFit(candidate: RecommendationCandidate, matchLevel: number | null)
   if (!matchLevel) return { rank: 2, label: "nivå ej satt", safe: true };
   const primary = Number(candidate.primaryLevel);
   const secondary = Number(candidate.secondaryLevel);
-  if (primary === matchLevel) return { rank: 0, label: "primär nivå", safe: true };
-  if (secondary === matchLevel) return { rank: 1, label: "sekundär nivå", safe: true };
+  if (primary === matchLevel) return { rank: 0, label: "normal nivå", safe: true };
+  if (secondary === matchLevel) return { rank: 1, label: "utmaningsnivå", safe: true };
   const levels = preferredLevels(candidate);
   if (levels.length === 0) return { rank: 2, label: "nivå ej satt", safe: true };
   const distance = Math.min(...levels.map((level) => Math.abs(level - matchLevel)));
@@ -113,16 +97,10 @@ function levelFit(candidate: RecommendationCandidate, matchLevel: number | null)
   return { rank: 3, label: "annan nivå", safe: !tooHard };
 }
 
-function isGoalkeeper(candidate: RecommendationCandidate): boolean {
-  return [candidate.primaryPosition, candidate.secondaryPosition]
-    .map(normalized)
-    .includes("målvakt");
-}
-
 function fairnessOrder(matchLevel: number | null) {
   return (left: RecommendationCandidate, right: RecommendationCandidate) => {
-    const callupDiff = projectedCallups(left) - projectedCallups(right);
-    if (callupDiff !== 0) return callupDiff;
+    const loadDiff = left.windowMatchCount - right.windowMatchCount;
+    if (loadDiff !== 0) return loadDiff;
     const levelDiff = levelFit(left, matchLevel).rank - levelFit(right, matchLevel).rank;
     if (levelDiff !== 0) return levelDiff;
     const leftDate = left.lastSelectedDate ?? "";
@@ -175,7 +153,7 @@ export function recommendYellowSelection(input: {
     for (const candidate of yellow) {
       if (selected.size >= targetSize) break;
       const fit = levelFit(candidate, input.matchLevel);
-      add(candidate, `Rättvist Gul-lån · ${projectedCallups(candidate)} kallelser · ${fit.label}`);
+      add(candidate, `Rättvist Gul-lån · ${candidate.windowMatchCount} matcher ±7 dagar · ${fit.label}`);
     }
     const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
     return {
@@ -187,16 +165,10 @@ export function recommendYellowSelection(input: {
     };
   }
 
-  // Målvakt är det enda hårda positionskravet i första versionen.
-  if (![...selected].some((id) => selectable.some((candidate) => candidate.id === id && isGoalkeeper(candidate)))) {
-    const goalkeeper = yellow.filter(isGoalkeeper).sort(fairnessOrder(input.matchLevel))[0];
-    if (goalkeeper) add(goalkeeper, `Målvakt · ${projectedCallups(goalkeeper)} kallelser`);
-  }
-
   for (const candidate of yellow) {
     if (selected.size >= targetSize) break;
     const fit = levelFit(candidate, input.matchLevel);
-    add(candidate, `${projectedCallups(candidate)} kallelser · ${fit.label}`);
+    add(candidate, `${candidate.windowMatchCount} matcher ±7 dagar · ${fit.label}`);
   }
 
   const fillers = ["F15", "Grön"];

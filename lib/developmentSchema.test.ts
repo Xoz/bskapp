@@ -79,6 +79,17 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(attendanceQueries).not.toContain("FROM attendance_imports");
   });
 
+  it("räknar belastning som matcher sju dagar före och efter målmatchen", () => {
+    for (const source of [developmentCore, mobileDevelopment]) {
+      expect(source).toContain("INTERVAL '7 days'");
+      expect(source).toContain("window_match_count");
+      expect(source).toContain("FROM match_players played");
+      expect(source).toContain("FROM match_squad squad");
+    }
+    expect(schema).toContain('id: "0010-canonical-coach-assessment"');
+    expect(schema).toContain("players_assessed_level_check");
+  });
+
   it("refererar inte den borttagna ELO-tabellen", () => {
     expect(queries).not.toContain("FROM match_ratings");
   });

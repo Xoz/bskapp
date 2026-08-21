@@ -38,6 +38,8 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
     secondaryPosition: string;
     primaryLevel: string;
     secondaryLevel: string;
+    assessedAt: string | null;
+    assessedBy: string;
     selectionEligible: boolean;
   };
   stats: {
@@ -146,6 +148,7 @@ export type MobileSelectionCandidate = {
   matchCount: number;
   callupCount: number;
   plannedUpcomingCount: number;
+  windowMatchCount: number;
   lastSelectedDate: string | null;
 };
 
@@ -530,10 +533,13 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       preferred_position_secondary: string;
       preferred_level_primary: string;
       preferred_level_secondary: string;
+      level_assessed_at: string | null;
+      level_assessed_by: string;
       selection_eligible: number;
     }>(
       `SELECT preferred_position_primary, preferred_position_secondary,
-              preferred_level_primary, preferred_level_secondary, selection_eligible
+              preferred_level_primary, preferred_level_secondary,
+              level_assessed_at::text, level_assessed_by, selection_eligible
        FROM players WHERE id = ?`,
       [playerId]
     ),
@@ -602,6 +608,8 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       secondaryPosition: profile?.preferred_position_secondary ?? "",
       primaryLevel: profile?.preferred_level_primary ?? "",
       secondaryLevel: profile?.preferred_level_secondary ?? "",
+      assessedAt: profile?.level_assessed_at ?? null,
+      assessedBy: profile?.level_assessed_by ?? "",
       selectionEligible: Boolean(profile?.selection_eligible),
     },
     stats: {
@@ -716,19 +724,20 @@ export async function updateMobilePlayerPreferences(
     throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
   }
   const positions = new Set(["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"]);
-  const levels = new Set(["", "2", "3", "4", "5"]);
-  if (!positions.has(input.primaryPosition) || !positions.has(input.secondaryPosition) || !levels.has(input.primaryLevel) || !levels.has(input.secondaryLevel)) {
+  const levels = new Set(["", "2", "3", "4"]);
+  if (!positions.has(input.primaryPosition) || !levels.has(input.primaryLevel) || !levels.has(input.secondaryLevel)) {
     throw new DevelopmentServiceError("invalid", "Ogiltig position eller Sanktan-nivå.", 400);
   }
   await run(
-    `UPDATE players SET preferred_position_primary = ?, preferred_position_secondary = ?,
-                        preferred_level_primary = ?, preferred_level_secondary = ?, selection_eligible = ?
+    `UPDATE players SET preferred_position_primary = ?,
+                        preferred_level_primary = ?, preferred_level_secondary = ?,
+                        level_assessed_at = now(), level_assessed_by = ?, selection_eligible = ?
      WHERE id = ?`,
     [
       input.primaryPosition,
-      input.secondaryPosition === input.primaryPosition ? "" : input.secondaryPosition,
       input.primaryLevel,
       input.secondaryLevel === input.primaryLevel ? "" : input.secondaryLevel,
+      actor.name,
       input.selectionEligible ? 1 : 0,
       playerId,
     ]
@@ -859,6 +868,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
     match_count: number;
     callup_count: number;
     planned_upcoming_count: number;
+    window_match_count: number;
     last_selected_date: string | null;
   }>(
     `SELECT p.id AS player_id, p.name, p.jersey_number, p.position,
@@ -895,6 +905,23 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
              WHERE played_mp.player_id = p.id) AS match_count,
             (SELECT COUNT(*) FROM development_activity_callups ac WHERE ac.player_id = p.id) AS callup_count,
             (SELECT COUNT(*) FROM development_selection_decisions future_sd JOIN development_activities future_da ON future_da.id = future_sd.activity_id WHERE future_sd.player_id = p.id AND future_sd.decision = 'selected' AND future_da.activity_date >= ? AND future_da.id <> ?) AS planned_upcoming_count,
+            (SELECT COUNT(DISTINCT window_match.id)
+             FROM matches window_match
+             WHERE window_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND (target.activity_date::date + INTERVAL '7 days')
+               AND (
+                 EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
+                 OR EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = window_match.id AND squad.player_id = p.id)
+                 OR EXISTS (
+                   SELECT 1 FROM development_activities window_activity
+                   JOIN development_selection_decisions window_selection ON window_selection.activity_id = window_activity.id
+                   WHERE window_activity.match_id = window_match.id AND window_selection.player_id = p.id AND window_selection.decision = 'selected'
+                 )
+                 OR EXISTS (
+                   SELECT 1 FROM development_activities window_activity
+                   JOIN development_activity_callups window_callup ON window_callup.activity_id = window_activity.id
+                   WHERE window_activity.match_id = window_match.id AND window_callup.player_id = p.id AND window_callup.attendance_status <> 'absent'
+                 )
+               )) AS window_match_count,
             (SELECT MAX(history.date)
              FROM match_players history_player
              JOIN matches history ON history.id = history_player.match_id
@@ -938,6 +965,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         matchCount: Number(row.match_count),
         callupCount: Number(row.callup_count),
         plannedUpcomingCount: Number(row.planned_upcoming_count),
+        windowMatchCount: Number(row.window_match_count),
         lastSelectedDate: row.last_selected_date,
       };
     }),

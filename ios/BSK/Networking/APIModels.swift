@@ -107,6 +107,8 @@ struct PlayerDetail: Codable, Identifiable {
         let secondaryPosition: String
         let primaryLevel: String
         let secondaryLevel: String
+        let assessedAt: String?
+        let assessedBy: String
         let selectionEligible: Bool
     }
 
@@ -307,6 +309,7 @@ struct SelectionCandidate: Codable, Identifiable {
     let matchCount: Int
     let callupCount: Int
     let plannedUpcomingCount: Int
+    let windowMatchCount: Int
     let lastSelectedDate: String?
 
     var id: Int { playerId }
