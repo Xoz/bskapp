@@ -4,6 +4,7 @@ import {
   parseSvenskaLagCallupRows,
   workbookOpponent,
 } from "./callupWorkbook";
+import { canImportPlayedAttendance } from "./services/callupWorkbookImport";
 
 function exampleRows(): unknown[][] {
   const rows = Array.from({ length: 15 }, () => [] as unknown[]);
@@ -43,5 +44,10 @@ describe("Svenska Lag-kallelsefil", () => {
   it("normaliserar motståndare utan att tappa bokstäver", () => {
     expect(workbookOpponent("Träningsmatch mot Erikslunds KF")).toBe("Erikslunds KF");
     expect(normalizeMatchName("FC Café – Öst")).toBe("fc café öst");
+  });
+
+  it("importerar aldrig faktiskt deltagande för framtida matcher", () => {
+    expect(canImportPlayedAttendance("2026-08-21", "2026-08-21")).toBe(true);
+    expect(canImportPlayedAttendance("2026-08-22", "2026-08-21")).toBe(false);
   });
 });

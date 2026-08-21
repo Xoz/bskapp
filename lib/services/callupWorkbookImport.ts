@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { all, batch } from "../db";
 import { normalizePersonName } from "../attendance";
+import { swedishToday } from "../dates";
 import {
   normalizeMatchName,
   parseSvenskaLagCallupWorkbook,
@@ -51,6 +52,10 @@ function exactKey(date: string, startTime: string | null, opponent: string, team
 
 function bufferHash(buffer: ArrayBuffer): string {
   return crypto.createHash("sha256").update(Buffer.from(buffer)).digest("hex");
+}
+
+export function canImportPlayedAttendance(activityDate: string, today = swedishToday()): boolean {
+  return activityDate <= today;
 }
 
 async function parseFiles(files: readonly WorkbookFileInput[]): Promise<{
@@ -138,7 +143,9 @@ export async function importSvenskaLagCallupWorkbooks(
             status: person.accepted ? "present" : person.declined ? "absent" : "unknown",
           });
         }
-        if (person.attended && !seenAttendance.has(player.id)) {
+        // Svenska Lag kan ha N-markeringar även för framtida aktiviteter.
+        // Sådana är planering, aldrig bevis för en redan spelad match.
+        if (person.attended && canImportPlayedAttendance(activity.date) && !seenAttendance.has(player.id)) {
           seenAttendance.add(player.id);
           attendedPlayerIds.push(player.id);
         }
