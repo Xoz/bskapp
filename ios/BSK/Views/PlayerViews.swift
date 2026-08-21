@@ -17,13 +17,13 @@ struct PlayerList: View {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("TRUPPEN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                        Text("\(filteredPlayers.count) spelare").font(.largeTitle.bold())
+                        Text("\(filteredPlayers.count) spelare").font(.title.bold())
                     }
                     Spacer()
                     Text("\(model.players.filter { !$0.activeGoals.isEmpty }.count) med fokus")
                         .font(.caption.bold()).foregroundStyle(BSKTheme.accent)
                 }
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 155), spacing: 10)], spacing: 10) {
                     ForEach(filteredPlayers) { player in
                         playerLink(player)
                     }
@@ -47,12 +47,36 @@ struct PlayerList: View {
     @ViewBuilder
     private func playerLink(_ player: PlayerSummary) -> some View {
         if horizontalSizeClass == .compact {
-            NavigationLink { PlayerDetailView(playerID: player.id) } label: { playerCard(player) }
+            NavigationLink { PlayerDetailView(playerID: player.id) } label: { compactPlayerRow(player) }
                 .buttonStyle(.plain)
         } else {
             Button { selection = player.id } label: { playerCard(player) }
                 .buttonStyle(.plain)
         }
+    }
+
+    private func compactPlayerRow(_ player: PlayerSummary) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 13, style: .continuous).fill(BSKTheme.accent.opacity(0.14))
+                Text(player.jerseyNumber.map(String.init) ?? String(player.name.prefix(1)))
+                    .font(.headline.bold()).foregroundStyle(BSKTheme.accent)
+            }
+            .frame(width: 46, height: 46)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(player.name).font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                Text(player.primaryPosition.isEmpty ? (player.position.isEmpty ? "Spelare" : player.position) : player.primaryPosition)
+                    .font(.caption).foregroundStyle(BSKTheme.secondary)
+                Text(player.activeGoals.first?.title ?? "Inget aktivt fokus")
+                    .font(.caption2).foregroundStyle(player.activeGoals.isEmpty ? BSKTheme.muted : BSKTheme.accent).lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            Circle().fill(player.activeGoals.isEmpty ? BSKTheme.muted : BSKTheme.accent).frame(width: 7, height: 7)
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(.horizontal, 13).padding(.vertical, 10)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
     }
 
     private func playerCard(_ player: PlayerSummary) -> some View {
@@ -91,6 +115,7 @@ struct PlayerList: View {
 
 struct PlayerDetailView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let playerID: Int
     @State private var detail: PlayerDetail?
     @State private var loadError: String?
@@ -100,15 +125,15 @@ struct PlayerDetailView: View {
     var body: some View {
         ScrollView {
             if let detail {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 15 : 24) {
                     HStack(alignment: .top, spacing: 16) {
                         Text(detail.name.prefix(1))
-                            .font(.largeTitle.bold())
-                            .frame(width: 72, height: 72)
+                            .font(horizontalSizeClass == .compact ? .title.bold() : .largeTitle.bold())
+                            .frame(width: horizontalSizeClass == .compact ? 54 : 72, height: horizontalSizeClass == .compact ? 54 : 72)
                             .foregroundStyle(BSKTheme.accent)
                             .background(BSKTheme.accent.opacity(0.14), in: Circle())
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(detail.name).font(.largeTitle.bold())
+                            Text(detail.name).font(horizontalSizeClass == .compact ? .title.bold() : .largeTitle.bold())
                             Text([detail.primaryPosition, detail.position].filter { !$0.isEmpty }.joined(separator: " · "))
                                 .foregroundStyle(.secondary)
                             HStack(spacing: 6) {
@@ -147,7 +172,7 @@ struct PlayerDetailView: View {
                                     .padding(.top, 6)
                                 }
                             }
-                            .padding()
+                            .padding(horizontalSizeClass == .compact ? 12 : 16)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .bskCardSurface()
                         }
@@ -163,7 +188,7 @@ struct PlayerDetailView: View {
                                     .font(.caption.bold())
                                     .foregroundStyle(goal.status == "achieved" ? BSKTheme.accent : BSKTheme.warning)
                             }
-                            .padding(14)
+                            .padding(horizontalSizeClass == .compact ? 11 : 14)
                             .bskCardSurface()
                         }
                     }
@@ -182,7 +207,7 @@ struct PlayerDetailView: View {
                                 Spacer()
                                 Text(match.sourceTeam).font(.caption.bold()).foregroundStyle(BSKTheme.accent)
                             }
-                            .padding(14)
+                            .padding(horizontalSizeClass == .compact ? 11 : 14)
                             .bskCardSurface()
                         }
                     }
@@ -200,11 +225,11 @@ struct PlayerDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(16)
+                        .padding(horizontalSizeClass == .compact ? 12 : 16)
                         .bskCardSurface()
                     }
                 }
-                .padding(24)
+                .padding(horizontalSizeClass == .compact ? 14 : 24)
                 .frame(maxWidth: 780, alignment: .leading)
             } else if let loadError {
                 ContentUnavailableView("Kunde inte läsa spelaren", systemImage: "exclamationmark.triangle", description: Text(loadError))
@@ -275,14 +300,15 @@ struct PlayerDetailView: View {
 }
 
 private struct ProfileMetric: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let value: Int
     let label: String
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(String(value)).font(.title2.bold()).foregroundStyle(BSKTheme.accent)
+            Text(String(value)).font(horizontalSizeClass == .compact ? .headline.bold() : .title2.bold()).foregroundStyle(BSKTheme.accent)
             Text(label).font(.caption).foregroundStyle(BSKTheme.secondary)
         }
-        .padding(14)
+        .padding(horizontalSizeClass == .compact ? 10 : 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .bskCardSurface()
     }
@@ -410,5 +436,5 @@ private struct PlayerPreferencesSheet: View {
 private struct SectionTitle: View {
     let title: String
     init(_ title: String) { self.title = title }
-    var body: some View { Text(title).font(.title2.bold()) }
+    var body: some View { Text(title).font(.headline.bold()) }
 }

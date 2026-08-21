@@ -5,31 +5,31 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [BSKTheme.background, BSKTheme.elevated, BSKTheme.background],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            BSKBackdrop()
 
-            VStack(spacing: 28) {
+            VStack(spacing: 30) {
                 Spacer()
-                VStack(spacing: 14) {
-                    Text("+90")
-                        .font(.system(size: 64, weight: .black, design: .rounded))
-                        .foregroundStyle(BSKTheme.accent)
-                    Text("BSK F2014")
-                        .font(.caption.bold())
-                        .tracking(2.2)
-                        .foregroundStyle(BSKTheme.muted)
+                ZStack {
+                    Circle().fill(BSKTheme.accent.opacity(0.08)).frame(width: 220, height: 220).blur(radius: 18)
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
+                        .fill(BSKTheme.hero)
+                        .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(BSKTheme.accent.opacity(0.35)))
+                        .shadow(color: BSKTheme.accent.opacity(0.18), radius: 30, y: 12)
+                    VStack(spacing: 6) {
+                        Text("+90").font(.system(size: 54, weight: .black, design: .rounded)).foregroundStyle(BSKTheme.accent)
+                        Text("BSK F2014").font(.system(size: 10, weight: .black)).tracking(2.4).foregroundStyle(BSKTheme.secondary)
+                    }
                 }
-                VStack(spacing: 8) {
-                    Text("Utveckling nära träningen")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .frame(width: 174, height: 174)
+                VStack(spacing: 10) {
+                    Text("Se matchen.\nUtveckla spelaren.")
+                        .font(.system(size: 38, weight: .black, design: .rounded))
+                        .tracking(-1)
                         .multilineTextAlignment(.center)
-                    Text("Samma lag. Samma data. Nu native.")
-                        .font(.body)
+                    Text("Ett fokuserat verktyg för beslut före, under och efter match.")
+                        .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
+                        .multilineTextAlignment(.center)
                 }
                 .foregroundStyle(.white)
                 Spacer()
@@ -42,18 +42,19 @@ struct LoginView: View {
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 16)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(BSKTheme.accent)
                 .foregroundStyle(.black)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .disabled(model.isWorking)
-                Text("Samma konto, spelare och behörigheter som på bsk2014.se.")
+                Text("Säkert med ditt befintliga BSK-konto")
                     .font(.footnote)
                     .foregroundStyle(.white.opacity(0.65))
                     .multilineTextAlignment(.center)
             }
-            .padding(32)
+            .padding(28)
             .frame(maxWidth: 520)
             .padding(.vertical, 20)
         }

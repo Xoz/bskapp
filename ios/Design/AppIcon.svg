@@ -1,0 +1,52 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="122" y1="42" x2="908" y2="1014" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#242621"/>
+      <stop offset="0.48" stop-color="#111310"/>
+      <stop offset="1" stop-color="#080907"/>
+    </linearGradient>
+    <radialGradient id="stadium" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(795 151) rotate(132.7) scale(610 565)">
+      <stop stop-color="#FFD23F" stop-opacity="0.42"/>
+      <stop offset="0.34" stop-color="#F3A712" stop-opacity="0.17"/>
+      <stop offset="1" stop-color="#F3A712" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="268" y1="228" x2="758" y2="801" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF2"/>
+      <stop offset="0.52" stop-color="#E8E4D5"/>
+      <stop offset="1" stop-color="#ACA99F"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="410" y1="180" x2="650" y2="409" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE06A"/>
+      <stop offset="0.48" stop-color="#F6B819"/>
+      <stop offset="1" stop-color="#D98A00"/>
+    </linearGradient>
+    <filter id="shadow" x="151" y="149" width="731" height="746" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="goldGlow" x="326" y="102" width="373" height="395" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#F6B819" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#stadium)"/>
+  <path d="M-80 876L741 55H1038L128 1024H-80V876Z" fill="#FFFFFF" fill-opacity="0.018"/>
+  <path d="M96 1018L1018 96" stroke="#F7C534" stroke-opacity="0.055" stroke-width="2"/>
+
+  <g filter="url(#shadow)">
+    <path d="M646 271C761 324 840 440 840 574C840 758 691 907 507 907C323 907 174 758 174 574C174 440 253 324 368 271" stroke="#050605" stroke-opacity="0.5" stroke-width="70" stroke-linecap="round"/>
+    <path d="M646 271C761 324 840 440 840 574C840 758 691 907 507 907C323 907 174 758 174 574C174 440 253 324 368 271" stroke="url(#ring)" stroke-width="52" stroke-linecap="round"/>
+    <path d="M639 285C744 334 816 439 816 561" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#goldGlow)">
+    <rect x="433" y="170" width="148" height="58" rx="29" fill="url(#gold)"/>
+    <rect x="478" y="125" width="58" height="148" rx="29" fill="url(#gold)"/>
+  </g>
+
+  <path d="M507 574L650 366" stroke="#050605" stroke-opacity="0.55" stroke-width="60" stroke-linecap="round"/>
+  <path d="M507 574L650 366" stroke="url(#ring)" stroke-width="42" stroke-linecap="round"/>
+  <circle cx="507" cy="574" r="62" fill="#090A08" stroke="url(#ring)" stroke-width="16"/>
+  <circle cx="507" cy="574" r="32" fill="url(#gold)"/>
+  <circle cx="496" cy="562" r="10" fill="#FFF4B8" fill-opacity="0.72"/>
+</svg>

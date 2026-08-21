@@ -174,5 +174,7 @@ grep -E "CREATE TABLE" lib/db.ts
 - `ios/BSK.xcodeproj` är den universella SwiftUI-klienten för iPhone och iPad.
   `ios/BSK/Auth` innehåller ASWebAuthenticationSession, PKCE och Keychain;
   `ios/BSK/Networking` innehåller tokenrefresh och Mobile API-modeller; vyerna
-  använder adaptiv `NavigationSplitView`. Kör- och konfigurationsnoter finns i
+  använder separata adaptiva flöden för kompakt navigation och
+  `NavigationSplitView`. Appikonen ligger i `ios/BSK/Assets.xcassets` med
+  redigerbart original i `ios/Design`. Kör- och konfigurationsnoter finns i
   `ios/README.md`.

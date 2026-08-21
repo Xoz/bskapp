@@ -1,12 +1,47 @@
 import SwiftUI
 
+private struct AdaptiveListLink<Value: Hashable, Destination: View, Label: View>: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Binding private var selection: Value?
+    private let value: Value
+    private let destination: () -> Destination
+    private let label: () -> Label
+
+    init(
+        value: Value,
+        selection: Binding<Value?>,
+        @ViewBuilder destination: @escaping () -> Destination,
+        @ViewBuilder label: @escaping () -> Label
+    ) {
+        self.value = value
+        _selection = selection
+        self.destination = destination
+        self.label = label
+    }
+
+    var body: some View {
+        if horizontalSizeClass == .compact {
+            NavigationLink(destination: destination, label: label)
+        } else {
+            Button {
+                selection = value
+            } label: {
+                label()
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
 struct ActivityList: View {
     @EnvironmentObject private var model: AppModel
     @Binding var selection: String?
 
     var body: some View {
         List(model.activities, selection: $selection) { activity in
-            NavigationLink(value: activity.id) {
+            AdaptiveListLink(value: activity.id, selection: $selection) {
+                ActivityDetail(activity: activity)
+            } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 10) {
                         Image(systemName: activity.type == "match" ? "sportscourt.fill" : "figure.run")
@@ -84,7 +119,7 @@ struct ActivityDetail: View {
     private var matchHero: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text("NÄSTA MATCH")
+                Text("MATCHDAG")
                     .font(.caption2.bold())
                     .tracking(1.6)
                     .foregroundStyle(BSKTheme.accent)
@@ -724,16 +759,16 @@ struct TodayList: View {
                 )
                 .frame(maxWidth: .infinity, minHeight: 420)
             } else {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("MATCHVECKAN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                        Text("Nästa uppgift").font(.largeTitle.bold())
+                        Text("Den här veckan").font(.title.bold())
                     }
                     ForEach(Array(thisWeeksMatches.enumerated()), id: \.element.id) { index, activity in
                         matchLink(activity, featured: index == 0)
                     }
                 }
-                .padding(18)
+                .padding(horizontalSizeClass == .compact ? 14 : 18)
                 .frame(maxWidth: 840)
                 .frame(maxWidth: .infinity)
             }
@@ -754,7 +789,11 @@ struct TodayList: View {
         }
     }
 
+    @ViewBuilder
     private func matchCard(_ activity: ActivitySummary, featured: Bool) -> some View {
+        if horizontalSizeClass == .compact {
+            compactMatchRow(activity, featured: featured)
+        } else {
         HStack(spacing: featured ? 18 : 13) {
             ZStack {
                 RoundedRectangle(cornerRadius: featured ? 22 : 16, style: .continuous)
@@ -789,6 +828,42 @@ struct TodayList: View {
         )
         .overlay(RoundedRectangle(cornerRadius: featured ? 26 : 20, style: .continuous).stroke(featured ? BSKTheme.accent.opacity(0.45) : BSKTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(featured ? 0.28 : 0.14), radius: featured ? 20 : 10, y: 8)
+        }
+    }
+
+    private func compactMatchRow(_ activity: ActivitySummary, featured: Bool) -> some View {
+        HStack(spacing: 12) {
+            compactDateTile(activity.date)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(featured ? "NÄSTA MATCH" : "MATCH")
+                    .font(.system(size: 9, weight: .black)).tracking(1.2).foregroundStyle(BSKTheme.accent)
+                Text(activity.title).font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                if !activity.theme.isEmpty { Text(activity.theme).font(.caption2).foregroundStyle(BSKTheme.muted).lineLimit(1) }
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 8) {
+                Text(activity.startTime ?? "--:--")
+                    .font(.system(size: 19, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(.white)
+                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+            }
+        }
+        .padding(12)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(featured ? BSKTheme.accent.opacity(0.42) : BSKTheme.border))
+    }
+
+    private func compactDateTile(_ date: String) -> some View {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        let day = parts.count == 3 ? parts[2] : 0
+        let month = parts.count == 3 ? parts[1] : 0
+        let months = ["JAN", "FEB", "MAR", "APR", "MAJ", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
+        let monthText = (1...12).contains(month) ? months[month - 1] : ""
+        return VStack(spacing: 1) {
+            Text(String(format: "%02d", day)).font(.system(size: 20, weight: .black, design: .rounded)).foregroundStyle(.white)
+            Text(monthText).font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(BSKTheme.muted)
+        }
+        .frame(width: 50, height: 56)
+        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 
     private var thisWeeksMatches: [ActivitySummary] {
@@ -833,7 +908,7 @@ struct TodayDetail: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Matchhistorik och efterarbete finns under Observera.", systemImage: "chart.xyaxis.line")
+                    Label("Efterarbete och spelarbedömning finns under Utvärdera.", systemImage: "checklist")
                     Label("Spelarprofiler och utvecklingsmål finns under Spelare.", systemImage: "person.3")
                 }
                 .foregroundStyle(.secondary)
@@ -852,7 +927,9 @@ struct SelectionList: View {
 
     var body: some View {
         List(model.selectionMatches, selection: $selection) { match in
-            NavigationLink(value: match.id) {
+            AdaptiveListLink(value: match.id, selection: $selection) {
+                SelectionDetail(match: match)
+            } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "sportscourt.fill").foregroundStyle(BSKTheme.accent)
@@ -1037,19 +1114,19 @@ struct MatchEvaluationList: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("EFTER MATCHEN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                    Text("Spelarnas insats").font(.largeTitle.bold())
+                    Text("MATCHUPPFÖLJNING").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                    Text("Utvärdera").font(.title.bold())
                     Text("Fortsätt där du slutade eller öppna en ny match.").foregroundStyle(BSKTheme.secondary)
                 }
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 245), spacing: 14)], spacing: 14) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 245), spacing: 10)], spacing: 10) {
                     ForEach(model.matchEvaluations) { match in
                         evaluationLink(match)
                     }
                 }
             }
-            .padding(18)
+            .padding(horizontalSizeClass == .compact ? 14 : 18)
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
@@ -1066,12 +1143,40 @@ struct MatchEvaluationList: View {
     @ViewBuilder
     private func evaluationLink(_ match: MatchEvaluationSummary) -> some View {
         if horizontalSizeClass == .compact {
-            NavigationLink { MatchEvaluationView(matchID: match.id) } label: { evaluationCard(match) }
+            NavigationLink { MatchEvaluationView(matchID: match.id) } label: { compactEvaluationRow(match) }
                 .buttonStyle(.plain)
         } else {
             Button { selection = match.id } label: { evaluationCard(match) }
                 .buttonStyle(.plain)
         }
+    }
+
+    private func compactEvaluationRow(_ match: MatchEvaluationSummary) -> some View {
+        let complete = match.total > 0 && match.handled == match.total
+        return HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 13, style: .continuous).fill((complete ? BSKTheme.accent : BSKTheme.warning).opacity(0.13))
+                Image(systemName: complete ? "checkmark" : "figure.soccer")
+                    .font(.headline.bold()).foregroundStyle(complete ? BSKTheme.accent : BSKTheme.warning)
+            }.frame(width: 48, height: 48)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(match.homeAway == "home" ? "Hemma mot" : "Borta mot") \(match.opponent)")
+                    .font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(BSKTheme.secondary)
+                ProgressView(value: Double(match.handled), total: Double(max(match.total, 1)))
+                    .tint(complete ? BSKTheme.accent : BSKTheme.warning)
+            }
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(match.handled)/\(match.total)").font(.headline.bold()).monospacedDigit().foregroundStyle(.white)
+                Text(complete ? "KLAR" : match.handled > 0 ? "FORTSÄTT" : "STARTA")
+                    .font(.system(size: 9, weight: .black)).tracking(0.8).foregroundStyle(complete ? BSKTheme.accent : BSKTheme.warning)
+            }
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(12)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(complete ? BSKTheme.accent.opacity(0.35) : BSKTheme.border))
     }
 
     private func evaluationCard(_ match: MatchEvaluationSummary) -> some View {
@@ -1107,6 +1212,7 @@ struct MatchEvaluationList: View {
 
 struct MatchEvaluationView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let matchID: Int
     @State private var workspace: MatchEvaluationWorkspace?
     @State private var answers: [Int: MatchEvaluationAnswer] = [:]
@@ -1118,11 +1224,11 @@ struct MatchEvaluationView: View {
         Group {
             if let workspace, !workspace.players.isEmpty {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 12 : 18) {
                         progressCard(workspace)
                         playerCard(workspace.players[activeIndex])
                     }
-                    .padding(20)
+                    .padding(horizontalSizeClass == .compact ? 12 : 20)
                     .frame(maxWidth: 760)
                     .frame(maxWidth: .infinity)
                 }
@@ -1139,14 +1245,14 @@ struct MatchEvaluationView: View {
     }
 
     private func progressCard(_ workspace: MatchEvaluationWorkspace) -> some View {
-        HStack(spacing: 18) {
+        HStack(spacing: horizontalSizeClass == .compact ? 10 : 18) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(workspace.match.homeAway == "home" ? "HEMMAMATCH" : "BORTAMATCH")
                     .font(.caption2.bold())
                     .tracking(1.6)
                     .foregroundStyle(BSKTheme.accent)
                 Text(workspace.match.opponent)
-                    .font(.title2.bold())
+                    .font(horizontalSizeClass == .compact ? .headline.bold() : .title2.bold())
                     .foregroundStyle(.white)
                 HStack(spacing: 8) {
                     Label(workspace.match.date, systemImage: "calendar")
@@ -1171,11 +1277,13 @@ struct MatchEvaluationView: View {
                     Text("av \(workspace.players.count)").font(.caption2).foregroundStyle(BSKTheme.muted)
                 }
             }
-            .frame(width: 72, height: 72)
+            .frame(width: horizontalSizeClass == .compact ? 52 : 72, height: horizontalSizeClass == .compact ? 52 : 72)
 
+            if horizontalSizeClass != .compact {
             VStack(alignment: .leading, spacing: 4) {
                 Text("SPELARE").font(.caption2.bold()).tracking(1.2).foregroundStyle(BSKTheme.muted)
                 Text("\(activeIndex + 1)/\(workspace.players.count)").font(.headline).monospacedDigit()
+            }
             }
 
             Spacer(minLength: 0)
@@ -1195,7 +1303,7 @@ struct MatchEvaluationView: View {
             }
             .offset(y: 34)
         }
-        .padding(20)
+        .padding(horizontalSizeClass == .compact ? 14 : 20)
         .padding(.bottom, savedMessage == nil && model.queuedMatchEvaluationCount == 0 ? 0 : 28)
         .background(
             LinearGradient(
@@ -1210,7 +1318,7 @@ struct MatchEvaluationView: View {
 
     private func playerCard(_ player: MatchEvaluationWorkspace.Player) -> some View {
         let answer = answers[player.id] ?? blankAnswer(player)
-        return VStack(alignment: .leading, spacing: 24) {
+        return VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 16 : 24) {
             HStack(spacing: 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -1219,11 +1327,11 @@ struct MatchEvaluationView: View {
                         .font(.title.bold())
                         .foregroundStyle(.black.opacity(0.78))
                 }
-                .frame(width: 68, height: 68)
+                .frame(width: horizontalSizeClass == .compact ? 52 : 68, height: horizontalSizeClass == .compact ? 52 : 68)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("BEDÖM SPELAREN").font(.caption2.bold()).tracking(1.4).foregroundStyle(BSKTheme.muted)
-                    Text(player.name).font(.title.bold())
+                    Text(player.name).font(horizontalSizeClass == .compact ? .title2.bold() : .title.bold())
                     if !player.level.isEmpty {
                         Text(player.level).font(.caption.bold()).foregroundStyle(BSKTheme.accent)
                     }
@@ -1291,7 +1399,7 @@ struct MatchEvaluationView: View {
                 .tint(BSKTheme.muted)
             }
         }
-        .padding(22)
+        .padding(horizontalSizeClass == .compact ? 14 : 22)
         .background(BSKTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
