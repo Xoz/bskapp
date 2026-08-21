@@ -49,7 +49,10 @@ describe("säkerhetskontrakt", () => {
     expect(client).toContain("private var refreshTask: Task<TokenPair, Error>?");
     expect(client).toContain("if let refreshTask");
     expect(client).toContain("self.rotateRefreshToken()");
+    expect(client).toContain("current.accessToken != failedAccessToken");
+    expect(client).toContain("refresh(afterUsing: accessToken)");
     expect(appModel).toContain("if case APIClientError.unauthorized = error");
+    expect(appModel).toContain("guard phase == .loading, !isRestoringSession else { return }");
     expect(appModel).toContain("Ett tillfälligt nät-, server- eller Keychain-fel är inte en");
     expect(keychain).toContain("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly");
   });

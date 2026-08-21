@@ -50,6 +50,7 @@ final class AppModel: ObservableObject {
     private let matchEvaluationQueueURL: URL
     private let networkMonitor = NWPathMonitor()
     private let networkMonitorQueue = DispatchQueue(label: "se.bsk2014.network-monitor")
+    private var isRestoringSession = false
 
     init() {
         #if DEBUG
@@ -148,7 +149,9 @@ final class AppModel: ObservableObject {
     }
 
     func restore() async {
-        guard phase == .loading else { return }
+        guard phase == .loading, !isRestoringSession else { return }
+        isRestoringSession = true
+        defer { isRestoringSession = false }
         var retryDelay = 1.0
         while phase == .loading {
             do {

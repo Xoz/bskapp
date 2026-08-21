@@ -161,7 +161,15 @@ actor APIClient {
         clearSession()
     }
 
-    private func refresh() async throws -> TokenPair {
+    private func refresh(afterUsing failedAccessToken: String?) async throws -> TokenPair {
+        guard let current = try store.loadTokens() else { throw APIClientError.unauthorized }
+
+        // Ett annat anrop kan redan ha roterat sessionen medan detta anrops
+        // gamla 401-svar var på väg tillbaka. Återanvänd då de nya tokens som
+        // ligger i Keychain i stället för att rotera en gång till.
+        if let failedAccessToken, current.accessToken != failedAccessToken {
+            return current
+        }
         if let refreshTask {
             return try await refreshTask.value
         }
@@ -202,7 +210,7 @@ actor APIClient {
         let accessToken = authorized ? (try? store.loadTokens())?.accessToken : nil
         let (data, response) = try await send(path: path, method: method, body: body, accessToken: accessToken)
         if response.statusCode == 401, authorized, canRefresh {
-            let tokens = try await refresh()
+            let tokens = try await refresh(afterUsing: accessToken)
             let retried = try await send(path: path, method: method, body: body, accessToken: tokens.accessToken)
             return try decode(data: retried.0, response: retried.1)
         }
