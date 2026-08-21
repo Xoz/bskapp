@@ -1,5 +1,5 @@
 import { type CurrentUser } from "@/lib/auth";
-import { get } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { getLiveState, recordEvent, setClock, undoLastEvent } from "@/lib/live";
 import { OPPONENT_GOAL } from "@/lib/liveTypes";
 import { DevelopmentServiceError } from "@/lib/services/development";
@@ -36,9 +36,33 @@ async function requireAccessibleMatch(actor: CurrentUser, matchId: number) {
   if (!row) throw new DevelopmentServiceError("not_found", "Matchen hittades inte.", 404);
 }
 
+async function getMobileLiveState(matchId: number) {
+  const state = await getLiveState(matchId, true);
+  const decisions = await all<{ player_id: number; decision: "selected" | "reserve" | "rested" }>(
+    `SELECT DISTINCT sd.player_id, sd.decision
+       FROM development_selection_decisions sd
+       JOIN development_activities da ON da.id = sd.activity_id
+      WHERE da.match_id = ?`,
+    [matchId]
+  );
+  const squad = decisions.length > 0
+    ? decisions.filter((row) => row.decision === "selected").map((row) => row.player_id)
+    : (await all<{ player_id: number }>(
+        "SELECT player_id FROM match_squad WHERE match_id = ?",
+        [matchId]
+      )).map((row) => row.player_id);
+  const allowed = new Set(squad);
+
+  return {
+    ...state,
+    players: state.players.filter((player) => allowed.has(player.id)),
+    onField: state.onField.filter((playerId) => allowed.has(playerId)),
+  };
+}
+
 export async function getMobileLiveMatch(actor: CurrentUser, matchId: number) {
   await requireAccessibleMatch(actor, matchId);
-  return getLiveState(matchId, true);
+  return getMobileLiveState(matchId);
 }
 
 export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number, action: MobileLiveAction) {
@@ -46,7 +70,7 @@ export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number,
   if (action.type === "clock") {
     await setClock(matchId, action.op);
   } else if (action.type === "goal") {
-    const state = await getLiveState(matchId, true);
+    const state = await getMobileLiveState(matchId);
     if (!Number.isInteger(action.playerId) || !state.players.some((player) => player.id === action.playerId)) {
       throw new DevelopmentServiceError("invalid", "Målskytten ingår inte i matchtruppen.", 400);
     }
@@ -58,5 +82,5 @@ export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number,
   } else {
     throw new DevelopmentServiceError("invalid", "Okänd matchåtgärd.", 400);
   }
-  return getLiveState(matchId, true);
+  return getMobileLiveState(matchId);
 }
