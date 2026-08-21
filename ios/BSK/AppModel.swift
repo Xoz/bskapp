@@ -141,6 +141,8 @@ final class AppModel: ObservableObject {
                 challengeContext: "balanced",
                 observationCount: 3,
                 isPrimaryMatch: true,
+                sourceTeam: "Gul",
+                loanedPlayerNames: [],
                 finished: false
             )
         ]

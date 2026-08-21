@@ -47,6 +47,7 @@ struct ActivityList: View {
                         Image(systemName: activity.type == "match" ? "sportscourt.fill" : "figure.run")
                             .foregroundStyle(BSKTheme.accent)
                         Text(activity.title).fontWeight(.semibold)
+                        if !activity.sourceTeam.isEmpty { BSKStatusChip(title: activity.sourceTeam) }
                     }
                     HStack {
                         Text(activity.date)
@@ -57,11 +58,16 @@ struct ActivityList: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    if !activity.loanedPlayerNames.isEmpty {
+                        Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(BSKTheme.accent)
+                    }
                 }
                 .padding(.vertical, 4)
             }
         }
-        .navigationTitle("Observera")
+        .navigationTitle("Matcher")
         .bskListSurface()
         .refreshable { await model.reload() }
     }

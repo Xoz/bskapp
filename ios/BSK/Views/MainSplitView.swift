@@ -12,7 +12,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .today: return "Idag"
-        case .observe: return "Observera"
+        case .observe: return "Matcher"
         case .evaluate: return "Utvärdera"
         case .players: return "Spelare"
         case .selection: return "Uttagning"
@@ -22,7 +22,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .today: return "sun.max"
-        case .observe: return "scope"
+        case .observe: return "calendar"
         case .evaluate: return "checklist"
         case .players: return "person.3"
         case .selection: return "sportscourt"
@@ -173,7 +173,7 @@ struct MainSplitView: View {
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
                 ActivityDetail(activity: activity)
             } else {
-                EmptyWorkspaceDetail(title: "Välj en aktivitet", message: "Öppna en match eller träning och fånga observationer.", icon: "scope")
+                EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för trupp, matchcenter och observationer.", icon: "calendar")
             }
         case .evaluate:
             if let selectedEvaluation {
@@ -496,17 +496,17 @@ private struct ActivityWorkspaceList: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 BSKPageHeader(
-                    eyebrow: "Utveckling i stunden",
-                    title: "Observera",
-                    message: "Öppna en aktivitet och fånga det som faktiskt utvecklar spelaren.",
-                    trailing: "\(model.activities.count) aktiviteter"
+                    eyebrow: "GUL OCH GRÖN",
+                    title: "Matcher",
+                    message: "Alla lagens matcher på samma plats. Gulspelare som lånas till Grön markeras direkt.",
+                    trailing: "\(model.activities.count) matcher"
                 )
 
                 if model.activities.isEmpty {
                     ContentUnavailableView(
-                        "Inga aktiviteter",
+                        "Inga matcher",
                         systemImage: "sportscourt",
-                        description: Text("Matcher och träningar visas här när de har hämtats.")
+                        description: Text("Gul- och Grönmatcher visas här när de har hämtats.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 360)
                 } else {
@@ -549,7 +549,7 @@ private struct ActivityWorkspaceList: View {
                 }
                 .frame(width: 50, height: 50)
                 Spacer()
-                BSKStatusChip(title: activity.type == "match" ? "Match" : "Träning")
+                BSKStatusChip(title: activity.sourceTeam.isEmpty ? "Match" : activity.sourceTeam)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -559,6 +559,12 @@ private struct ActivityWorkspaceList: View {
                     .foregroundStyle(BSKTheme.secondary)
                 if !activity.theme.isEmpty {
                     Text(activity.theme).font(.caption).foregroundStyle(BSKTheme.muted).lineLimit(2)
+                }
+                if !activity.loanedPlayerNames.isEmpty {
+                    Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(BSKTheme.accent)
+                        .lineLimit(3)
                 }
             }
 

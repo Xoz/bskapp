@@ -117,6 +117,8 @@ export type MobileActivity = {
   challengeContext: "safe" | "balanced" | "challenging";
   observationCount: number;
   isPrimaryMatch: boolean;
+  sourceTeam: string;
+  loanedPlayerNames: string[];
   finished: boolean;
 };
 
@@ -767,6 +769,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     challenge_context: MobileActivity["challengeContext"];
     observation_count: number;
     is_primary_match: boolean;
+    source_team: string;
+    loaned_player_names: string;
     finished: number;
   }>(
     `SELECT da.id, da.match_id, da.activity_date, da.start_time, da.activity_type, da.title,
@@ -774,18 +778,52 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
             COUNT(o.id) AS observation_count,
             da.activity_type = 'match'
               AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul') AS is_primary_match,
+            COALESCE(match_group.name, '') AS source_team,
+            COALESCE((
+              SELECT string_agg(loaned.name, E'\\x1f' ORDER BY lower(loaned.name))
+              FROM players loaned
+              JOIN player_group_memberships loaned_membership
+                ON loaned_membership.player_id = loaned.id AND loaned_membership.is_primary = 1
+              JOIN groups loaned_group
+                ON loaned_group.id = loaned_membership.group_id AND loaned_group.name = 'Gul'
+              WHERE match_group.name = 'Grön'
+                AND (
+                  (COALESCE(linked_match.finished, 0) = 1 AND EXISTS (
+                    SELECT 1 FROM match_players played
+                    WHERE played.match_id = da.match_id AND played.player_id = loaned.id
+                  ))
+                  OR
+                  (COALESCE(linked_match.finished, 0) = 0 AND (
+                    EXISTS (
+                      SELECT 1 FROM match_squad squad
+                      WHERE squad.match_id = da.match_id AND squad.player_id = loaned.id
+                    )
+                    OR (
+                      NOT EXISTS (SELECT 1 FROM match_squad saved_squad WHERE saved_squad.match_id = da.match_id)
+                      AND (
+                        EXISTS (
+                          SELECT 1 FROM development_selection_decisions decision
+                          WHERE decision.activity_id = da.id AND decision.player_id = loaned.id
+                            AND decision.decision = 'selected'
+                        )
+                        OR EXISTS (
+                          SELECT 1 FROM development_activity_callups callup
+                          WHERE callup.activity_id = da.id AND callup.player_id = loaned.id
+                            AND callup.attendance_status IN ('present', 'unknown')
+                        )
+                      )
+                    )
+                  ))
+                )
+            ), '') AS loaned_player_names,
             COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished
      FROM development_activities da
+     JOIN matches linked_match ON linked_match.id = da.match_id
+     JOIN groups match_group ON match_group.id = da.group_id AND match_group.name IN ('Gul', 'Grön')
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
-       AND (
-         da.activity_type <> 'match'
-         OR (
-           da.match_id IS NOT NULL
-           AND EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')
-         )
-       )
-     GROUP BY da.id
+       AND da.activity_type = 'match'
+     GROUP BY da.id, match_group.name, linked_match.finished
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
     scope.args
@@ -802,6 +840,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     challengeContext: row.challenge_context,
     observationCount: Number(row.observation_count),
     isPrimaryMatch: row.is_primary_match,
+    sourceTeam: row.source_team,
+    loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
     finished: Boolean(row.finished),
   }));
 }

@@ -43,15 +43,17 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment.slice(activitiesStart, selectionStart)).not.toContain("await run(");
     expect(mobileDevelopment.slice(selectionStart, workspaceStart)).not.toContain("await run(");
     expect(mobileDevelopment).not.toContain("ensureManualMatchActivities");
-    expect(mobileDevelopment.slice(activitiesStart, selectionStart)).toContain("da.match_id IS NOT NULL");
+    expect(mobileDevelopment.slice(activitiesStart, selectionStart)).toContain("JOIN matches linked_match ON linked_match.id = da.match_id");
   });
 
-  it("visar canonical Gul-matcher och gör upsert på match-id", () => {
+  it("visar canonical Gul- och Grönmatcher och gör upsert på match-id", () => {
     const saveMatchStart = actions.indexOf("export async function saveMatch");
     const cupStart = actions.indexOf("// ---- Cup-hantering", saveMatchStart);
     const saveMatch = actions.slice(saveMatchStart, cupStart);
 
-    expect(mobileDevelopment).toContain("EXISTS (SELECT 1 FROM groups g WHERE g.id = da.group_id AND g.name = 'Gul')");
+    expect(mobileDevelopment).toContain("match_group.name IN ('Gul', 'Grön')");
+    expect(mobileDevelopment).toContain("loaned_player_names");
+    expect(mobileDevelopment).toContain("callup.attendance_status IN ('present', 'unknown')");
     expect(saveMatch).toContain("ON CONFLICT (match_id) WHERE match_id IS NOT NULL DO UPDATE SET");
     expect(saveMatch).toContain("external_source = excluded.external_source");
     expect(actions).toContain("UPDATE development_activities existing_activity");
