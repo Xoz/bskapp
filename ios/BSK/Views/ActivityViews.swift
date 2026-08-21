@@ -804,34 +804,114 @@ struct TodayList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: String?
+    @State private var selectedPlayerLoad: PlayerMatchLoad?
 
     var body: some View {
         ScrollView {
-            if thisWeeksMatches.isEmpty {
-                ContentUnavailableView(
-                    "Inga fler matcher den här veckan",
-                    systemImage: "calendar",
-                    description: Text("När nya matcher har hämtats visas de här.")
-                )
-                .frame(maxWidth: .infinity, minHeight: 420)
-            } else {
+            VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("MATCHVECKAN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
                         Text("Den här veckan").font(.title.bold())
                     }
-                    ForEach(Array(thisWeeksMatches.enumerated()), id: \.element.id) { index, activity in
-                        matchLink(activity, featured: index == 0)
+                    if thisWeeksMatches.isEmpty {
+                        Label("Inga fler matcher den här veckan", systemImage: "calendar")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
+                    } else {
+                        ForEach(Array(thisWeeksMatches.enumerated()), id: \.element.id) { index, activity in
+                            matchLink(activity, featured: index == 0)
+                        }
                     }
                 }
-                .padding(horizontalSizeClass == .compact ? 14 : 18)
-                .frame(maxWidth: 840)
-                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("GULSPELARE").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                        Text("Mest matchutrymme").font(.title2.bold())
+                        Text("Spelade matcher de senaste sju dagarna")
+                            .font(.caption)
+                            .foregroundStyle(BSKTheme.muted)
+                    }
+                    if model.playerMatchLoads.isEmpty {
+                        Text("Inga Gulspelare hittades.")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .padding(.vertical, 8)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(sortedPlayerLoads) { player in
+                                Button { selectedPlayerLoad = player } label: {
+                                    playerLoadRow(player)
+                                }
+                                .buttonStyle(.plain)
+                                if player.id != sortedPlayerLoads.last?.id {
+                                    Divider().overlay(BSKTheme.hairline).padding(.leading, 14)
+                                }
+                            }
+                        }
+                        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+                    }
+                }
             }
+            .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .frame(maxWidth: 840)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Idag")
         .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
+        .sheet(item: $selectedPlayerLoad) { player in
+            NavigationStack {
+                PlayerMatchLoadDetail(player: player)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var sortedPlayerLoads: [PlayerMatchLoad] {
+        model.playerMatchLoads.sorted {
+            $0.capacity > $1.capacity || ($0.capacity == $1.capacity && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
+        }
+    }
+
+    private func playerLoadRow(_ player: PlayerMatchLoad) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(player.name).font(.subheadline.bold()).foregroundStyle(.white)
+                Text(player.recentMatches.count == 1 ? "1 match senaste 7 dagarna" : "\(player.recentMatches.count) matcher senaste 7 dagarna")
+                    .font(.caption2)
+                    .foregroundStyle(BSKTheme.muted)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 6) {
+                Text("\(player.capacity) %")
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(capacityColor(player.capacity))
+                ProgressView(value: Double(player.capacity), total: 100)
+                    .tint(capacityColor(player.capacity))
+                    .frame(width: horizontalSizeClass == .compact ? 92 : 130)
+            }
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(player.name), \(player.capacity) procent matchutrymme, \(player.recentMatches.count) matcher senaste sju dagarna")
+    }
+
+    private func capacityColor(_ capacity: Int) -> Color {
+        if capacity >= 75 { return BSKTheme.accent }
+        if capacity >= 40 { return BSKTheme.warning }
+        return BSKTheme.danger
     }
 
     @ViewBuilder
@@ -947,6 +1027,93 @@ struct TodayList: View {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+}
+
+private struct PlayerMatchLoadDetail: View {
+    @Environment(\.dismiss) private var dismiss
+    let player: PlayerMatchLoad
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("MATCHUTRYMME").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(player.name).font(.largeTitle.bold())
+                        Spacer()
+                        Text("\(player.capacity) %")
+                            .font(.title.bold()).monospacedDigit().foregroundStyle(capacityColor)
+                    }
+                    ProgressView(value: Double(player.capacity), total: 100)
+                        .tint(capacityColor)
+                    Text(player.recentMatches.count == 1 ? "1 spelad match de senaste sju dagarna" : "\(player.recentMatches.count) spelade matcher de senaste sju dagarna")
+                        .font(.caption).foregroundStyle(BSKTheme.muted)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Kommande matcher").font(.title3.bold())
+                    if player.upcomingMatches.isEmpty {
+                        Label("Inga kommande matcher registrerade", systemImage: "calendar.badge.checkmark")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(player.upcomingMatches) { match in
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(match.title).font(.subheadline.bold())
+                                        Text([match.date, match.startTime].compactMap { $0 }.joined(separator: " · "))
+                                            .font(.caption).foregroundStyle(BSKTheme.muted)
+                                    }
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text(match.sourceTeam).font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+                                        Text(statusLabel(match.status)).font(.caption2.bold()).foregroundStyle(statusColor(match.status))
+                                    }
+                                }
+                                .padding(14)
+                                if match.id != player.upcomingMatches.last?.id {
+                                    Divider().overlay(BSKTheme.hairline).padding(.leading, 14)
+                                }
+                            }
+                        }
+                        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(BSKTheme.canvas)
+        .navigationTitle("Spelare")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Klar") { dismiss() }
+            }
+        }
+    }
+
+    private var capacityColor: Color {
+        if player.capacity >= 75 { return BSKTheme.accent }
+        if player.capacity >= 40 { return BSKTheme.warning }
+        return BSKTheme.danger
+    }
+
+    private func statusLabel(_ status: String) -> String {
+        switch status {
+        case "selected": return "Uttagen"
+        case "accepted": return "Tackat ja"
+        default: return "Inväntar svar"
+        }
+    }
+
+    private func statusColor(_ status: String) -> Color {
+        status == "pending" ? BSKTheme.warning : BSKTheme.accent
+    }
 }
 
 struct TodayDetail: View {

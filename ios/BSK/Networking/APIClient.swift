@@ -49,6 +49,10 @@ actor APIClient {
         try await perform(path: "/players", method: "GET", body: nil, authorized: true)
     }
 
+    func playerMatchLoads() async throws -> [PlayerMatchLoad] {
+        try await perform(path: "/player-match-loads", method: "GET", body: nil, authorized: true)
+    }
+
     func player(id: Int) async throws -> PlayerDetail {
         try await perform(path: "/players/\(id)", method: "GET", body: nil, authorized: true)
     }

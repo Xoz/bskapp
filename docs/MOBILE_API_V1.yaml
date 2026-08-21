@@ -36,6 +36,24 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /player-match-loads:
+    get:
+      summary: Ordinarie Gulspelare sorterade efter matchutrymme
+      responses:
+        "200":
+          description: Matchutrymme från spelade matcher under de senaste sju dygnen samt kommande uttagningar och kallelser
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [apiVersion, data]
+                properties:
+                  apiVersion: { const: "1" }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/PlayerMatchLoad" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /activities:
     get:
       summary: Behöriga aktiviteter för observationsflödet
@@ -148,6 +166,37 @@ components:
           properties:
             goals: { type: array, items: { type: object, additionalProperties: true } }
             observations: { type: array, maxItems: 40, items: { type: object, additionalProperties: true } }
+    PlayerMatchLoad:
+      type: object
+      required: [playerId, name, capacity, recentMatches, upcomingMatches]
+      properties:
+        playerId: { type: integer }
+        name: { type: string }
+        jerseyNumber: { type: [integer, "null"] }
+        capacity: { type: integer, minimum: 0, maximum: 100 }
+        recentMatches:
+          type: array
+          items:
+            type: object
+            required: [id, date, title, sourceTeam]
+            properties:
+              id: { type: string }
+              date: { type: string, format: date }
+              startTime: { type: [string, "null"] }
+              title: { type: string }
+              sourceTeam: { type: string }
+        upcomingMatches:
+          type: array
+          items:
+            type: object
+            required: [id, date, title, sourceTeam, status]
+            properties:
+              id: { type: string }
+              date: { type: string, format: date }
+              startTime: { type: [string, "null"] }
+              title: { type: string }
+              sourceTeam: { type: string }
+              status: { type: string, enum: [selected, accepted, pending] }
     Activity:
       type: object
       required: [id, date, type, title, theme, challengeContext, observationCount]

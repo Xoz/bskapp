@@ -3,6 +3,8 @@ import "server-only";
 import crypto from "crypto";
 import type { CurrentUser, Permission } from "../auth";
 import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
+import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
+import { matchCapacity } from "../matchCapacity";
 
 export type MobileEvidence = "shown" | "practicing" | "revisit";
 
@@ -74,6 +76,28 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
     note: string;
     coachName: string;
     createdAt: string;
+  }[];
+};
+
+export type MobilePlayerMatchLoad = {
+  playerId: number;
+  name: string;
+  jerseyNumber: number | null;
+  capacity: number;
+  recentMatches: {
+    id: string;
+    date: string;
+    startTime: string | null;
+    title: string;
+    sourceTeam: string;
+  }[];
+  upcomingMatches: {
+    id: string;
+    date: string;
+    startTime: string | null;
+    title: string;
+    sourceTeam: string;
+    status: "selected" | "accepted" | "pending";
   }[];
 };
 
@@ -307,6 +331,135 @@ export async function listMobilePlayers(actor: CurrentUser): Promise<MobilePlaye
       } : null,
     };
   });
+}
+
+export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<MobilePlayerMatchLoad[]> {
+  requirePermission(actor, "view_players");
+  const scope = playerScope(actor);
+  const today = swedishToday();
+  const cutoff = swedishDateOffset(-7);
+  const players = await all<{ id: number; name: string; jersey_number: number | null }>(
+    `SELECT p.id, p.name, p.jersey_number
+     FROM players p
+     JOIN player_group_memberships pgm ON pgm.player_id = p.id AND pgm.is_primary = 1
+     JOIN groups g ON g.id = pgm.group_id AND g.group_type = 'subgroup' AND g.active = 1
+     WHERE p.active = 1 AND g.name = 'Gul' AND ${scope.sql}
+       AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
+       AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
+     ORDER BY lower(p.name)`,
+    [...scope.args, today, today]
+  );
+  if (players.length === 0) return [];
+  const playerIds = players.map((player) => player.id);
+  const marks = placeholders(playerIds);
+  const [recentRows, upcomingRows] = await Promise.all([
+    all<{
+      player_id: number;
+      external_id: string;
+      match_date: string;
+      start_time: string | null;
+      title: string;
+      source_team: string;
+    }>(
+      `WITH recent_matches AS (
+         SELECT pcmp.player_id, pcm.external_id, pcm.match_date, pcm.start_time,
+                'Mot ' || pcm.opponent AS title, pcm.source_team
+         FROM player_competition_match_players pcmp
+         JOIN player_competition_matches pcm ON pcm.external_id = pcmp.match_external_id
+         WHERE pcmp.player_id IN (${marks})
+           AND pcm.competition = 'sanktan'
+           AND pcm.match_date >= ? AND pcm.match_date <= ?
+         UNION ALL
+         SELECT ap.player_id, da.id AS external_id, da.activity_date AS match_date,
+                da.start_time, da.title, COALESCE(g.name, 'Gul') AS source_team
+         FROM development_activity_participation ap
+         JOIN development_activities da ON da.id = ap.activity_id
+         LEFT JOIN groups g ON g.id = da.group_id
+         WHERE ap.player_id IN (${marks})
+           AND ap.attendance_status = 'present'
+           AND da.activity_type = 'match'
+           AND da.external_source <> 'svenskalag_sanktan'
+           AND da.activity_date >= ? AND da.activity_date <= ?
+       )
+       SELECT * FROM recent_matches
+       ORDER BY match_date DESC, start_time DESC NULLS LAST, external_id`,
+      [...playerIds, cutoff, today, ...playerIds, cutoff, today]
+    ),
+    all<{
+      player_id: number;
+      id: string;
+      activity_date: string;
+      start_time: string | null;
+      title: string;
+      source_team: string;
+      status: "selected" | "accepted" | "pending";
+    }>(
+      `SELECT linked.player_id, da.id, da.activity_date, da.start_time, da.title,
+              COALESCE(pcm.source_team, g.name, 'Gul') AS source_team,
+              CASE
+                WHEN linked.in_squad OR linked.selected_decision THEN 'selected'
+                WHEN linked.callup_status = 'present' THEN 'accepted'
+                ELSE 'pending'
+              END AS status
+       FROM development_activities da
+       LEFT JOIN player_competition_matches pcm ON da.external_key = 'sanktan:' || pcm.external_id
+       LEFT JOIN groups g ON g.id = da.group_id
+       JOIN LATERAL (
+         SELECT p.id AS player_id,
+                EXISTS (SELECT 1 FROM match_squad ms WHERE ms.match_id = da.match_id AND ms.player_id = p.id) AS in_squad,
+                EXISTS (SELECT 1 FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.player_id = p.id AND sd.decision = 'selected') AS selected_decision,
+                (SELECT dac.attendance_status FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.player_id = p.id LIMIT 1) AS callup_status,
+                EXISTS (SELECT 1 FROM match_squad any_ms WHERE any_ms.match_id = da.match_id) AS has_saved_squad
+         FROM players p
+         WHERE p.id IN (${marks})
+       ) linked ON (
+         linked.in_squad
+         OR (
+           NOT linked.has_saved_squad
+           AND (linked.selected_decision OR linked.callup_status IN ('present', 'unknown'))
+         )
+       )
+       WHERE da.activity_type = 'match' AND da.activity_date >= ?
+       ORDER BY da.activity_date, da.start_time NULLS LAST, da.id`,
+      [...playerIds, today]
+    ),
+  ]);
+
+  const recentByPlayer = new Map<number, MobilePlayerMatchLoad["recentMatches"]>();
+  for (const row of recentRows) {
+    recentByPlayer.set(row.player_id, [...(recentByPlayer.get(row.player_id) ?? []), {
+      id: row.external_id,
+      date: row.match_date,
+      startTime: row.start_time,
+      title: row.title,
+      sourceTeam: row.source_team,
+    }]);
+  }
+  const upcomingByPlayer = new Map<number, MobilePlayerMatchLoad["upcomingMatches"]>();
+  for (const row of upcomingRows) {
+    upcomingByPlayer.set(row.player_id, [...(upcomingByPlayer.get(row.player_id) ?? []), {
+      id: row.id,
+      date: row.activity_date,
+      startTime: row.start_time,
+      title: row.title,
+      sourceTeam: row.source_team,
+      status: row.status,
+    }]);
+  }
+  const nowMs = Date.now();
+  return players
+    .map((player) => {
+      const recentMatches = recentByPlayer.get(player.id) ?? [];
+      return {
+        playerId: player.id,
+        name: player.name,
+        jerseyNumber: player.jersey_number,
+        capacity: matchCapacity(recentMatches, nowMs, swedishWallClockToEpoch),
+        recentMatches,
+        upcomingMatches: upcomingByPlayer.get(player.id) ?? [],
+      };
+    })
+    .sort((left, right) => right.capacity - left.capacity || left.name.localeCompare(right.name, "sv"));
 }
 
 export async function listMobileActivityPlayers(actor: CurrentUser, activityId: string): Promise<MobilePlayerSummary[]> {

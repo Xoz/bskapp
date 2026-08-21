@@ -67,6 +67,34 @@ struct PlayerSummary: Codable, Identifiable {
     let lastObservation: ObservationSummary?
 }
 
+struct PlayerMatchLoad: Codable, Identifiable {
+    struct Match: Codable, Identifiable {
+        let id: String
+        let date: String
+        let startTime: String?
+        let title: String
+        let sourceTeam: String
+    }
+
+    struct UpcomingMatch: Codable, Identifiable {
+        let id: String
+        let date: String
+        let startTime: String?
+        let title: String
+        let sourceTeam: String
+        let status: String
+    }
+
+    let playerId: Int
+    let name: String
+    let jerseyNumber: Int?
+    let capacity: Int
+    let recentMatches: [Match]
+    let upcomingMatches: [UpcomingMatch]
+
+    var id: Int { playerId }
+}
+
 struct PlayerDetail: Codable, Identifiable {
     struct Team: Codable, Identifiable {
         let id: Int

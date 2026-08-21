@@ -29,7 +29,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 | Vill ändra | Läs dessa filer |
 | --- | --- |
-| **Primär utvecklingsloop** (Idag → mål → observation → historik) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `components/{CoreActivityCard,PilotStartField}.tsx` |
+| **Primär utvecklingsloop** (Idag → mål → observation → historik; native Idag visar Gulspelarnas matchutrymme) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `lib/matchCapacity.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `app/api/mobile/v1/player-match-loads/`, `components/{CoreActivityCard,PilotStartField}.tsx`, `ios/BSK/Views/ActivityViews.swift` |
 | **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
 | **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
@@ -87,6 +87,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
+- **matchCapacity.ts**: ren 0–100-mätare för nyligt matchspel; varje match kostar 50 procentenheter och avdraget tonas bort under sju dygn.
 - **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, `matchEvaluationIsOpen` (öppnar 75 minuter efter avspark), konsensus/avvikelse och spelartrend utan poäng eller ELO.
 
 ---
@@ -108,7 +109,7 @@ och `development_pilot_events`. `development_activity_callups` håller Svenska L
 
 Skyddade primärvyer under `app/(skyddad)/`: `idag`, `observera`, `spelare` (+ `[id]`) och `uttagning`. `oversikt` omdirigerar till `idag`. Sekundära skyddade vyer: matcher (+ `[id]`, laguttagning, live, cup, ny, ny-cup, importera-cup), äldre spelarutvärdering/utveckling, statistik, installningar, administration och mina-spelare.
 Publika: `/login`, `/invite`, `/guide`, `/min-profil`, `/mitt-utvecklingstrad`, `/spelare/login`, `/live/[id]` (+ rapportera), `/spelarkort/[token]`, `/matchutvardering/[token]`.
-API: `app/api/auth/{google,callback/google,dev,coach-bridge}`, `app/api/live/[id]`, `app/api/export/player/[id]`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
+API: `app/api/auth/{google,callback/google,dev,coach-bridge}`, `app/api/live/[id]`, `app/api/export/player/[id]` samt mobile v1 inklusive `player-match-loads`. `auth/dev` är DEV-ONLY (404 i prod): loggar in utan Google för lokal testning.
 
 Lokal testmiljö: `.env.development.local` pekar `DATABASE_URL` på en lokal Postgres (`bskdev`) i stället för prod. `scripts/seed-dev.mjs` seedar en testmatch idag (trupp + startelva). `scripts/reset-dev-match.mjs` återställer testmatchen till rent pågående tillstånd (behåller trupp/startelva). `scripts/test-live.sh` kör hela end-to-end-testprotokollet för liverapportering (se `docs/TESTPROTOKOLL-live.md`). Alla tre vägrar köra mot icke-lokal DB. Se `projects/bsk-app` i GBrain för uppsättning.
 

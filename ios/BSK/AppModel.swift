@@ -23,6 +23,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var phase: Phase = .loading
     @Published private(set) var user: CurrentUser?
     @Published private(set) var players: [PlayerSummary] = []
+    @Published private(set) var playerMatchLoads: [PlayerMatchLoad] = []
     @Published private(set) var activities: [ActivitySummary] = []
     @Published private(set) var selectionMatches: [SelectionMatchSummary] = []
     @Published private(set) var matchEvaluations: [MatchEvaluationSummary] = []
@@ -51,6 +52,11 @@ final class AppModel: ObservableObject {
     private let networkMonitorQueue = DispatchQueue(label: "se.bsk2014.network-monitor")
 
     init() {
+        #if DEBUG
+        let isUIReview = ProcessInfo.processInfo.arguments.contains("-ui-review")
+        #else
+        let isUIReview = false
+        #endif
         let store = KeychainStore()
         let baseURLString = Bundle.main.object(forInfoDictionaryKey: "BSKAPIBaseURL") as? String
         let baseURL = URL(string: baseURLString ?? "https://bsk2014.se/api/mobile/v1")!
@@ -71,7 +77,73 @@ final class AppModel: ObservableObject {
                 await self.loadCoreData()
             }
         }
-        networkMonitor.start(queue: networkMonitorQueue)
+        if isUIReview {
+            configureUIReviewFixtures()
+        } else {
+            networkMonitor.start(queue: networkMonitorQueue)
+        }
+    }
+
+    private func configureUIReviewFixtures() {
+        #if DEBUG
+        user = CurrentUser(
+            id: 1,
+            email: "tranare@bsk2014.se",
+            name: "Karin Tränare",
+            roles: ["admin"],
+            primaryRole: "admin",
+            permissions: [
+                "manage_users", "manage_settings", "manage_groups", "view_players", "manage_players",
+                "view_private_player_data", "manage_evaluations", "view_matches", "manage_matches",
+                "manage_squads", "report_matches", "view_statistics"
+            ],
+            groupIds: []
+        )
+        let focus = GoalSummary(
+            id: "00000000-0000-4000-8000-000000000001",
+            slot: 1,
+            title: "Söka spelbar yta före mottagning",
+            evidenceHint: "Titta upp och flytta före passningen",
+            reviewOn: "2026-09-01"
+        )
+        players = [
+            PlayerSummary(id: 1, name: "Alma", jerseyNumber: 7, position: "Mittfält", primaryPosition: "Mittfält", activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 2, name: "Adele", jerseyNumber: 11, position: "Anfall", primaryPosition: "Anfall", activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 3, name: "Kerstin", jerseyNumber: 4, position: "Back", primaryPosition: "Back", activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 4, name: "Mira", jerseyNumber: 1, position: "Målvakt", primaryPosition: "Målvakt", activeGoals: [], lastObservation: nil)
+        ]
+        playerMatchLoads = [
+            PlayerMatchLoad(playerId: 1, name: "Alma", jerseyNumber: 7, capacity: 100, recentMatches: [], upcomingMatches: [
+                .init(id: "sanktan-review-1", date: "2026-08-22", startTime: "10:15", title: "Hemma mot Spånga IS", sourceTeam: "Gul", status: "selected")
+            ]),
+            PlayerMatchLoad(playerId: 2, name: "Adele", jerseyNumber: 11, capacity: 82, recentMatches: [
+                .init(id: "recent-1", date: "2026-08-19", startTime: "18:30", title: "Mot AIK", sourceTeam: "Grön")
+            ], upcomingMatches: []),
+            PlayerMatchLoad(playerId: 3, name: "Kerstin", jerseyNumber: 4, capacity: 50, recentMatches: [
+                .init(id: "recent-2", date: "2026-08-21", startTime: "09:00", title: "Mot Sollentuna", sourceTeam: "Gul")
+            ], upcomingMatches: []),
+            PlayerMatchLoad(playerId: 4, name: "Mira", jerseyNumber: 1, capacity: 18, recentMatches: [
+                .init(id: "recent-3", date: "2026-08-20", startTime: "18:00", title: "Mot Brommapojkarna", sourceTeam: "Gul"),
+                .init(id: "recent-4", date: "2026-08-18", startTime: "18:30", title: "Mot Vasalund", sourceTeam: "Grön")
+            ], upcomingMatches: [])
+        ]
+        activities = [
+            ActivitySummary(
+                id: "sanktan-review-1",
+                matchId: nil,
+                date: "2026-08-22",
+                startTime: "10:15",
+                type: "match",
+                title: "Hemma mot Spånga IS",
+                groupId: 1,
+                theme: "Spelbarhet och mod i första passningen",
+                challengeContext: "balanced",
+                observationCount: 3,
+                isPrimaryMatch: true
+            )
+        ]
+        phase = .signedIn
+        #endif
     }
 
     func restore() async {
@@ -260,6 +332,7 @@ final class AppModel: ObservableObject {
         await api.logout()
         user = nil
         players = []
+        playerMatchLoads = []
         activities = []
         selectionMatches = []
         matchEvaluations = []
@@ -274,8 +347,10 @@ final class AppModel: ObservableObject {
     private func loadCoreData() async {
         do {
             async let loadedPlayers = api.players()
+            async let loadedPlayerMatchLoads = api.playerMatchLoads()
             async let loadedActivities = api.activities()
             players = try await loadedPlayers
+            playerMatchLoads = try await loadedPlayerMatchLoads
             activities = try await loadedActivities
             if user?.permissions.contains("manage_squads") == true {
                 selectionMatches = try await api.selectionMatches()
