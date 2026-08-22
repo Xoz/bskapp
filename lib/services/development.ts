@@ -121,6 +121,7 @@ export type MobileActivity = {
   matchLevel: "Extra svår" | "Svår" | "Medel" | "Lätt" | "Extra lätt" | "Öppen klass";
   loanedPlayerNames: string[];
   finished: boolean;
+  evaluationReady: boolean;
   acceptedCallupCount: number;
   declinedCallupCount: number;
   pendingCallupCount: number;
@@ -784,6 +785,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     match_level: MobileActivity["matchLevel"];
     loaned_player_names: string;
     finished: number;
+    evaluation_ready: boolean;
     accepted_callup_count: number;
     declined_callup_count: number;
     pending_callup_count: number;
@@ -844,6 +846,15 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
                 )
             ), '') AS loaned_player_names,
             COALESCE((SELECT m.finished FROM matches m WHERE m.id = da.match_id), 0) AS finished,
+            (
+              COALESCE(linked_match.finished, 0) = 1
+              OR da.activity_date < to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+              OR (
+                da.start_time IS NOT NULL
+                AND da.activity_date::date + da.start_time::time + INTERVAL '90 minutes'
+                    <= now() AT TIME ZONE 'Europe/Stockholm'
+              )
+            ) AS evaluation_ready,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'present'), 0) AS accepted_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'unknown'), 0) AS pending_callup_count,
@@ -889,6 +900,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     matchLevel: row.match_level,
     loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
     finished: Boolean(row.finished),
+    evaluationReady: row.evaluation_ready,
     acceptedCallupCount: Number(row.accepted_callup_count),
     declinedCallupCount: Number(row.declined_callup_count),
     pendingCallupCount: Number(row.pending_callup_count),
@@ -931,6 +943,13 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE da.activity_type = 'match'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+       AND COALESCE(m.finished, 0) = 0
+       AND (
+         da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+         OR da.start_time IS NULL
+         OR da.activity_date::date + da.start_time::time + INTERVAL '90 minutes'
+              > now() AT TIME ZONE 'Europe/Stockholm'
+       )
        AND g.name = 'Gul'
        AND ${scope.sql}
      ORDER BY da.activity_date, da.start_time NULLS LAST, da.id

@@ -132,7 +132,15 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
      FROM matches m
      WHERE m.date BETWEEN to_char((now() AT TIME ZONE 'Europe/Stockholm')::date - 7, 'YYYY-MM-DD')
                       AND to_char((now() AT TIME ZONE 'Europe/Stockholm')::date + 1, 'YYYY-MM-DD')
-       AND m.finished = 1
+       AND (
+         m.finished = 1
+         OR m.date < to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+         OR (
+           m.start_time IS NOT NULL
+           AND m.date::date + m.start_time::time + INTERVAL '90 minutes'
+                <= now() AT TIME ZONE 'Europe/Stockholm'
+         )
+       )
        AND EXISTS (
          SELECT 1
          FROM development_activities da

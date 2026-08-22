@@ -179,4 +179,13 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain('TextField("Tränarkommentar för matchanalys…"');
     expect(nativeActivityViews).toContain('Label("Spara matchinfo"');
   });
+
+  it("flyttar matchen från kommande till utvärdering efter 90 minuter", () => {
+    expect(mobileDevelopment.match(/INTERVAL '90 minutes'/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(mobileMatchEvaluation).toContain("m.finished = 1");
+    expect(mobileMatchEvaluation).toContain("INTERVAL '90 minutes'");
+    expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(2);
+    expect(nativeMainSplitView).toContain(".filter { !$0.evaluationReady }");
+    expect(nativeMainSplitView).toContain(".filter(\\.evaluationReady)");
+  });
 });

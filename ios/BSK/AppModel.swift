@@ -145,6 +145,7 @@ final class AppModel: ObservableObject {
                 matchLevel: "Medel",
                 loanedPlayerNames: [],
                 finished: false,
+                evaluationReady: false,
                 acceptedCallupCount: 7,
                 declinedCallupCount: 2,
                 pendingCallupCount: 1,

@@ -185,6 +185,7 @@ struct ActivitySummary: Codable, Identifiable {
     let matchLevel: String
     let loanedPlayerNames: [String]
     let finished: Bool
+    let evaluationReady: Bool
     let acceptedCallupCount: Int
     let declinedCallupCount: Int
     let pendingCallupCount: Int

@@ -168,7 +168,15 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
               OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
             ) AS has_confirmed_squad,
-            da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
+            CASE WHEN da.activity_type = 'match' AND m.id IS NOT NULL THEN NOT (
+              COALESCE(m.finished, 0) = 1
+              OR da.activity_date < to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+              OR (
+                da.start_time IS NOT NULL
+                AND da.activity_date::date + da.start_time::time + INTERVAL '90 minutes'
+                    <= now() AT TIME ZONE 'Europe/Stockholm'
+              )
+            ) ELSE da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') END AS is_upcoming,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2
@@ -452,7 +460,15 @@ export async function getActivityDetail(activityId: string): Promise<{
               EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
               OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
             ) AS has_confirmed_squad,
-            da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS is_upcoming,
+            CASE WHEN da.activity_type = 'match' AND m.id IS NOT NULL THEN NOT (
+              COALESCE(m.finished, 0) = 1
+              OR da.activity_date < to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+              OR (
+                da.start_time IS NOT NULL
+                AND da.activity_date::date + da.start_time::time + INTERVAL '90 minutes'
+                    <= now() AT TIME ZONE 'Europe/Stockholm'
+              )
+            ) ELSE da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') END AS is_upcoming,
             ARRAY(
               SELECT p2.name
               FROM development_activity_participation ap2

@@ -5,7 +5,7 @@ import { swedishMinutesSinceMidnight, swedishToday } from "./dates";
 import type { MatchImpact, SelfComparison } from "./matchEvaluationTypes";
 
 export const evaluationTokenHash = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
-export const MATCH_EVALUATION_DELAY_MINUTES = 75;
+export const MATCH_EVALUATION_DELAY_MINUTES = 90;
 
 export function matchEvaluationIsOpen(
   date: string,

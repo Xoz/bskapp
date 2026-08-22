@@ -650,13 +650,13 @@ private struct ActivityWorkspaceList: View {
 
     private var upcomingMatches: [ActivitySummary] {
         model.activities
-            .filter { !$0.finished && $0.date >= today }
+            .filter { !$0.evaluationReady }
             .sorted(by: ascendingMatchOrder)
     }
 
     private var playedMatches: [ActivitySummary] {
         model.activities
-            .filter { $0.finished || $0.date < today }
+            .filter(\.evaluationReady)
             .sorted { ascendingMatchOrder($1, $0) }
     }
 
@@ -671,6 +671,7 @@ private struct ActivityWorkspaceList: View {
 
     private func matchStatus(_ activity: ActivitySummary) -> String {
         if activity.finished { return "Avslutad" }
+        if activity.evaluationReady { return "Klar för utvärdering" }
         if activity.date < today { return "Ej avslutad" }
         return "Ingen Gulspelare utlånad"
     }
