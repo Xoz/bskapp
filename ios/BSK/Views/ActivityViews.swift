@@ -98,9 +98,11 @@ struct ActivityDetail: View {
             VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 12 : 18) {
                 matchHero
 
-                if activity.type == "match", let matchID = activity.matchId {
+                if activity.sourceTeam == "Grön" {
+                    greenInformationCard
+                } else if activity.type == "match", let matchID = activity.matchId {
                     NavigationLink {
-                        MatchCenterView(matchID: matchID, title: activity.title)
+                        MatchCenterView(matchID: matchID, title: activity.title, liveActivityEnabled: true)
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "scoreboard.fill")
@@ -122,11 +124,13 @@ struct ActivityDetail: View {
                     .buttonStyle(.plain)
                 }
 
-                if let matchID = activity.matchId {
+                if activity.sourceTeam != "Grön", let matchID = activity.matchId {
                     MatchLineupBoard(matchID: matchID)
                 }
 
-                MatchObservationBoard(activity: activity)
+                if activity.sourceTeam != "Grön" {
+                    MatchObservationBoard(activity: activity)
+                }
             }
             .padding(horizontalSizeClass == .compact ? 12 : 18)
             .frame(maxWidth: 820)
@@ -135,6 +139,27 @@ struct ActivityDetail: View {
         .background(BSKTheme.canvas)
         .navigationTitle("Match")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var greenInformationCard: some View {
+        let roster = activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
+        return VStack(alignment: .leading, spacing: 9) {
+            Label("Endast information", systemImage: "info.circle.fill")
+                .font(.headline)
+                .foregroundStyle(BSKTheme.accent)
+            Text("Lag Grön ansvarar själva för matchen. Den kan därför inte hanteras i Matchcenter, Uttagning, Utvärdera eller Live Activity här.")
+                .font(.subheadline)
+                .foregroundStyle(BSKTheme.secondary)
+            if !roster.isEmpty {
+                Text("\(activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"): \(roster.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundStyle(BSKTheme.secondary)
+            }
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
     }
 
     private var matchHero: some View {
@@ -156,7 +181,7 @@ struct ActivityDetail: View {
                 Text(activity.title)
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
-                Text("Laguppställning och matchcenter")
+                Text(activity.sourceTeam == "Grön" ? "Information från Lag Grön" : "Laguppställning och matchcenter")
                     .font(.subheadline)
                     .foregroundStyle(BSKTheme.secondary)
             }
@@ -1491,6 +1516,7 @@ struct MatchCenterView: View {
     @EnvironmentObject private var model: AppModel
     let matchID: Int
     let title: String
+    let liveActivityEnabled: Bool
 
     @State private var state: LiveMatchState?
     @State private var loadedAt = Date()
@@ -1774,7 +1800,7 @@ struct MatchCenterView: View {
             let loaded = try await model.liveMatch(id: matchID)
             state = loaded
             loadedAt = Date()
-            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: loaded) }
+            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: loaded, isEnabled: liveActivityEnabled) }
         } catch {
             if reportErrors { model.errorMessage = error.localizedDescription }
         }
@@ -1788,7 +1814,7 @@ struct MatchCenterView: View {
             let updated = try await model.updateLiveMatch(id: matchID, command: command)
             state = updated
             loadedAt = Date()
-            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: updated) }
+            if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: updated, isEnabled: liveActivityEnabled) }
             if updated.finished { await model.reload() }
         } catch { model.errorMessage = error.localizedDescription }
     }

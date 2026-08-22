@@ -6,10 +6,13 @@ const coreActions = readFileSync(new URL("./coreActions.ts", import.meta.url), "
 const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
 const mobileMatchEvaluation = readFileSync(new URL("./services/matchEvaluationMobile.ts", import.meta.url), "utf8");
+const mobileLive = readFileSync(new URL("./services/mobileLive.ts", import.meta.url), "utf8");
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
 const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView.swift", import.meta.url), "utf8");
+const nativeAppModel = readFileSync(new URL("../ios/BSK/AppModel.swift", import.meta.url), "utf8");
+const nativeLiveActivity = readFileSync(new URL("../ios/BSK/MatchLiveActivityManager.swift", import.meta.url), "utf8");
 const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
@@ -187,5 +190,15 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(2);
     expect(nativeMainSplitView).toContain(".filter { !$0.evaluationReady }");
     expect(nativeMainSplitView).toContain(".filter(\\.evaluationReady)");
+  });
+
+  it("behandlar Grön som skrivskyddad information utan Live Activity", () => {
+    expect(nativeAppModel).toContain('activity.sourceTeam == "Gul"');
+    expect(nativeAppModel).toContain("MatchLiveActivityManager.end(matchID: matchID)");
+    expect(nativeLiveActivity).toContain("guard isEnabled else");
+    expect(nativeActivityViews).toContain('Label("Endast information"');
+    expect(nativeActivityViews).toContain('if activity.sourceTeam != "Grön"');
+    expect(mobileLive).toContain('row?.team_name !== "Gul"');
+    expect(mobileLive).toContain("Grönmatcher är endast information och kan inte hanteras här.");
   });
 });

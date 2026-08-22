@@ -71,6 +71,18 @@ async function requireAccessibleMatch(actor: CurrentUser, matchId: number) {
   if (!row) throw new DevelopmentServiceError("not_found", "Matchen hittades inte.", 404);
 }
 
+async function requirePrimaryTeamMatch(matchId: number) {
+  const row = await get<{ team_name: string }>(
+    `SELECT COALESCE(g.name, '') AS team_name
+     FROM matches m LEFT JOIN groups g ON g.id = m.group_id
+     WHERE m.id = ?`,
+    [matchId]
+  );
+  if (row?.team_name !== "Gul") {
+    throw new DevelopmentServiceError("forbidden", "Grönmatcher är endast information och kan inte hanteras här.", 403);
+  }
+}
+
 async function getMobileLiveState(matchId: number) {
   const state = await getLiveState(matchId, true);
   const squad = (await all<{ player_id: number }>(
@@ -93,6 +105,7 @@ export async function getMobileLiveMatch(actor: CurrentUser, matchId: number) {
 
 export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number, action: MobileLiveAction) {
   await requireAccessibleMatch(actor, matchId);
+  await requirePrimaryTeamMatch(matchId);
   if (action.type === "clock") {
     await setClock(matchId, action.op);
   } else if (action.type === "goal") {

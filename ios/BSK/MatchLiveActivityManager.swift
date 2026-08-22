@@ -12,7 +12,11 @@ enum MatchLiveActivityManager {
             && now <= matchStartAt.addingTimeInterval(matchWindowLength)
     }
 
-    static func sync(matchID: Int, title: String, state: LiveMatchState) async {
+    static func sync(matchID: Int, title: String, state: LiveMatchState, isEnabled: Bool = true) async {
+        guard isEnabled else {
+            await end(matchID: matchID)
+            return
+        }
         let existing = Activity<BSKMatchLiveActivityAttributes>.activities.first {
             $0.attributes.matchID == matchID
         }
@@ -61,6 +65,13 @@ enum MatchLiveActivityManager {
                 print("[BSK] Kunde inte starta Live Activity för match \(matchID): \(error.localizedDescription)")
             }
         }
+    }
+
+    static func end(matchID: Int) async {
+        guard let existing = Activity<BSKMatchLiveActivityAttributes>.activities.first(where: {
+            $0.attributes.matchID == matchID
+        }) else { return }
+        await existing.end(nil, dismissalPolicy: .immediate)
     }
 
     private static func content(for state: LiveMatchState, phase: String, matchStartAt: Date?) -> ActivityContent<BSKMatchLiveActivityAttributes.ContentState> {

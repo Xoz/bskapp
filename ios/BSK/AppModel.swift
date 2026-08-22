@@ -401,8 +401,14 @@ final class AppModel: ObservableObject {
 
     private func syncLiveActivitiesNearKickoff() async {
         guard user?.permissions.contains("report_matches") == true else { return }
+        for activity in activities where activity.sourceTeam != "Gul" {
+            if let matchID = activity.matchId {
+                await MatchLiveActivityManager.end(matchID: matchID)
+            }
+        }
         let candidates = activities.filter { activity in
             activity.type == "match"
+                && activity.sourceTeam == "Gul"
                 && activity.matchId != nil
                 && MatchLiveActivityManager.shouldSync(date: activity.date, time: activity.startTime)
         }
@@ -410,7 +416,7 @@ final class AppModel: ObservableObject {
             guard let matchID = activity.matchId else { continue }
             do {
                 let state = try await api.liveMatch(id: matchID)
-                await MatchLiveActivityManager.sync(matchID: matchID, title: activity.title, state: state)
+                await MatchLiveActivityManager.sync(matchID: matchID, title: activity.title, state: state, isEnabled: true)
             } catch {
                 print("[BSK] Kunde inte synka Live Activity för match \(matchID): \(error.localizedDescription)")
             }
