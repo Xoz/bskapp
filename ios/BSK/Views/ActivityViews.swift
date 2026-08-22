@@ -1916,6 +1916,10 @@ struct MatchEvaluationView: View {
     @State private var activeIndex = 0
     @State private var isSaving = false
     @State private var savedMessage: String?
+    @State private var ourScoreText = ""
+    @State private var opponentScoreText = ""
+    @State private var coachComment = ""
+    @State private var showsMatchContext = false
 
     var body: some View {
         Group {
@@ -1938,6 +1942,94 @@ struct MatchEvaluationView: View {
         }
         .navigationTitle(workspace?.match.opponent ?? "Utvärdera")
         .task(id: matchID) { await load() }
+        .sheet(isPresented: $showsMatchContext) {
+            if let workspace {
+                NavigationStack {
+                    ScrollView {
+                        matchContextCard(workspace)
+                            .padding(14)
+                    }
+                    .background(BSKTheme.background)
+                    .navigationTitle("Resultat & kommentar")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Klar") { showsMatchContext = false }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
+    }
+
+    private func matchContextCard(_ workspace: MatchEvaluationWorkspace) -> some View {
+        VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 10 : 16) {
+            Label("Matchens sammanfattning", systemImage: "square.and.pencil")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            if workspace.match.hasLiveData == true {
+                HStack {
+                    Text("Slutresultat från Matchcenter")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.secondary)
+                    Spacer()
+                    Text("\(workspace.match.ourScore.map(String.init) ?? "–")–\(workspace.match.opponentScore.map(String.init) ?? "–")")
+                        .font(.title2.bold())
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    scoreField("BSK", text: $ourScoreText)
+                    Text("–").font(.title2.bold()).foregroundStyle(BSKTheme.muted)
+                    scoreField("Motståndare", text: $opponentScoreText)
+                    Spacer(minLength: 0)
+                    Text("Manuellt slutresultat")
+                        .font(.caption)
+                        .foregroundStyle(BSKTheme.muted)
+                }
+            }
+
+            TextField("Tränarkommentar för matchanalys…", text: $coachComment, axis: .vertical)
+                .lineLimit(horizontalSizeClass == .compact ? 2...3 : 3...5)
+                .padding(11)
+                .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(BSKTheme.border))
+                .onChange(of: coachComment) { _, value in
+                    if value.count > 4000 { coachComment = String(value.prefix(4000)) }
+                }
+
+            Button { Task { await saveMatchContext() } } label: {
+                Label("Spara matchinfo", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(BSKTheme.backgroundDeep)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving || !scoreInputIsValid)
+            .opacity(isSaving || !scoreInputIsValid ? 0.5 : 1)
+        }
+        .padding(horizontalSizeClass == .compact ? 12 : 18)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+    }
+
+    private func scoreField(_ label: String, text: Binding<String>) -> some View {
+        VStack(spacing: 3) {
+            Text(label).font(.caption2.bold()).foregroundStyle(BSKTheme.muted)
+            TextField("0", text: text)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.title2.bold())
+                .monospacedDigit()
+                .frame(width: 58, height: 42)
+                .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(BSKTheme.border))
+        }
     }
 
     private func progressCard(_ workspace: MatchEvaluationWorkspace) -> some View {
@@ -1960,6 +2052,12 @@ struct MatchEvaluationView: View {
                 .foregroundStyle(BSKTheme.secondary)
                 ProgressView(value: Double(handledCount), total: Double(workspace.players.count))
                     .tint(BSKTheme.accent)
+                Button { showsMatchContext = true } label: {
+                    Label("Resultat & kommentar", systemImage: "square.and.pencil")
+                        .font(.caption.bold())
+                        .foregroundStyle(BSKTheme.accent)
+                }
+                .buttonStyle(.plain)
             }
 
             ZStack {
@@ -2182,8 +2280,16 @@ struct MatchEvaluationView: View {
             let loaded = try await model.matchEvaluation(id: matchID)
             workspace = loaded
             answers = Dictionary(uniqueKeysWithValues: loaded.players.map { ($0.id, blankAnswer($0)) })
+            ourScoreText = loaded.match.ourScore.map(String.init) ?? ""
+            opponentScoreText = loaded.match.opponentScore.map(String.init) ?? ""
+            coachComment = loaded.match.coachComment ?? ""
             if let pending = model.pendingMatchEvaluation(id: matchID) {
                 for answer in pending.answers { answers[answer.playerId] = answer }
+                if let context = pending.context {
+                    ourScoreText = context.ourScore.map(String.init) ?? ""
+                    opponentScoreText = context.opponentScore.map(String.init) ?? ""
+                    coachComment = context.coachComment
+                }
                 activeIndex = min(pending.activeIndex, max(0, loaded.players.count - 1))
                 savedMessage = "Väntar på synkning"
             } else {
@@ -2208,6 +2314,7 @@ struct MatchEvaluationView: View {
             let status = try await model.saveMatchEvaluation(
                 id: matchID,
                 answers: Array(answers.values),
+                context: evaluationContext,
                 workspace: currentWorkspace,
                 activeIndex: nextIndex
             )
@@ -2222,6 +2329,49 @@ struct MatchEvaluationView: View {
         } catch {
             model.errorMessage = error.localizedDescription
         }
+    }
+
+    @MainActor
+    private func saveMatchContext() async {
+        guard !isSaving, scoreInputIsValid, let currentWorkspace = workspace else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let status = try await model.saveMatchEvaluation(
+                id: matchID,
+                answers: Array(answers.values),
+                context: evaluationContext,
+                workspace: currentWorkspace,
+                activeIndex: activeIndex
+            )
+            switch status {
+            case .saved(let updated):
+                workspace = updated
+                savedMessage = "Sparat"
+            case .queued:
+                savedMessage = "Väntar på synkning"
+            }
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    private var evaluationContext: MatchEvaluationContext {
+        MatchEvaluationContext(
+            ourScore: Int(ourScoreText.trimmingCharacters(in: .whitespacesAndNewlines)),
+            opponentScore: Int(opponentScoreText.trimmingCharacters(in: .whitespacesAndNewlines)),
+            coachComment: coachComment
+        )
+    }
+
+    private var scoreInputIsValid: Bool {
+        if workspace?.match.hasLiveData == true { return true }
+        let our = ourScoreText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let opponent = opponentScoreText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if our.isEmpty && opponent.isEmpty { return true }
+        guard !our.isEmpty, !opponent.isEmpty,
+              let ourValue = Int(our), let opponentValue = Int(opponent) else { return false }
+        return (0...99).contains(ourValue) && (0...99).contains(opponentValue)
     }
 
     private func finishAfterLastPlayerIfNeeded(in workspace: MatchEvaluationWorkspace, advanced: Bool) {

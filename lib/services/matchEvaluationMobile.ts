@@ -21,7 +21,13 @@ export type MobileMatchEvaluationSummary = {
 };
 
 export type MobileMatchEvaluationWorkspace = {
-  match: Omit<MobileMatchEvaluationSummary, "total" | "handled"> & { activityId: string | null };
+  match: Omit<MobileMatchEvaluationSummary, "total" | "handled"> & {
+    activityId: string | null;
+    ourScore: number | null;
+    opponentScore: number | null;
+    hasLiveData: boolean;
+    coachComment: string;
+  };
   players: {
     id: number;
     name: string;
@@ -40,6 +46,12 @@ export type MobileMatchEvaluationAnswer = {
   matchImpact: string | null;
   reasonTag: string;
   skipped: boolean;
+};
+
+export type MobileMatchEvaluationContext = {
+  ourScore: number | null;
+  opponentScore: number | null;
+  coachComment: string;
 };
 
 function requireEvaluationPermission(actor: CurrentUser): void {
@@ -64,7 +76,17 @@ export async function getMobileMatchEvaluation(
   requireEvaluationPermission(actor);
   if (!Number.isInteger(matchId) || matchId < 1) throw new DevelopmentServiceError("invalid", "Ogiltigt match-id.", 400);
   const scope = groupScope(actor);
-  const accessible = await get<{ id: number }>(`SELECT m.id FROM matches m WHERE m.id = ? AND ${scope.sql}`, [matchId, ...scope.args]);
+  const accessible = await get<{
+    id: number;
+    our_score: number | null;
+    opponent_score: number | null;
+    evaluation_comment: string;
+    has_live_data: boolean;
+  }>(`SELECT m.id, m.our_score, m.opponent_score, COALESCE(m.evaluation_comment, '') AS evaluation_comment,
+             (m.clock_offset > 0 OR m.clock_started_at IS NOT NULL OR EXISTS (
+               SELECT 1 FROM match_events event WHERE event.match_id = m.id
+             )) AS has_live_data
+      FROM matches m WHERE m.id = ? AND ${scope.sql}`, [matchId, ...scope.args]);
   if (!accessible) throw new DevelopmentServiceError("not_found", "Matchen hittades inte.", 404);
   const workspace = await getMatchEvaluationWorkspace(matchId, "coach", String(actor.id));
   if (!workspace) throw new DevelopmentServiceError("not_found", "Matchutvärderingen hittades inte.", 404);
@@ -77,6 +99,10 @@ export async function getMobileMatchEvaluation(
       level: workspace.match.level,
       homeAway: workspace.match.home_away,
       activityId: workspace.match.activity_id,
+      ourScore: accessible.our_score,
+      opponentScore: accessible.opponent_score,
+      hasLiveData: accessible.has_live_data,
+      coachComment: accessible.evaluation_comment,
     },
     players: workspace.players.map((player) => ({
       id: player.id,
@@ -140,12 +166,38 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
 export async function saveMobileMatchEvaluation(
   actor: CurrentUser,
   matchId: number,
-  answers: MobileMatchEvaluationAnswer[]
+  answers: MobileMatchEvaluationAnswer[],
+  context?: MobileMatchEvaluationContext
 ): Promise<MobileMatchEvaluationWorkspace> {
   const workspace = await getMobileMatchEvaluation(actor, matchId);
+  const evaluationContext = context ?? {
+    ourScore: workspace.match.ourScore,
+    opponentScore: workspace.match.opponentScore,
+    coachComment: workspace.match.coachComment,
+  };
+  const coachComment = evaluationContext.coachComment.trim();
+  if (coachComment.length > 4000) throw new DevelopmentServiceError("invalid", "Tränarkommentaren är för lång.", 400);
+  const scores = [evaluationContext.ourScore, evaluationContext.opponentScore];
+  if (scores.some((score) => score !== null && (!Number.isInteger(score) || score < 0 || score > 99))) {
+    throw new DevelopmentServiceError("invalid", "Ogiltigt slutresultat.", 400);
+  }
+  if ((evaluationContext.ourScore === null) !== (evaluationContext.opponentScore === null)) {
+    throw new DevelopmentServiceError("invalid", "Fyll i båda resultatfälten.", 400);
+  }
+  if (workspace.match.hasLiveData && (evaluationContext.ourScore !== workspace.match.ourScore || evaluationContext.opponentScore !== workspace.match.opponentScore)) {
+    throw new DevelopmentServiceError("idempotency_conflict", "Resultatet kommer från Matchcenter och kan inte ändras här.", 409);
+  }
   const byPlayer = new Map(workspace.players.map((player) => [player.id, player]));
   const seen = new Set<number>();
   const statements: { sql: string; args: SqlArgs }[] = [];
+  statements.push({
+    sql: workspace.match.hasLiveData
+      ? `UPDATE matches SET evaluation_comment = ?, evaluation_updated_by = ?, evaluation_updated_at = now() WHERE id = ?`
+      : `UPDATE matches SET our_score = ?, opponent_score = ?, evaluation_comment = ?, evaluation_updated_by = ?, evaluation_updated_at = now() WHERE id = ?`,
+    args: workspace.match.hasLiveData
+      ? [coachComment, actor.id, matchId]
+      : [evaluationContext.ourScore, evaluationContext.opponentScore, coachComment, actor.id, matchId],
+  });
   for (const answer of answers) {
     const player = byPlayer.get(answer.playerId);
     if (!player || seen.has(answer.playerId)) throw new DevelopmentServiceError("invalid", "Ogiltigt spelarunderlag.", 400);
@@ -176,9 +228,7 @@ export async function saveMobileMatchEvaluation(
       ],
     });
   }
-  if (statements.length) {
-    await batch(statements);
-    await logActivity(actor.name, "utvärderade match native", `${statements.length} spelare`);
-  }
+  await batch(statements);
+  await logActivity(actor.name, "utvärderade match native", `${Math.max(0, statements.length - 1)} spelare`);
   return getMobileMatchEvaluation(actor, matchId);
 }

@@ -5,6 +5,7 @@ const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
 const coreActions = readFileSync(new URL("./coreActions.ts", import.meta.url), "utf8");
 const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
+const mobileMatchEvaluation = readFileSync(new URL("./services/matchEvaluationMobile.ts", import.meta.url), "utf8");
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
@@ -166,5 +167,16 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain("activity.acceptedPlayerNames");
     expect(todayPage).toContain('row.activity.source_team === "Gul"');
     expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');
+  });
+
+  it("sparar manuellt slutresultat och AI-redo tränarkommentar i utvärderingen", () => {
+    expect(schema).toContain('id: "0013-match-evaluation-context"');
+    expect(schema).toContain("evaluation_comment TEXT NOT NULL DEFAULT ''");
+    expect(mobileMatchEvaluation).toContain("m.clock_offset > 0 OR m.clock_started_at IS NOT NULL");
+    expect(mobileMatchEvaluation).toContain("Resultatet kommer från Matchcenter och kan inte ändras här.");
+    expect(mobileMatchEvaluation).toContain("SET our_score = ?, opponent_score = ?, evaluation_comment = ?");
+    expect(nativeActivityViews).toContain('Text("Manuellt slutresultat")');
+    expect(nativeActivityViews).toContain('TextField("Tränarkommentar för matchanalys…"');
+    expect(nativeActivityViews).toContain('Label("Spara matchinfo"');
   });
 });

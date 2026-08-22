@@ -359,6 +359,10 @@ struct MatchEvaluationWorkspace: Codable {
         let level: String
         let homeAway: String
         let activityId: String?
+        let ourScore: Int?
+        let opponentScore: Int?
+        let hasLiveData: Bool?
+        let coachComment: String?
     }
 
     struct Player: Codable, Identifiable {
@@ -382,4 +386,10 @@ struct MatchEvaluationAnswer: Codable {
     var matchImpact: String?
     var reasonTag: String
     var skipped: Bool
+}
+
+struct MatchEvaluationContext: Codable {
+    let ourScore: Int?
+    let opponentScore: Int?
+    let coachComment: String
 }

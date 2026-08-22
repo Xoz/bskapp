@@ -1265,6 +1265,12 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     )`);
     await getClient().unsafe("COMMENT ON TABLE svenskalag_file_imports IS 'Importjournal för Svenska Lag-exporten Kallelser, svar & närvaro'");
   } },
+  { id: "0013-match-evaluation-context", run: async () => {
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_comment TEXT NOT NULL DEFAULT ''");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_updated_at TIMESTAMPTZ");
+    await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_comment IS 'Tränarens fria matchkommentar för efteranalys och framtida AI-underlag'");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

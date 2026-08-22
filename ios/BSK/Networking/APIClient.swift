@@ -146,12 +146,15 @@ actor APIClient {
         try await perform(path: "/match-evaluations/\(id)", method: "GET", body: nil, authorized: true)
     }
 
-    func saveMatchEvaluation(id: Int, answers: [MatchEvaluationAnswer]) async throws -> MatchEvaluationWorkspace {
-        struct Body: Encodable { let answers: [MatchEvaluationAnswer] }
+    func saveMatchEvaluation(id: Int, answers: [MatchEvaluationAnswer], context: MatchEvaluationContext) async throws -> MatchEvaluationWorkspace {
+        struct Body: Encodable {
+            let answers: [MatchEvaluationAnswer]
+            let context: MatchEvaluationContext
+        }
         return try await perform(
             path: "/match-evaluations/\(id)",
             method: "PUT",
-            body: encoder.encode(Body(answers: answers)),
+            body: encoder.encode(Body(answers: answers, context: context)),
             authorized: true
         )
     }

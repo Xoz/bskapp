@@ -266,19 +266,20 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func pendingMatchEvaluation(id: Int) -> (answers: [MatchEvaluationAnswer], activeIndex: Int)? {
+    func pendingMatchEvaluation(id: Int) -> (answers: [MatchEvaluationAnswer], context: MatchEvaluationContext?, activeIndex: Int)? {
         guard let queued = queuedMatchEvaluations.first(where: { $0.matchID == id }) else { return nil }
-        return (queued.answers, queued.activeIndex)
+        return (queued.answers, queued.context, queued.activeIndex)
     }
 
     func saveMatchEvaluation(
         id: Int,
         answers: [MatchEvaluationAnswer],
+        context: MatchEvaluationContext,
         workspace: MatchEvaluationWorkspace,
         activeIndex: Int
     ) async throws -> MatchEvaluationSaveStatus {
         do {
-            let updated = try await api.saveMatchEvaluation(id: id, answers: answers)
+            let updated = try await api.saveMatchEvaluation(id: id, answers: answers, context: context)
             queuedMatchEvaluations.removeAll(where: { $0.matchID == id })
             persistMatchEvaluationQueue()
             matchEvaluations = try await api.matchEvaluations()
@@ -289,6 +290,7 @@ final class AppModel: ObservableObject {
                 matchID: id,
                 workspace: workspace,
                 answers: answers,
+                context: context,
                 activeIndex: activeIndex
             )
             if let index = queuedMatchEvaluations.firstIndex(where: { $0.matchID == id }) {
@@ -433,7 +435,12 @@ final class AppModel: ObservableObject {
         var remaining: [QueuedMatchEvaluation] = []
         for queued in queuedMatchEvaluations {
             do {
-                _ = try await api.saveMatchEvaluation(id: queued.matchID, answers: queued.answers)
+                let context = queued.context ?? MatchEvaluationContext(
+                    ourScore: queued.workspace.match.ourScore,
+                    opponentScore: queued.workspace.match.opponentScore,
+                    coachComment: queued.workspace.match.coachComment ?? ""
+                )
+                _ = try await api.saveMatchEvaluation(id: queued.matchID, answers: queued.answers, context: context)
             } catch {
                 remaining.append(queued)
             }
@@ -525,5 +532,6 @@ private struct QueuedMatchEvaluation: Codable {
     let matchID: Int
     let workspace: MatchEvaluationWorkspace
     let answers: [MatchEvaluationAnswer]
+    let context: MatchEvaluationContext?
     let activeIndex: Int
 }

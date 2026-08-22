@@ -3,6 +3,7 @@ import {
   getMobileMatchEvaluation,
   saveMobileMatchEvaluation,
   type MobileMatchEvaluationAnswer,
+  type MobileMatchEvaluationContext,
 } from "@/lib/services/matchEvaluationMobile";
 import { mobileError, mobileResponse, requireMobileActor } from "@/lib/mobileApi";
 
@@ -27,11 +28,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const actor = await requireMobileActor(request);
-    const body = await request.json() as { answers?: MobileMatchEvaluationAnswer[] };
+    const body = await request.json() as { answers?: MobileMatchEvaluationAnswer[]; context?: MobileMatchEvaluationContext };
     if (!Array.isArray(body.answers) || body.answers.length > 50) {
       throw new DevelopmentServiceError("invalid", "Ogiltigt utvärderingsunderlag.", 400);
     }
-    return mobileResponse(await saveMobileMatchEvaluation(actor, matchId((await context.params).id), body.answers));
+    if (body.context && typeof body.context.coachComment !== "string") {
+      throw new DevelopmentServiceError("invalid", "Ogiltig matchsammanfattning.", 400);
+    }
+    return mobileResponse(await saveMobileMatchEvaluation(actor, matchId((await context.params).id), body.answers, body.context));
   } catch (error) {
     return mobileError(error);
   }
