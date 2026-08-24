@@ -29,7 +29,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 | Vill ändra | Läs dessa filer |
 | --- | --- |
-| **Primär utvecklingsloop** (Idag → mål → observation → historik; native Idag visar Gulspelarnas matchutrymme) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `lib/matchCapacity.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `app/api/mobile/v1/player-match-loads/`, `components/{CoreActivityCard,PilotStartField}.tsx`, `ios/BSK/Views/ActivityViews.swift` |
+| **Primär utvecklingsloop** (Idag → mål → observation → historik; native Idag visar Gulspelarnas matchutrymme) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `lib/matchCapacity.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `app/api/mobile/v1/player-match-loads/`, `components/{CoreActivityCard,PilotStartField}.tsx`, `ios/BSK/Views/{ActivityViews,PlayerViews}.swift` |
 | **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
 | **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
@@ -37,7 +37,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | **Match: skapa/redigera/ta bort, cup, nivå** | `lib/actions.ts` (save/delete/updateCup/setMatchLevel…), `components/MatchForm.tsx`, `app/(skyddad)/matcher/` |
 | **Laguttagning / trupp / formation** | `components/SquadBoard.tsx`, `lib/formations.ts`, `lib/positions.ts`, `lib/actions.ts` (saveSquad/saveLineup) |
 | **Cupgemensam laguttagning** (uttagna till cupen, default per match) | `components/CupSquadPicker.tsx`, `lib/actions.ts` (saveCupSquad → matchgruppens `player_group_memberships`), `lib/queries.ts` (getGroupMemberIds), `app/(skyddad)/matcher/cup/[slug]/page.tsx` + `…/matcher/[id]/laguttagning/page.tsx` (förväljer cupens trupp) |
-| **Utvecklingsträd + sparad utvecklingsbild** | `lib/skillTrappan.ts` (gemensam färdighetsmodell), `components/UtvecklingChecklist.tsx` (aktuellt träd), `components/DevelopmentCheckinForm.tsx` (daterad uppdatering), `lib/queries.ts` (getPlayerSkillStatuses/getDevelopmentCheckpoints/getLatestDevelopmentCheckpoint), `lib/actions.ts` (setSkillStatus/setSkillNote/createDevelopmentCheckpoint), `app/(skyddad)/spelare/[id]/page.tsx` (aktiv sammanfattning och ingång), `…/utveckling/` (nuläge + träd + historik), `…/utveckling/avstamning/` (uppdatera utvecklingsbild), `…/utvardera/` (kompatibilitetsredirect), `app/(skyddad)/utveckling/` (lagvy), `app/mitt-utvecklingstrad/` (spelarens låsta läsvy) |
+| **Utvecklingsträd + sparad utvecklingsbild** | `lib/skillTrappan.ts` (gemensam färdighetsmodell), `components/UtvecklingChecklist.tsx` (aktuellt träd), `components/DevelopmentCheckinForm.tsx` (daterad uppdatering), `lib/queries.ts` (getPlayerSkillStatuses/getDevelopmentCheckpoints/getLatestDevelopmentCheckpoint), `lib/actions.ts` (createDevelopmentCheckpoint), `lib/services/development.ts` (get/updateMobilePlayerDevelopment), `app/(skyddad)/spelare/[id]/page.tsx` (aktiv sammanfattning och ingång), `…/utveckling/` (nuläge + träd + historik), `…/utveckling/avstamning/` (uppdatera utvecklingsbild), `…/utvardera/` (kompatibilitetsredirect), `app/(skyddad)/utveckling/` (lagvy), `app/mitt-utvecklingstrad/` (spelarens låsta läsvy), `app/api/mobile/v1/players/[id]/development/`, `ios/BSK/Views/PlayerViews.swift` |
 | **Äldre SvFF-utvärderingar / självskattning** | `components/SkillRadar.tsx`, `components/DevelopmentChart.tsx`, `components/SelfEvalForm.tsx`, `lib/svff.ts`, `lib/actions.ts` (createEvaluation/submitSelfEval). Befintliga 1–4-utvärderingar visas som äldre historik på spelarprofilen och översätts inte automatiskt till trädet. |
 | **Matchutvärdering / utveckling över tid** | `lib/matchEvaluation.ts`, `lib/actions.ts` (saveCoachMatchEvaluations/createMatchEvaluationInvite/savePublicMatchEvaluations), `components/{MatchEvaluationForm,MatchEvaluationTrend}.tsx`, `app/(skyddad)/matcher/[id]/utvardera/`, publik `app/matchutvardering/[token]/`, status på matchsidan och `/idag`, trend på spelarprofilen |
 | **Utveckling över tid / diagram** | `components/DevelopmentChart.tsx`, `components/ParticipationChart.tsx`, `lib/queries.ts` (getPlayerDevelopment) |
@@ -159,16 +159,16 @@ grep -E "CREATE TABLE" lib/db.ts
 ```
 ## Mobile API och nativegrund
 
-- `lib/services/development.ts` är transportoberoende servicelager för den
-  första nativevertikalen. Det äger gruppscope, permissions, läsmodeller,
-  observationsvalidering, idempotens och audit.
+- `lib/services/development.ts` är transportoberoende servicelager för native.
+  Det äger gruppscope, permissions, spelar- och utvecklingsträdsläsmodeller,
+  samlade utvecklingsbilder, observationsvalidering, idempotens och audit.
 - `lib/mobileApi.ts` formar versionsmärkta JSON-svar och löser tills vidare
   både BSK:s befintliga webbsession och native bearer-session.
 - `lib/mobileAuth.ts` äger OAuth state, S256-PKCE, engångskod, access-token,
   roterande refresh-token och återkallningsbara enhetssessioner. Flödet och
   Keychain-kontraktet finns i `docs/NATIVE_AUTH.md`.
 - `app/api/mobile/v1/players/` och `app/api/mobile/v1/activities/` exponerar
-  trupp, spelardetalj, aktiviteter och skrivning av observationer.
+  trupp, spelardetalj, utvecklingsträd, aktiviteter och skrivning av observationer.
 - `lib/services/mobileLive.ts` och `app/api/mobile/v1/matches/[id]/live/`
   exponerar behörighetsstyrd matchklocka, mål och ångra för nativeklienten.
 - API-kontraktet finns i `docs/MOBILE_API_V1.yaml`. Planlinjen är uttryckligen

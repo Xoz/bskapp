@@ -5,6 +5,15 @@ import type { CurrentUser, Permission } from "../auth";
 import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
 import { matchCapacity } from "../matchCapacity";
+import {
+  CATEGORIES as DEVELOPMENT_CATEGORIES,
+  SKILLS as DEVELOPMENT_SKILLS,
+  STATUS_ORDER as DEVELOPMENT_STATUS_ORDER,
+  isUnlocked,
+  statusOf,
+  type SkillStatus,
+  type StatusMap,
+} from "../skillTrappan";
 
 export type MobileEvidence = "shown" | "practicing" | "revisit";
 
@@ -79,6 +88,50 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
     coachName: string;
     createdAt: string;
   }[];
+};
+
+export type MobilePlayerDevelopment = {
+  playerId: number;
+  playerName: string;
+  hasStatus: boolean;
+  doneCount: number;
+  activeCount: number;
+  totalCount: number;
+  latest: {
+    id: string;
+    date: string;
+    coachName: string;
+    strengths: string;
+    focusNote: string;
+    wellbeingNote: string;
+  } | null;
+  internalNote: string;
+  categories: {
+    id: string;
+    name: string;
+    short: string;
+    skills: {
+      id: string;
+      level: number;
+      title: string;
+      question: string;
+      criterion: string;
+      advice: string;
+      nextStep: string;
+      status: SkillStatus;
+      isFocus: boolean;
+      isUnlocked: boolean;
+    }[];
+  }[];
+};
+
+export type UpdateMobilePlayerDevelopmentInput = {
+  date: string;
+  strengths: string;
+  focusNote: string;
+  wellbeingNote: string;
+  focusSkillIds: string[];
+  statuses: Record<string, SkillStatus>;
 };
 
 export type MobilePlayerMatchLoad = {
@@ -671,6 +724,166 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       createdAt: observation.created_at,
     })),
   };
+}
+
+export async function getMobilePlayerDevelopment(actor: CurrentUser, playerId: number): Promise<MobilePlayerDevelopment> {
+  requirePermission(actor, "view_private_player_data");
+  if (!Number.isInteger(playerId) || playerId < 1) {
+    throw new DevelopmentServiceError("invalid", "Ogiltigt spelar-id.", 400);
+  }
+  const player = (await accessiblePlayers(actor)).find((candidate) => candidate.id === playerId);
+  if (!player) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+
+  const [statusRows, latest, internalNote] = await Promise.all([
+    all<{ skill_id: string; status: SkillStatus }>(
+      "SELECT skill_id, status FROM player_skill_status WHERE player_id = ?",
+      [playerId]
+    ),
+    get<{
+      id: string;
+      date: string;
+      coach_name: string;
+      strengths: string;
+      focus_note: string;
+      wellbeing_note: string;
+    }>(
+      `SELECT id, date, coach_name, strengths, focus_note, wellbeing_note
+       FROM development_checkpoints
+       WHERE player_id = ?
+       ORDER BY date DESC, created_at DESC
+       LIMIT 1`,
+      [playerId]
+    ),
+    get<{ note: string }>("SELECT note FROM player_skill_notes WHERE player_id = ?", [playerId]),
+  ]);
+  const focusRows = latest
+    ? await all<{ skill_id: string }>(
+        "SELECT skill_id FROM development_checkpoint_skills WHERE checkpoint_id = ? AND is_focus = 1",
+        [latest.id]
+      )
+    : [];
+  const statuses = Object.fromEntries(statusRows.map((row) => [row.skill_id, row.status])) as StatusMap;
+  const focusIds = new Set(focusRows.map((row) => row.skill_id));
+  const doneCount = DEVELOPMENT_SKILLS.filter((skill) => statusOf(statuses, skill.id) === "done").length;
+  const activeCount = DEVELOPMENT_SKILLS.filter((skill) => {
+    const status = statusOf(statuses, skill.id);
+    return status === "training" || status === "almost";
+  }).length;
+
+  return {
+    playerId,
+    playerName: player.name,
+    hasStatus: statusRows.length > 0,
+    doneCount,
+    activeCount,
+    totalCount: DEVELOPMENT_SKILLS.length,
+    latest: latest ? {
+      id: latest.id,
+      date: latest.date,
+      coachName: latest.coach_name,
+      strengths: latest.strengths,
+      focusNote: latest.focus_note,
+      wellbeingNote: latest.wellbeing_note,
+    } : null,
+    internalNote: internalNote?.note ?? "",
+    categories: DEVELOPMENT_CATEGORIES.map((category) => ({
+      id: category.id,
+      name: category.name,
+      short: category.short,
+      skills: DEVELOPMENT_SKILLS.filter((skill) => skill.category === category.id).map((skill) => ({
+        id: skill.id,
+        level: skill.level,
+        title: skill.title,
+        question: skill.question,
+        criterion: skill.criterion,
+        advice: skill.advice,
+        nextStep: skill.nextStep,
+        status: statusOf(statuses, skill.id),
+        isFocus: focusIds.has(skill.id),
+        isUnlocked: isUnlocked(skill, statuses),
+      })),
+    })),
+  };
+}
+
+export async function updateMobilePlayerDevelopment(
+  actor: CurrentUser,
+  playerId: number,
+  input: UpdateMobilePlayerDevelopmentInput
+): Promise<MobilePlayerDevelopment> {
+  requirePermission(actor, "manage_evaluations");
+  if (!Number.isInteger(playerId) || playerId < 1) {
+    throw new DevelopmentServiceError("invalid", "Ogiltigt spelar-id.", 400);
+  }
+  const player = (await accessiblePlayers(actor)).find((candidate) => candidate.id === playerId);
+  if (!player) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+
+  const date = String(input?.date ?? "").slice(0, 10);
+  const strengths = String(input?.strengths ?? "").trim();
+  const focusNote = String(input?.focusNote ?? "").trim();
+  const wellbeingNote = String(input?.wellbeingNote ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || strengths.length > 2000 || focusNote.length > 2000 || wellbeingNote.length > 2000) {
+    throw new DevelopmentServiceError("invalid", "Kontrollera datum och sammanfattning.", 400);
+  }
+  if (!input.statuses || typeof input.statuses !== "object" || Array.isArray(input.statuses)) {
+    throw new DevelopmentServiceError("invalid", "Färdighetsstatus saknas.", 400);
+  }
+  const validSkillIds = new Set(DEVELOPMENT_SKILLS.map((skill) => skill.id));
+  const submittedEntries = Object.entries(input.statuses);
+  if (submittedEntries.some(([id, status]) => !validSkillIds.has(id) || !DEVELOPMENT_STATUS_ORDER.includes(status))) {
+    throw new DevelopmentServiceError("invalid", "Ogiltig färdighetsstatus.", 400);
+  }
+  const focusIds = [...new Set(Array.isArray(input.focusSkillIds) ? input.focusSkillIds.map(String) : [])];
+  if (focusIds.length > 2 || focusIds.some((id) => !validSkillIds.has(id))) {
+    throw new DevelopmentServiceError("invalid", "Välj högst två giltiga fokusfärdigheter.", 400);
+  }
+
+  const currentRows = await all<{ skill_id: string; status: SkillStatus }>(
+    "SELECT skill_id, status FROM player_skill_status WHERE player_id = ?",
+    [playerId]
+  );
+  const current = Object.fromEntries(currentRows.map((row) => [row.skill_id, row.status])) as StatusMap;
+  const next = Object.fromEntries(DEVELOPMENT_SKILLS.map((skill) => [
+    skill.id,
+    input.statuses[skill.id] ?? current[skill.id] ?? "not_started",
+  ])) as StatusMap;
+  const checkpointId = crypto.randomUUID();
+  const snapshotArgs = DEVELOPMENT_SKILLS.flatMap((skill) => [
+    checkpointId,
+    skill.id,
+    next[skill.id],
+    current[skill.id] ?? "not_started",
+    focusIds.includes(skill.id) ? 1 : 0,
+  ]);
+  const statusArgs = DEVELOPMENT_SKILLS.flatMap((skill) => [playerId, skill.id, next[skill.id]]);
+  const coachName = actor.name.trim().slice(0, 120) || "Tränare";
+
+  await batch([
+    {
+      sql: `INSERT INTO development_checkpoints
+        (id, player_id, date, coach_name, strengths, focus_note, wellbeing_note)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [checkpointId, playerId, date, coachName, strengths, focusNote, wellbeingNote],
+    },
+    {
+      sql: `INSERT INTO development_checkpoint_skills
+        (checkpoint_id, skill_id, status, previous_status, is_focus)
+        VALUES ${DEVELOPMENT_SKILLS.map(() => "(?, ?, ?, ?, ?)").join(", ")}`,
+      args: snapshotArgs,
+    },
+    {
+      sql: `INSERT INTO player_skill_status (player_id, skill_id, status, updated_at)
+        SELECT incoming.player_id::integer, incoming.skill_id, incoming.status,
+          to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+        FROM (VALUES ${DEVELOPMENT_SKILLS.map(() => "(?, ?, ?)").join(", ")})
+          AS incoming(player_id, skill_id, status)
+        ON CONFLICT (player_id, skill_id)
+        DO UPDATE SET status = EXCLUDED.status, updated_at = EXCLUDED.updated_at`,
+      args: statusArgs,
+    },
+  ]);
+  await logActivity(coachName, "Uppdaterade utvecklingsbild i native", player.name);
+  return getMobilePlayerDevelopment(actor, playerId);
 }
 
 export async function createMobileDevelopmentGoal(

@@ -292,8 +292,8 @@ async function applyBaselineSchema(): Promise<void> {
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       PRIMARY KEY (match_external_id, player_id)
     )`,
-    // Utvecklingsträdet (7v7 → 9v9): en rad per spelare/färdighet som klickas
-    // i checklistan. skill_id pekar in i lib/skillTrappan.ts (statisk data, ingen tabell).
+    // Utvecklingsträdet (7v7 → 9v9): en rad per spelare/färdighet med aktuellt
+    // nuläge. skill_id pekar in i lib/skillTrappan.ts (statisk data, ingen tabell).
     `CREATE TABLE IF NOT EXISTS player_skill_status (
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       skill_id TEXT NOT NULL,
@@ -306,8 +306,8 @@ async function applyBaselineSchema(): Promise<void> {
       note TEXT NOT NULL DEFAULT '',
       updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
     )`,
-    // Daterade avstämningar är historiska ögonblicksbilder av utvecklingsträdet.
-    // Det aktuella läget ligger fortsatt i player_skill_status för snabba ändringar.
+    // Daterade utvecklingsbilder är historiska ögonblicksbilder av trädet.
+    // Det aktuella läget ligger i player_skill_status och uppdateras med bilden.
     `CREATE TABLE IF NOT EXISTS development_checkpoints (
       id TEXT PRIMARY KEY,
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,

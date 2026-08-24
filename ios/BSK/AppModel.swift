@@ -217,6 +217,14 @@ final class AppModel: ObservableObject {
         try await api.player(id: id)
     }
 
+    func playerDevelopment(id: Int) async throws -> PlayerDevelopment {
+        try await api.playerDevelopment(id: id)
+    }
+
+    func updatePlayerDevelopment(playerID: Int, update: PlayerDevelopmentUpdate) async throws -> PlayerDevelopment {
+        try await api.updatePlayerDevelopment(playerID: playerID, update: update)
+    }
+
     func activityPlayers(id: String) async throws -> [PlayerSummary] {
         try await api.activityPlayers(id: id)
     }

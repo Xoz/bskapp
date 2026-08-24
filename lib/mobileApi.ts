@@ -25,6 +25,7 @@ export function mobileError(error: unknown): Response {
       { status: error.status, headers: { "cache-control": "no-store" } }
     );
   }
+  console.error("Mobile API internal error", error);
   return Response.json(
     { apiVersion: "1", error: { code: "internal_error", message: "Ett oväntat serverfel inträffade." } },
     { status: 500, headers: { "cache-control": "no-store" } }

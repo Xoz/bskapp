@@ -169,6 +169,59 @@ struct PlayerDetail: Codable, Identifiable {
     let observations: [Observation]
 }
 
+struct PlayerDevelopment: Codable, Identifiable {
+    struct Latest: Codable, Identifiable {
+        let id: String
+        let date: String
+        let coachName: String
+        let strengths: String
+        let focusNote: String
+        let wellbeingNote: String
+    }
+
+    struct Category: Codable, Identifiable {
+        let id: String
+        let name: String
+        let short: String
+        let skills: [Skill]
+    }
+
+    struct Skill: Codable, Identifiable {
+        let id: String
+        let level: Int
+        let title: String
+        let question: String
+        let criterion: String
+        let advice: String
+        let nextStep: String
+        let status: String
+        let isFocus: Bool
+        let isUnlocked: Bool
+    }
+
+    let playerId: Int
+    let playerName: String
+    let hasStatus: Bool
+    let doneCount: Int
+    let activeCount: Int
+    let totalCount: Int
+    let latest: Latest?
+    let internalNote: String
+    let categories: [Category]
+
+    var id: Int { playerId }
+    var focusSkills: [Skill] { categories.flatMap(\.skills).filter(\.isFocus) }
+}
+
+struct PlayerDevelopmentUpdate: Encodable {
+    let date: String
+    let strengths: String
+    let focusNote: String
+    let wellbeingNote: String
+    let focusSkillIds: [String]
+    let statuses: [String: String]
+}
+
 struct ActivitySummary: Codable, Identifiable {
     let id: String
     let matchId: Int?

@@ -2165,7 +2165,7 @@ export async function createDevelopmentCheckpoint(formData: FormData): Promise<v
     },
     {
       sql: `INSERT INTO player_skill_status (player_id, skill_id, status, updated_at)
-        SELECT incoming.player_id, incoming.skill_id, incoming.status,
+        SELECT incoming.player_id::integer, incoming.skill_id, incoming.status,
           to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
         FROM (VALUES ${SKILLS.map(() => "(?, ?, ?)").join(", ")})
           AS incoming(player_id, skill_id, status)

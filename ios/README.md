@@ -10,7 +10,8 @@ Appen innehåller:
 - access- och refresh-token i Keychain med this-device-only-skydd,
 - automatisk tokenrefresh,
 - adaptiva arbetsytor för Idag, Observera, Utvärdera, Spelare och Uttagning,
-- trupp, spelardetalj, utvecklingsmål och aktiviteter från `/api/mobile/v1`,
+- trupp, spelardetalj, utvecklingsmål, utvecklingsträd och aktiviteter från `/api/mobile/v1`,
+- samlad `Uppdatera utvecklingsbild` med status, högst två fokus och sparad historik,
 - skrivande observationer med lokal kö vid nätverksavbrott,
 - matchutvärderingar med lokal kö och transparent uttagningsstöd,
 - serverstyrt matchcenter med periodklocka, mål, målskytt, ångra och laguppställning,
@@ -61,10 +62,11 @@ Google-retur och hela flödet på fysisk iPhone/iPad återstår före App Store-
   inte garantera exakt automatisk start eller fjärruppdatering om appen är helt
   stängd. Det är ett separat framtida driftsteg.
 
-## Verifierat 2026-08-20
+## Verifierat 2026-08-24
 
 - Debug simulatorbuild passerar för iPhone 17 Pro med iOS 27.
 - Debug simulatorbuild passerar för iPad Pro 13 tum (M5) med iPadOS 27.
+- Spelarprofilens utvecklingsträd och samlade uppdateringsflöde bygger för iPhone och iPad.
 - Serverns TypeScript-kontroll och samtliga 32 Vitest-tester passerar tillsammans
   med Apple-klientens första build.
 - Den responsiva navigeringen och den nya appikonen ingår i den separata

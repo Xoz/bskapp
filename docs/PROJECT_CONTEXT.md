@@ -13,6 +13,10 @@
   isär genom odokumenterade snabbändringar.
 - Utvecklingsvyerna använder kärnvyerna `core-*`-design, klubbens primärfärg och
   rena områdesnamn. Kategorisymboler och dekorativa markörer visas inte.
+- Samma modell är nu tillgänglig i nativeappen från spelarprofilen. Mobilvyn
+  visar nuläge, fokus, samtliga färdigheter och sparar status och sammanfattning
+  tillsammans via `Uppdatera utvecklingsbild`; webb och native delar tabeller,
+  behörigheter och historik men använder plattformsanpassade gränssnitt.
 
 ## Beslut 2026-08-20: enkel matchutvärdering
 

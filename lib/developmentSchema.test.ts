@@ -5,6 +5,7 @@ const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
 const coreActions = readFileSync(new URL("./coreActions.ts", import.meta.url), "utf8");
 const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
+const mobileDevelopmentRoute = readFileSync(new URL("../app/api/mobile/v1/players/[id]/development/route.ts", import.meta.url), "utf8");
 const mobileMatchEvaluation = readFileSync(new URL("./services/matchEvaluationMobile.ts", import.meta.url), "utf8");
 const mobileLive = readFileSync(new URL("./services/mobileLive.ts", import.meta.url), "utf8");
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
@@ -12,6 +13,7 @@ const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
 const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView.swift", import.meta.url), "utf8");
 const nativeAppModel = readFileSync(new URL("../ios/BSK/AppModel.swift", import.meta.url), "utf8");
+const nativePlayerViews = readFileSync(new URL("../ios/BSK/Views/PlayerViews.swift", import.meta.url), "utf8");
 const nativeLiveActivity = readFileSync(new URL("../ios/BSK/MatchLiveActivityManager.swift", import.meta.url), "utf8");
 const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
 const playerPage = readFileSync(new URL("../app/(skyddad)/spelare/[id]/page.tsx", import.meta.url), "utf8");
@@ -34,6 +36,18 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(schema).toContain("CHECK (slot IN (1, 2))");
     expect(schema).toContain("idx_development_goals_active_slot");
     expect(schema).toContain("WHERE status = 'active'");
+  });
+
+  it("exponerar samma samlade utvecklingsbild i native utan direkta snabbändringar", () => {
+    expect(mobileDevelopmentRoute).toContain("export async function GET");
+    expect(mobileDevelopmentRoute).toContain("export async function PUT");
+    expect(mobileDevelopment).toContain("export async function getMobilePlayerDevelopment");
+    expect(mobileDevelopment).toContain("export async function updateMobilePlayerDevelopment");
+    expect(mobileDevelopment).toContain("development_checkpoints");
+    expect(mobileDevelopment).toContain("development_checkpoint_skills");
+    expect(mobileDevelopment).toContain("focusIds.length > 2");
+    expect(nativePlayerViews).toContain("PlayerDevelopmentUpdateSheet");
+    expect(nativePlayerViews).not.toContain("setSkillStatus");
   });
 
   it("sparar tränarens explicita beslut i stället för automatval", () => {

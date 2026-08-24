@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: BSK Mobile API
   version: 1.0.0-draft
-  description: Första kontraktet för nativevertikalen trupp, spelare och observation.
+  description: Nativekontrakt för trupp, spelare, utvecklingsträd och observation.
 servers:
   - url: https://bsk2014.se/api/mobile/v1
 paths:
@@ -33,6 +33,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerDetailEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /players/{playerId}/development:
+    parameters:
+      - name: playerId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      summary: Spelarens aktuella utvecklingsträd och senaste sparade utvecklingsbild
+      responses:
+        "200":
+          description: Behörighetsstyrt utvecklingsträd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDevelopmentEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: Spara en samlad utvecklingsbild och uppdatera aktuellt träd
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlayerDevelopmentUpdate" }
+      responses:
+        "200":
+          description: Det uppdaterade utvecklingsträdet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDevelopmentEnvelope"
+        "400": { $ref: "#/components/responses/Invalid" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -166,6 +202,74 @@ components:
           properties:
             goals: { type: array, items: { type: object, additionalProperties: true } }
             observations: { type: array, maxItems: 40, items: { type: object, additionalProperties: true } }
+    SkillStatus:
+      type: string
+      enum: [not_started, training, almost, done]
+    DevelopmentSkill:
+      type: object
+      required: [id, level, title, question, criterion, advice, nextStep, status, isFocus, isUnlocked]
+      properties:
+        id: { type: string }
+        level: { type: integer, minimum: 1, maximum: 5 }
+        title: { type: string }
+        question: { type: string }
+        criterion: { type: string }
+        advice: { type: string }
+        nextStep: { type: string }
+        status: { $ref: "#/components/schemas/SkillStatus" }
+        isFocus: { type: boolean }
+        isUnlocked: { type: boolean }
+    PlayerDevelopment:
+      type: object
+      required: [playerId, playerName, hasStatus, doneCount, activeCount, totalCount, latest, internalNote, categories]
+      properties:
+        playerId: { type: integer }
+        playerName: { type: string }
+        hasStatus: { type: boolean }
+        doneCount: { type: integer, minimum: 0 }
+        activeCount: { type: integer, minimum: 0 }
+        totalCount: { type: integer, minimum: 0 }
+        latest:
+          oneOf:
+            - type: object
+              required: [id, date, coachName, strengths, focusNote, wellbeingNote]
+              properties:
+                id: { type: string, format: uuid }
+                date: { type: string, format: date }
+                coachName: { type: string }
+                strengths: { type: string }
+                focusNote: { type: string }
+                wellbeingNote: { type: string }
+            - { type: "null" }
+        internalNote: { type: string }
+        categories:
+          type: array
+          items:
+            type: object
+            required: [id, name, short, skills]
+            properties:
+              id: { type: string }
+              name: { type: string }
+              short: { type: string }
+              skills:
+                type: array
+                items: { $ref: "#/components/schemas/DevelopmentSkill" }
+    PlayerDevelopmentUpdate:
+      type: object
+      required: [date, strengths, focusNote, wellbeingNote, focusSkillIds, statuses]
+      properties:
+        date: { type: string, format: date }
+        strengths: { type: string, maxLength: 2000 }
+        focusNote: { type: string, maxLength: 2000 }
+        wellbeingNote: { type: string, maxLength: 2000 }
+        focusSkillIds:
+          type: array
+          maxItems: 2
+          uniqueItems: true
+          items: { type: string }
+        statuses:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/SkillStatus" }
     PlayerMatchLoad:
       type: object
       required: [playerId, name, capacity, recentMatches, upcomingMatches]
@@ -248,3 +352,9 @@ components:
       properties:
         apiVersion: { const: "1" }
         data: { $ref: "#/components/schemas/PlayerDetail" }
+    PlayerDevelopmentEnvelope:
+      type: object
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { const: "1" }
+        data: { $ref: "#/components/schemas/PlayerDevelopment" }
