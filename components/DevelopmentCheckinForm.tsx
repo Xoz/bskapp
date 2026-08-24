@@ -17,7 +17,7 @@ function SubmitButton({ changedCount }: { changedCount: number }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn-primary px-6" disabled={pending}>
-      {pending ? "Sparar avstämning…" : `Spara avstämning${changedCount ? ` · ${changedCount} ändringar` : ""}`}
+      {pending ? "Sparar utvecklingsbild…" : `Spara utvecklingsbild${changedCount ? ` · ${changedCount} ändringar` : ""}`}
     </button>
   );
 }
@@ -68,9 +68,9 @@ export default function DevelopmentCheckinForm({
     <form action={createDevelopmentCheckpoint} className="space-y-6">
       <input type="hidden" name="player_id" value={playerId} />
 
-      <div className="card p-6 space-y-5">
+      <div className="core-panel p-5 md:p-6 space-y-5">
         <div>
-          <p className="eyebrow mb-1">1 · Ramar för avstämningen</p>
+          <p className="core-kicker mb-1">1 · Grunduppgifter</p>
           <h2 className="font-semibold">När och vem?</h2>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
@@ -85,13 +85,13 @@ export default function DevelopmentCheckinForm({
         </div>
       </div>
 
-      <div className="card p-6 space-y-4">
+      <div className="core-panel p-5 md:p-6 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="eyebrow mb-1">2 · Observerade färdigheter</p>
+            <p className="core-kicker mb-1">2 · Utvecklingsträdet</p>
             <h2 className="font-semibold">Vad har förändrats?</h2>
             <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-              Bekräfta nuläget eller ändra bara det du faktiskt har observerat. Kategorierna är hopfällda för att hålla avstämningen fokuserad.
+              Bekräfta nuläget eller ändra bara det du har tillräckligt underlag för. Områdena är hopfällda för att hålla arbetet fokuserat.
             </p>
           </div>
           <div className="flex gap-2">
@@ -110,8 +110,8 @@ export default function DevelopmentCheckinForm({
             return (
               <details key={cat.id} className="rounded-xl" style={{ border: "1px solid var(--border)", background: "var(--surface)" }} open={activeInCategory > 0 || undefined}>
                 <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3">
-                  <span className="font-medium text-sm">{cat.icon} {cat.name}</span>
-                  <span className="caption" style={{ color: activeInCategory ? cat.color : "var(--ink-muted)" }}>
+                  <span className="font-medium text-sm">{cat.name}</span>
+                  <span className="caption" style={{ color: activeInCategory ? "var(--primary)" : "var(--ink-muted)" }}>
                     {activeInCategory ? `${activeInCategory} pågår` : `${skills.length} steg`} · öppna
                   </span>
                 </summary>
@@ -121,14 +121,14 @@ export default function DevelopmentCheckinForm({
                     const focused = focusIds.includes(skill.id);
                     const focusDisabled = !focused && focusIds.length >= 2;
                     return (
-                      <div key={skill.id} className="rounded-lg p-3" style={{ background: "var(--elevated)", border: focused ? `1px solid ${cat.color}` : "1px solid transparent" }}>
+                      <div key={skill.id} className="rounded-lg p-3" style={{ background: "var(--elevated)", border: focused ? "1px solid var(--primary-line)" : "1px solid transparent" }}>
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div>
                             <p className="caption" style={{ color: "var(--ink-muted)" }}>Nivå {skill.level}</p>
                             <p className="font-medium text-sm">{skill.title}</p>
                             <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>{skill.criterion}</p>
                           </div>
-                          <label className="caption flex items-center gap-1.5 shrink-0" style={{ color: focused ? cat.color : "var(--ink-muted)" }}>
+                          <label className="caption flex items-center gap-1.5 shrink-0" style={{ color: focused ? "var(--primary)" : "var(--ink-muted)" }}>
                             <input
                               type="checkbox"
                               name="focus_skill"
@@ -174,9 +174,9 @@ export default function DevelopmentCheckinForm({
         </div>
       </div>
 
-      <div className="card p-6 space-y-5">
+      <div className="core-panel p-5 md:p-6 space-y-5">
         <div>
-          <p className="eyebrow mb-1">3 · Sammanfattning</p>
+          <p className="core-kicker mb-1">3 · Sammanfattning</p>
           <h2 className="font-semibold">Styrkor, fokus och mående</h2>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             Färdigheter och mående hålls isär. Glädje och lagkänsla räknas aldrig som en färdighet som ska bli “klar”.
@@ -202,7 +202,7 @@ export default function DevelopmentCheckinForm({
       <div className="flex items-center gap-3 flex-wrap">
         <SubmitButton changedCount={changedCount} />
         <span className="caption" style={{ color: "var(--ink-muted)" }}>
-          Avstämningen sparas som en historisk ögonblicksbild och uppdaterar det aktuella trädet.
+          Utvecklingsbilden sparas i historiken och uppdaterar det aktuella trädet.
         </span>
       </div>
     </form>

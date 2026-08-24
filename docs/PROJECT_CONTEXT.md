@@ -1,5 +1,19 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-24: utvecklingsträdet är en aktiv del av spelarprofilen
+
+- Utvecklingsträdet har lyfts från "äldre utvecklingsarkiv" till en aktuell,
+  synlig del av spelarprofilen med nuläge, direkt ingång och senaste sparade
+  historik.
+- Den synliga arbetsbenämningen är `Uppdatera utvecklingsbild`, inte en separat
+  generell utvärdering eller avstämning. Den befintliga checkpointmodellen och
+  historiken bevaras oförändrade inför kommande integration med spelarsamtal.
+- Själva trädet är en läsvy. Status, fokus och sammanfattning ändras samlat via
+  `Uppdatera utvecklingsbild`, så aktuellt nuläge och historik inte kan glida
+  isär genom odokumenterade snabbändringar.
+- Utvecklingsvyerna använder kärnvyerna `core-*`-design, klubbens primärfärg och
+  rena områdesnamn. Kategorisymboler och dekorativa markörer visas inte.
+
 ## Beslut 2026-08-20: enkel matchutvärdering
 
 - Den oanvända ELO-prototypen är borttagen, inklusive `match_ratings`, `players.form_rating`, statistikförslag och formdiagram.

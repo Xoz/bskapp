@@ -8,7 +8,7 @@ import Avatar from "@/components/Avatar";
 import { IconArrowLeft } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Ny utvecklingsavstämning" };
+export const metadata = { title: "Uppdatera utvecklingsbild" };
 
 export default async function DevelopmentCheckinPage({ params }: { params: Promise<{ id: string }> }) {
   const role = await getRole();
@@ -35,16 +35,16 @@ export default async function DevelopmentCheckinPage({ params }: { params: Promi
         <IconArrowLeft width={15} height={15} /> {firstName}s utveckling
       </Link>
 
-      <div className="card p-6 md:p-7 flex items-center gap-5">
+      <header className="core-panel p-5 md:p-6 flex items-center gap-5">
         <Avatar name={player.name} jersey={player.jersey_number} size={56} />
         <div>
-          <p className="eyebrow">Ny utvecklingsavstämning</p>
-          <h1 className="text-[1.5rem] font-bold leading-tight mt-0.5">{player.name}</h1>
+          <p className="core-kicker">Utvecklingsträd</p>
+          <h1 className="core-section-title mt-2">Uppdatera {firstName}s utvecklingsbild</h1>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             Uppdatera det som har förändrats, välj högst två fokus och spara nuläget i historiken.
           </p>
         </div>
-      </div>
+      </header>
 
       <DevelopmentCheckinForm
         playerId={player.id}

@@ -329,7 +329,7 @@ export default function GuidePage() {
               id="utvarderingar"
               number="04"
               title="Spelarutveckling"
-              intro="Utvecklingssidan samlar nuläge, färdighetsträd och daterade avstämningar. Spelaren ska jämföras med sig själv, inte med lagkamraterna."
+              intro="Utvecklingssidan samlar spelarens aktuella utvecklingsträd och sparade historik. Spelaren ska jämföras med sig själv, inte med lagkamraterna."
             >
               <Topic title="Färdighetssteg – inte skolbetyg">
                 <p>Varje konkret färdighetssteg markeras som ej påbörjat, tränar på, nästan klart eller klart. Svårighetsnivå 1–5 beskriver själva steget; statusen beskriver var spelaren befinner sig just nu.</p>
@@ -338,21 +338,21 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
 
-              <Topic title="Gör en utvecklingsavstämning">
+              <Topic title="Uppdatera utvecklingsbilden">
                 <Steps>
-                  <Step title="Öppna spelaren och välj Öppna utveckling" />
-                  <Step title="Välj Ny avstämning" />
+                  <Step title="Öppna spelaren och välj Utvecklingsträd" />
+                  <Step title="Välj Uppdatera utvecklingsbild" />
                   <Step title="Kontrollera datum och tränarnamn" />
-                  <Step title="Uppdatera observerade färdigheter">Kategorierna är hopfällda. Ändra bara det du faktiskt har sett sedan förra avstämningen.</Step>
+                  <Step title="Uppdatera utvecklingsträdet">Områdena är hopfällda. Ändra bara det du har tillräckligt underlag för.</Step>
                   <Step title="Skriv styrkor">Lyft fram konkreta beteenden som spelaren kan känna igen.</Step>
                   <Step title="Välj högst två fokusfärdigheter">Beskriv hur laget och spelaren ska träna på dem.</Step>
                   <Step title="Notera mående separat">Glädje, trygghet och lagkänsla är viktiga signaler men räknas inte som färdigheter som ska bli klara.</Step>
-                  <Step title="Spara avstämningen">Nuläget uppdateras och en historisk ögonblicksbild skapas.</Step>
+                  <Step title="Spara utvecklingsbilden">Nuläget uppdateras och en historisk ögonblicksbild skapas.</Step>
                 </Steps>
               </Topic>
 
-              <Topic title="Historik och äldre utvärderingar">
-                <p>Avstämningshistoriken visar vilka färdigheter som ändrades, valda fokus och tränarens sammanfattning. Äldre fyrgradiga SvFF-utvärderingar finns kvar på spelarprofilen men ändrar inte automatiskt det nya trädet.</p>
+              <Topic title="Historik och äldre bedömningar">
+                <p>Historiken visar vilka färdigheter som ändrades, valda fokus och tränarens sammanfattning. Äldre fyrgradiga SvFF-bedömningar finns kvar på spelarprofilen men ändrar inte automatiskt utvecklingsträdet.</p>
               </Topic>
 
               <Topic title="Jämför tränarens och spelarens bild">

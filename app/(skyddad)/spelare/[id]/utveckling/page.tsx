@@ -13,7 +13,7 @@ import {
 import { CATEGORIES, skill as skillById, STATUS_LABEL } from "@/lib/skillTrappan";
 import Avatar from "@/components/Avatar";
 import UtvecklingChecklist from "@/components/UtvecklingChecklist";
-import { IconArrowLeft, IconPlus, IconSpark, IconTarget } from "@/components/Icons";
+import { IconArrowLeft, IconPlus } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Spelarens utveckling" };
@@ -49,7 +49,7 @@ export default async function PlayerDevelopmentPage({
   const firstName = player.name.replace(/^Exempel:\s*/, "").split(" ")[0];
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="core-page max-w-4xl">
       <Link
         href={`/spelare/${player.id}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
@@ -60,61 +60,51 @@ export default async function PlayerDevelopmentPage({
 
       {query.sparad === "1" && (
         <div className="rounded-xl p-4 body-small" style={{ background: "var(--ok-bg)", border: "1px solid var(--success)", color: "var(--success)" }}>
-          Utvecklingsavstämningen är sparad. Trädet och historiken visar nu samma nuläge.
+          Utvecklingsbilden är uppdaterad. Trädet och historiken visar nu samma nuläge.
         </div>
       )}
 
-      <div className="card p-6 md:p-7 flex items-center gap-5 flex-wrap">
+      <header className="core-panel p-5 md:p-6 flex items-center gap-5 flex-wrap">
         <Avatar name={player.name} jersey={player.jersey_number} size={64} />
         <div className="flex-1 min-w-48">
-          <p className="eyebrow">Spelarens utveckling · 7v7 → 9v9</p>
-          <h1 className="text-[1.65rem] font-bold leading-tight mt-0.5">{player.name}</h1>
+          <p className="core-kicker">Utvecklingsträd · 7v7 till 9v9</p>
+          <h1 className="core-title">{player.name}</h1>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            {latest ? `Senaste avstämning ${latest.date}${latest.coach_name ? ` · ${latest.coach_name}` : ""}` : "Ingen avstämning ännu"}
+            {latest ? `Senast uppdaterat ${latest.date}${latest.coach_name ? ` · ${latest.coach_name}` : ""}` : "Utvecklingsträdet är inte påbörjat"}
           </p>
         </div>
         <Link href={`/spelare/${player.id}/utveckling/avstamning`} className="btn-primary">
-          <IconPlus width={15} height={15} /> Ny avstämning
+          <IconPlus width={15} height={15} /> Uppdatera utvecklingsbild
         </Link>
-      </div>
+      </header>
 
       <nav className="flex flex-wrap gap-2" aria-label="Delar på utvecklingssidan">
-        <a href="#oversikt" className="btn-secondary btn-sm">Översikt</a>
-        <a href="#fardigheter" className="btn-secondary btn-sm">Färdigheter</a>
-        <a href="#historik" className="btn-secondary btn-sm">Avstämningar</a>
+        <a href="#oversikt" className="btn-secondary btn-sm">Nuläge</a>
+        <a href="#fardigheter" className="btn-secondary btn-sm">Utvecklingsträd</a>
+        <a href="#historik" className="btn-secondary btn-sm">Historik</a>
       </nav>
 
       <section id="oversikt" className="scroll-mt-6 space-y-4">
         <div>
-          <p className="eyebrow">Översikt</p>
+          <p className="core-kicker">Nuläge</p>
           <h2 className="text-xl font-semibold mt-0.5">Nuläge och nästa steg</h2>
         </div>
 
         {latest ? (
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="card p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--ok-bg)", color: "var(--success)" }}>
-                  <IconSpark width={16} height={16} />
-                </span>
-                <h3 className="font-semibold">Styrkor just nu</h3>
-              </div>
+            <div className="core-panel p-5">
+              <h3 className="font-semibold mb-3">Styrkor just nu</h3>
               <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
-                {latest.strengths || "Inga styrkor noterades i den senaste avstämningen."}
+                {latest.strengths || "Inga styrkor noterades i den senaste uppdateringen."}
               </p>
             </div>
-            <div className="card p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
-                  <IconTarget width={16} height={16} />
-                </span>
-                <h3 className="font-semibold">Nästa fokus</h3>
-              </div>
+            <div className="core-panel p-5">
+              <h3 className="font-semibold mb-3">Nästa fokus</h3>
               <div className="flex flex-wrap gap-2 mb-3">
                 {focusIds.map((skillId) => {
                   const skill = skillById(skillId);
                   const cat = skill ? CATEGORIES.find((item) => item.id === skill.category) : null;
-                  return skill ? <span key={skillId} className="badge badge-primary">{cat?.icon} {skill.title}</span> : null;
+                  return skill ? <span key={skillId} className="badge badge-primary">{cat?.short}: {skill.title}</span> : null;
                 })}
                 {focusIds.length === 0 && <span className="caption" style={{ color: "var(--ink-muted)" }}>Inga fokusfärdigheter valda.</span>}
               </div>
@@ -122,8 +112,8 @@ export default async function PlayerDevelopmentPage({
                 {latest.focus_note || "Ingen särskild fokusanteckning."}
               </p>
             </div>
-            <div className="card p-5 md:col-span-2">
-              <p className="eyebrow mb-2">Mående och spelarens röst</p>
+            <div className="core-panel p-5 md:col-span-2">
+              <p className="core-kicker mb-2">Mående och spelarens röst</p>
               <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>
                 {latest.wellbeing_note || selfEval?.note_to_coach || selfEval?.want_to_improve || "Inga aktuella noteringar om mående eller spelarens upplevelse."}
               </p>
@@ -135,27 +125,25 @@ export default async function PlayerDevelopmentPage({
             </div>
           </div>
         ) : (
-          <div className="card p-8 text-center">
-            <p className="font-semibold mb-1">Börja med en utvecklingsavstämning</p>
+          <div className="core-panel p-8 text-center">
+            <p className="font-semibold mb-1">Börja med utvecklingsträdet</p>
             <p className="body-small max-w-md mx-auto mb-4" style={{ color: "var(--ink-secondary)" }}>
               Beskriv nuläget, välj högst två fokus och skapa den första historiska ögonblicksbilden för {firstName}.
             </p>
-            <Link href={`/spelare/${player.id}/utveckling/avstamning`} className="btn-primary">Gör första avstämningen</Link>
+            <Link href={`/spelare/${player.id}/utveckling/avstamning`} className="btn-primary">Beskriv första nuläget</Link>
           </div>
         )}
       </section>
 
       <section id="fardigheter" className="scroll-mt-6 space-y-4">
         <div>
-          <p className="eyebrow">Färdigheter</p>
-          <h2 className="text-xl font-semibold mt-0.5">Trädet och aktuellt nuläge</h2>
+          <p className="core-kicker">Utvecklingsträd</p>
+          <h2 className="core-section-title mt-2">Färdigheter och aktuellt nuläge</h2>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
             “Aktuellt” visar nästa olåsta steg i varje område. Öppna hela trädet när du behöver mer detalj.
           </p>
         </div>
         <UtvecklingChecklist
-          playerId={player.id}
-          firstName={firstName}
           initialStatuses={statuses}
           initialNote={note}
           focusSkillIds={focusIds}
@@ -164,8 +152,8 @@ export default async function PlayerDevelopmentPage({
 
       <section id="historik" className="scroll-mt-6 space-y-4">
         <div>
-          <p className="eyebrow">Avstämningar</p>
-          <h2 className="text-xl font-semibold mt-0.5">Utveckling över tid</h2>
+          <p className="core-kicker">Historik</p>
+          <h2 className="core-section-title mt-2">Utveckling över tid</h2>
         </div>
         {checkpoints.length > 0 ? (
           <div className="space-y-3">
@@ -174,7 +162,7 @@ export default async function PlayerDevelopmentPage({
               const changes = rows.filter((item) => item.status !== item.previous_status);
               const focuses = rows.filter((item) => item.is_focus).map((item) => skillById(item.skill_id)).filter(Boolean);
               return (
-                <details key={checkpoint.id} className="card p-5" open={checkpoint.id === latest?.id || undefined}>
+                <details key={checkpoint.id} className="core-panel p-5" open={checkpoint.id === latest?.id || undefined}>
                   <summary className="cursor-pointer list-none flex items-center justify-between gap-4">
                     <div>
                       <h3 className="font-semibold">{checkpoint.date}</h3>
@@ -212,17 +200,17 @@ export default async function PlayerDevelopmentPage({
             })}
           </div>
         ) : (
-          <p className="body-small" style={{ color: "var(--ink-muted)" }}>Ingen avstämningshistorik ännu.</p>
+          <p className="body-small" style={{ color: "var(--ink-muted)" }}>Ingen sparad utvecklingshistorik ännu.</p>
         )}
 
         {legacyEvaluations.length > 0 && (
-          <div className="card p-5" style={{ background: "var(--surface)" }}>
-            <p className="font-semibold text-sm">Tidigare utvärderingar · äldre modell</p>
+          <div className="core-panel p-5">
+            <p className="font-semibold text-sm">Tidigare bedömningar · äldre modell</p>
             <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-              {legacyEvaluations.length} äldre {legacyEvaluations.length === 1 ? "utvärdering är" : "utvärderingar är"} bevarade och kan fortfarande läsas på spelarprofilen. De översätts inte automatiskt till trädstatus.
+              {legacyEvaluations.length} äldre {legacyEvaluations.length === 1 ? "bedömning är" : "bedömningar är"} bevarade och kan fortfarande läsas på spelarprofilen. De översätts inte automatiskt till trädstatus.
             </p>
             <Link href={`/spelare/${player.id}#aldre-utvarderingar`} className="caption underline mt-2 inline-block" style={{ color: "var(--primary)" }}>
-              Visa äldre utvärderingar
+              Visa äldre bedömningar
             </Link>
           </div>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   CATEGORIES,
   skillsByCategory,
@@ -15,10 +15,8 @@ import {
   STATUS_LABEL,
   type CategoryId,
   type FilterMode,
-  type SkillStatus,
   type StatusMap,
 } from "@/lib/skillTrappan";
-import { setSkillStatus, setSkillNote } from "@/lib/actions";
 
 const FILTERS: { mode: FilterMode; label: string }[] = [
   { mode: "next", label: "Aktuellt" },
@@ -30,41 +28,18 @@ const FILTERS: { mode: FilterMode; label: string }[] = [
   { mode: "level5", label: "Nivå 5" },
 ];
 
-const STATUS_SEQUENCE: SkillStatus[] = ["not_started", "training", "almost", "done"];
-
 export default function UtvecklingChecklist({
-  playerId,
-  firstName,
   initialStatuses,
   initialNote = "",
   focusSkillIds = [],
-  readOnly = false,
 }: {
-  playerId: number;
-  firstName: string;
   initialStatuses: StatusMap;
   initialNote?: string;
   focusSkillIds?: string[];
-  readOnly?: boolean;
 }) {
-  const [statuses, setStatuses] = useState(initialStatuses);
-  const [note, setNote] = useState(initialNote);
+  const statuses = initialStatuses;
   const [filterMode, setFilterMode] = useState<FilterMode>("next");
   const [categoryFilter, setCategoryFilter] = useState<CategoryId | "all">("all");
-  const [, startTransition] = useTransition();
-
-  function updateStatus(skillId: string, status: SkillStatus) {
-    setStatuses((prev) => ({ ...prev, [skillId]: status }));
-    startTransition(() => {
-      setSkillStatus(playerId, skillId, status);
-    });
-  }
-
-  function commitNote() {
-    startTransition(() => {
-      setSkillNote(playerId, note);
-    });
-  }
 
   const total = totalProgress(statuses);
   const next = nextRecommendedSkill(statuses);
@@ -78,8 +53,8 @@ export default function UtvecklingChecklist({
   return (
     <div className="space-y-6">
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="card p-5">
-          <p className="eyebrow mb-2">Färdighetsresan</p>
+        <div className="core-panel p-5">
+          <p className="core-kicker mb-2">Utvecklingsbild</p>
           {hasAssessment ? (
             <>
               <div className="flex items-center justify-between mb-2">
@@ -94,12 +69,12 @@ export default function UtvecklingChecklist({
             </>
           ) : (
             <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
-              Ingen avstämning ännu. Börja med att beskriva nuläget, inte med en procentsiffra.
+              Utvecklingsträdet är inte påbörjat. Börja med att beskriva nuläget, inte med en procentsiffra.
             </p>
           )}
         </div>
-        <div className="card p-5">
-          <p className="eyebrow mb-2">Nästa rekommenderade färdighet</p>
+        <div className="core-panel p-5">
+          <p className="core-kicker mb-2">Nästa möjliga steg</p>
           {next ? (
             <>
               <p className="font-medium text-sm mb-0.5">{next.title}</p>
@@ -107,7 +82,7 @@ export default function UtvecklingChecklist({
             </>
           ) : (
             <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
-              Allt klart – grymt jobbat!
+              Alla steg i trädet är markerade som klara.
             </p>
           )}
         </div>
@@ -115,7 +90,7 @@ export default function UtvecklingChecklist({
 
       {focusSkills.length > 0 && (
         <div>
-          <p className="eyebrow mb-2">Valda fokus just nu</p>
+          <p className="core-kicker mb-2">Valda fokus just nu</p>
           <div className="grid sm:grid-cols-2 gap-2">
             {focusSkills.map((skill) => {
               const cat = CATEGORIES.find((item) => item.id === skill.category)!;
@@ -124,9 +99,9 @@ export default function UtvecklingChecklist({
                   key={skill.id}
                   type="button"
                   onClick={() => setCategoryFilter(skill.category)}
-                  className="card p-3 text-left"
+                  className="core-panel p-3 text-left"
                 >
-                  <span className="caption" style={{ color: cat.color }}>{cat.icon} {cat.name}</span>
+                  <span className="caption" style={{ color: "var(--ink-muted)" }}>{cat.name}</span>
                   <span className="block font-medium text-sm mt-1">{skill.title}</span>
                 </button>
               );
@@ -146,14 +121,11 @@ export default function UtvecklingChecklist({
               onClick={() => setCategoryFilter(active ? "all" : p.category)}
               className="text-left rounded-lg p-2.5 transition"
               style={{
-                border: `1px solid ${active ? cat.color : "var(--border)"}`,
-                background: active ? `color-mix(in srgb, ${cat.color}, transparent 90%)` : "var(--surface)",
+                border: `1px solid ${active ? "var(--primary-line)" : "var(--border)"}`,
+                background: active ? "var(--primary-wash)" : "var(--surface)",
               }}
             >
-              <div className="flex items-center gap-1.5 text-xs mb-1.5">
-                <span>{cat.icon}</span>
-                <span className="truncate">{cat.short}</span>
-              </div>
+              <div className="text-xs mb-1.5 truncate">{cat.short}</div>
               <span className="level-meter">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <i key={n} className={n <= p.currentLevel ? "on" : ""} />
@@ -187,7 +159,7 @@ export default function UtvecklingChecklist({
             className="px-3 py-1.5 rounded-full text-xs"
             style={{ color: "var(--ink-muted)", border: "1px solid var(--border)" }}
           >
-            Visa alla kategorier ×
+            Rensa områdesfilter
           </button>
         )}
       </div>
@@ -198,16 +170,13 @@ export default function UtvecklingChecklist({
           if (skills.length === 0) return null;
           return (
             <section key={cat.id}>
-              <h2 className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ fontFamily: "var(--font-display)" }}>
-                <span>{cat.icon}</span>
-                {cat.name}
-              </h2>
+              <h2 className="text-sm font-semibold mb-2" style={{ fontFamily: "var(--font-display)" }}>{cat.name}</h2>
               <div className="space-y-1.5">
                 {skills.map((s) => {
                   const st = statusOf(statuses, s.id);
                   const unlocked = isUnlocked(s, statuses);
                   return (
-                    <div key={s.id} className="card p-3" style={{ opacity: unlocked ? 1 : 0.5 }}>
+                    <div key={s.id} className="core-panel p-3" style={{ opacity: unlocked ? 1 : 0.5 }}>
                       <div className="flex items-start justify-between gap-3 mb-1.5">
                         <div className="min-w-0 flex items-center gap-2 flex-wrap">
                           <span className="caption tabular-nums" style={{ color: "var(--ink-muted)" }}>
@@ -216,26 +185,16 @@ export default function UtvecklingChecklist({
                           <span className="font-medium text-sm">{s.question}</span>
                         </div>
                         <div className="inline-flex gap-1 shrink-0">
-                          {STATUS_SEQUENCE.map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              disabled={readOnly || !unlocked}
-                              title={STATUS_LABEL[opt]}
-                              onClick={() => updateStatus(s.id, opt)}
-                              aria-label={`${s.title}: ${STATUS_LABEL[opt]}`}
-                              aria-pressed={st === opt}
-                              className="rounded-full border px-2 py-1 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                              style={{
-                                background: st === opt ? STATUS_COLOR[opt] : "transparent",
-                                borderColor: STATUS_COLOR[opt],
-                                color: st === opt ? "#111" : "var(--ink-muted)",
-                                fontSize: "0.65rem",
-                              }}
-                            >
-                              {opt === "not_started" ? "Inte än" : opt === "training" ? "Övar" : opt === "almost" ? "Nära" : "Klar"}
-                            </button>
-                          ))}
+                          <span
+                            className="rounded-full border px-2.5 py-1 caption font-medium"
+                            style={{
+                              background: st === "not_started" ? "transparent" : STATUS_COLOR[st],
+                              borderColor: STATUS_COLOR[st],
+                              color: st === "not_started" ? "var(--ink-muted)" : "#111",
+                            }}
+                          >
+                            {STATUS_LABEL[st]}
+                          </span>
                         </div>
                       </div>
 
@@ -270,20 +229,10 @@ export default function UtvecklingChecklist({
         })}
       </div>
 
-      {!readOnly && (
-        <div className="card p-5">
-          <label className="label mb-2" htmlFor="skill_note">
-            Tränaranteckningar
-          </label>
-          <textarea
-            id="skill_note"
-            className="input"
-            rows={3}
-            placeholder={`Skriv en anteckning om ${firstName}s utveckling...`}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onBlur={commitNote}
-          />
+      {initialNote && (
+        <div className="core-panel p-5">
+          <p className="core-kicker mb-2">Tränaranteckning</p>
+          <p className="body-small whitespace-pre-wrap" style={{ color: "var(--ink-secondary)" }}>{initialNote}</p>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCore } from "@/lib/developmentCore";
 import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
+import { getLatestDevelopmentCheckpoint, getPlayerSkillStatuses } from "@/lib/queries";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
 import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
@@ -10,6 +11,7 @@ import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import { getPlayerMatchEvaluationTrend } from "@/lib/matchEvaluation";
 import MatchEvaluationTrend from "@/components/MatchEvaluationTrend";
+import { totalProgress } from "@/lib/skillTrappan";
 
 export const dynamic = "force-dynamic";
 function formatMatchDate(value: string | Date) {
@@ -29,9 +31,11 @@ export default async function PlayerPage({ params, searchParams }: {
   const { id } = await params;
   const playerId = Number(id);
   if (!Number.isInteger(playerId)) notFound();
-  const [core, matchEvaluationTrend] = await Promise.all([
+  const [core, matchEvaluationTrend, skillStatuses, latestDevelopmentUpdate] = await Promise.all([
     getPlayerCore(playerId),
     getPlayerMatchEvaluationTrend(playerId),
+    getPlayerSkillStatuses(playerId),
+    getLatestDevelopmentCheckpoint(playerId),
   ]);
   if (!core) notFound();
   const { mal } = await searchParams;
@@ -49,6 +53,9 @@ export default async function PlayerPage({ params, searchParams }: {
   const assessmentMeta = summary.player.level_assessed_at
     ? `Senast bedömd ${formatMatchDate(summary.player.level_assessed_at)}${summary.player.level_assessed_by ? ` av ${summary.player.level_assessed_by}` : ""}`
     : "Ingen daterad nivåbedömning ännu";
+  const treeProgress = totalProgress(skillStatuses);
+  const activeTreeSteps = Object.values(skillStatuses).filter((status) => status === "training" || status === "almost").length;
+  const hasTreeStatus = Object.keys(skillStatuses).length > 0;
 
   return (
     <div className="core-page">
@@ -72,8 +79,26 @@ export default async function PlayerPage({ params, searchParams }: {
             <span>{levelSummary ? `Nivå: ${levelSummary}` : "Nivå saknas"}</span>
           </div>
         </div>
-        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Äldre utvecklingsarkiv</Link>
+        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Utvecklingsträd</Link>
       </header>
+
+      <section className="core-panel core-form-panel">
+        <div className="core-section-head">
+          <div>
+            <p className="core-kicker">Utvecklingsträd</p>
+            <h2 className="core-section-title mt-2">Långsiktig utvecklingsbild</h2>
+          </div>
+          <Link href={`/spelare/${playerId}/utveckling`} className="btn-primary btn-sm">Öppna trädet</Link>
+        </div>
+        <p className="body-small max-w-2xl" style={{ color: "var(--ink-secondary)" }}>
+          Följ spelarens färdigheter över tid och håll aktuellt fokus samlat på ett ställe.
+        </p>
+        <div className="core-statline">
+          <span>{hasTreeStatus ? `${activeTreeSteps} steg i arbete` : "Trädet är inte påbörjat"}</span>
+          {hasTreeStatus && <span>{treeProgress.done} av {treeProgress.total} steg behärskade</span>}
+          <span>{latestDevelopmentUpdate ? `Senast uppdaterat ${latestDevelopmentUpdate.date}` : "Ingen sparad historik"}</span>
+        </div>
+      </section>
 
       <details className="core-panel core-form-panel">
         <summary className="core-section-head cursor-pointer list-none">

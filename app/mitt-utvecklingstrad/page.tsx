@@ -64,7 +64,7 @@ export default async function MittUtvecklingstradPage() {
         </div>
       )}
 
-      <UtvecklingChecklist playerId={player.id} firstName={firstName} initialStatuses={statuses} focusSkillIds={focusIds} readOnly />
+      <UtvecklingChecklist initialStatuses={statuses} focusSkillIds={focusIds} />
     </div>
   );
 }
