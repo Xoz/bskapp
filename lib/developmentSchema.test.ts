@@ -14,6 +14,7 @@ const nativeMainSplitView = readFileSync(new URL("../ios/BSK/Views/MainSplitView
 const nativeAppModel = readFileSync(new URL("../ios/BSK/AppModel.swift", import.meta.url), "utf8");
 const nativeLiveActivity = readFileSync(new URL("../ios/BSK/MatchLiveActivityManager.swift", import.meta.url), "utf8");
 const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
+const playerPage = readFileSync(new URL("../app/(skyddad)/spelare/[id]/page.tsx", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -200,5 +201,11 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain('if activity.sourceTeam != "Grön"');
     expect(mobileLive).toContain('row?.team_name !== "Gul"');
     expect(mobileLive).toContain("Grönmatcher är endast information och kan inte hanteras här.");
+  });
+
+  it("är kompatibel med PostgreSQL på Idag och spelarprofilen", () => {
+    expect(developmentCore).toContain("GROUP BY da.id, m.id, m.level, g.group_type, g.name");
+    expect(playerPage).not.toContain("level_assessed_at.slice");
+    expect(playerPage).toContain("formatMatchDate(summary.player.level_assessed_at)");
   });
 });

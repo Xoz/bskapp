@@ -224,7 +224,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
      WHERE ${scope.sql}
        AND (da.activity_type <> 'match' OR da.match_id IS NOT NULL)
        ${sourceFilter}
-     GROUP BY da.id, m.level, g.group_type, g.name
+     GROUP BY da.id, m.id, m.level, g.group_type, g.name
      ORDER BY
        CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN 0 ELSE 1 END,
        CASE WHEN da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') THEN da.activity_date END ASC,

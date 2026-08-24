@@ -12,9 +12,12 @@ import { getPlayerMatchEvaluationTrend } from "@/lib/matchEvaluation";
 import MatchEvaluationTrend from "@/components/MatchEvaluationTrend";
 
 export const dynamic = "force-dynamic";
-function formatMatchDate(value: string) {
+function formatMatchDate(value: string | Date) {
+  const date = value instanceof Date
+    ? value
+    : new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
   return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
-    .format(new Date(`${value}T12:00:00`));
+    .format(date);
 }
 
 export default async function PlayerPage({ params, searchParams }: {
@@ -44,7 +47,7 @@ export default async function PlayerPage({ params, searchParams }: {
     ? `Normal: ${normalLevel}${challengeLevel ? ` · Utmaning: ${challengeLevel}` : ""}`
     : "";
   const assessmentMeta = summary.player.level_assessed_at
-    ? `Senast bedömd ${formatMatchDate(summary.player.level_assessed_at.slice(0, 10))}${summary.player.level_assessed_by ? ` av ${summary.player.level_assessed_by}` : ""}`
+    ? `Senast bedömd ${formatMatchDate(summary.player.level_assessed_at)}${summary.player.level_assessed_by ? ` av ${summary.player.level_assessed_by}` : ""}`
     : "Ingen daterad nivåbedömning ännu";
 
   return (
