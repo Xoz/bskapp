@@ -48,6 +48,9 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).toContain("focusIds.length > 2");
     expect(nativePlayerViews).toContain("PlayerDevelopmentUpdateSheet");
     expect(nativePlayerViews).not.toContain("setSkillStatus");
+    expect(nativePlayerViews).toContain("Välj status för färdigheterna och spara allt samlat.");
+    expect(nativePlayerViews).toContain("statuses[skill.id] = status");
+    expect(nativePlayerViews).not.toContain(".pickerStyle(.menu)");
   });
 
   it("ger native spelarlistan lagmedlemskap och startar filtret med Gul", () => {

@@ -17,6 +17,9 @@
   visar nuläge, fokus, samtliga färdigheter och sparar status och sammanfattning
   tillsammans via `Uppdatera utvecklingsbild`; webb och native delar tabeller,
   behörigheter och historik men använder plattformsanpassade gränssnitt.
+- Native utvecklingsträd har en tydlig primär åtgärd inne på sidan för att
+  uppdatera utvecklingsbilden. I uppdateringsläget visas samtliga fyra statusar
+  direkt som tryckbara val per färdighet; ingen dold dropdown krävs.
 - Native spelarlista filtreras på aktuellt lagmedlemskap och öppnar alltid med
   `Gul` valt. Tränaren kan därefter växla till Grön, övriga behöriga lag eller
   Alla utan att lämna spelarvyn. Endast permanenta undergrupper räknas som lag;

@@ -428,6 +428,24 @@ private struct PlayerDevelopmentView: View {
 
                     developmentSummary(development)
 
+                    if canManageDevelopment {
+                        Button { showsEditor = true } label: {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Uppdatera utvecklingsbild")
+                                    .font(.headline)
+                                    .foregroundStyle(BSKTheme.background)
+                                Text("Välj status för färdigheterna och spara allt samlat.")
+                                    .font(.caption)
+                                    .foregroundStyle(BSKTheme.background.opacity(0.75))
+                            }
+                            .padding(horizontalSizeClass == .compact ? 13 : 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Öppnar val för Ej påbörjad, Tränar på, Nästan klar och Klar")
+                    }
+
                     if let latest = development.latest {
                         SectionTitle("Nuläge och nästa steg")
                         developmentLatest(latest, focusSkills: development.focusSkills)
@@ -636,6 +654,9 @@ private struct PlayerDevelopmentUpdateSheet: View {
                         .foregroundStyle(focusSkillIds.isEmpty ? BSKTheme.warning : BSKTheme.secondary)
                 }
                 Section("Utvecklingsträd") {
+                    Text("Öppna ett område och välj status direkt för varje färdighet. Ändringarna sparas först när du väljer Spara.")
+                        .font(.caption)
+                        .foregroundStyle(BSKTheme.secondary)
                     ForEach(development.categories) { category in
                         DisclosureGroup(category.name) {
                             ForEach(category.skills) { skill in
@@ -694,17 +715,26 @@ private struct DevelopmentEditSkillRow: View {
     @Binding var focusSkillIds: Set<String>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(skill.question).font(.subheadline.bold())
-            HStack {
-                Text("Nivå \(skill.level)").font(.caption).foregroundStyle(BSKTheme.secondary)
-                Spacer()
-                Picker("Status", selection: statusBinding) {
-                    ForEach(["not_started", "training", "almost", "done"], id: \.self) { status in
-                        Text(developmentStatusLabel(status)).tag(status)
+            Text("Nivå \(skill.level) · Välj status")
+                .font(.caption)
+                .foregroundStyle(BSKTheme.secondary)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 7) {
+                ForEach(["not_started", "training", "almost", "done"], id: \.self) { status in
+                    Button {
+                        statuses[skill.id] = status
+                    } label: {
+                        Text(developmentStatusLabel(status))
+                            .font(.caption.bold())
+                            .foregroundStyle(currentStatus == status ? BSKTheme.background : BSKTheme.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(currentStatus == status ? developmentStatusColor(status) : BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(currentStatus == status ? developmentStatusColor(status) : BSKTheme.border))
                     }
+                    .buttonStyle(.plain)
                 }
-                .pickerStyle(.menu)
             }
             Toggle("Fokus", isOn: focusBinding)
                 .disabled(!focusSkillIds.contains(skill.id) && focusSkillIds.count >= 2)
@@ -712,8 +742,8 @@ private struct DevelopmentEditSkillRow: View {
         .padding(.vertical, 5)
     }
 
-    private var statusBinding: Binding<String> {
-        Binding(get: { statuses[skill.id] ?? skill.status }, set: { statuses[skill.id] = $0 })
+    private var currentStatus: String {
+        statuses[skill.id] ?? skill.status
     }
 
     private var focusBinding: Binding<Bool> {
