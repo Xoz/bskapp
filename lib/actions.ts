@@ -2075,6 +2075,20 @@ export async function syncSanktanDirectTransfer(formData: FormData) {
       sql: "DELETE FROM development_activity_participation WHERE activity_id = ? AND source = 'svenskalag_direct'",
       args: [dbMatch.activity_id],
     });
+    if (dbMatch.match_id !== null) {
+      for (const callup of linkedCallups.filter((candidate) => candidate.status !== "accepted")) {
+        statements.push({
+          sql: `DELETE FROM match_players
+                WHERE match_id = ? AND player_id = ?
+                  AND NOT EXISTS (
+                    SELECT 1 FROM development_activity_participation manual
+                    WHERE manual.activity_id = ? AND manual.player_id = ?
+                      AND manual.source = 'manual' AND manual.attendance_status = 'present'
+                  )`,
+          args: [dbMatch.match_id, callup.playerId, dbMatch.activity_id, callup.playerId],
+        });
+      }
+    }
     for (const callup of linkedCallups.filter((candidate) => candidate.status === "accepted")) {
       finalizedPlayers++;
       statements.push({
@@ -2083,18 +2097,28 @@ export async function syncSanktanDirectTransfer(formData: FormData) {
               VALUES (?, ?, 'present', 1, 'svenskalag_direct', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
               ON CONFLICT (activity_id, player_id) DO UPDATE SET
                 attendance_status = CASE WHEN development_activity_participation.source = 'manual'
+                    AND development_activity_participation.attendance_status IN ('present', 'absent')
                   THEN development_activity_participation.attendance_status ELSE excluded.attendance_status END,
                 selected = CASE WHEN development_activity_participation.source = 'manual'
+                    AND development_activity_participation.attendance_status IN ('present', 'absent')
                   THEN development_activity_participation.selected ELSE excluded.selected END,
                 source = CASE WHEN development_activity_participation.source = 'manual'
+                    AND development_activity_participation.attendance_status IN ('present', 'absent')
                   THEN development_activity_participation.source ELSE excluded.source END,
                 updated_at = excluded.updated_at`,
         args: [dbMatch.activity_id, callup.playerId],
       });
       if (dbMatch.match_id !== null) {
         statements.push({
-          sql: "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
-          args: [dbMatch.match_id, callup.playerId],
+          sql: `INSERT INTO match_players (match_id, player_id)
+                SELECT ?, ?
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM development_activity_participation manual
+                  WHERE manual.activity_id = ? AND manual.player_id = ?
+                    AND manual.source = 'manual' AND manual.attendance_status = 'absent'
+                )
+                ON CONFLICT (match_id, player_id) DO NOTHING`,
+          args: [dbMatch.match_id, callup.playerId, dbMatch.activity_id, callup.playerId],
         });
       }
     }
