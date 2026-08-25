@@ -188,6 +188,7 @@ components:
         primaryPosition: { type: string }
         teamNames:
           type: array
+          description: Aktiva permanenta laggrupper; cupimportens matchgrupper ingår inte.
           items: { type: string }
         activeGoals:
           type: array

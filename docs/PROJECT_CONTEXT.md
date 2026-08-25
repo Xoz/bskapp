@@ -19,7 +19,9 @@
   behörigheter och historik men använder plattformsanpassade gränssnitt.
 - Native spelarlista filtreras på aktuellt lagmedlemskap och öppnar alltid med
   `Gul` valt. Tränaren kan därefter växla till Grön, övriga behöriga lag eller
-  Alla utan att lämna spelarvyn.
+  Alla utan att lämna spelarvyn. Endast permanenta undergrupper räknas som lag;
+  cupimportens matchgrupper, exempelvis `com`, `comp` och `friendly`, filtreras
+  bort vid API-källan och kan inte visas som spelarfilter.
 
 ## Beslut 2026-08-20: enkel matchutvärdering
 

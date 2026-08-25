@@ -348,7 +348,7 @@ async function accessiblePlayers(actor: CurrentUser): Promise<PlayerRow[]> {
             COALESCE((
               SELECT array_agg(g.name ORDER BY pgm.is_primary DESC, lower(g.name))
               FROM player_group_memberships pgm
-              JOIN groups g ON g.id = pgm.group_id AND g.active = 1
+              JOIN groups g ON g.id = pgm.group_id AND g.active = 1 AND g.group_type = 'subgroup'
               WHERE pgm.player_id = p.id
                 AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
                 AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
@@ -585,7 +585,7 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
             COALESCE((
               SELECT array_agg(g.name ORDER BY pgm.is_primary DESC, lower(g.name))
               FROM player_group_memberships pgm
-              JOIN groups g ON g.id = pgm.group_id AND g.active = 1
+              JOIN groups g ON g.id = pgm.group_id AND g.active = 1 AND g.group_type = 'subgroup'
               WHERE pgm.player_id = p.id
                 AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
                 AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)

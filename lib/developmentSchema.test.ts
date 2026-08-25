@@ -56,6 +56,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativePlayerViews).toContain('@State private var selectedTeam = "Gul"');
     expect(nativePlayerViews).toContain('selectTeam("Gul")');
     expect(nativePlayerViews).toContain("player.teamNames.contains(selectedTeam)");
+    expect(mobileDevelopment.match(/g\.group_type = 'subgroup'/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(nativePlayerViews).not.toMatch(/\bcom\b|\bcomp\b|\bfriendly\b/i);
   });
 
   it("sparar tränarens explicita beslut i stället för automatval", () => {
