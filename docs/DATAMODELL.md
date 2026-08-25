@@ -38,8 +38,9 @@ Svenska Lag-normaliseringen gör följande:
 
 1. matchidentiteten återanvänds eller skapas i `matches`;
 2. Svenska Lag-aktiviteten länkas till matchen där länken är entydig;
-3. faktisk närvaro skrivs idempotent till `match_players`;
-4. statistik och mobil-API läser därefter samma tabeller som manuella matcher.
+3. för Sanktan räknas spelare som står kvar med svaret ja på kallelsen från kalenderdagen efter matchen som deltagande; Svenska Lags separata LOK-/närvarodel används inte i detta flöde;
+4. deltagandet skrivs idempotent till `match_players` och manuella korrigeringar i utvecklingsaktiviteten bevaras;
+5. statistik och mobil-API läser därefter samma tabeller som manuella matcher.
 
 ## Avsiktliga skillnader
 

@@ -12,6 +12,48 @@ export type ImportedCallupTotals = {
   pending: number;
 };
 
+export type SanktanDirectSyncWindow = {
+  previousWeekFrom: string;
+  previousWeekTo: string;
+  futureFrom: string;
+  futureTo: string;
+};
+
+function shiftIsoDate(date: string, days: number): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error("Ogiltigt kalenderdatum.");
+  }
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+/** Förra kalenderveckan samt idag till och med sju dagar framåt. */
+export function sanktanDirectSyncWindow(today: string): SanktanDirectSyncWindow {
+  const parsed = new Date(`${today}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== today) {
+    throw new Error("Ogiltigt kalenderdatum.");
+  }
+  const daysSinceMonday = (parsed.getUTCDay() + 6) % 7;
+  return {
+    previousWeekFrom: shiftIsoDate(today, -daysSinceMonday - 7),
+    previousWeekTo: shiftIsoDate(today, -daysSinceMonday - 1),
+    futureFrom: today,
+    futureTo: shiftIsoDate(today, 7),
+  };
+}
+
+export function isInSanktanDirectSyncWindow(date: string, today: string): boolean {
+  const window = sanktanDirectSyncWindow(today);
+  return (date >= window.previousWeekFrom && date <= window.previousWeekTo)
+    || (date >= window.futureFrom && date <= window.futureTo);
+}
+
+/** Ett kvarstående ja blir deltagande först kalenderdagen efter matchen. */
+export function shouldFinalizeAcceptedCallups(activityDate: string, today: string): boolean {
+  return activityDate < today;
+}
+
 export function countImportedCallupStatuses(callups: readonly ImportedCallupPlayer[]): ImportedCallupTotals {
   return callups.reduce<ImportedCallupTotals>((totals, callup) => {
     totals[callup.status] += 1;

@@ -12,6 +12,7 @@ import {
   syncSanktanMatchCounts,
   syncSanktanMatchHistory,
   syncSanktanCallupHistory,
+  syncSanktanDirectTransfer,
   syncUpcomingSanktanCallups,
   generatePlayerPin,
   generateCoachInvite,
@@ -81,6 +82,10 @@ export default async function SettingsPage({
     sanktan_matcher?: string;
     sanktan_kommande?: string;
     sanktan_kommande_matcher?: string;
+    sanktan_direkt?: string;
+    sanktan_direkt_matcher?: string;
+    sanktan_direkt_deltagare?: string;
+    sanktan_direkt_omatchade?: string;
     kallelsefil?: string;
     kallelsefil_matcher?: string;
     kallelsefil_kallelser?: string;
@@ -113,7 +118,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher, kallelsefil, kallelsefil_matcher, kallelsefil_kallelser, kallelsefil_omatchade } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher, sanktan_direkt, sanktan_direkt_matcher, sanktan_direkt_deltagare, sanktan_direkt_omatchade, kallelsefil, kallelsefil_matcher, kallelsefil_kallelser, kallelsefil_omatchade } =
     await searchParams;
 
   return (
@@ -127,7 +132,7 @@ export default async function SettingsPage({
       </div>
 
       {/* Notifieringar */}
-      {(sparad || kalender != null) && (
+      {(sparad || kalender != null || narvaro != null || sanktan != null || sanktan_historik != null || sanktan_kommande != null || sanktan_direkt != null || kallelsefil != null) && (
         <div className="mb-6 space-y-2">
           {sparad && (
             <div
@@ -244,6 +249,18 @@ export default async function SettingsPage({
             <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--warn-bg)", color: "var(--warning)" }}>
               <IconAlert width={16} height={16} />
               Kunde inte synka kommande kallelser. Ingen kallelsedata ändrades.
+            </div>
+          )}
+          {sanktan_direkt === "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--ok-bg)", color: "var(--success)" }}>
+              <IconCheck width={16} height={16} />
+              {`${sanktan_direkt_matcher ?? "0"} matcher direktsynkades och ${sanktan_direkt_deltagare ?? "0"} ja-svar från tidigare matcher räknades som deltagande.${Number(sanktan_direkt_omatchade ?? 0) > 0 ? ` ${sanktan_direkt_omatchade} personer saknade aktiv spelarprofil.` : ""}`}
+            </div>
+          )}
+          {sanktan_direkt != null && sanktan_direkt !== "ok" && (
+            <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--warn-bg)", color: "var(--warning)" }}>
+              <IconAlert width={16} height={16} />
+              Kunde inte direktsynka Svenska Lag. Ingen data ändrades; kontrollera match-id, datumfönster, svar och totalsiffror.
             </div>
           )}
           {kallelsefil === "ok" && (
@@ -629,10 +646,33 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="font-semibold">Sanktanmatcher från Svenska Lag</h2>
                   <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                    Ladda upp exporten <strong>Kallelser, svar &amp; närvaro</strong> för Gul och Grön. Appen kopplar säkra matchningar och uppdaterar belastning, kallelsesvar och faktiskt deltagande.
+                    Direktsynka kallelser och svar för Gul och Grön. För en spelad match räknas kvarstående ja-svar som deltagande först dagen efter. Svenska Lags LOK-/närvarodel används aldrig.
                   </p>
                 </div>
               </div>
+              <div className="rounded-2xl p-4" style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}>
+              <ConfirmForm action={syncSanktanDirectTransfer} message="Synka kallelser och göra kvarstående ja-svar från tidigare matcher till deltagande?" className="space-y-3">
+                <div>
+                  <label className="label" htmlFor="svenskalag_direct_matches">Matcher och kallelsesvar (JSON)</label>
+                  <textarea
+                    id="svenskalag_direct_matches"
+                    name="matches"
+                    rows={10}
+                    required
+                    className="input font-mono text-sm"
+                    placeholder={'[{"id":"20024484","callups":[{"name":"Spelare","status":"accepted"}],"totals":{"accepted":1,"declined":0,"pending":0}}]'}
+                  />
+                </div>
+                <p className="caption" style={{ color: "var(--ink-muted)" }}>
+                  Endast förra kalenderveckan och idag till sju dagar framåt accepteras. Match-id måste komma från Svenska Lag. Ja blir deltagande först från dagen efter matchen; manuella korrigeringar bevaras.
+                </p>
+                <button type="submit" className="btn-primary">Direktsynka Svenska Lag</button>
+              </ConfirmForm>
+              </div>
+              <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--ink-muted)" }}>
+                  Äldre filimport
+                </summary>
               <form action={importSvenskaLagCallupFiles} className="space-y-3 rounded-2xl p-4" style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}>
                 <div>
                   <label className="label" htmlFor="callup_files">Excel-filer för Gul och Grön</label>
@@ -651,6 +691,7 @@ export default async function SettingsPage({
                 </p>
                 <button type="submit" className="btn-primary">Importera Svenska Lag-data</button>
               </form>
+              </details>
               <details className="pt-4" style={{ borderTop: "1px solid var(--border)" }}>
                 <summary className="cursor-pointer font-semibold text-sm" style={{ color: "var(--ink-muted)" }}>
                   Äldre manuella importverktyg

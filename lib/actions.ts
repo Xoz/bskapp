@@ -30,6 +30,8 @@ import { erasePlayerData } from "./playerPrivacy";
 import { swedishToday } from "./dates";
 import {
   callupTotalsCoverKnownPlayers,
+  sanktanDirectSyncWindow,
+  shouldFinalizeAcceptedCallups,
   type ImportedCallupPlayer,
   type ImportedCallupTotals,
 } from "./callupSync";
@@ -1967,6 +1969,142 @@ export async function syncSanktanCallupHistory(formData: FormData) {
   await logActivity(importedBy, "Synkade historiska Sanktan-kallelser", `${season} · Gul · ${seen.size} matcher`);
   revalidatePath("/installningar"); revalidatePath("/spelare"); revalidatePath("/observera"); revalidatePath("/uttagning");
   redirect(`/installningar?sanktan_kallelser=ok&sanktan_kallelser_matcher=${seen.size}#trupp`);
+}
+
+/**
+ * Direkt transport från Svenska Lags kallelsevy. LOK-/närvarodata ingår aldrig:
+ * för spelade matcher blir kvarstående ja-svar deltagande först dagen efter.
+ */
+export async function syncSanktanDirectTransfer(formData: FormData) {
+  await requirePermission("manage_settings");
+  const raw = String(formData.get("matches") ?? "").trim();
+  type ImportedDirectMatch = {
+    id: string;
+    callups: ImportedCallupPlayer[];
+    totals: ImportedCallupTotals;
+  };
+  let imported: ImportedDirectMatch[];
+  try { imported = JSON.parse(raw) as ImportedDirectMatch[]; } catch { redirect("/installningar?sanktan_direkt=fel#trupp"); }
+  if (!Array.isArray(imported) || imported.length === 0) redirect("/installningar?sanktan_direkt=fel#trupp");
+
+  const externalIds = imported.map((match) => String(match?.id ?? ""));
+  if (new Set(externalIds).size !== externalIds.length || externalIds.some((id) => !/^\d+$/.test(id))) {
+    redirect("/installningar?sanktan_direkt=match#trupp");
+  }
+
+  for (const match of imported) {
+    const seenNames = new Set<string>();
+    if (!Array.isArray(match.callups)
+      || match.callups.some((callup) => {
+        if (!callup || !["accepted", "declined", "pending"].includes(callup.status)) return true;
+        const name = normalizePersonName(String(callup.name ?? ""));
+        if (!name || seenNames.has(name)) return true;
+        seenNames.add(name);
+        return false;
+      })
+      || !match.totals
+      || !callupTotalsCoverKnownPlayers(match.totals, match.callups)) {
+      redirect("/installningar?sanktan_direkt=fel#trupp");
+    }
+  }
+
+  const today = swedishToday();
+  const window = sanktanDirectSyncWindow(today);
+  const placeholders = externalIds.map(() => "?").join(", ");
+  const [players, matches] = await Promise.all([
+    all<{ id: number; name: string }>("SELECT id, name FROM players WHERE active = 1 ORDER BY name"),
+    all<{ activity_id: string; external_id: string; activity_date: string; match_id: number | null }>(
+      `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id,
+              da.activity_date, da.match_id
+       FROM development_activities da
+       WHERE da.external_source = 'svenskalag_sanktan'
+         AND replace(da.external_key, 'sanktan:', '') IN (${placeholders})
+         AND ((da.activity_date BETWEEN ? AND ?) OR (da.activity_date BETWEEN ? AND ?))`,
+      [...externalIds, window.previousWeekFrom, window.previousWeekTo, window.futureFrom, window.futureTo]
+    ),
+  ]);
+  if (matches.length !== imported.length) redirect("/installningar?sanktan_direkt=match#trupp");
+
+  const playerByName = new Map(players.map((player) => [normalizePersonName(player.name), player] as const));
+  const activityByExternalId = new Map(matches.map((match) => [match.external_id, match] as const));
+  const statements: { sql: string; args: (string | number)[] }[] = [];
+  let finalizedPlayers = 0;
+  let ignoredPeople = 0;
+
+  for (const importedMatch of imported) {
+    const dbMatch = activityByExternalId.get(String(importedMatch.id));
+    if (!dbMatch) redirect("/installningar?sanktan_direkt=match#trupp");
+    const linkedCallups: { playerId: number; status: ImportedCallupPlayer["status"] }[] = [];
+    for (const callup of importedMatch.callups) {
+      const player = playerByName.get(normalizePersonName(String(callup.name)));
+      if (!player) {
+        ignoredPeople++;
+        continue;
+      }
+      linkedCallups.push({ playerId: player.id, status: callup.status });
+    }
+
+    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [dbMatch.activity_id] });
+    statements.push({
+      sql: `INSERT INTO development_activity_callup_summaries
+            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
+            VALUES (?, ?, ?, ?, 'svenskalag_direct', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
+              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
+              source = excluded.source, updated_at = excluded.updated_at`,
+      args: [dbMatch.activity_id, importedMatch.totals.accepted, importedMatch.totals.declined, importedMatch.totals.pending],
+    });
+    for (const callup of linkedCallups) {
+      const attendanceStatus = callup.status === "accepted" ? "present" : callup.status === "declined" ? "absent" : "unknown";
+      statements.push({
+        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
+        args: [dbMatch.activity_id, callup.playerId, attendanceStatus],
+      });
+    }
+
+    if (!shouldFinalizeAcceptedCallups(dbMatch.activity_date, today)) continue;
+    if (dbMatch.match_id !== null) {
+      statements.push({
+        sql: `DELETE FROM match_players mp USING development_activity_participation dap
+              WHERE mp.match_id = ? AND dap.activity_id = ? AND dap.player_id = mp.player_id
+                AND dap.source = 'svenskalag_direct'`,
+        args: [dbMatch.match_id, dbMatch.activity_id],
+      });
+    }
+    statements.push({
+      sql: "DELETE FROM development_activity_participation WHERE activity_id = ? AND source = 'svenskalag_direct'",
+      args: [dbMatch.activity_id],
+    });
+    for (const callup of linkedCallups.filter((candidate) => candidate.status === "accepted")) {
+      finalizedPlayers++;
+      statements.push({
+        sql: `INSERT INTO development_activity_participation
+              (activity_id, player_id, attendance_status, selected, source, updated_at)
+              VALUES (?, ?, 'present', 1, 'svenskalag_direct', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+              ON CONFLICT (activity_id, player_id) DO UPDATE SET
+                attendance_status = CASE WHEN development_activity_participation.source = 'manual'
+                  THEN development_activity_participation.attendance_status ELSE excluded.attendance_status END,
+                selected = CASE WHEN development_activity_participation.source = 'manual'
+                  THEN development_activity_participation.selected ELSE excluded.selected END,
+                source = CASE WHEN development_activity_participation.source = 'manual'
+                  THEN development_activity_participation.source ELSE excluded.source END,
+                updated_at = excluded.updated_at`,
+        args: [dbMatch.activity_id, callup.playerId],
+      });
+      if (dbMatch.match_id !== null) {
+        statements.push({
+          sql: "INSERT INTO match_players (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
+          args: [dbMatch.match_id, callup.playerId],
+        });
+      }
+    }
+  }
+
+  await batch(statements);
+  const importedBy = (await getCoachName()) ?? "Tränare";
+  await logActivity(importedBy, "Direktsynkade Svenska Lag", `${imported.length} matcher · ${finalizedPlayers} deltaganden`);
+  revalidatePath("/installningar"); revalidatePath("/spelare"); revalidatePath("/observera"); revalidatePath("/uttagning");
+  redirect(`/installningar?sanktan_direkt=ok&sanktan_direkt_matcher=${imported.length}&sanktan_direkt_deltagare=${finalizedPlayers}&sanktan_direkt_omatchade=${ignoredPeople}#trupp`);
 }
 
 export async function syncUpcomingSanktanCallups(formData: FormData) {

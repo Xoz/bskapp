@@ -62,7 +62,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 
 ## lib/ — exports per fil
 
-- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchutvärdering, närvaroimport, Sanktan-match- och kallelsehistorik, inställningar, delningslänkar och administration.
+- **actions.ts** (server actions): all skrivande logik. Bl.a. login/logout, spelare, `createDevelopmentCheckpoint` + setSkillStatus/setSkillNote, äldre createEvaluation/submitSelfEval, matcher/cuper/laguttagning/live/matchutvärdering, närvaroimport, Sanktan-match- och kallelsehistorik, `syncSanktanDirectTransfer` för filfri kallelse-/deltagandesynk, inställningar, delningslänkar och administration.
 - **coreActions.ts**: behörighetskontrollerade skrivflöden för källsynk, aktivitetsfokus, högst två utvecklingsmål, snabba observationer, uttagningsbeslut och pilotmätning.
 - **developmentCore.ts**: läsmodeller för de fyra primära vyerna, spelarens mål/evidens/exponering, kallelsesvar härledda från individuella kallelser samt uttagningsarbetsytan och 28-dagars pilotmått.
 - **developmentSync.ts**: idempotent spegling från befintliga matcher och senaste Svenska Lag-närvaroimport till utvecklingsaktiviteter/deltagande.

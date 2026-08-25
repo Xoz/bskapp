@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   callupTotalsCoverKnownPlayers,
   countImportedCallupStatuses,
+  isInSanktanDirectSyncWindow,
+  sanktanDirectSyncWindow,
   selectionDecisionFromCallups,
+  shouldFinalizeAcceptedCallups,
 } from "./callupSync";
 
 describe("kallelsesynk", () => {
@@ -31,5 +34,23 @@ describe("kallelsesynk", () => {
 
   it("behåller sparad uttagning när kallelse saknas", () => {
     expect(selectionDecisionFromCallups(false, null, "reserve")).toBe("reserve");
+  });
+
+  it("avgränsar direktsynken till förra kalenderveckan och sju dagar framåt", () => {
+    expect(sanktanDirectSyncWindow("2026-08-25")).toEqual({
+      previousWeekFrom: "2026-08-17",
+      previousWeekTo: "2026-08-23",
+      futureFrom: "2026-08-25",
+      futureTo: "2026-09-01",
+    });
+    expect(isInSanktanDirectSyncWindow("2026-08-22", "2026-08-25")).toBe(true);
+    expect(isInSanktanDirectSyncWindow("2026-08-24", "2026-08-25")).toBe(false);
+    expect(isInSanktanDirectSyncWindow("2026-09-02", "2026-08-25")).toBe(false);
+  });
+
+  it("gör ja-svar till deltagande först dagen efter matchen", () => {
+    expect(shouldFinalizeAcceptedCallups("2026-08-24", "2026-08-25")).toBe(true);
+    expect(shouldFinalizeAcceptedCallups("2026-08-25", "2026-08-25")).toBe(false);
+    expect(shouldFinalizeAcceptedCallups("2026-08-26", "2026-08-25")).toBe(false);
   });
 });
