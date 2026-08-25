@@ -20,6 +20,9 @@
 - Native utvecklingsträd har en tydlig primär åtgärd inne på sidan för att
   uppdatera utvecklingsbilden. I uppdateringsläget visas samtliga fyra statusar
   direkt som tryckbara val per färdighet; ingen dold dropdown krävs.
+- Samtliga färdighetstexter är neutrala tränarbedömningar i påståendeform,
+  exempelvis `Kan driva bollen ...`, i stället för frågor riktade direkt till
+  spelaren.
 - Native spelarlista filtreras på aktuellt lagmedlemskap och öppnar alltid med
   `Gul` valt. Tränaren kan därefter växla till Grön, övriga behöriga lag eller
   Alla utan att lämna spelarvyn. Endast permanenta undergrupper räknas som lag;
