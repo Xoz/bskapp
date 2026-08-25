@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isValidChallengeLevel, normalizeChallengeLevel } from "@/lib/playerLevelPreferences";
 
 const POSITIONS = ["Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 const LEVELS = [
@@ -31,6 +32,7 @@ function PreferenceRows({
   onSecondaryChange,
   primaryLabel = "Normal",
   secondaryLabel = "Utmaning",
+  secondaryAllowed,
 }: {
   title: string;
   choices: Choice[];
@@ -40,6 +42,7 @@ function PreferenceRows({
   onSecondaryChange: (value: string) => void;
   primaryLabel?: string;
   secondaryLabel?: string;
+  secondaryAllowed?: (value: string) => boolean;
 }) {
   return (
     <fieldset className="min-w-0">
@@ -51,6 +54,7 @@ function PreferenceRows({
         {choices.map((choice) => {
           const primaryId = `${title}-${choice.value}-primary`;
           const secondaryId = `${title}-${choice.value}-secondary`;
+          const secondaryDisabled = secondaryAllowed ? !secondaryAllowed(choice.value) : false;
           return (
             <div key={choice.value} className="contents">
               <span className="body-small py-1">{choice.label}</span>
@@ -58,7 +62,7 @@ function PreferenceRows({
                 <input id={primaryId} type="checkbox" checked={primary === choice.value} onChange={() => onPrimaryChange(primary === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)]" aria-label={`${choice.label}, förstaval`} />
               </label>
               <label htmlFor={secondaryId} className="flex justify-center cursor-pointer py-1">
-                <input id={secondaryId} type="checkbox" checked={secondary === choice.value} onChange={() => onSecondaryChange(secondary === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)]" aria-label={`${choice.label}, andraval`} />
+                <input id={secondaryId} type="checkbox" checked={secondary === choice.value} disabled={secondaryDisabled} onChange={() => onSecondaryChange(secondary === choice.value ? "" : choice.value)} className="h-5 w-5 accent-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-35" aria-label={`${choice.label}, andraval`} />
               </label>
             </div>
           );
@@ -97,7 +101,7 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
   const [positionPrimary, setPositionPrimary] = useState(defaults.positionPrimary);
   const [positionSecondary, setPositionSecondary] = useState(defaults.positionSecondary);
   const [levelPrimary, setLevelPrimary] = useState(defaults.levelPrimary);
-  const [levelSecondary, setLevelSecondary] = useState(defaults.levelSecondary);
+  const [levelSecondary, setLevelSecondary] = useState(normalizeChallengeLevel(defaults.levelPrimary, defaults.levelSecondary));
   const [selectionEligible, setSelectionEligible] = useState(defaults.selectionEligible);
 
   const setPosition = (choice: "primary" | "secondary", value: string) => {
@@ -112,10 +116,9 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
   const setLevel = (choice: "primary" | "secondary", value: string) => {
     if (choice === "primary") {
       setLevelPrimary(value);
-      if (value && value === levelSecondary) setLevelSecondary("");
+      if (!isValidChallengeLevel(value, levelSecondary)) setLevelSecondary("");
     } else {
-      setLevelSecondary(value);
-      if (value && value === levelPrimary) setLevelPrimary("");
+      setLevelSecondary(isValidChallengeLevel(levelPrimary, value) ? value : "");
     }
   };
 
@@ -134,7 +137,7 @@ export default function PlayerSelectionPreferencesForm({ action, defaults }: Pro
       </label>
       <div className="grid gap-5 rounded-xl border p-3 md:grid-cols-2 md:gap-8" style={{ borderColor: "var(--border)", background: "var(--elevated)" }}>
         <SingleChoiceRows title="Primär position" choices={POSITIONS.map((value) => ({ value, label: value }))} selected={positionPrimary} onChange={(value) => setPosition("primary", value)} />
-        <PreferenceRows title="Tränarbedömd Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} />
+        <PreferenceRows title="Tränarbedömd Sanktan-nivå" choices={LEVELS} primary={levelPrimary} secondary={levelSecondary} onPrimaryChange={(value) => setLevel("primary", value)} onSecondaryChange={(value) => setLevel("secondary", value)} secondaryAllowed={(value) => isValidChallengeLevel(levelPrimary, value)} />
       </div>
       <div className="flex justify-end"><button type="submit" className="btn-primary">Spara preferenser</button></div>
     </form>

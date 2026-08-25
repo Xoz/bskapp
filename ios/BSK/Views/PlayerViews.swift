@@ -838,7 +838,10 @@ private struct PlayerPreferencesSheet: View {
         _primaryPosition = State(initialValue: preferences.primaryPosition)
         _secondaryPosition = State(initialValue: preferences.secondaryPosition)
         _primaryLevel = State(initialValue: preferences.primaryLevel)
-        _secondaryLevel = State(initialValue: preferences.secondaryLevel)
+        let normal = Int(preferences.primaryLevel)
+        let challenge = Int(preferences.secondaryLevel)
+        let validChallenge = normal.flatMap { normalValue in challenge.map { $0 < normalValue } } ?? false
+        _secondaryLevel = State(initialValue: validChallenge ? preferences.secondaryLevel : "")
         _selectionEligible = State(initialValue: preferences.selectionEligible)
     }
 
@@ -850,13 +853,26 @@ private struct PlayerPreferencesSheet: View {
                 }
                 Section("Tränarbedömd Sanktan-nivå") {
                     levelPicker("Normal nivå", selection: $primaryLevel)
-                    levelPicker("Utmaningsnivå", selection: $secondaryLevel)
+                    levelPicker(
+                        "Utmaningsnivå",
+                        selection: $secondaryLevel,
+                        levels: ["2", "3", "4"].filter { level in
+                            guard let normal = Int(primaryLevel), let challenge = Int(level) else { return false }
+                            return challenge < normal
+                        }
+                    )
                 }
                 Section { Toggle("Kan föreslås till uttagning", isOn: $selectionEligible) }
                 if let errorMessage { Text(errorMessage).foregroundStyle(BSKTheme.danger) }
             }
             .bskListSurface()
             .navigationTitle("Position och nivå")
+            .onChange(of: primaryLevel) { _, normal in
+                guard let normalValue = Int(normal), let challengeValue = Int(secondaryLevel), challengeValue < normalValue else {
+                    secondaryLevel = ""
+                    return
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Avbryt") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -892,10 +908,10 @@ private struct PlayerPreferencesSheet: View {
         }
     }
 
-    private func levelPicker(_ title: String, selection: Binding<String>) -> some View {
+    private func levelPicker(_ title: String, selection: Binding<String>, levels: [String] = ["2", "3", "4"]) -> some View {
         Picker(title, selection: selection) {
             Text("Ej satt").tag("")
-            ForEach(["2", "3", "4"], id: \.self) { Text("Sanktan \($0)").tag($0) }
+            ForEach(levels, id: \.self) { Text("Sanktan \($0)").tag($0) }
         }
     }
 }

@@ -1271,6 +1271,31 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_updated_at TIMESTAMPTZ");
     await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_comment IS 'Tränarens fria matchkommentar för efteranalys och framtida AI-underlag'");
   } },
+  { id: "0014-challenge-level-order", run: async () => {
+    // Utmaning ska vara svårare än normalnivån. Lägre Sanktan-nummer är
+    // svårare, så äldre omvända kombinationer rensas utan att ändra den
+    // kanoniska normalnivån.
+    await getClient().unsafe(`
+      UPDATE players
+      SET preferred_level_secondary = ''
+      WHERE preferred_level_secondary <> ''
+        AND (
+          preferred_level_primary = ''
+          OR preferred_level_secondary::int >= preferred_level_primary::int
+        )
+    `);
+    await getClient().unsafe("ALTER TABLE players DROP CONSTRAINT IF EXISTS players_challenge_level_check");
+    await getClient().unsafe(`
+      ALTER TABLE players ADD CONSTRAINT players_challenge_level_check CHECK (
+        preferred_level_secondary = ''
+        OR (
+          preferred_level_primary IN ('2', '3', '4')
+          AND preferred_level_secondary IN ('2', '3', '4')
+          AND preferred_level_secondary::int < preferred_level_primary::int
+        )
+      )
+    `);
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

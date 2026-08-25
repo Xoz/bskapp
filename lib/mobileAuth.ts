@@ -193,35 +193,29 @@ export async function refreshMobileSession(refreshToken: string): Promise<Mobile
   if (!TOKEN_PATTERN.test(refreshToken)) return null;
   const presentedHash = tokenHash(refreshToken);
   const nextAccess = randomToken();
-  const nextRefresh = randomToken();
   const rows = await run(
     `UPDATE mobile_device_sessions SET
        access_token_hash = ?,
        access_expires_at = now() + (? * interval '1 second'),
-       previous_refresh_token_hash = refresh_token_hash,
-       refresh_token_hash = ?,
+       previous_refresh_token_hash = NULL,
        refresh_expires_at = now() + (? * interval '1 second'),
        last_used_at = now()
      WHERE refresh_token_hash = ? AND refresh_expires_at > now() AND revoked_at IS NULL
      RETURNING id`,
     [
       tokenHash(nextAccess), ACCESS_TOKEN_MAX_AGE_SECONDS,
-      tokenHash(nextRefresh), REFRESH_TOKEN_MAX_AGE_SECONDS,
+      REFRESH_TOKEN_MAX_AGE_SECONDS,
       presentedHash,
     ]
   );
-  if (rows.length === 0) {
-    await run(
-      `UPDATE mobile_device_sessions SET revoked_at = now()
-       WHERE previous_refresh_token_hash = ? AND revoked_at IS NULL`,
-      [presentedHash]
-    );
-    return null;
-  }
+  if (rows.length === 0) return null;
   return {
     accessToken: nextAccess,
     accessTokenExpiresIn: ACCESS_TOKEN_MAX_AGE_SECONDS,
-    refreshToken: nextRefresh,
+    // Behåll samma refresh-token under enhetssessionen. Då är parallella
+    // refreshanrop och ett nätverksomförsök idempotenta i stället för att ett
+    // legitimt andra anrop återkallar hela sessionen.
+    refreshToken,
     refreshTokenExpiresIn: REFRESH_TOKEN_MAX_AGE_SECONDS,
     sessionId: String(rows[0].id),
   };

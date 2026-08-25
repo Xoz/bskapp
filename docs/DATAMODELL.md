@@ -56,7 +56,8 @@ Svenska Lag-normaliseringen gör följande:
 
 - `preferred_level_primary` är tränarens kanoniska normalnivå: 2 Svår,
   3 Medel eller 4 Lätt. `preferred_level_secondary` är en frivillig
-  utmaningsnivå. Tidpunkt och tränare sparas i `level_assessed_at` och
+  utmaningsnivå och måste vara svårare, alltså ha ett lägre nummer, än
+  normalnivån. Tidpunkt och tränare sparas i `level_assessed_at` och
   `level_assessed_by`.
 - Endast `preferred_position_primary` används i profil och manuell uppställning.
   Position påverkar inte den automatiska rekommendationen.

@@ -12,6 +12,7 @@ import {
   hasPermission,
   type Permission,
 } from "./auth";
+import { normalizeChallengeLevel } from "./playerLevelPreferences";
 import { getPlayers } from "./queries";
 import { swedishToday } from "./dates";
 import { createDevelopmentObservations, type CreateObservationCommand } from "./services/development";
@@ -361,7 +362,7 @@ export async function savePlayerSelectionPreferences(playerId: number, formData:
     [
       primaryPosition,
       primaryLevel,
-      secondaryLevel === primaryLevel ? "" : secondaryLevel,
+      normalizeChallengeLevel(primaryLevel, secondaryLevel),
       assessedBy,
       selectionEligible,
       playerId,
