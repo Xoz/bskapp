@@ -5,10 +5,21 @@ struct PlayerList: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: Int?
     @State private var searchText = ""
+    @State private var selectedTeam = "Gul"
+
+    private var teamOptions: [String] {
+        let names = Set(model.players.flatMap(\.teamNames))
+        let preferred = ["Gul", "Grön"].filter(names.contains)
+        let remaining = names.subtracting(preferred).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        return preferred + remaining + ["Alla"]
+    }
 
     private var filteredPlayers: [PlayerSummary] {
-        guard !searchText.isEmpty else { return model.players }
-        return model.players.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        model.players.filter { player in
+            let matchesTeam = selectedTeam == "Alla" || player.teamNames.contains(selectedTeam)
+            let matchesSearch = searchText.isEmpty || player.name.localizedCaseInsensitiveContains(searchText)
+            return matchesTeam && matchesSearch
+        }
     }
 
     var body: some View {
@@ -20,9 +31,10 @@ struct PlayerList: View {
                         Text("\(filteredPlayers.count) spelare").font(.title.bold())
                     }
                     Spacer()
-                    Text("\(model.players.filter { !$0.activeGoals.isEmpty }.count) med fokus")
+                    Text("\(filteredPlayers.filter { !$0.activeGoals.isEmpty }.count) med fokus")
                         .font(.caption.bold()).foregroundStyle(BSKTheme.accent)
                 }
+                teamFilter
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 155), spacing: 10)], spacing: 10) {
                     ForEach(filteredPlayers) { player in
                         playerLink(player)
@@ -37,10 +49,36 @@ struct PlayerList: View {
         .searchable(text: $searchText, prompt: "Sök spelare")
         .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
+        .onAppear { selectTeam("Gul") }
         .overlay {
             if model.players.isEmpty {
                 ContentUnavailableView("Ingen trupp", systemImage: "person.3", description: Text("Kontrollera gruppbehörigheten i BSK."))
             }
+        }
+    }
+
+    private var teamFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(teamOptions, id: \.self) { team in
+                    Button(team) { selectTeam(team) }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(selectedTeam == team ? BSKTheme.background : BSKTheme.secondary)
+                        .padding(.horizontal, 15)
+                        .padding(.vertical, 9)
+                        .background(selectedTeam == team ? BSKTheme.accent : BSKTheme.surface, in: Capsule())
+                        .overlay(Capsule().stroke(selectedTeam == team ? BSKTheme.accent : BSKTheme.border))
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+        .accessibilityLabel("Filtrera spelare per lag")
+    }
+
+    private func selectTeam(_ team: String) {
+        selectedTeam = team
+        if let selection, !filteredPlayers.contains(where: { $0.id == selection }) {
+            self.selection = nil
         }
     }
 

@@ -108,10 +108,10 @@ final class AppModel: ObservableObject {
             reviewOn: "2026-09-01"
         )
         players = [
-            PlayerSummary(id: 1, name: "Alma", jerseyNumber: 7, position: "Mittfält", primaryPosition: "Mittfält", activeGoals: [focus], lastObservation: nil),
-            PlayerSummary(id: 2, name: "Adele", jerseyNumber: 11, position: "Anfall", primaryPosition: "Anfall", activeGoals: [focus], lastObservation: nil),
-            PlayerSummary(id: 3, name: "Kerstin", jerseyNumber: 4, position: "Back", primaryPosition: "Back", activeGoals: [focus], lastObservation: nil),
-            PlayerSummary(id: 4, name: "Mira", jerseyNumber: 1, position: "Målvakt", primaryPosition: "Målvakt", activeGoals: [], lastObservation: nil)
+            PlayerSummary(id: 1, name: "Alma", jerseyNumber: 7, position: "Mittfält", primaryPosition: "Mittfält", teamNames: ["Gul"], activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 2, name: "Adele", jerseyNumber: 11, position: "Anfall", primaryPosition: "Anfall", teamNames: ["Gul"], activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 3, name: "Kerstin", jerseyNumber: 4, position: "Back", primaryPosition: "Back", teamNames: ["Grön"], activeGoals: [focus], lastObservation: nil),
+            PlayerSummary(id: 4, name: "Mira", jerseyNumber: 1, position: "Målvakt", primaryPosition: "Målvakt", teamNames: ["Gul", "Grön"], activeGoals: [], lastObservation: nil)
         ]
         playerMatchLoads = [
             PlayerMatchLoad(playerId: 1, name: "Alma", jerseyNumber: 7, windowMatchCount: 1, capacity: 100, recentMatches: [], upcomingMatches: [

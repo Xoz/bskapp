@@ -179,13 +179,16 @@ components:
         createdAt: { type: string }
     PlayerSummary:
       type: object
-      required: [id, name, position, primaryPosition, activeGoals]
+      required: [id, name, position, primaryPosition, teamNames, activeGoals]
       properties:
         id: { type: integer }
         name: { type: string }
         jerseyNumber: { type: [integer, "null"] }
         position: { type: string }
         primaryPosition: { type: string }
+        teamNames:
+          type: array
+          items: { type: string }
         activeGoals:
           type: array
           maxItems: 2

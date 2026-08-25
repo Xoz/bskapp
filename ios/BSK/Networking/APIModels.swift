@@ -63,6 +63,7 @@ struct PlayerSummary: Codable, Identifiable {
     let jerseyNumber: Int?
     let position: String
     let primaryPosition: String
+    let teamNames: [String]
     let activeGoals: [GoalSummary]
     let lastObservation: ObservationSummary?
 }

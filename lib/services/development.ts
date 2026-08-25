@@ -23,6 +23,7 @@ export type MobilePlayerSummary = {
   jerseyNumber: number | null;
   position: string;
   primaryPosition: string;
+  teamNames: string[];
   activeGoals: {
     id: string;
     slot: 1 | 2;
@@ -308,6 +309,7 @@ type PlayerRow = {
   jersey_number: number | null;
   position: string;
   preferred_position_primary: string;
+  team_names: string[];
 };
 
 type GoalRow = {
@@ -340,12 +342,21 @@ type ObservationRow = {
 async function accessiblePlayers(actor: CurrentUser): Promise<PlayerRow[]> {
   requirePermission(actor, "view_players");
   const scope = playerScope(actor);
+  const today = swedishToday();
   return all<PlayerRow>(
-    `SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary
+    `SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary,
+            COALESCE((
+              SELECT array_agg(g.name ORDER BY pgm.is_primary DESC, lower(g.name))
+              FROM player_group_memberships pgm
+              JOIN groups g ON g.id = pgm.group_id AND g.active = 1
+              WHERE pgm.player_id = p.id
+                AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
+                AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
+            ), ARRAY[]::text[]) AS team_names
      FROM players p
      WHERE p.active = 1 AND ${scope.sql}
      ORDER BY p.name`,
-    scope.args
+    [today, today, ...scope.args]
   );
 }
 
@@ -387,6 +398,7 @@ export async function listMobilePlayers(actor: CurrentUser): Promise<MobilePlaye
       jerseyNumber: player.jersey_number,
       position: player.position,
       primaryPosition: player.preferred_position_primary,
+      teamNames: player.team_names,
       activeGoals: (goalsByPlayer.get(player.id) ?? []).map((goal) => ({
         id: goal.id,
         slot: goal.slot,
@@ -531,12 +543,14 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
   requirePermission(actor, "manage_evaluations");
   if (!activityId) throw new DevelopmentServiceError("invalid", "Aktivitet saknas.", 400);
   const scope = activityScope(actor);
+  const today = swedishToday();
   const rows = await all<{
     id: number;
     name: string;
     jersey_number: number | null;
     position: string;
     preferred_position_primary: string;
+    team_names: string[];
     active_goals: MobilePlayerSummary["activeGoals"];
   }>(
     `WITH target AS (
@@ -569,6 +583,14 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
      )
      SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary,
             COALESCE((
+              SELECT array_agg(g.name ORDER BY pgm.is_primary DESC, lower(g.name))
+              FROM player_group_memberships pgm
+              JOIN groups g ON g.id = pgm.group_id AND g.active = 1
+              WHERE pgm.player_id = p.id
+                AND (pgm.starts_on IS NULL OR pgm.starts_on <= ?)
+                AND (pgm.ends_on IS NULL OR pgm.ends_on >= ?)
+            ), ARRAY[]::text[]) AS team_names,
+            COALESCE((
               SELECT json_agg(json_build_object(
                 'id', g.id,
                 'slot', g.slot,
@@ -582,7 +604,7 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
      FROM participants part
      JOIN players p ON p.id = part.player_id AND p.active = 1
      ORDER BY lower(p.name)`,
-    [activityId, ...scope.args]
+    [activityId, ...scope.args, today, today]
   );
   return rows.map((row) => ({
     id: row.id,
@@ -590,6 +612,7 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
     jerseyNumber: row.jersey_number,
     position: row.position,
     primaryPosition: row.preferred_position_primary,
+    teamNames: row.team_names,
     activeGoals: row.active_goals ?? [],
     lastObservation: null,
   }));

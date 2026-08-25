@@ -50,6 +50,14 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativePlayerViews).not.toContain("setSkillStatus");
   });
 
+  it("ger native spelarlistan lagmedlemskap och startar filtret med Gul", () => {
+    expect(mobileDevelopment).toContain("AS team_names");
+    expect(mobileDevelopment).toContain("teamNames: player.team_names");
+    expect(nativePlayerViews).toContain('@State private var selectedTeam = "Gul"');
+    expect(nativePlayerViews).toContain('selectTeam("Gul")');
+    expect(nativePlayerViews).toContain("player.teamNames.contains(selectedTeam)");
+  });
+
   it("sparar tränarens explicita beslut i stället för automatval", () => {
     expect(coreActions).toContain('formData.getAll("selected_player")');
     expect(coreActions).toContain('decision === "selected" ? 1 : 0');

@@ -11,6 +11,7 @@ Appen innehåller:
 - automatisk tokenrefresh,
 - adaptiva arbetsytor för Idag, Observera, Utvärdera, Spelare och Uttagning,
 - trupp, spelardetalj, utvecklingsmål, utvecklingsträd och aktiviteter från `/api/mobile/v1`,
+- lagfiltrerad spelarlista som öppnar med Gul och kan växlas till övriga lag eller Alla,
 - samlad `Uppdatera utvecklingsbild` med status, högst två fokus och sparad historik,
 - skrivande observationer med lokal kö vid nätverksavbrott,
 - matchutvärderingar med lokal kö och transparent uttagningsstöd,
