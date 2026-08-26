@@ -26,6 +26,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var players: [PlayerSummary] = []
     @Published private(set) var playerMatchLoads: [PlayerMatchLoad] = []
     @Published private(set) var activities: [ActivitySummary] = []
+    @Published private(set) var trainings: [TrainingSummary] = []
     @Published private(set) var selectionMatches: [SelectionMatchSummary] = []
     @Published private(set) var matchEvaluations: [MatchEvaluationSummary] = []
     @Published private(set) var queuedObservationCount = 0
@@ -151,6 +152,7 @@ final class AppModel: ObservableObject {
                 loanedPlayerNames: [],
                 finished: false,
                 evaluationReady: false,
+                evaluationCompleted: false,
                 acceptedCallupCount: 7,
                 declinedCallupCount: 2,
                 pendingCallupCount: 1,
@@ -161,6 +163,18 @@ final class AppModel: ObservableObject {
                 rosterSource: "accepted",
                 rosterLabel: "Preliminär trupp",
                 rosterPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
+            )
+        ]
+        trainings = [
+            TrainingSummary(
+                id: "training-review-1",
+                date: "2026-08-24",
+                startTime: "18:30",
+                title: "Träning",
+                theme: "Spelbarhet och mod i första passningen",
+                challengeContext: "balanced",
+                participantCount: 13,
+                observationCount: 4
             )
         ]
         phase = .signedIn
@@ -396,6 +410,7 @@ final class AppModel: ObservableObject {
         players = []
         playerMatchLoads = []
         activities = []
+        trainings = []
         selectionMatches = []
         matchEvaluations = []
         errorMessage = nil
@@ -407,9 +422,11 @@ final class AppModel: ObservableObject {
             async let loadedPlayers = api.players()
             async let loadedPlayerMatchLoads = api.playerMatchLoads()
             async let loadedActivities = api.activities()
+            async let loadedTrainings = api.trainings()
             players = try await loadedPlayers
             playerMatchLoads = try await loadedPlayerMatchLoads
             activities = try await loadedActivities
+            trainings = try await loadedTrainings
             if user?.permissions.contains("manage_squads") == true {
                 selectionMatches = try await api.selectionMatches()
             } else {

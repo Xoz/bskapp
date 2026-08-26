@@ -264,6 +264,7 @@ struct ActivitySummary: Codable, Identifiable {
     let loanedPlayerNames: [String]
     let finished: Bool
     let evaluationReady: Bool
+    let evaluationCompleted: Bool
     let acceptedCallupCount: Int
     let declinedCallupCount: Int
     let pendingCallupCount: Int
@@ -274,6 +275,17 @@ struct ActivitySummary: Codable, Identifiable {
     let rosterSource: String?
     let rosterLabel: String?
     let rosterPlayerNames: [String]?
+}
+
+struct TrainingSummary: Codable, Identifiable {
+    let id: String
+    let date: String
+    let startTime: String?
+    let title: String
+    let theme: String
+    let challengeContext: String
+    let participantCount: Int
+    let observationCount: Int
 }
 
 struct LiveMatchState: Codable {

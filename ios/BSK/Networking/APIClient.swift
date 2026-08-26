@@ -115,6 +115,10 @@ actor APIClient {
         try await perform(path: "/activities", method: "GET", body: nil, authorized: true)
     }
 
+    func trainings() async throws -> [TrainingSummary] {
+        try await perform(path: "/trainings", method: "GET", body: nil, authorized: true)
+    }
+
     func activityPlayers(id: String) async throws -> [PlayerSummary] {
         try await perform(path: "/activities/\(id)/players", method: "GET", body: nil, authorized: true)
     }

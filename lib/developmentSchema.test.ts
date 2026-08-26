@@ -111,7 +111,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain("case matches");
     expect(nativeMainSplitView).not.toContain("case observe");
     expect(nativeMainSplitView).toContain('return user.permissions.contains("view_matches")');
-    expect(nativeMainSplitView).toContain('matchSection(title: "Behöver avslutas"');
+    expect(nativeMainSplitView).toContain('case .evaluate: return "Att utvärdera"');
     expect(nativePlayerViews).toContain('TextField("Sök spelare", text: $searchText)');
     expect(nativePlayerViews).not.toContain('.searchable(text: $searchText');
     expect(nativePlayerViews).toContain('team == "Gul" ? BSKTheme.teamYellow');
@@ -143,7 +143,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain("dismissOnComplete: false");
     expect(nativeActivityViews).toContain("PremiumSelectionDetail(match: selectionMatch)");
     expect(nativeMainSplitView.match(/MatchWorkspaceView\(/g)?.length).toBeGreaterThanOrEqual(5);
-    expect(nativeMainSplitView).toContain("initialSection: .evaluation");
+    expect(nativeMainSplitView).toContain("shouldStartEvaluation(activity) ? .evaluation : .overview");
     expect(nativeMainSplitView).toContain("initialSection: .roster");
     expect(nativeMainSplitView).toContain("await model.reload()");
   });
@@ -327,8 +327,19 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileMatchEvaluation).toContain("m.finished = 1");
     expect(mobileMatchEvaluation).toContain("INTERVAL '90 minutes'");
     expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(2);
-    expect(nativeMainSplitView).toContain(".filter { !$0.evaluationReady && $0.date >= today }");
-    expect(nativeMainSplitView).toContain(".filter(\\.evaluationReady)");
+    expect(nativeMainSplitView).toContain(".filter(needsEvaluation)");
+    expect(nativeMainSplitView).toContain('case .evaluate: return "Att utvärdera"');
+  });
+
+  it("samlar utvärderingen under Matcher och använder huvudfliken för Träningar", () => {
+    expect(nativeMainSplitView).toContain('case .trainings: return "Träningar"');
+    expect(nativeMainSplitView).not.toContain('case .evaluate: return "Utvärdera"');
+    expect(nativeMainSplitView).toContain('case .completed: return "Klart"');
+    expect(nativeMainSplitView).toContain("TrainingWorkspaceList(selection:");
+    expect(nativeMainSplitView).toContain("activity.evaluationCompleted");
+    expect(mobileDevelopment).toContain("export async function listMobileTrainings");
+    expect(mobileDevelopment).toContain("da.activity_type = 'training'");
+    expect(mobileDevelopment).toContain("linked_match.evaluation_closed_at IS NOT NULL AS evaluation_completed");
   });
 
   it("behandlar Grön som skrivskyddad information utan Live Activity", () => {

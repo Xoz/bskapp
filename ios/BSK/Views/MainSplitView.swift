@@ -3,7 +3,7 @@ import SwiftUI
 private enum AppSection: String, CaseIterable, Identifiable {
     case today
     case matches
-    case evaluate
+    case trainings
     case players
     case selection
     case settings
@@ -13,7 +13,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .today: return "Idag"
         case .matches: return "Matcher"
-        case .evaluate: return "Utvärdera"
+        case .trainings: return "Träningar"
         case .players: return "Spelare"
         case .selection: return "Uttagning"
         case .settings: return "Inställningar"
@@ -23,7 +23,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .today: return "sun.max"
         case .matches: return "calendar"
-        case .evaluate: return "checklist"
+        case .trainings: return "figure.run"
         case .players: return "person.3"
         case .selection: return "sportscourt"
         case .settings: return "gearshape"
@@ -37,8 +37,8 @@ private enum AppSection: String, CaseIterable, Identifiable {
             return ["admin", "head_coach", "coach", "leader"].contains(user.primaryRole)
         case .matches:
             return user.permissions.contains("view_matches")
-        case .evaluate:
-            return user.permissions.contains("manage_evaluations")
+        case .trainings:
+            return user.permissions.contains("view_players")
         case .players:
             return user.permissions.contains("view_players")
         case .selection:
@@ -64,7 +64,7 @@ struct MainSplitView: View {
     }()
     @State private var selectedPlayer: Int?
     @State private var selectedActivity: String?
-    @State private var selectedEvaluation: Int?
+    @State private var selectedTraining: String?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var compactNavigationID = UUID()
     @State private var showsAccount = false
@@ -148,8 +148,8 @@ struct MainSplitView: View {
             TodayList(selection: $selectedActivity)
         case .matches:
             ActivityWorkspaceList(selection: $selectedActivity)
-        case .evaluate:
-            MatchEvaluationList(selection: $selectedEvaluation)
+        case .trainings:
+            TrainingWorkspaceList(selection: $selectedTraining)
         case .players:
             PlayerList(selection: $selectedPlayer)
         case .selection:
@@ -171,16 +171,19 @@ struct MainSplitView: View {
             }
         case .matches:
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                MatchWorkspaceView(activity: activity, initialSection: .roster)
+                MatchWorkspaceView(
+                    activity: activity,
+                    initialSection: shouldStartEvaluation(activity) ? .evaluation : .overview
+                )
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för trupp, matchcenter och observationer.", icon: "calendar")
             }
-        case .evaluate:
-            if let selectedEvaluation,
-               let activity = model.activities.first(where: { $0.matchId == selectedEvaluation }) {
-                MatchWorkspaceView(activity: activity, initialSection: .evaluation)
+        case .trainings:
+            if let selectedTraining,
+               let training = model.trainings.first(where: { $0.id == selectedTraining }) {
+                TrainingDetail(training: training)
             } else {
-                EmptyWorkspaceDetail(title: "Välj en match", message: "Fortsätt eller starta en spelarutvärdering.", icon: "checklist")
+                EmptyWorkspaceDetail(title: "Välj en träning", message: "Öppna ett träningspass för närvaro, tema och observationer.", icon: "figure.run")
             }
         case .players:
             if let selectedPlayer {
@@ -252,7 +255,25 @@ struct MainSplitView: View {
     private func resetSelections() {
         selectedPlayer = nil
         selectedActivity = nil
-        selectedEvaluation = nil
+        selectedTraining = nil
+    }
+
+    private func shouldStartEvaluation(_ activity: ActivitySummary) -> Bool {
+        activity.sourceTeam == "Gul"
+            && activity.evaluationReady
+            && !activity.evaluationCompleted
+            && activity.date >= swedishDate(daysFromToday: -7)
+    }
+
+    private func swedishDate(daysFromToday: Int) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Stockholm")!
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: calendar.date(byAdding: .day, value: daysFromToday, to: Date()) ?? Date())
     }
 
     private var sidebar: some View {
@@ -505,10 +526,33 @@ private struct AccountDetail: View {
     }
 }
 
+private enum MatchListFilter: String, CaseIterable, Identifiable {
+    case upcoming
+    case evaluate
+    case completed
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .upcoming: return "Kommande"
+        case .evaluate: return "Att utvärdera"
+        case .completed: return "Klart"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .upcoming: return "calendar"
+        case .evaluate: return "checklist"
+        case .completed: return "checkmark.circle"
+        }
+    }
+}
+
 private struct ActivityWorkspaceList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selection: String?
+    @State private var filter: MatchListFilter = .upcoming
 
     var body: some View {
         ScrollView {
@@ -517,10 +561,10 @@ private struct ActivityWorkspaceList: View {
                     eyebrow: "GUL OCH GRÖN",
                     title: "Matcher",
                     message: "Alla lagens matcher på samma plats. Gulspelare som lånas till Grön markeras direkt.",
-                    trailing: "\(model.activities.count) matcher"
+                    trailing: "\(matchActivities.count) matcher"
                 )
 
-                if model.activities.isEmpty {
+                if matchActivities.isEmpty {
                     ContentUnavailableView(
                         "Inga matcher",
                         systemImage: "sportscourt",
@@ -528,14 +572,16 @@ private struct ActivityWorkspaceList: View {
                     )
                     .frame(maxWidth: .infinity, minHeight: 360)
                 } else {
-                    if !upcomingMatches.isEmpty {
-                        matchSection(title: "Kommande", matches: upcomingMatches)
-                    }
-                    if !overdueMatches.isEmpty {
-                        matchSection(title: "Behöver avslutas", matches: overdueMatches)
-                    }
-                    if !playedMatches.isEmpty {
-                        matchSection(title: "Spelade", matches: playedMatches)
+                    filterBar
+                    if filteredMatches.isEmpty {
+                        ContentUnavailableView(
+                            emptyTitle,
+                            systemImage: filter.icon,
+                            description: Text(emptyMessage)
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 260)
+                    } else {
+                        matchSection(title: filter.title, matches: filteredMatches)
                     }
                 }
             }
@@ -547,6 +593,37 @@ private struct ActivityWorkspaceList: View {
         .navigationTitle("")
         .background(BSKBackdrop())
         .refreshable { await model.reload() }
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 7) {
+            ForEach(MatchListFilter.allCases) { item in
+                Button {
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        filter = item
+                        selection = nil
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: item.icon)
+                        Text(item.title)
+                        if item == .evaluate && evaluationCount > 0 {
+                            Text("\(evaluationCount)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(filter == item ? BSKTheme.backgroundDeep : BSKTheme.warning)
+                        }
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(filter == item ? BSKTheme.backgroundDeep : BSKTheme.secondary)
+                    .padding(.horizontal, horizontalSizeClass == .compact ? 10 : 13)
+                    .frame(height: 38)
+                    .background(filter == item ? BSKTheme.accent : BSKTheme.surface, in: Capsule())
+                    .overlay(Capsule().stroke(filter == item ? BSKTheme.accent : BSKTheme.border))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func matchSection(title: String, matches: [ActivitySummary]) -> some View {
@@ -572,7 +649,12 @@ private struct ActivityWorkspaceList: View {
     @ViewBuilder
     private func activityLink(_ activity: ActivitySummary) -> some View {
         if horizontalSizeClass == .compact {
-            NavigationLink { ActivityDetail(activity: activity) } label: { activityCard(activity) }
+            NavigationLink {
+                MatchWorkspaceView(
+                    activity: activity,
+                    initialSection: needsEvaluation(activity) ? .evaluation : .overview
+                )
+            } label: { activityCard(activity) }
                 .buttonStyle(.plain)
         } else {
             Button { selection = activity.id } label: { activityCard(activity) }
@@ -621,7 +703,23 @@ private struct ActivityWorkspaceList: View {
                         .foregroundStyle(BSKTheme.muted)
                 }
 
-                if !activity.loanedPlayerNames.isEmpty {
+                if activity.evaluationCompleted {
+                    Label("Utvärdering klar", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(BSKTheme.accent)
+                } else if activity.sourceTeam == "Gul" && activity.evaluationReady && activity.date < evaluationWindowStart {
+                    Label("Historik", systemImage: "archivebox.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(BSKTheme.muted)
+                } else if let progress = evaluationProgress(activity) {
+                    Label("\(progress.handled) av \(progress.total) utvärderade", systemImage: "checklist")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(BSKTheme.warning)
+                } else if activity.sourceTeam == "Gul" && activity.evaluationReady {
+                    Label("Redo att utvärdera", systemImage: "checklist")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(BSKTheme.warning)
+                } else if !activity.loanedPlayerNames.isEmpty {
                     Label("Gul-lån: \(activity.loanedPlayerNames.joined(separator: ", "))", systemImage: "arrow.left.arrow.right")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(BSKTheme.accent)
@@ -670,22 +768,69 @@ private struct ActivityWorkspaceList: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
     }
 
-    private var upcomingMatches: [ActivitySummary] {
-        model.activities
-            .filter { !$0.evaluationReady && $0.date >= today }
-            .sorted(by: ascendingMatchOrder)
+    private var matchActivities: [ActivitySummary] {
+        model.activities.filter { $0.type == "match" }
     }
 
-    private var overdueMatches: [ActivitySummary] {
-        model.activities
-            .filter { !$0.evaluationReady && $0.date < today }
-            .sorted { ascendingMatchOrder($1, $0) }
+    private var filteredMatches: [ActivitySummary] {
+        switch filter {
+        case .upcoming:
+            return matchActivities
+                .filter { !$0.evaluationReady }
+                .sorted(by: ascendingMatchOrder)
+        case .evaluate:
+            return matchActivities
+                .filter(needsEvaluation)
+                .sorted { ascendingMatchOrder($1, $0) }
+        case .completed:
+            return matchActivities
+                .filter { $0.evaluationReady && ($0.sourceTeam == "Grön" || $0.evaluationCompleted || $0.date < evaluationWindowStart) }
+                .sorted { ascendingMatchOrder($1, $0) }
+        }
     }
 
-    private var playedMatches: [ActivitySummary] {
-        model.activities
-            .filter(\.evaluationReady)
-            .sorted { ascendingMatchOrder($1, $0) }
+    private var evaluationCount: Int {
+        matchActivities.filter(needsEvaluation).count
+    }
+
+    private var emptyTitle: String {
+        switch filter {
+        case .upcoming: return "Inga kommande matcher"
+        case .evaluate: return "Inget att utvärdera"
+        case .completed: return "Inga klara matcher"
+        }
+    }
+
+    private var emptyMessage: String {
+        switch filter {
+        case .upcoming: return "Nya matcher visas här när de läggs in."
+        case .evaluate: return "Matcher hamnar här efter avslut eller 90 minuter efter avspark."
+        case .completed: return "Färdigutvärderade matcher samlas här."
+        }
+    }
+
+    private func evaluationProgress(_ activity: ActivitySummary) -> MatchEvaluationSummary? {
+        guard let matchID = activity.matchId else { return nil }
+        return model.matchEvaluations.first(where: { $0.id == matchID })
+    }
+
+    private func needsEvaluation(_ activity: ActivitySummary) -> Bool {
+        activity.sourceTeam == "Gul"
+            && activity.evaluationReady
+            && !activity.evaluationCompleted
+            && activity.date >= evaluationWindowStart
+    }
+
+    private var evaluationWindowStart: String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Stockholm")!
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let start = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        return formatter.string(from: start)
     }
 
     private var today: String {
@@ -729,6 +874,184 @@ private struct ActivityWorkspaceList: View {
         lhs.date == rhs.date
             ? (lhs.startTime ?? "") < (rhs.startTime ?? "")
             : lhs.date < rhs.date
+    }
+}
+
+private struct TrainingWorkspaceList: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Binding var selection: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                BSKPageHeader(
+                    eyebrow: "TRÄNING",
+                    title: "Träningar",
+                    message: "Träningspass, närvaro och samlad observationsdata på samma plats.",
+                    trailing: "\(model.trainings.count) pass"
+                )
+
+                if model.trainings.isEmpty {
+                    ContentUnavailableView(
+                        "Inga träningar",
+                        systemImage: "figure.run",
+                        description: Text("Träningspass visas här när de har importerats.")
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 360)
+                } else {
+                    if !upcoming.isEmpty { trainingSection(title: "Kommande", trainings: upcoming) }
+                    if !completed.isEmpty { trainingSection(title: "Genomförda", trainings: completed) }
+                }
+            }
+            .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .bskCompactTabClearance()
+            .frame(maxWidth: 980)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("")
+        .background(BSKBackdrop())
+        .refreshable { await model.reload() }
+    }
+
+    private func trainingSection(title: String, trainings: [TrainingSummary]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .bottom) {
+                Text(title).font(.title2.bold()).foregroundStyle(.white)
+                Spacer()
+                Text("\(trainings.count) \(trainings.count == 1 ? "pass" : "pass")")
+                    .font(.caption).foregroundStyle(BSKTheme.muted)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 11)], spacing: 11) {
+                ForEach(trainings) { training in trainingLink(training) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func trainingLink(_ training: TrainingSummary) -> some View {
+        if horizontalSizeClass == .compact {
+            NavigationLink { TrainingDetail(training: training) } label: { trainingCard(training) }
+                .buttonStyle(.plain)
+        } else {
+            Button { selection = training.id } label: { trainingCard(training) }
+                .buttonStyle(.plain)
+        }
+    }
+
+    private func trainingCard(_ training: TrainingSummary) -> some View {
+        HStack(spacing: 13) {
+            compactDateTile(training.date)
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text(training.title)
+                        .font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(training.startTime ?? "--:--")
+                        .font(.system(size: 19, weight: .black, design: .rounded))
+                        .monospacedDigit().foregroundStyle(.white)
+                }
+                if !training.theme.isEmpty {
+                    Label(training.theme, systemImage: "scope")
+                        .font(.caption).foregroundStyle(BSKTheme.secondary).lineLimit(1)
+                }
+                HStack(spacing: 12) {
+                    Label("\(training.participantCount) närvarande", systemImage: "person.2.fill")
+                    Label("\(training.observationCount) observationer", systemImage: "eye.fill")
+                }
+                .font(.caption2.bold())
+                .foregroundStyle(BSKTheme.muted)
+            }
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(selection == training.id ? BSKTheme.accent : BSKTheme.border, lineWidth: selection == training.id ? 2 : 1))
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func compactDateTile(_ date: String) -> some View {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        let day = parts.count == 3 ? parts[2] : 0
+        let month = parts.count == 3 ? parts[1] : 0
+        let months = ["JAN", "FEB", "MAR", "APR", "MAJ", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
+        let monthText = (1...12).contains(month) ? months[month - 1] : ""
+        return VStack(spacing: 1) {
+            Text(String(format: "%02d", day)).font(.system(size: 20, weight: .black, design: .rounded)).foregroundStyle(.white)
+            Text(monthText).font(.system(size: 9, weight: .bold)).tracking(0.7).foregroundStyle(BSKTheme.muted)
+        }
+        .frame(width: 52, height: 58)
+        .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+    }
+
+    private var upcoming: [TrainingSummary] {
+        model.trainings.filter { $0.date >= today }.sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
+    }
+
+    private var completed: [TrainingSummary] {
+        model.trainings.filter { $0.date < today }.sorted { ($0.date, $0.startTime ?? "") > ($1.date, $1.startTime ?? "") }
+    }
+
+    private var today: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }
+}
+
+private struct TrainingDetail: View {
+    let training: TrainingSummary
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TRÄNINGSPASS").font(.caption2.bold()).tracking(1.5).foregroundStyle(BSKTheme.accent)
+                    Text(training.title).font(.largeTitle.bold()).foregroundStyle(.white)
+                    Text([training.date, training.startTime].compactMap { $0 }.joined(separator: " · "))
+                        .font(.subheadline.bold()).foregroundStyle(BSKTheme.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 10) {
+                    metricCard(value: training.participantCount, title: "Närvarande", icon: "person.2.fill")
+                    metricCard(value: training.observationCount, title: "Observationer", icon: "eye.fill")
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    Label("Träningstema", systemImage: "scope").font(.headline).foregroundStyle(BSKTheme.accent)
+                    Text(training.theme.isEmpty ? "Inget tema registrerat" : training.theme)
+                        .font(.subheadline).foregroundStyle(training.theme.isEmpty ? BSKTheme.muted : BSKTheme.secondary)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+            }
+            .padding(18)
+            .bskCompactTabClearance()
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
+        }
+        .background(BSKBackdrop())
+        .navigationTitle("Träning")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func metricCard(value: Int, title: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Image(systemName: icon).foregroundStyle(BSKTheme.accent)
+            Text("\(value)").font(.title.bold()).foregroundStyle(.white)
+            Text(title).font(.caption).foregroundStyle(BSKTheme.muted)
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.border))
     }
 }
 

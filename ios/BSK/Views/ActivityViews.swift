@@ -1567,7 +1567,7 @@ struct TodayDetail: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Efterarbete och spelarbedömning finns under Utvärdera.", systemImage: "checklist")
+                    Label("Efterarbete och spelarbedömning finns under matchens flik Utvärdera.", systemImage: "checklist")
                     Label("Spelarprofiler och utvecklingsmål finns under Spelare.", systemImage: "person.3")
                 }
                 .foregroundStyle(.secondary)

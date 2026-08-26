@@ -201,6 +201,7 @@ export type MobileActivity = {
   loanedPlayerNames: string[];
   finished: boolean;
   evaluationReady: boolean;
+  evaluationCompleted: boolean;
   acceptedCallupCount: number;
   declinedCallupCount: number;
   pendingCallupCount: number;
@@ -211,6 +212,17 @@ export type MobileActivity = {
   rosterSource: string;
   rosterLabel: string;
   rosterPlayerNames: string[];
+};
+
+export type MobileTraining = {
+  id: string;
+  date: string;
+  startTime: string | null;
+  title: string;
+  theme: string;
+  challengeContext: "safe" | "balanced" | "challenging";
+  participantCount: number;
+  observationCount: number;
 };
 
 export type MobileSelectionMatch = {
@@ -1170,6 +1182,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
     loaned_player_names: string;
     finished: number;
     evaluation_ready: boolean;
+    evaluation_completed: boolean;
     accepted_callup_count: number;
     declined_callup_count: number;
     pending_callup_count: number;
@@ -1239,6 +1252,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
                     <= now() AT TIME ZONE 'Europe/Stockholm'
               )
             ) AS evaluation_ready,
+            linked_match.evaluation_closed_at IS NOT NULL AS evaluation_completed,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'present'), 0) AS accepted_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'unknown'), 0) AS pending_callup_count,
@@ -1260,7 +1274,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
        AND da.activity_type = 'match'
-     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level
+     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level, linked_match.evaluation_closed_at
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
     scope.args
@@ -1285,6 +1299,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
       loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
       finished: Boolean(row.finished),
       evaluationReady: row.evaluation_ready,
+      evaluationCompleted: row.evaluation_completed,
       acceptedCallupCount: Number(row.accepted_callup_count),
       declinedCallupCount: Number(row.declined_callup_count),
       pendingCallupCount: Number(row.pending_callup_count),
@@ -1297,6 +1312,43 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
       rosterPlayerNames: roster?.players.map((player) => player.name) ?? [],
     };
   });
+}
+
+export async function listMobileTrainings(actor: CurrentUser): Promise<MobileTraining[]> {
+  requirePermission(actor, "view_players");
+  const scope = activityScope(actor);
+  const rows = await all<{
+    id: string;
+    activity_date: string;
+    start_time: string | null;
+    title: string;
+    theme: string;
+    challenge_context: MobileTraining["challengeContext"];
+    participant_count: number;
+    observation_count: number;
+  }>(
+    `SELECT da.id, da.activity_date, da.start_time, da.title, da.theme, da.challenge_context,
+            COUNT(DISTINCT ap.player_id) FILTER (WHERE ap.attendance_status = 'present') AS participant_count,
+            COUNT(DISTINCT o.id) AS observation_count
+     FROM development_activities da
+     LEFT JOIN development_activity_participation ap ON ap.activity_id = da.id
+     LEFT JOIN development_observations o ON o.activity_id = da.id
+     WHERE da.activity_type = 'training' AND ${scope.sql}
+     GROUP BY da.id
+     ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST, da.id DESC
+     LIMIT 160`,
+    scope.args
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    date: row.activity_date,
+    startTime: row.start_time,
+    title: row.title,
+    theme: row.theme,
+    challengeContext: row.challenge_context,
+    participantCount: Number(row.participant_count),
+    observationCount: Number(row.observation_count),
+  }));
 }
 
 export async function listMobileSelectionMatches(actor: CurrentUser): Promise<MobileSelectionMatch[]> {
