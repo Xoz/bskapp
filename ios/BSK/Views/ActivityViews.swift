@@ -257,7 +257,7 @@ struct ActivityDetail: View {
     let activity: ActivitySummary
 
     var body: some View {
-        MatchWorkspaceView(activity: activity, initialSection: .overview)
+        MatchWorkspaceView(activity: activity, initialSection: .roster)
     }
 }
 

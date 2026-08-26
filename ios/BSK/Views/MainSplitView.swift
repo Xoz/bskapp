@@ -165,13 +165,13 @@ struct MainSplitView: View {
         switch currentSection {
         case .today:
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                MatchWorkspaceView(activity: activity, initialSection: .overview)
+                MatchWorkspaceView(activity: activity, initialSection: .roster)
             } else {
                 TodayDetail()
             }
         case .matches:
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                MatchWorkspaceView(activity: activity, initialSection: .overview)
+                MatchWorkspaceView(activity: activity, initialSection: .roster)
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för trupp, matchcenter och observationer.", icon: "calendar")
             }
@@ -204,7 +204,7 @@ struct MainSplitView: View {
         if let activity = model.activities.first(where: { $0.id == id }) {
             MatchWorkspaceView(
                 activity: activity,
-                initialSection: currentSection == .selection ? .roster : .overview
+                initialSection: .roster
             )
         } else {
             ContentUnavailableView("Innehållet finns inte längre", systemImage: "questionmark.folder")
