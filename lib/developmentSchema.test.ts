@@ -339,6 +339,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain("activity.evaluationCompleted");
     expect(mobileDevelopment).toContain("export async function listMobileTrainings");
     expect(mobileDevelopment).toContain("da.activity_type = 'training'");
+    expect(mobileDevelopment).toContain("da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')");
+    expect(nativeMainSplitView).not.toContain('trainingSection(title: "Genomförda"');
     expect(mobileDevelopment).toContain("linked_match.evaluation_closed_at IS NOT NULL AS evaluation_completed");
   });
 

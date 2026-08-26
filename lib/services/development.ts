@@ -1343,9 +1343,11 @@ export async function listMobileTrainings(actor: CurrentUser): Promise<MobileTra
      LEFT JOIN development_activity_participation ap ON ap.activity_id = da.id
      LEFT JOIN development_observations o ON o.activity_id = da.id
      LEFT JOIN development_activity_callup_summaries cs ON cs.activity_id = da.id
-     WHERE da.activity_type = 'training' AND ${scope.sql}
+     WHERE da.activity_type = 'training'
+       AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+       AND ${scope.sql}
      GROUP BY da.id
-     ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST, da.id DESC
+     ORDER BY da.activity_date ASC, da.start_time ASC NULLS LAST, da.id ASC
      LIMIT 160`,
     scope.args
   );

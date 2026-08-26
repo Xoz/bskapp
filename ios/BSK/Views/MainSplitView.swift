@@ -889,19 +889,18 @@ private struct TrainingWorkspaceList: View {
                     eyebrow: "TRÄNING",
                     title: "Träningar",
                     message: "Träningspass, närvaro och samlad observationsdata på samma plats.",
-                    trailing: "\(model.trainings.count) pass"
+                    trailing: "\(upcoming.count) pass"
                 )
 
-                if model.trainings.isEmpty {
+                if upcoming.isEmpty {
                     ContentUnavailableView(
-                        "Inga träningar",
+                        "Inga kommande träningar",
                         systemImage: "figure.run",
-                        description: Text("Träningspass visas här när de har importerats.")
+                        description: Text("Kommande träningspass visas här när de har importerats.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 360)
                 } else {
-                    if !upcoming.isEmpty { trainingSection(title: "Kommande", trainings: upcoming) }
-                    if !completed.isEmpty { trainingSection(title: "Genomförda", trainings: completed) }
+                    trainingSection(title: "Kommande", trainings: upcoming)
                 }
             }
             .padding(horizontalSizeClass == .compact ? 14 : 18)
@@ -992,10 +991,6 @@ private struct TrainingWorkspaceList: View {
 
     private var upcoming: [TrainingSummary] {
         model.trainings.filter { $0.date >= today }.sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
-    }
-
-    private var completed: [TrainingSummary] {
-        model.trainings.filter { $0.date < today }.sorted { ($0.date, $0.startTime ?? "") > ($1.date, $1.startTime ?? "") }
     }
 
     private var today: String {
