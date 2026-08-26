@@ -11,20 +11,30 @@ struct BSKMatchLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("BSK").font(.caption.bold()).foregroundStyle(accent)
+                    Text("BSK")
+                        .font(.headline.bold())
+                        .foregroundStyle(accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.opponent).font(.caption.bold()).lineLimit(1)
+                    Text(context.state.opponent)
+                        .font(.headline.bold())
+                        .lineLimit(1)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    score(context.state).font(.title2.bold())
+                    score(context.state)
+                        .font(.system(size: 34, weight: .black, design: .rounded))
+                        .monospacedDigit()
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
-                        Text(phaseLabel(context.state)).font(.caption2.bold()).foregroundStyle(.secondary)
+                        Text(phaseLabel(context.state))
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
                         Spacer()
-                        activityTime(context.state).font(.headline.monospacedDigit())
+                        activityTime(context.state)
+                            .font(.title3.bold().monospacedDigit())
                     }
+                    .padding(.top, 4)
                 }
             } compactLeading: {
                 Text("BSK").font(.caption2.bold()).foregroundStyle(accent)
@@ -39,39 +49,50 @@ struct BSKMatchLiveActivityWidget: Widget {
     private let accent = Color(red: 23 / 255, green: 201 / 255, blue: 100 / 255)
 
     private func lockScreenView(_ context: ActivityViewContext<BSKMatchLiveActivityAttributes>) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
+        VStack(spacing: 13) {
+            HStack(alignment: .center) {
                 Label(phaseLabel(context.state), systemImage: context.state.phase == "countdown" ? "calendar.badge.clock" : "sportscourt.fill")
-                    .font(.system(size: 9, weight: .black))
-                    .tracking(1.1)
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(1.3)
                     .foregroundStyle(accent)
-                HStack(spacing: 6) {
-                    Text("BSK").font(.system(size: 17, weight: .black, design: .rounded))
-                    Text("mot").font(.caption.bold()).foregroundStyle(.secondary)
-                    Text(context.state.opponent)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                }
+                Spacer()
+                Text(context.state.phase == "live" ? "PERIOD \(context.state.period) AV \(context.state.periods)" : "MATCHDAG")
+                    .font(.system(size: 10, weight: .black))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 4) {
-                score(context.state)
-                    .font(.system(size: 29, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                HStack(spacing: 6) {
-                    Text(context.state.phase == "live" ? "P\(context.state.period)/\(context.state.periods)" : phaseLabel(context.state))
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(.secondary)
-                    activityTime(context.state)
-                        .font(.system(size: 15, weight: .black, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(accent)
+
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("BSK")
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(context.state.opponent)
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
                 }
+                Spacer(minLength: 8)
+                score(context.state)
+                    .font(.system(size: 43, weight: .black, design: .rounded))
+                    .monospacedDigit()
+            }
+
+            HStack {
+                Text(context.state.phase == "countdown" ? "NÄSTA MATCH" : phaseLabel(context.state))
+                    .font(.system(size: 10, weight: .black))
+                    .tracking(1)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                activityTime(context.state)
+                    .font(.system(size: 19, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(accent)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     private func score(_ state: BSKMatchLiveActivityAttributes.ContentState) -> some View {
