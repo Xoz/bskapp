@@ -241,6 +241,10 @@ final class AppModel: ObservableObject {
         try await api.updatePlayerDevelopment(playerID: playerID, update: update)
     }
 
+    func createPlayerConversation(playerID: Int, conversation: PlayerConversationCreate) async throws -> PlayerDetail {
+        try await api.createPlayerConversation(playerID: playerID, conversation: conversation)
+    }
+
     func activityPlayers(id: String) async throws -> [PlayerSummary] {
         try await api.activityPlayers(id: id)
     }

@@ -158,6 +158,18 @@ struct PlayerDetail: Codable, Identifiable {
         let createdAt: String
     }
 
+    struct Conversation: Codable, Identifiable {
+        let id: String
+        let date: String
+        let coachName: String
+        let coachSummary: String
+        let playerPerspective: String
+        let agreedActions: String
+        let followUpOn: String?
+        let developmentCheckpointId: String?
+        let createdAt: String
+    }
+
     let id: Int
     let name: String
     let jerseyNumber: Int?
@@ -171,6 +183,15 @@ struct PlayerDetail: Codable, Identifiable {
     let matchHistory: [MatchHistory]
     let goals: [Goal]
     let observations: [Observation]
+    let conversations: [Conversation]
+}
+
+struct PlayerConversationCreate: Encodable {
+    let date: String
+    let coachSummary: String
+    let playerPerspective: String
+    let agreedActions: String
+    let followUpOn: String?
 }
 
 struct PlayerDevelopment: Codable, Identifiable {

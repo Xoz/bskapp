@@ -104,6 +104,11 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 - Lokal testmiljo finns for utveckling utan prod-DB
 - Behörighet, gruppscope och liveåtkomst är härdade och regressionstestade. GDPR:s tekniska utdrags-, raderings- och återställningsdel är byggd; föreningsbeslut och driftinventering återstår.
 - Utvecklingstrappan (spelarutveckling 7v7->9v9) byggd 2026-07-09 och sammanfogad med spelarutvarderingen 2026-07-18. `/spelare/[id]/utveckling` ar nu den gemensamma arbetsytan for oversikt, aktuellt fardighetstrad och historiska avstamningar. `/utvardera` ar en kompatibilitetsredirect till `/utveckling/avstamning`. Varje avstamning sparar en snapshot i `development_checkpoints` + `development_checkpoint_skills` och uppdaterar aktuellt lage i `player_skill_status`; aldre SvFF-utvarderingar bevaras separat som lasbar historik.
+- Spelarsamtal är en separat historik i `player_conversations`, inte ett annat namn
+  på utvecklingsträdets checkpoints. Webb och native sparar samtalsdatum,
+  tränarens sammanfattning, spelarens perspektiv, överenskomna nästa steg och
+  frivilligt uppföljningsdatum. Den senaste utvecklingsbilden på eller före
+  samtalsdatumet länkas som kontext utan att samtalet ändrar trädet.
 
 ## Nasta steg
 

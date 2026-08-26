@@ -327,6 +327,18 @@ async function applyBaselineSchema(): Promise<void> {
       is_focus INTEGER NOT NULL DEFAULT 0 CHECK (is_focus IN (0, 1)),
       PRIMARY KEY (checkpoint_id, skill_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS player_conversations (
+      id TEXT PRIMARY KEY,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      conversation_date TEXT NOT NULL,
+      coach_name TEXT NOT NULL DEFAULT '',
+      coach_summary TEXT NOT NULL DEFAULT '',
+      player_perspective TEXT NOT NULL DEFAULT '',
+      agreed_actions TEXT NOT NULL DEFAULT '',
+      follow_up_on TEXT,
+      development_checkpoint_id TEXT REFERENCES development_checkpoints(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`,
     `CREATE TABLE IF NOT EXISTS development_activities (
       id TEXT PRIMARY KEY,
       activity_date TEXT NOT NULL,
@@ -1303,6 +1315,22 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_evaluation_players_waived_check CHECK (evaluation_players_waived IN (0, 1))");
     await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_closed_at IS 'Matchuppföljningen är avslutad och ska inte ligga kvar i arbetslistan'");
     await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_players_waived IS 'Spelarbedömningar avstod uttryckligen eftersom bedömningsunderlag saknades'");
+  } },
+  { id: "0016-player-conversations", run: async () => {
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS player_conversations (
+      id TEXT PRIMARY KEY,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      conversation_date TEXT NOT NULL,
+      coach_name TEXT NOT NULL DEFAULT '',
+      coach_summary TEXT NOT NULL DEFAULT '',
+      player_perspective TEXT NOT NULL DEFAULT '',
+      agreed_actions TEXT NOT NULL DEFAULT '',
+      follow_up_on TEXT,
+      development_checkpoint_id TEXT REFERENCES development_checkpoints(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    )`);
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_player_conversations_player_date ON player_conversations(player_id, conversation_date DESC, created_at DESC)");
+    await getClient().unsafe("COMMENT ON TABLE player_conversations IS 'Separat historik för genomförda spelarsamtal; utvecklingsträdets checkpoints används endast som valfri kontext'");
   } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";

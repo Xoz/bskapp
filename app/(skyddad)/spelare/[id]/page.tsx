@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCore } from "@/lib/developmentCore";
-import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
-import { getLatestDevelopmentCheckpoint, getPlayerSkillStatuses } from "@/lib/queries";
+import { closeDevelopmentGoal, createDevelopmentGoal, createPlayerConversation, savePlayerSelectionPreferences } from "@/lib/coreActions";
+import { getLatestDevelopmentCheckpoint, getPlayerConversations, getPlayerSkillStatuses } from "@/lib/queries";
+import { swedishToday } from "@/lib/dates";
 import Avatar from "@/components/Avatar";
 import PilotStartField from "@/components/PilotStartField";
 import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
@@ -24,26 +25,29 @@ function formatMatchDate(value: string | Date) {
 
 export default async function PlayerPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ mal?: string }>;
+  searchParams: Promise<{ mal?: string; samtal?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   const { id } = await params;
   const playerId = Number(id);
   if (!Number.isInteger(playerId)) notFound();
-  const [core, matchEvaluationTrend, skillStatuses, latestDevelopmentUpdate] = await Promise.all([
+  const canViewPrivate = user.permissions.includes("view_private_player_data");
+  const [core, matchEvaluationTrend, skillStatuses, latestDevelopmentUpdate, conversations] = await Promise.all([
     getPlayerCore(playerId),
     getPlayerMatchEvaluationTrend(playerId),
     getPlayerSkillStatuses(playerId),
     getLatestDevelopmentCheckpoint(playerId),
+    canViewPrivate ? getPlayerConversations(playerId) : Promise.resolve([]),
   ]);
   if (!core) notFound();
-  const { mal } = await searchParams;
+  const { mal, samtal } = await searchParams;
   const { summary, goalHistory, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
   const addGoal = createDevelopmentGoal.bind(null, playerId);
   const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
+  const saveConversation = createPlayerConversation.bind(null, playerId);
   const positionSummary = summary.player.preferred_position_primary || summary.player.position || "";
   const normalLevel = sanktanLevelLabel(Number(summary.player.preferred_level_primary));
   const challengeLevel = sanktanLevelLabel(Number(summary.player.preferred_level_secondary));
@@ -99,6 +103,79 @@ export default async function PlayerPage({ params, searchParams }: {
           <span>{latestDevelopmentUpdate ? `Senast uppdaterat ${latestDevelopmentUpdate.date}` : "Ingen sparad historik"}</span>
         </div>
       </section>
+
+      {canViewPrivate && <details className="core-panel core-form-panel" open={samtal === "tomt"}>
+        <summary className="core-section-head cursor-pointer list-none">
+          <div>
+            <p className="core-kicker">Spelarsamtal</p>
+            <h2 className="core-section-title mt-2">Samtal och överenskommelser</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="core-section-note">{conversations.length} sparade</span>
+            <span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span>
+          </div>
+        </summary>
+        {samtal === "sparat" && (
+          <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--ok-bg)" }}>
+            Spelarsamtalet är sparat.
+          </p>
+        )}
+        {samtal === "tomt" && (
+          <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--danger-bg)" }}>
+            Skriv minst en samtalsanteckning innan du sparar.
+          </p>
+        )}
+        {canEdit && (
+          <form action={saveConversation} className="grid md:grid-cols-2 gap-4 mt-5">
+            <label>
+              <span className="label">Samtalsdatum</span>
+              <input name="conversation_date" type="date" defaultValue={swedishToday()} required className="input mt-1" />
+            </label>
+            <label>
+              <span className="label">Följ upp</span>
+              <input name="follow_up_on" type="date" className="input mt-1" />
+            </label>
+            <label className="md:col-span-2">
+              <span className="label">Tränarens sammanfattning</span>
+              <textarea name="coach_summary" rows={3} maxLength={4000} className="input mt-1" placeholder="Vad tog ni upp och vad är tränarens bild?" />
+            </label>
+            <label className="md:col-span-2">
+              <span className="label">Spelarens perspektiv</span>
+              <textarea name="player_perspective" rows={3} maxLength={4000} className="input mt-1" placeholder="Vad uttryckte spelaren om trivsel, motivation och sin utveckling?" />
+            </label>
+            <label className="md:col-span-2">
+              <span className="label">Överenskomna nästa steg</span>
+              <textarea name="agreed_actions" rows={3} maxLength={4000} className="input mt-1" placeholder="Vad ska spelaren och tränarna göra fram till uppföljningen?" />
+            </label>
+            <div className="md:col-span-2 flex items-center gap-3 flex-wrap">
+              <button type="submit" className="btn-primary">Spara spelarsamtal</button>
+              <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                Samtalet sparas separat från utvecklingsträdet.
+              </span>
+            </div>
+          </form>
+        )}
+        {conversations.length > 0 && (
+          <div className="space-y-3 mt-5">
+            {conversations.map((conversation) => (
+              <article key={conversation.id} className="core-panel p-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h3>{formatMatchDate(conversation.conversation_date)}</h3>
+                  <span className="caption" style={{ color: "var(--ink-muted)" }}>
+                    {conversation.coach_name || "Tränare"}
+                    {conversation.follow_up_on ? ` · följ upp ${formatMatchDate(conversation.follow_up_on)}` : ""}
+                  </span>
+                </div>
+                <div className="space-y-2 mt-3">
+                  {conversation.coach_summary && <p className="body-small whitespace-pre-wrap"><strong>Tränarens sammanfattning:</strong> {conversation.coach_summary}</p>}
+                  {conversation.player_perspective && <p className="body-small whitespace-pre-wrap"><strong>Spelarens perspektiv:</strong> {conversation.player_perspective}</p>}
+                  {conversation.agreed_actions && <p className="body-small whitespace-pre-wrap"><strong>Nästa steg:</strong> {conversation.agreed_actions}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </details>}
 
       <details className="core-panel core-form-panel">
         <summary className="core-section-head cursor-pointer list-none">

@@ -72,6 +72,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /players/{playerId}/conversations:
+    parameters:
+      - name: playerId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    post:
+      summary: Spara ett genomfört spelarsamtal separat från utvecklingsträdet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlayerConversationCreate" }
+      responses:
+        "200":
+          description: Uppdaterad spelardetalj med samtalshistorik
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDetailEnvelope"
+        "400": { $ref: "#/components/responses/Invalid" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /player-match-loads:
     get:
       summary: Ordinarie Gulspelare sorterade efter matchutrymme
@@ -202,10 +226,36 @@ components:
       allOf:
         - { $ref: "#/components/schemas/PlayerSummary" }
         - type: object
-          required: [goals, observations]
+          required: [goals, observations, conversations]
           properties:
             goals: { type: array, items: { type: object, additionalProperties: true } }
             observations: { type: array, maxItems: 40, items: { type: object, additionalProperties: true } }
+            conversations:
+              type: array
+              maxItems: 30
+              items: { $ref: "#/components/schemas/PlayerConversation" }
+    PlayerConversation:
+      type: object
+      required: [id, date, coachName, coachSummary, playerPerspective, agreedActions, followUpOn, developmentCheckpointId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        coachName: { type: string }
+        coachSummary: { type: string }
+        playerPerspective: { type: string }
+        agreedActions: { type: string }
+        followUpOn: { type: [string, "null"], format: date }
+        developmentCheckpointId: { type: [string, "null"], format: uuid }
+        createdAt: { type: string }
+    PlayerConversationCreate:
+      type: object
+      required: [date, coachSummary, playerPerspective, agreedActions, followUpOn]
+      properties:
+        date: { type: string, format: date }
+        coachSummary: { type: string, maxLength: 4000 }
+        playerPerspective: { type: string, maxLength: 4000 }
+        agreedActions: { type: string, maxLength: 4000 }
+        followUpOn: { type: [string, "null"], format: date }
     SkillStatus:
       type: string
       enum: [not_started, training, almost, done]

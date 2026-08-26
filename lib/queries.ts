@@ -846,6 +846,31 @@ export async function getLatestDevelopmentCheckpoint(
   return { ...latest, skills: await getDevelopmentCheckpointSkills(latest.id) };
 }
 
+export interface PlayerConversation {
+  id: string;
+  player_id: number;
+  conversation_date: string;
+  coach_name: string;
+  coach_summary: string;
+  player_perspective: string;
+  agreed_actions: string;
+  follow_up_on: string | null;
+  development_checkpoint_id: string | null;
+  created_at: string;
+}
+
+export async function getPlayerConversations(playerId: number): Promise<PlayerConversation[]> {
+  return all<PlayerConversation>(
+    `SELECT id, player_id, conversation_date, coach_name, coach_summary,
+            player_perspective, agreed_actions, follow_up_on,
+            development_checkpoint_id, created_at
+     FROM player_conversations
+     WHERE player_id = ?
+     ORDER BY conversation_date DESC, created_at DESC`,
+    [playerId]
+  );
+}
+
 export interface TeamSkillOverviewRow {
   category: string;
   avgPercent: number;

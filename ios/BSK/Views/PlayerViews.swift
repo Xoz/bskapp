@@ -182,6 +182,7 @@ struct PlayerDetailView: View {
     @State private var loadError: String?
     @State private var showsNewGoal = false
     @State private var showsPreferences = false
+    @State private var showsNewConversation = false
 
     var body: some View {
         ScrollView {
@@ -262,6 +263,35 @@ struct PlayerDetailView: View {
                             .bskCardSurface()
                         }
                         .buttonStyle(.plain)
+                    }
+
+                    if canViewDevelopment {
+                        SectionTitle("Spelarsamtal")
+                        if canManageGoals {
+                            Button {
+                                showsNewConversation = true
+                            } label: {
+                                Label("Nytt spelarsamtal", systemImage: "person.2")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(horizontalSizeClass == .compact ? 13 : 16)
+                                    .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .foregroundStyle(BSKTheme.background)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if detail.conversations.isEmpty {
+                            Text("Inga spelarsamtal sparade ännu.")
+                                .font(.subheadline)
+                                .foregroundStyle(BSKTheme.secondary)
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .bskCardSurface()
+                        } else {
+                            ForEach(detail.conversations) { conversation in
+                                ConversationCard(conversation: conversation)
+                            }
+                        }
                     }
 
                     SectionTitle("Aktuellt fokus")
@@ -365,6 +395,9 @@ struct PlayerDetailView: View {
                         if canManageGoals && (detail?.activeGoals.count ?? 2) < 2 {
                             Button("Nytt utvecklingsmål", systemImage: "target") { showsNewGoal = true }
                         }
+                        if canManageGoals && canViewDevelopment {
+                            Button("Nytt spelarsamtal", systemImage: "person.2") { showsNewConversation = true }
+                        }
                         if canManagePreferences {
                             Button("Position och nivå", systemImage: "slider.horizontal.3") { showsPreferences = true }
                         }
@@ -385,6 +418,11 @@ struct PlayerDetailView: View {
                 PlayerPreferencesSheet(preferences: detail.preferences) { preferences in
                     self.detail = try await model.savePlayerPreferences(playerID: playerID, preferences: preferences)
                 }
+            }
+        }
+        .sheet(isPresented: $showsNewConversation) {
+            NewConversationSheet { conversation in
+                detail = try await model.createPlayerConversation(playerID: playerID, conversation: conversation)
             }
         }
         .task(id: playerID) {
@@ -430,6 +468,132 @@ struct PlayerDetailView: View {
     private func assessmentLevelLabel(_ value: String) -> String {
         value == "2" ? "Svår" : value == "3" ? "Medel" : value == "4" ? "Lätt" : "Ej satt"
     }
+}
+
+private struct ConversationCard: View {
+    let conversation: PlayerDetail.Conversation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(conversation.date).font(.headline)
+                Spacer()
+                Text(conversation.coachName).font(.caption).foregroundStyle(BSKTheme.muted)
+            }
+            if !conversation.coachSummary.isEmpty {
+                conversationText("Tränarens sammanfattning", conversation.coachSummary)
+            }
+            if !conversation.playerPerspective.isEmpty {
+                conversationText("Spelarens perspektiv", conversation.playerPerspective)
+            }
+            if !conversation.agreedActions.isEmpty {
+                conversationText("Överenskomna nästa steg", conversation.agreedActions)
+            }
+            if let followUpOn = conversation.followUpOn {
+                Label("Följ upp \(followUpOn)", systemImage: "calendar")
+                    .font(.caption.bold())
+                    .foregroundStyle(BSKTheme.accent)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .bskCardSurface()
+    }
+
+    private func conversationText(_ title: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title).font(.caption.bold()).foregroundStyle(BSKTheme.secondary)
+            Text(text).font(.subheadline)
+        }
+    }
+}
+
+private struct NewConversationSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let save: (PlayerConversationCreate) async throws -> Void
+    @State private var date = Date()
+    @State private var coachSummary = ""
+    @State private var playerPerspective = ""
+    @State private var agreedActions = ""
+    @State private var hasFollowUp = false
+    @State private var followUpDate = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Samtal") {
+                    DatePicker("Samtalsdatum", selection: $date, displayedComponents: .date)
+                    TextField("Tränarens sammanfattning", text: $coachSummary, axis: .vertical)
+                        .lineLimit(3...8)
+                    TextField("Spelarens perspektiv", text: $playerPerspective, axis: .vertical)
+                        .lineLimit(3...8)
+                    TextField("Överenskomna nästa steg", text: $agreedActions, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+                Section("Uppföljning") {
+                    Toggle("Sätt uppföljningsdatum", isOn: $hasFollowUp)
+                    if hasFollowUp {
+                        DatePicker("Följ upp", selection: $followUpDate, displayedComponents: .date)
+                    }
+                }
+                Section {
+                    Text("Samtalet sparas separat från utvecklingsträdet. Trädets aktuella bild kopplas som kontext.")
+                        .font(.caption)
+                        .foregroundStyle(BSKTheme.secondary)
+                }
+                if let errorMessage {
+                    Text(errorMessage).foregroundStyle(BSKTheme.danger)
+                }
+            }
+            .bskListSurface()
+            .navigationTitle("Nytt spelarsamtal")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Avbryt") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Spara") { Task { await submit() } }
+                        .disabled(isSaving || isEmpty)
+                }
+            }
+            .interactiveDismissDisabled(isSaving)
+        }
+    }
+
+    private var isEmpty: Bool {
+        [coachSummary, playerPerspective, agreedActions]
+            .allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    @MainActor
+    private func submit() async {
+        isSaving = true
+        errorMessage = nil
+        do {
+            try await save(PlayerConversationCreate(
+                date: Self.dateFormatter.string(from: date),
+                coachSummary: coachSummary.trimmingCharacters(in: .whitespacesAndNewlines),
+                playerPerspective: playerPerspective.trimmingCharacters(in: .whitespacesAndNewlines),
+                agreedActions: agreedActions.trimmingCharacters(in: .whitespacesAndNewlines),
+                followUpOn: hasFollowUp ? Self.dateFormatter.string(from: followUpDate) : nil
+            ))
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSaving = false
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 private struct PlayerDevelopmentView: View {

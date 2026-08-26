@@ -73,6 +73,15 @@ actor APIClient {
         )
     }
 
+    func createPlayerConversation(playerID: Int, conversation: PlayerConversationCreate) async throws -> PlayerDetail {
+        try await perform(
+            path: "/players/\(playerID)/conversations",
+            method: "POST",
+            body: encoder.encode(conversation),
+            authorized: true
+        )
+    }
+
     func createGoal(playerID: Int, title: String, evidenceHint: String, reviewOn: String?) async throws -> PlayerDetail {
         struct Body: Encodable { let title: String; let evidenceHint: String; let reviewOn: String? }
         return try await perform(

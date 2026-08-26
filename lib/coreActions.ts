@@ -386,3 +386,48 @@ export async function savePlayerSelectionPreferences(playerId: number, formData:
   revalidatePath(`/spelare/${playerId}`);
   revalidatePath("/uttagning");
 }
+
+export async function createPlayerConversation(playerId: number, formData: FormData) {
+  await requireCorePermission("manage_evaluations");
+  if (!(await canAccessPlayer(playerId))) redirect("/spelare");
+
+  const dateRaw = String(formData.get("conversation_date") ?? "").slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : swedishToday();
+  const coachSummary = String(formData.get("coach_summary") ?? "").trim().slice(0, 4000);
+  const playerPerspective = String(formData.get("player_perspective") ?? "").trim().slice(0, 4000);
+  const agreedActions = String(formData.get("agreed_actions") ?? "").trim().slice(0, 4000);
+  const followUpRaw = String(formData.get("follow_up_on") ?? "").slice(0, 10);
+  const followUpOn = validDateOrEmpty(followUpRaw) ? followUpRaw : "";
+  if (!coachSummary && !playerPerspective && !agreedActions) {
+    redirect(`/spelare/${playerId}?samtal=tomt`);
+  }
+
+  const latestCheckpoint = await get<{ id: string }>(
+    `SELECT id FROM development_checkpoints
+     WHERE player_id = ? AND date <= ?
+     ORDER BY date DESC, created_at DESC LIMIT 1`,
+    [playerId, date]
+  );
+  const coachName = (await getCoachName()) ?? "Tränare";
+  await run(
+    `INSERT INTO player_conversations
+       (id, player_id, conversation_date, coach_name, coach_summary,
+        player_perspective, agreed_actions, follow_up_on, development_checkpoint_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)`,
+    [
+      crypto.randomUUID(),
+      playerId,
+      date,
+      coachName,
+      coachSummary,
+      playerPerspective,
+      agreedActions,
+      followUpOn,
+      latestCheckpoint?.id ?? null,
+    ]
+  );
+  const player = await get<{ name: string }>("SELECT name FROM players WHERE id = ?", [playerId]);
+  await logActivity(coachName, "Sparade spelarsamtal", player?.name ?? `spelare ${playerId}`);
+  revalidatePath(`/spelare/${playerId}`);
+  redirect(`/spelare/${playerId}?samtal=sparat`);
+}

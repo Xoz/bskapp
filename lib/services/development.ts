@@ -90,6 +90,27 @@ export type MobilePlayerDetail = MobilePlayerSummary & {
     coachName: string;
     createdAt: string;
   }[];
+  conversations: MobilePlayerConversation[];
+};
+
+export type MobilePlayerConversation = {
+  id: string;
+  date: string;
+  coachName: string;
+  coachSummary: string;
+  playerPerspective: string;
+  agreedActions: string;
+  followUpOn: string | null;
+  developmentCheckpointId: string | null;
+  createdAt: string;
+};
+
+export type CreateMobilePlayerConversationInput = {
+  date: string;
+  coachSummary: string;
+  playerPerspective: string;
+  agreedActions: string;
+  followUpOn: string | null;
 };
 
 export type MobilePlayerDevelopment = {
@@ -346,6 +367,18 @@ type ObservationRow = {
   evidence: MobileEvidence;
   note: string;
   coach_name: string;
+  created_at: string;
+};
+
+type PlayerConversationRow = {
+  id: string;
+  conversation_date: string;
+  coach_name: string;
+  coach_summary: string;
+  player_perspective: string;
+  agreed_actions: string;
+  follow_up_on: string | null;
+  development_checkpoint_id: string | null;
   created_at: string;
 };
 
@@ -622,7 +655,7 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
   }
   const summary = (await listMobilePlayers(actor)).find((player) => player.id === playerId);
   if (!summary) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
-  const [profile, teams, stats, matchHistory, goals, observations] = await Promise.all([
+  const [profile, teams, stats, matchHistory, goals, observations, conversations] = await Promise.all([
     get<{
       preferred_position_primary: string;
       preferred_position_secondary: string;
@@ -694,6 +727,15 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
        LIMIT 40`,
       [playerId]
     ),
+    actor.permissions.includes("view_private_player_data") ? all<PlayerConversationRow>(
+      `SELECT id, conversation_date, coach_name, coach_summary, player_perspective,
+              agreed_actions, follow_up_on, development_checkpoint_id, created_at
+       FROM player_conversations
+       WHERE player_id = ?
+       ORDER BY conversation_date DESC, created_at DESC
+       LIMIT 30`,
+      [playerId]
+    ) : Promise.resolve([] as PlayerConversationRow[]),
   ]);
   return {
     ...summary,
@@ -744,7 +786,74 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
       coachName: observation.coach_name,
       createdAt: observation.created_at,
     })),
+    conversations: conversations.map((conversation) => ({
+      id: conversation.id,
+      date: conversation.conversation_date,
+      coachName: conversation.coach_name,
+      coachSummary: conversation.coach_summary,
+      playerPerspective: conversation.player_perspective,
+      agreedActions: conversation.agreed_actions,
+      followUpOn: conversation.follow_up_on,
+      developmentCheckpointId: conversation.development_checkpoint_id,
+      createdAt: conversation.created_at,
+    })),
   };
+}
+
+export async function createMobilePlayerConversation(
+  actor: CurrentUser,
+  playerId: number,
+  input: CreateMobilePlayerConversationInput
+): Promise<MobilePlayerDetail> {
+  requirePermission(actor, "manage_evaluations");
+  if (!Number.isInteger(playerId) || playerId < 1) {
+    throw new DevelopmentServiceError("invalid", "Ogiltigt spelar-id.", 400);
+  }
+  const player = (await accessiblePlayers(actor)).find((candidate) => candidate.id === playerId);
+  if (!player) throw new DevelopmentServiceError("not_found", "Spelaren hittades inte.", 404);
+
+  const date = String(input?.date ?? "").slice(0, 10);
+  const coachSummary = String(input?.coachSummary ?? "").trim();
+  const playerPerspective = String(input?.playerPerspective ?? "").trim();
+  const agreedActions = String(input?.agreedActions ?? "").trim();
+  const followUpOn = input?.followUpOn == null ? "" : String(input.followUpOn).slice(0, 10);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date)
+    || (followUpOn !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(followUpOn))
+    || [coachSummary, playerPerspective, agreedActions].some((value) => value.length > 4000)
+  ) {
+    throw new DevelopmentServiceError("invalid", "Kontrollera datum och samtalsanteckningar.", 400);
+  }
+  if (!coachSummary && !playerPerspective && !agreedActions) {
+    throw new DevelopmentServiceError("invalid", "Skriv minst en samtalsanteckning.", 400);
+  }
+
+  const latestCheckpoint = await get<{ id: string }>(
+    `SELECT id FROM development_checkpoints
+     WHERE player_id = ? AND date <= ?
+     ORDER BY date DESC, created_at DESC LIMIT 1`,
+    [playerId, date]
+  );
+  const coachName = actor.name.trim().slice(0, 120) || "Tränare";
+  await run(
+    `INSERT INTO player_conversations
+       (id, player_id, conversation_date, coach_name, coach_summary,
+        player_perspective, agreed_actions, follow_up_on, development_checkpoint_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)`,
+    [
+      crypto.randomUUID(),
+      playerId,
+      date,
+      coachName,
+      coachSummary,
+      playerPerspective,
+      agreedActions,
+      followUpOn,
+      latestCheckpoint?.id ?? null,
+    ]
+  );
+  await logActivity(coachName, "Sparade spelarsamtal", player.name);
+  return getMobilePlayer(actor, playerId);
 }
 
 export async function getMobilePlayerDevelopment(actor: CurrentUser, playerId: number): Promise<MobilePlayerDevelopment> {

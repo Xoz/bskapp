@@ -3,7 +3,7 @@ import { all, batch, get, run } from "./db";
 export async function exportPlayerData(playerId: number, actor: string) {
   const player = await get<Record<string, unknown>>("SELECT * FROM players WHERE id = ?", [playerId]);
   if (!player) return null;
-  const [evaluations, evaluationScores, selfEvaluations, matchStatistics, matchEvaluations, attendance, skillStatuses, skillNotes, checkpoints, checkpointSkills, memberships, accountLinks] = await Promise.all([
+  const [evaluations, evaluationScores, selfEvaluations, matchStatistics, matchEvaluations, attendance, skillStatuses, skillNotes, checkpoints, checkpointSkills, conversations, memberships, accountLinks] = await Promise.all([
     all<Record<string, unknown>>("SELECT * FROM evaluations WHERE player_id = ? ORDER BY date, id", [playerId]),
     all<Record<string, unknown>>("SELECT es.* FROM evaluation_scores es JOIN evaluations e ON e.id=es.evaluation_id WHERE e.player_id = ? ORDER BY es.evaluation_id,es.skill_id", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM player_self_evals WHERE player_id = ? ORDER BY created_at,id", [playerId]),
@@ -14,6 +14,7 @@ export async function exportPlayerData(playerId: number, actor: string) {
     all<Record<string, unknown>>("SELECT * FROM player_skill_notes WHERE player_id = ?", [playerId]),
     all<Record<string, unknown>>("SELECT * FROM development_checkpoints WHERE player_id = ? ORDER BY date,id", [playerId]),
     all<Record<string, unknown>>("SELECT dcs.* FROM development_checkpoint_skills dcs JOIN development_checkpoints dc ON dc.id=dcs.checkpoint_id WHERE dc.player_id = ? ORDER BY dcs.checkpoint_id,dcs.skill_id", [playerId]),
+    all<Record<string, unknown>>("SELECT * FROM player_conversations WHERE player_id = ? ORDER BY conversation_date,id", [playerId]),
     all<Record<string, unknown>>("SELECT pgm.*,g.name group_name,g.group_type FROM player_group_memberships pgm JOIN groups g ON g.id=pgm.group_id WHERE pgm.player_id = ? ORDER BY g.name", [playerId]),
     all<Record<string, unknown>>("SELECT upl.relation,u.email,u.name FROM user_player_links upl JOIN users u ON u.id=upl.user_id WHERE upl.player_id = ? ORDER BY u.email", [playerId]),
   ]);
@@ -32,6 +33,7 @@ export async function exportPlayerData(playerId: number, actor: string) {
     skillNotes,
     developmentCheckpoints: checkpoints,
     developmentCheckpointSkills: checkpointSkills,
+    playerConversations: conversations,
     groupMemberships: memberships,
     accountLinks,
   };
