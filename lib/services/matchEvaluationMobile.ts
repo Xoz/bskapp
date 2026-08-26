@@ -215,6 +215,11 @@ export async function saveMobileMatchEvaluation(
     const player = byPlayer.get(answer.playerId);
     if (!player || seen.has(answer.playerId)) throw new DevelopmentServiceError("invalid", "Ogiltigt spelarunderlag.", 400);
     seen.add(answer.playerId);
+    const hasPartialAssessment = !answer.skipped && Boolean(answer.selfComparison || answer.matchImpact);
+    if (hasPartialAssessment && (!answer.selfComparison || !answer.matchImpact)) {
+      if (evaluationContext.completeWithoutPlayerEvaluations === true) continue;
+      throw new DevelopmentServiceError("invalid", "Fyll i båda bedömningarna för spelaren.", 400);
+    }
     if (!answer.skipped && (!answer.selfComparison || !answer.matchImpact)) continue;
     if (
       (!answer.skipped && (!SELF_VALUES.has(answer.selfComparison!) || !IMPACT_VALUES.has(answer.matchImpact!)))

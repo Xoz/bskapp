@@ -12,7 +12,23 @@ struct RootView: View {
             case .loading:
                 ZStack {
                     BSKBackdrop()
-                    VStack(spacing: 18) {
+                    if let restoreError = model.restoreError {
+                        VStack(spacing: 16) {
+                            Image(systemName: "wifi.exclamationmark")
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundStyle(BSKTheme.warning)
+                            Text("Kunde inte ansluta").font(.title2.bold())
+                            Text(restoreError)
+                                .font(.subheadline)
+                                .foregroundStyle(BSKTheme.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Försök igen") { Task { await model.restore() } }
+                                .buttonStyle(.borderedProminent)
+                                .tint(BSKTheme.accent)
+                        }
+                        .padding(28)
+                    } else {
+                        VStack(spacing: 18) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 22, style: .continuous).fill(BSKTheme.hero)
                             Text("+90").font(.system(size: 26, weight: .black, design: .rounded)).foregroundStyle(BSKTheme.accent)
@@ -23,6 +39,7 @@ struct RootView: View {
                             .font(.system(size: 10, weight: .bold))
                             .tracking(1.8)
                             .foregroundStyle(BSKTheme.muted)
+                        }
                     }
                 }
                 .task { await model.restore() }

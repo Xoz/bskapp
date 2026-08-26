@@ -1,7 +1,8 @@
 import { type CurrentUser } from "../auth";
-import { all, get } from "../db";
+import { get } from "../db";
 import { finishMatch, getLiveState, recordEvent, setClock, undoLastEvent } from "../live";
 import { OPPONENT_GOAL } from "../liveTypes";
+import { resolveMatchRoster } from "../matchRoster";
 import { DevelopmentServiceError } from "./development";
 
 export type MobileLiveAction =
@@ -84,17 +85,19 @@ async function requirePrimaryTeamMatch(matchId: number) {
 }
 
 async function getMobileLiveState(matchId: number) {
-  const state = await getLiveState(matchId, true);
-  const squad = (await all<{ player_id: number }>(
-    "SELECT player_id FROM match_squad WHERE match_id = ?",
-    [matchId]
-  )).map((row) => row.player_id);
-  const allowed = new Set(squad);
+  const [state, roster] = await Promise.all([
+    getLiveState(matchId, true),
+    resolveMatchRoster(matchId),
+  ]);
+  const players = roster?.players ?? [];
+  const allowed = new Set(players.map((player) => player.id));
 
   return {
     ...state,
-    players: state.players.filter((player) => allowed.has(player.id)),
+    players,
     onField: state.onField.filter((playerId) => allowed.has(playerId)),
+    rosterSource: roster?.source ?? "none",
+    rosterLabel: roster?.label ?? "Ingen trupp",
   };
 }
 

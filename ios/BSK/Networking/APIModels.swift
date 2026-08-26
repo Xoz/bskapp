@@ -247,6 +247,9 @@ struct ActivitySummary: Codable, Identifiable {
     let hasConfirmedSquad: Bool
     let squadPlayerNames: [String]
     let acceptedPlayerNames: [String]
+    let rosterSource: String?
+    let rosterLabel: String?
+    let rosterPlayerNames: [String]?
 }
 
 struct LiveMatchState: Codable {

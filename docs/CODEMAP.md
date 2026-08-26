@@ -30,8 +30,9 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | Vill ändra | Läs dessa filer |
 | --- | --- |
 | **Primär utvecklingsloop** (Idag → mål → observation → historik; native Idag visar Gulspelarnas matchutrymme och Spelare startar lagfiltrerad på Gul; endast permanenta `subgroup`-lag blir filter) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `lib/matchCapacity.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `app/api/mobile/v1/{players,player-match-loads}/`, `components/{CoreActivityCard,PilotStartField}.tsx`, `ios/BSK/Views/{ActivityViews,PlayerViews}.swift` |
+| **Gemensamt native-matchnav** (Översikt, Trupp, Matchcenter och Utvärdera från alla matchingångar; behörighets- och matchstatusstyrt) | `ios/BSK/Views/{ActivityViews,MainSplitView}.swift`, `ios/BSK/AppModel.swift`, `lib/services/{development,matchEvaluationMobile,mobileLive}.ts`, `lib/matchRoster.ts` |
 | **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
-| **Live-matchrapportering** (klocka, mål, byten, händelser) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
+| **Live-matchrapportering** (klocka, mål, byten, händelser; gemensam truppkälla) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/matchRoster.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
 | **Match: skapa/redigera/ta bort, cup, nivå** | `lib/actions.ts` (save/delete/updateCup/setMatchLevel…), `components/MatchForm.tsx`, `app/(skyddad)/matcher/` |
@@ -89,6 +90,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
 - **matchCapacity.ts**: ren 0–100-mätare för nyligt matchspel; varje match kostar 50 procentenheter och avdraget tonas bort under sju dygn.
 - **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, `matchEvaluationIsOpen` (öppnar 75 minuter efter avspark), konsensus/avvikelse och spelartrend utan poäng eller ELO.
+- **matchRoster.ts**: gemensam resolver för vilka spelare som hör till en match. Spelade matcher prioriterar `match_players`; kommande matcher prioriterar `match_squad`, därefter uttagningsbeslut/deltagande och accepterade kallelser.
 
 ---
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 private enum AppSection: String, CaseIterable, Identifiable {
     case today
-    case observe
+    case matches
     case evaluate
     case players
     case selection
@@ -12,7 +12,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .today: return "Idag"
-        case .observe: return "Matcher"
+        case .matches: return "Matcher"
         case .evaluate: return "Utvärdera"
         case .players: return "Spelare"
         case .selection: return "Uttagning"
@@ -22,7 +22,7 @@ private enum AppSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .today: return "sun.max"
-        case .observe: return "calendar"
+        case .matches: return "calendar"
         case .evaluate: return "checklist"
         case .players: return "person.3"
         case .selection: return "sportscourt"
@@ -35,8 +35,8 @@ private enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .today:
             return ["admin", "head_coach", "coach", "leader"].contains(user.primaryRole)
-        case .observe:
-            return user.permissions.contains("manage_evaluations")
+        case .matches:
+            return user.permissions.contains("view_matches")
         case .evaluate:
             return user.permissions.contains("manage_evaluations")
         case .players:
@@ -146,7 +146,7 @@ struct MainSplitView: View {
         switch currentSection {
         case .today:
             TodayList(selection: $selectedActivity)
-        case .observe:
+        case .matches:
             ActivityWorkspaceList(selection: $selectedActivity)
         case .evaluate:
             MatchEvaluationList(selection: $selectedEvaluation)
@@ -165,21 +165,20 @@ struct MainSplitView: View {
         switch currentSection {
         case .today:
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                ActivityDetail(activity: activity)
+                MatchWorkspaceView(activity: activity, initialSection: .overview)
             } else {
                 TodayDetail()
             }
-        case .observe:
+        case .matches:
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
-                ActivityDetail(activity: activity)
+                MatchWorkspaceView(activity: activity, initialSection: .overview)
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för trupp, matchcenter och observationer.", icon: "calendar")
             }
         case .evaluate:
-            if let selectedEvaluation {
-                MatchEvaluationView(matchID: selectedEvaluation) {
-                    self.selectedEvaluation = nil
-                }
+            if let selectedEvaluation,
+               let activity = model.activities.first(where: { $0.matchId == selectedEvaluation }) {
+                MatchWorkspaceView(activity: activity, initialSection: .evaluation)
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Fortsätt eller starta en spelarutvärdering.", icon: "checklist")
             }
@@ -190,8 +189,8 @@ struct MainSplitView: View {
                 EmptyWorkspaceDetail(title: "Välj en spelare", message: "Profil, fokus och historik öppnas här.", icon: "person.crop.circle")
             }
         case .selection:
-            if let id = selectedActivity, let match = model.selectionMatches.first(where: { $0.id == id }) {
-                PremiumSelectionDetail(match: match)
+            if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
+                MatchWorkspaceView(activity: activity, initialSection: .roster)
             } else {
                 EmptyWorkspaceDetail(title: "Välj en match", message: "Bygg och spara matchens trupp här.", icon: "sportscourt")
             }
@@ -202,10 +201,11 @@ struct MainSplitView: View {
 
     @ViewBuilder
     private func compactStringDestination(_ id: String) -> some View {
-        if currentSection == .selection, let match = model.selectionMatches.first(where: { $0.id == id }) {
-            PremiumSelectionDetail(match: match)
-        } else if let activity = model.activities.first(where: { $0.id == id }) {
-            ActivityDetail(activity: activity)
+        if let activity = model.activities.first(where: { $0.id == id }) {
+            MatchWorkspaceView(
+                activity: activity,
+                initialSection: currentSection == .selection ? .roster : .overview
+            )
         } else {
             ContentUnavailableView("Innehållet finns inte längre", systemImage: "questionmark.folder")
         }
@@ -364,17 +364,17 @@ struct MainSplitView: View {
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: item.icon)
-                            .font(.system(size: 18, weight: currentSection == item ? .bold : .medium))
+                            .font(.body.weight(currentSection == item ? .bold : .medium))
                         Text(item.title)
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.caption2.bold())
                             .lineLimit(1)
                     }
                     .foregroundStyle(currentSection == item ? BSKTheme.backgroundDeep : BSKTheme.muted)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 54)
+                    .frame(height: 50)
                     .background(
                         currentSection == item ? BSKTheme.accent : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                     )
                     .contentShape(Rectangle())
                 }
@@ -383,12 +383,13 @@ struct MainSplitView: View {
                 .accessibilityAddTraits(currentSection == item ? .isSelected : [])
             }
         }
-        .padding(6)
-        .background(BSKTheme.elevated.opacity(0.98), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
-        .shadow(color: .black.opacity(0.38), radius: 20, y: 8)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 5)
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+        .padding(.bottom, 4)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle().fill(BSKTheme.border).frame(height: 1)
+        }
     }
 }
 
@@ -423,6 +424,7 @@ private struct SettingsList: View {
 private struct AccountDetail: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showsPendingSyncAlert = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: horizontalSizeClass == .compact ? 14 : 22) {
@@ -441,7 +443,11 @@ private struct AccountDetail: View {
                 VStack(spacing: 0) {
                     accountRow("Miljö", value: "BSK F2014", icon: "shield.lefthalf.filled")
                     Divider().overlay(BSKTheme.hairline)
-                    accountRow("Status", value: "Synkroniserad", icon: "checkmark.icloud.fill")
+                    accountRow(
+                        "Status",
+                        value: model.hasPendingOfflineWork ? "Väntar på synkning" : "Synkroniserad",
+                        icon: model.hasPendingOfflineWork ? "arrow.triangle.2.circlepath" : "checkmark.icloud.fill"
+                    )
                     Divider().overlay(BSKTheme.hairline)
                     accountRow("Åtkomst", value: "Behörighetsstyrd", icon: "lock.shield.fill")
                     Divider().overlay(BSKTheme.hairline)
@@ -450,7 +456,13 @@ private struct AccountDetail: View {
                 .padding(.horizontal, 16)
                 .bskCardSurface()
 
-                Button(role: .destructive) { Task { await model.signOut() } } label: {
+                Button(role: .destructive) {
+                    if model.hasPendingOfflineWork {
+                        showsPendingSyncAlert = true
+                    } else {
+                        Task { await model.signOut() }
+                    }
+                } label: {
                     Label("Logga ut", systemImage: "rectangle.portrait.and.arrow.right")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
@@ -467,6 +479,12 @@ private struct AccountDetail: View {
         }
         .navigationTitle("Konto")
         .background(BSKBackdrop())
+        .alert("Synkning krävs", isPresented: $showsPendingSyncAlert) {
+            Button("Avbryt", role: .cancel) {}
+            Button("Försök synka") { Task { await model.reload() } }
+        } message: {
+            Text("Det finns observationer eller utvärderingar som bara finns på den här enheten. Synka dem innan du loggar ut så att inget går förlorat.")
+        }
     }
 
     private var appVersion: String {
@@ -513,12 +531,16 @@ private struct ActivityWorkspaceList: View {
                     if !upcomingMatches.isEmpty {
                         matchSection(title: "Kommande", matches: upcomingMatches)
                     }
+                    if !overdueMatches.isEmpty {
+                        matchSection(title: "Behöver avslutas", matches: overdueMatches)
+                    }
                     if !playedMatches.isEmpty {
                         matchSection(title: "Spelade", matches: playedMatches)
                     }
                 }
             }
             .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .bskCompactTabClearance()
             .frame(maxWidth: 980)
             .frame(maxWidth: .infinity)
         }
@@ -650,8 +672,14 @@ private struct ActivityWorkspaceList: View {
 
     private var upcomingMatches: [ActivitySummary] {
         model.activities
-            .filter { !$0.evaluationReady }
+            .filter { !$0.evaluationReady && $0.date >= today }
             .sorted(by: ascendingMatchOrder)
+    }
+
+    private var overdueMatches: [ActivitySummary] {
+        model.activities
+            .filter { !$0.evaluationReady && $0.date < today }
+            .sorted { ascendingMatchOrder($1, $0) }
     }
 
     private var playedMatches: [ActivitySummary] {
@@ -677,11 +705,11 @@ private struct ActivityWorkspaceList: View {
     }
 
     private func displayedRoster(_ activity: ActivitySummary) -> [String] {
-        activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
+        activity.rosterPlayerNames ?? (activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames)
     }
 
     private func rosterLabel(_ activity: ActivitySummary) -> String {
-        activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"
+        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")
     }
 
     private func levelColor(_ level: String?) -> Color {
@@ -733,6 +761,7 @@ private struct PremiumSelectionList: View {
             .padding(.horizontal, horizontalSizeClass == .compact ? 20 : 28)
             .padding(.top, 20)
             .padding(.bottom, 32)
+            .bskCompactTabClearance()
             .frame(maxWidth: 1040)
             .frame(maxWidth: .infinity)
         }
@@ -957,11 +986,12 @@ private struct PremiumSelectionList: View {
     }
 }
 
-private struct PremiumSelectionDetail: View {
+struct PremiumSelectionDetail: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let match: SelectionMatchSummary
     @State private var workspace: SelectionWorkspace?
+    @State private var loadError: String?
     @State private var decisions: [Int: String] = [:]
     @State private var isSaving = false
     @State private var savedMessage: String?
@@ -975,6 +1005,15 @@ private struct PremiumSelectionDetail: View {
                 .safeAreaInset(edge: .bottom) {
                     if horizontalSizeClass != .compact { saveBar }
                 }
+            } else if let loadError {
+                ContentUnavailableView {
+                    Label("Kunde inte läsa uttagningen", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(loadError)
+                } actions: {
+                    Button("Försök igen") { Task { await load() } }
+                }
+                .background(BSKBackdrop())
             } else {
                 ZStack { BSKBackdrop(); ProgressView("Förbereder uttagning…").tint(BSKTheme.accent) }
             }
@@ -1256,7 +1295,9 @@ private struct PremiumSelectionDetail: View {
             .font(.headline).foregroundStyle(BSKTheme.backgroundDeep).padding(.horizontal, 18).frame(height: 56)
         }
         .buttonStyle(.plain).background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .disabled(isSaving).padding(.horizontal, 14).padding(.bottom, 6)
+        .disabled(isSaving || selectedCount == 0)
+        .opacity(isSaving || selectedCount == 0 ? 0.5 : 1)
+        .padding(.horizontal, 14).padding(.bottom, 6)
         .background(.ultraThinMaterial)
     }
 
@@ -1271,11 +1312,15 @@ private struct PremiumSelectionDetail: View {
     private func callupLabel(_ status: String) -> String { status == "accepted" ? "Ja" : status == "declined" ? "Nej" : "Väntar" }
 
     @MainActor private func load() async {
+        loadError = nil
         do {
             let loaded = try await model.selectionWorkspace(id: match.id)
             workspace = loaded
             decisions = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.decision) })
-        } catch { model.errorMessage = error.localizedDescription }
+        } catch {
+            loadError = error.localizedDescription
+            model.errorMessage = error.localizedDescription
+        }
     }
 
     @MainActor private func save() async {
@@ -1287,6 +1332,7 @@ private struct PremiumSelectionDetail: View {
         do {
             self.workspace = try await model.saveSelection(id: match.id, decisions: payload)
             savedMessage = "Trupp bekräftad"
+            await model.reload()
         } catch { model.errorMessage = error.localizedDescription }
     }
 }

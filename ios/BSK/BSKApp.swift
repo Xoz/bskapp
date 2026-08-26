@@ -132,9 +132,18 @@ private struct BSKCardSurface: ViewModifier {
     }
 }
 
+private struct BSKCompactTabClearance: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    func body(content: Content) -> some View {
+        content.padding(.bottom, horizontalSizeClass == .compact ? 88 : 0)
+    }
+}
+
 extension View {
     func bskListSurface() -> some View { modifier(BSKListSurface()) }
     func bskCardSurface() -> some View { modifier(BSKCardSurface()) }
+    func bskCompactTabClearance() -> some View { modifier(BSKCompactTabClearance()) }
 }
 
 @main

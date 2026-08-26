@@ -5,6 +5,7 @@ import type { CurrentUser, Permission } from "../auth";
 import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
 import { matchCapacity } from "../matchCapacity";
+import { resolveMatchRoster, resolveMatchRosters } from "../matchRoster";
 import {
   CATEGORIES as DEVELOPMENT_CATEGORIES,
   SKILLS as DEVELOPMENT_SKILLS,
@@ -183,6 +184,9 @@ export type MobileActivity = {
   hasConfirmedSquad: boolean;
   squadPlayerNames: string[];
   acceptedPlayerNames: string[];
+  rosterSource: string;
+  rosterLabel: string;
+  rosterPlayerNames: string[];
 };
 
 export type MobileSelectionMatch = {
@@ -544,6 +548,17 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
   if (!activityId) throw new DevelopmentServiceError("invalid", "Aktivitet saknas.", 400);
   const scope = activityScope(actor);
   const today = swedishToday();
+  const target = await get<{ match_id: number }>(
+    `SELECT da.match_id
+     FROM development_activities da
+     WHERE da.id = ? AND da.activity_type = 'match' AND da.match_id IS NOT NULL AND ${scope.sql}`,
+    [activityId, ...scope.args]
+  );
+  if (!target) return [];
+  const roster = await resolveMatchRoster(target.match_id);
+  if (!roster || roster.players.length === 0) return [];
+  const rosterIds = roster.players.map((player) => player.id);
+  const marks = placeholders(rosterIds);
   const rows = await all<{
     id: number;
     name: string;
@@ -553,35 +568,7 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
     team_names: string[];
     active_goals: MobilePlayerSummary["activeGoals"];
   }>(
-    `WITH target AS (
-       SELECT da.id, da.match_id
-       FROM development_activities da
-       WHERE da.id = ? AND da.activity_type = 'match' AND ${scope.sql}
-     ), explicit_participants AS (
-       SELECT ms.player_id
-       FROM target t JOIN match_squad ms ON ms.match_id = t.match_id
-       UNION
-       SELECT sd.player_id
-       FROM target t
-       JOIN development_selection_decisions sd ON sd.activity_id = t.id
-       WHERE sd.decision = 'selected'
-       UNION
-       SELECT dap.player_id
-       FROM target t
-       JOIN development_activity_participation dap ON dap.activity_id = t.id
-       WHERE dap.selected = 1
-     ), accepted_callups AS (
-       SELECT dac.player_id
-       FROM target t
-       JOIN development_activity_callups dac ON dac.activity_id = t.id
-       WHERE dac.attendance_status = 'present'
-     ), participants AS (
-       SELECT player_id FROM explicit_participants
-       UNION
-       SELECT player_id FROM accepted_callups
-       WHERE NOT EXISTS (SELECT 1 FROM explicit_participants)
-     )
-     SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary,
+    `SELECT p.id, p.name, p.jersey_number, p.position, p.preferred_position_primary,
             COALESCE((
               SELECT array_agg(g.name ORDER BY pgm.is_primary DESC, lower(g.name))
               FROM player_group_memberships pgm
@@ -601,10 +588,10 @@ export async function listMobileActivityPlayers(actor: CurrentUser, activityId: 
               FROM player_development_goals g
               WHERE g.player_id = p.id AND g.status = 'active'
             ), '[]'::json) AS active_goals
-     FROM participants part
-     JOIN players p ON p.id = part.player_id AND p.active = 1
+     FROM players p
+     WHERE p.active = 1 AND p.id IN (${marks})
      ORDER BY lower(p.name)`,
-    [activityId, ...scope.args, today, today]
+    [today, today, ...rosterIds]
   );
   return rows.map((row) => ({
     id: row.id,
@@ -870,6 +857,47 @@ export async function updateMobilePlayerDevelopment(
     skill.id,
     input.statuses[skill.id] ?? current[skill.id] ?? "not_started",
   ])) as StatusMap;
+  const lockedStatus = DEVELOPMENT_SKILLS.find((skill) => statusOf(next, skill.id) !== "not_started" && !isUnlocked(skill, next));
+  if (lockedStatus) {
+    throw new DevelopmentServiceError("invalid", `Slutför föregående steg före ${lockedStatus.title}.`, 400);
+  }
+  const lockedFocus = focusIds.find((id) => {
+    const skill = DEVELOPMENT_SKILLS.find((candidate) => candidate.id === id);
+    return !skill || !isUnlocked(skill, next);
+  });
+  if (lockedFocus) {
+    throw new DevelopmentServiceError("invalid", "En låst färdighet kan inte väljas som fokus.", 400);
+  }
+  const latestCheckpoint = await get<{
+    id: string;
+    date: string;
+    strengths: string;
+    focus_note: string;
+    wellbeing_note: string;
+  }>(
+    `SELECT id, date, strengths, focus_note, wellbeing_note
+     FROM development_checkpoints
+     WHERE player_id = ?
+     ORDER BY date DESC, created_at DESC
+     LIMIT 1`,
+    [playerId]
+  );
+  const currentFocusRows = latestCheckpoint
+    ? await all<{ skill_id: string }>(
+        "SELECT skill_id FROM development_checkpoint_skills WHERE checkpoint_id = ? AND is_focus = 1",
+        [latestCheckpoint.id]
+      )
+    : [];
+  const currentFocusIds = new Set(currentFocusRows.map((row) => row.skill_id));
+  const hasChanges = !latestCheckpoint
+    || latestCheckpoint.date !== date
+    || latestCheckpoint.strengths !== strengths
+    || latestCheckpoint.focus_note !== focusNote
+    || latestCheckpoint.wellbeing_note !== wellbeingNote
+    || DEVELOPMENT_SKILLS.some((skill) => next[skill.id] !== (current[skill.id] ?? "not_started"))
+    || focusIds.length !== currentFocusIds.size
+    || focusIds.some((id) => !currentFocusIds.has(id));
+  if (!hasChanges) return getMobilePlayerDevelopment(actor, playerId);
   const checkpointId = crypto.randomUUID();
   const snapshotArgs = DEVELOPMENT_SKILLS.flatMap((skill) => [
     checkpointId,
@@ -1095,10 +1123,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'unknown'), 0) AS pending_callup_count,
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = da.match_id), 0) AS squad_count,
-            (
-              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = da.match_id)
-              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
-            ) AS has_confirmed_squad,
+            EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = da.match_id) AS has_confirmed_squad,
             COALESCE((
               SELECT string_agg(p.name, E'\\x1f' ORDER BY lower(p.name))
               FROM match_squad squad JOIN players p ON p.id = squad.player_id
@@ -1120,31 +1145,38 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LIMIT 80`,
     scope.args
   );
-  return rows.map((row) => ({
-    id: row.id,
-    matchId: row.match_id,
-    date: row.activity_date,
-    startTime: row.start_time,
-    type: row.activity_type,
-    title: row.title,
-    groupId: row.group_id,
-    theme: row.theme,
-    challengeContext: row.challenge_context,
-    observationCount: Number(row.observation_count),
-    isPrimaryMatch: row.is_primary_match,
-    sourceTeam: row.source_team,
-    matchLevel: row.match_level,
-    loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
-    finished: Boolean(row.finished),
-    evaluationReady: row.evaluation_ready,
-    acceptedCallupCount: Number(row.accepted_callup_count),
-    declinedCallupCount: Number(row.declined_callup_count),
-    pendingCallupCount: Number(row.pending_callup_count),
-    squadCount: Number(row.squad_count),
-    hasConfirmedSquad: row.has_confirmed_squad,
-    squadPlayerNames: row.squad_player_names ? row.squad_player_names.split("\u001f") : [],
-    acceptedPlayerNames: row.accepted_player_names ? row.accepted_player_names.split("\u001f") : [],
-  }));
+  const rosters = await resolveMatchRosters(rows.flatMap((row) => row.match_id == null ? [] : [row.match_id]));
+  return rows.map((row) => {
+    const roster = row.match_id == null ? null : rosters.get(row.match_id) ?? null;
+    return {
+      id: row.id,
+      matchId: row.match_id,
+      date: row.activity_date,
+      startTime: row.start_time,
+      type: row.activity_type,
+      title: row.title,
+      groupId: row.group_id,
+      theme: row.theme,
+      challengeContext: row.challenge_context,
+      observationCount: Number(row.observation_count),
+      isPrimaryMatch: row.is_primary_match,
+      sourceTeam: row.source_team,
+      matchLevel: row.match_level,
+      loanedPlayerNames: row.loaned_player_names ? row.loaned_player_names.split("\u001f") : [],
+      finished: Boolean(row.finished),
+      evaluationReady: row.evaluation_ready,
+      acceptedCallupCount: Number(row.accepted_callup_count),
+      declinedCallupCount: Number(row.declined_callup_count),
+      pendingCallupCount: Number(row.pending_callup_count),
+      squadCount: Number(row.squad_count),
+      hasConfirmedSquad: row.has_confirmed_squad,
+      squadPlayerNames: row.squad_player_names ? row.squad_player_names.split("\u001f") : [],
+      acceptedPlayerNames: row.accepted_player_names ? row.accepted_player_names.split("\u001f") : [],
+      rosterSource: roster?.source ?? "none",
+      rosterLabel: roster?.label ?? "Ingen trupp",
+      rosterPlayerNames: roster?.players.map((player) => player.name) ?? [],
+    };
+  });
 }
 
 export async function listMobileSelectionMatches(actor: CurrentUser): Promise<MobileSelectionMatch[]> {
@@ -1170,10 +1202,7 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
             COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
-            (
-              EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
-              OR EXISTS (SELECT 1 FROM development_selection_decisions decision WHERE decision.activity_id = da.id)
-            ) AS has_confirmed_squad
+            EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id) AS has_confirmed_squad
      FROM development_activities da
      JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id

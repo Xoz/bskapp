@@ -34,6 +34,23 @@ struct PlayerList: View {
                     Text("\(filteredPlayers.filter { !$0.activeGoals.isEmpty }.count) med fokus")
                         .font(.caption.bold()).foregroundStyle(BSKTheme.accent)
                 }
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(BSKTheme.muted)
+                    TextField("Sök spelare", text: $searchText)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(BSKTheme.muted)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Rensa sökning")
+                    }
+                }
+                .padding(.horizontal, 13)
+                .frame(minHeight: 46)
+                .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
                 teamFilter
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 155), spacing: 10)], spacing: 10) {
                     ForEach(filteredPlayers) { player in
@@ -42,11 +59,11 @@ struct PlayerList: View {
                 }
             }
             .padding(16)
+            .bskCompactTabClearance()
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
         .navigationTitle("Spelare")
-        .searchable(text: $searchText, prompt: "Sök spelare")
         .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
         .onAppear { selectTeam("Gul") }
@@ -63,16 +80,20 @@ struct PlayerList: View {
                 ForEach(teamOptions, id: \.self) { team in
                     Button(team) { selectTeam(team) }
                         .font(.subheadline.bold())
-                        .foregroundStyle(selectedTeam == team ? BSKTheme.background : BSKTheme.secondary)
+                        .foregroundStyle(selectedTeam == team ? BSKTheme.backgroundDeep : BSKTheme.secondary)
                         .padding(.horizontal, 15)
                         .padding(.vertical, 9)
-                        .background(selectedTeam == team ? BSKTheme.accent : BSKTheme.surface, in: Capsule())
-                        .overlay(Capsule().stroke(selectedTeam == team ? BSKTheme.accent : BSKTheme.border))
+                        .background(selectedTeam == team ? teamColor(team) : BSKTheme.surface, in: Capsule())
+                        .overlay(Capsule().stroke(selectedTeam == team ? teamColor(team) : BSKTheme.border))
                         .buttonStyle(.plain)
                 }
             }
         }
         .accessibilityLabel("Filtrera spelare per lag")
+    }
+
+    private func teamColor(_ team: String) -> Color {
+        team == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent
     }
 
     private func selectTeam(_ team: String) {
@@ -302,20 +323,29 @@ struct PlayerDetailView: View {
                     }
 
                     SectionTitle("Observationer")
-                    ForEach(detail.observations) { observation in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(observation.activityTitle).fontWeight(.semibold)
-                                Spacer()
-                                Text(observation.activityDate).font(.caption).foregroundStyle(.secondary)
+                    if detail.observations.isEmpty {
+                        Text("Inga observationer registrerade ännu.")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .bskCardSurface()
+                    } else {
+                        ForEach(detail.observations) { observation in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(observation.activityTitle).fontWeight(.semibold)
+                                    Spacer()
+                                    Text(observation.activityDate).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Text(observation.note.isEmpty ? evidenceLabel(observation.evidence) : observation.note)
+                                Text(observation.goalTitle ?? "Utveckling")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
-                            Text(observation.note.isEmpty ? evidenceLabel(observation.evidence) : observation.note)
-                            Text(observation.goalTitle ?? "Utveckling")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            .padding(horizontalSizeClass == .compact ? 12 : 16)
+                            .bskCardSurface()
                         }
-                        .padding(horizontalSizeClass == .compact ? 12 : 16)
-                        .bskCardSurface()
                     }
                 }
                 .padding(horizontalSizeClass == .compact ? 14 : 24)
@@ -624,18 +654,33 @@ private struct PlayerDevelopmentUpdateSheet: View {
     @State private var wellbeingNote: String
     @State private var statuses: [String: String]
     @State private var focusSkillIds: Set<String>
+    private let initialDate: String
+    private let initialStrengths: String
+    private let initialFocusNote: String
+    private let initialWellbeingNote: String
+    private let initialStatuses: [String: String]
+    private let initialFocusSkillIds: Set<String>
     @State private var isSaving = false
     @State private var errorMessage: String?
 
     init(development: PlayerDevelopment, didSave: @escaping (PlayerDevelopment) -> Void) {
         self.development = development
         self.didSave = didSave
-        _date = State(initialValue: Self.dateFormatter.date(from: development.latest?.date ?? "") ?? Date())
+        let startingDate = Self.dateFormatter.date(from: development.latest?.date ?? "") ?? Date()
+        let startingStatuses = Dictionary(uniqueKeysWithValues: development.categories.flatMap(\.skills).map { ($0.id, $0.status) })
+        let startingFocus = Set(development.focusSkills.map(\.id))
+        initialDate = Self.dateFormatter.string(from: startingDate)
+        initialStrengths = development.latest?.strengths ?? ""
+        initialFocusNote = development.latest?.focusNote ?? ""
+        initialWellbeingNote = development.latest?.wellbeingNote ?? ""
+        initialStatuses = startingStatuses
+        initialFocusSkillIds = startingFocus
+        _date = State(initialValue: startingDate)
         _strengths = State(initialValue: development.latest?.strengths ?? "")
         _focusNote = State(initialValue: development.latest?.focusNote ?? "")
         _wellbeingNote = State(initialValue: development.latest?.wellbeingNote ?? "")
-        _statuses = State(initialValue: Dictionary(uniqueKeysWithValues: development.categories.flatMap(\.skills).map { ($0.id, $0.status) }))
-        _focusSkillIds = State(initialValue: Set(development.focusSkills.map(\.id)))
+        _statuses = State(initialValue: startingStatuses)
+        _focusSkillIds = State(initialValue: startingFocus)
     }
 
     var body: some View {
@@ -659,8 +704,14 @@ private struct PlayerDevelopmentUpdateSheet: View {
                         .foregroundStyle(BSKTheme.secondary)
                     ForEach(development.categories) { category in
                         DisclosureGroup(category.name) {
-                            ForEach(category.skills) { skill in
-                                DevelopmentEditSkillRow(skill: skill, statuses: $statuses, focusSkillIds: $focusSkillIds)
+                            ForEach(Array(category.skills.enumerated()), id: \.element.id) { index, skill in
+                                DevelopmentEditSkillRow(
+                                    skill: skill,
+                                    isUnlocked: index == 0 || statuses[category.skills[index - 1].id] == "done",
+                                    dependentSkillIds: category.skills.dropFirst(index + 1).map(\.id),
+                                    statuses: $statuses,
+                                    focusSkillIds: $focusSkillIds
+                                )
                             }
                         }
                     }
@@ -672,11 +723,20 @@ private struct PlayerDevelopmentUpdateSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Avbryt") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Spara") { Task { await save() } }.disabled(isSaving)
+                    Button("Spara") { Task { await save() } }.disabled(isSaving || !hasChanges)
                 }
             }
             .interactiveDismissDisabled(isSaving)
         }
+    }
+
+    private var hasChanges: Bool {
+        Self.dateFormatter.string(from: date) != initialDate
+            || strengths != initialStrengths
+            || focusNote != initialFocusNote
+            || wellbeingNote != initialWellbeingNote
+            || statuses != initialStatuses
+            || focusSkillIds != initialFocusSkillIds
     }
 
     @MainActor
@@ -711,6 +771,8 @@ private struct PlayerDevelopmentUpdateSheet: View {
 
 private struct DevelopmentEditSkillRow: View {
     let skill: PlayerDevelopment.Skill
+    let isUnlocked: Bool
+    let dependentSkillIds: [String]
     @Binding var statuses: [String: String]
     @Binding var focusSkillIds: Set<String>
 
@@ -724,6 +786,12 @@ private struct DevelopmentEditSkillRow: View {
                 ForEach(["not_started", "training", "almost", "done"], id: \.self) { status in
                     Button {
                         statuses[skill.id] = status
+                        if status != "done" {
+                            for dependentID in dependentSkillIds {
+                                statuses[dependentID] = "not_started"
+                                focusSkillIds.remove(dependentID)
+                            }
+                        }
                     } label: {
                         Text(developmentStatusLabel(status))
                             .font(.caption.bold())
@@ -734,12 +802,19 @@ private struct DevelopmentEditSkillRow: View {
                             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(currentStatus == status ? developmentStatusColor(status) : BSKTheme.border))
                     }
                     .buttonStyle(.plain)
+                    .disabled(!isUnlocked)
                 }
             }
             Toggle("Fokus", isOn: focusBinding)
-                .disabled(!focusSkillIds.contains(skill.id) && focusSkillIds.count >= 2)
+                .disabled(!isUnlocked || (!focusSkillIds.contains(skill.id) && focusSkillIds.count >= 2))
+            if !isUnlocked {
+                Label("Slutför föregående steg först", systemImage: "lock.fill")
+                    .font(.caption)
+                    .foregroundStyle(BSKTheme.muted)
+            }
         }
         .padding(.vertical, 5)
+        .opacity(isUnlocked ? 1 : 0.58)
     }
 
     private var currentStatus: String {
@@ -785,7 +860,8 @@ private struct NewGoalSheet: View {
     let save: (String, String, String?) async throws -> Void
     @State private var title = ""
     @State private var evidenceHint = ""
-    @State private var reviewOn = ""
+    @State private var hasReviewDate = false
+    @State private var reviewDate = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -795,8 +871,10 @@ private struct NewGoalSheet: View {
                 Section("Utvecklingsmål") {
                     TextField("Observerbart nästa steg", text: $title, axis: .vertical)
                     TextField("Vad kan tränaren se?", text: $evidenceHint, axis: .vertical)
-                    TextField("Följ upp YYYY-MM-DD", text: $reviewOn)
-                        .textContentType(.dateTime)
+                    Toggle("Planera uppföljning", isOn: $hasReviewDate)
+                    if hasReviewDate {
+                        DatePicker("Följ upp", selection: $reviewDate, displayedComponents: .date)
+                    }
                 }
                 if let errorMessage { Text(errorMessage).foregroundStyle(BSKTheme.danger) }
             }
@@ -809,7 +887,7 @@ private struct NewGoalSheet: View {
                         Task {
                             isSaving = true
                             do {
-                                try await save(title, evidenceHint, reviewOn.isEmpty ? nil : reviewOn)
+                                try await save(title, evidenceHint, hasReviewDate ? Self.dateFormatter.string(from: reviewDate) : nil)
                                 dismiss()
                             } catch { errorMessage = error.localizedDescription }
                             isSaving = false
@@ -820,6 +898,15 @@ private struct NewGoalSheet: View {
             }
         }
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 private struct PlayerPreferencesSheet: View {

@@ -8,15 +8,18 @@ describe("säkerhetskontrakt", () => {
   it("avgränsar matchutvärderingar till matchens trupp och deltagare", () => {
     const actions = read("lib/actions.ts");
     const evaluation = read("lib/matchEvaluation.ts");
+    const roster = read("lib/matchRoster.ts");
     const start = actions.indexOf("async function persistMatchEvaluations");
     const end = actions.indexOf("export async function saveCoachMatchEvaluations", start);
     const implementation = actions.slice(start, end);
     expect(implementation).toContain("getMatchEvaluationWorkspace(matchId, contributorType, contributorId)");
-    expect(evaluation).toContain("SELECT player_id FROM match_squad WHERE match_id = ?");
-    expect(evaluation).toContain("UNION SELECT player_id FROM match_players WHERE match_id = ?");
-    expect(evaluation).toContain("dac.attendance_status = 'present'");
-    expect(evaluation).toContain("NOT EXISTS (SELECT 1 FROM explicit_participants)");
-    expect(evaluation).toContain("JOIN players p ON p.id = part.player_id");
+    expect(evaluation).toContain("resolveMatchRoster(matchId)");
+    expect(evaluation).toContain("p.id IN (${marks})");
+    expect(roster).toContain("FROM match_squad squad");
+    expect(roster).toContain("FROM match_players mp");
+    expect(roster).toContain("callup.attendance_status = 'present'");
+    expect(roster).toContain('"played",');
+    expect(roster).toContain('"confirmed",');
   });
 
   it("kräver capability-token för publik liverapportering", () => {

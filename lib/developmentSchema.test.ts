@@ -8,6 +8,7 @@ const mobileDevelopment = readFileSync(new URL("./services/development.ts", impo
 const mobileDevelopmentRoute = readFileSync(new URL("../app/api/mobile/v1/players/[id]/development/route.ts", import.meta.url), "utf8");
 const mobileMatchEvaluation = readFileSync(new URL("./services/matchEvaluationMobile.ts", import.meta.url), "utf8");
 const mobileLive = readFileSync(new URL("./services/mobileLive.ts", import.meta.url), "utf8");
+const matchRoster = readFileSync(new URL("./matchRoster.ts", import.meta.url), "utf8");
 const developmentCore = readFileSync(new URL("./developmentCore.ts", import.meta.url), "utf8");
 const queries = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
 const nativeActivityViews = readFileSync(new URL("../ios/BSK/Views/ActivityViews.swift", import.meta.url), "utf8");
@@ -51,6 +52,84 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativePlayerViews).toContain("Välj status för färdigheterna och spara allt samlat.");
     expect(nativePlayerViews).toContain("statuses[skill.id] = status");
     expect(nativePlayerViews).not.toContain(".pickerStyle(.menu)");
+  });
+
+  it("skyddar osynkat native-arbete och blockerar falska sparningar", () => {
+    expect(nativeAppModel).toContain("guard !hasPendingOfflineWork else");
+    expect(nativeAppModel).not.toContain("queuedObservations = []");
+    expect(nativeAppModel).not.toContain("queuedMatchEvaluations = []");
+    expect(nativeMainSplitView).toContain('alert("Synkning krävs"');
+    expect(nativePlayerViews).toContain("isSaving || !hasChanges");
+    expect(mobileDevelopment).toContain("if (!hasChanges) return getMobilePlayerDevelopment");
+    expect(nativeActivityViews).toContain("isSaving || !currentAnswerIsComplete");
+    expect(nativeActivityViews).toContain('savedMessage = "\\(incompleteIndices.count) spelare kvar"');
+    expect(mobileMatchEvaluation).toContain("hasPartialAssessment");
+  });
+
+  it("upprätthåller utvecklingsträdets ordning i både native och server", () => {
+    expect(nativePlayerViews).toContain('isUnlocked: index == 0 || statuses[category.skills[index - 1].id] == "done"');
+    expect(nativePlayerViews).toContain('Label("Slutför föregående steg först", systemImage: "lock.fill")');
+    expect(nativePlayerViews).toContain('statuses[dependentID] = "not_started"');
+    expect(mobileDevelopment).toContain("statusOf(next, skill.id) !== \"not_started\" && !isUnlocked(skill, next)");
+    expect(mobileDevelopment).toContain("En låst färdighet kan inte väljas som fokus.");
+  });
+
+  it("kräver minst en spelare i uttagningen på både telefon och bred layout", () => {
+    expect(nativeMainSplitView.match(/disabled\(isSaving \|\| selectedCount == 0\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(nativeActivityViews).toContain("disabled(isSaving || selectedCount == 0)");
+  });
+
+  it("visar beständiga fellägen med återförsök i native", () => {
+    expect(nativeAppModel).toContain("attempts >= 3");
+    expect(nativeAppModel).toContain("restoreError = error.localizedDescription");
+    expect(nativeMainSplitView).toContain('Label("Kunde inte läsa uttagningen"');
+    expect(nativeMainSplitView).toContain('Button("Försök igen") { Task { await load() } }');
+    expect(nativeActivityViews).toContain('Label("Kunde inte hämta matchtruppen"');
+    expect(nativeActivityViews).toContain('Label("Kunde inte hämta laguppställningen"');
+    expect(nativeActivityViews).toContain('Label("Kunde inte öppna Matchcenter"');
+    expect(nativeActivityViews).toContain('Label("Kunde inte läsa utvärderingen"');
+    expect(nativeActivityViews).toContain("guard loadError == nil else");
+  });
+
+  it("har konsekvent terminologi, behörighet och visuella native-kontroller", () => {
+    expect(nativeMainSplitView).toContain("case matches");
+    expect(nativeMainSplitView).not.toContain("case observe");
+    expect(nativeMainSplitView).toContain('return user.permissions.contains("view_matches")');
+    expect(nativeMainSplitView).toContain('matchSection(title: "Behöver avslutas"');
+    expect(nativePlayerViews).toContain('TextField("Sök spelare", text: $searchText)');
+    expect(nativePlayerViews).not.toContain('.searchable(text: $searchText');
+    expect(nativePlayerViews).toContain('team == "Gul" ? BSKTheme.teamYellow');
+    expect(nativePlayerViews).toContain('Toggle("Planera uppföljning"');
+    expect(nativePlayerViews).toContain("Inga observationer registrerade ännu.");
+    expect(nativeActivityViews).toContain('permissions.contains("report_matches")');
+    expect(nativeActivityViews).toContain('Text("Matcher att följa upp")');
+  });
+
+  it("låter sista kortet rullas helt ovanför den dockade native-menyn", () => {
+    const nativeTheme = readFileSync(new URL("../ios/BSK/BSKApp.swift", import.meta.url), "utf8");
+    expect(nativeMainSplitView).toContain(".safeAreaInset(edge: .bottom, spacing: 0) { compactNavigation }");
+    expect(nativeMainSplitView).toContain(".background(.ultraThinMaterial)");
+    expect(nativeTheme).toContain("BSKCompactTabClearance");
+    expect(nativeTheme).toContain("horizontalSizeClass == .compact ? 88 : 0");
+    expect(nativePlayerViews).toContain(".bskCompactTabClearance()");
+    expect(nativeActivityViews.match(/\.bskCompactTabClearance\(\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(nativeMainSplitView.match(/\.bskCompactTabClearance\(\)/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("öppnar alla native-matchingångar i ett gemensamt matchnav", () => {
+    expect(nativeActivityViews).toContain("enum MatchWorkspaceSection");
+    expect(nativeActivityViews).toContain("struct MatchWorkspaceView");
+    expect(nativeActivityViews).toContain('case .overview: return "Översikt"');
+    expect(nativeActivityViews).toContain('case .roster: return "Trupp"');
+    expect(nativeActivityViews).toContain('case .matchCenter: return "Matchcenter"');
+    expect(nativeActivityViews).toContain('case .evaluation: return "Utvärdera"');
+    expect(nativeActivityViews).toContain("if activity.evaluationReady,");
+    expect(nativeActivityViews).toContain("dismissOnComplete: false");
+    expect(nativeActivityViews).toContain("PremiumSelectionDetail(match: selectionMatch)");
+    expect(nativeMainSplitView.match(/MatchWorkspaceView\(/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(nativeMainSplitView).toContain("initialSection: .evaluation");
+    expect(nativeMainSplitView).toContain("initialSection: .roster");
+    expect(nativeMainSplitView).toContain("await model.reload()");
   });
 
   it("ger native spelarlistan lagmedlemskap och startar filtret med Gul", () => {
@@ -185,6 +264,18 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeMainSplitView).toContain("match.hasConfirmedSquad ? match.squadCount : match.acceptedCallupCount");
   });
 
+  it("använder samma truppkälla i matchkort, observation, Matchcenter och utvärdering", () => {
+    expect(mobileDevelopment).toContain("resolveMatchRosters");
+    expect(mobileDevelopment).toContain("resolveMatchRoster(target.match_id)");
+    expect(mobileLive).toContain("resolveMatchRoster(matchId)");
+    expect(matchRoster).toContain("const PLAYED_PRIORITY");
+    expect(matchRoster).toContain('"played",');
+    expect(matchRoster).toContain('"confirmed",');
+    expect(matchRoster).toContain('"accepted",');
+    expect(nativeActivityViews).toContain("activity.rosterPlayerNames");
+    expect(nativeMainSplitView).toContain("activity.rosterLabel");
+  });
+
   it("visar truppen på Gul- och Grönkort men håller Uttagning till Gul", () => {
     const activitiesStart = mobileDevelopment.indexOf("export async function listMobileActivities");
     const selectionStart = mobileDevelopment.indexOf("export async function listMobileSelectionMatches");
@@ -216,7 +307,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileMatchEvaluation).toContain("m.finished = 1");
     expect(mobileMatchEvaluation).toContain("INTERVAL '90 minutes'");
     expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(2);
-    expect(nativeMainSplitView).toContain(".filter { !$0.evaluationReady }");
+    expect(nativeMainSplitView).toContain(".filter { !$0.evaluationReady && $0.date >= today }");
     expect(nativeMainSplitView).toContain(".filter(\\.evaluationReady)");
   });
 

@@ -21,6 +21,7 @@ final class AppModel: ObservableObject {
     }
 
     @Published private(set) var phase: Phase = .loading
+    @Published private(set) var restoreError: String?
     @Published private(set) var user: CurrentUser?
     @Published private(set) var players: [PlayerSummary] = []
     @Published private(set) var playerMatchLoads: [PlayerMatchLoad] = []
@@ -41,6 +42,10 @@ final class AppModel: ObservableObject {
         }
     }
     @Published var isWorking = false
+
+    var hasPendingOfflineWork: Bool {
+        queuedObservationCount > 0 || queuedMatchEvaluationCount > 0
+    }
 
     private let api: APIClient
     private let auth: NativeAuthService
@@ -152,7 +157,10 @@ final class AppModel: ObservableObject {
                 squadCount: 0,
                 hasConfirmedSquad: false,
                 squadPlayerNames: [],
-                acceptedPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
+                acceptedPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"],
+                rosterSource: "accepted",
+                rosterLabel: "Preliminär trupp",
+                rosterPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
             )
         ]
         phase = .signedIn
@@ -163,7 +171,9 @@ final class AppModel: ObservableObject {
         guard phase == .loading, !isRestoringSession else { return }
         isRestoringSession = true
         defer { isRestoringSession = false }
+        restoreError = nil
         var retryDelay = 1.0
+        var attempts = 0
         while phase == .loading {
             do {
                 guard try await api.hasStoredSession() else {
@@ -183,8 +193,14 @@ final class AppModel: ObservableObject {
                 }
 
                 // Ett tillfälligt nät-, server- eller Keychain-fel är inte en
-                // utloggning. Behåll sessionen och försök igen när appen lever.
+                // utloggning. Behåll sessionen, men låt användaren ta över efter
+                // några automatiska försök i stället för att visa en evig laddning.
                 errorMessage = error.localizedDescription
+                attempts += 1
+                if attempts >= 3 {
+                    restoreError = error.localizedDescription
+                    return
+                }
                 try? await Task.sleep(for: .seconds(retryDelay))
                 retryDelay = min(retryDelay * 2, 10)
             }
@@ -367,6 +383,10 @@ final class AppModel: ObservableObject {
     }
 
     func signOut() async {
+        guard !hasPendingOfflineWork else {
+            errorMessage = "Synka väntande observationer och utvärderingar innan du loggar ut."
+            return
+        }
         await api.logout()
         user = nil
         players = []
@@ -374,10 +394,6 @@ final class AppModel: ObservableObject {
         activities = []
         selectionMatches = []
         matchEvaluations = []
-        queuedObservations = []
-        persistObservationQueue()
-        queuedMatchEvaluations = []
-        persistMatchEvaluationQueue()
         errorMessage = nil
         phase = .signedOut
     }

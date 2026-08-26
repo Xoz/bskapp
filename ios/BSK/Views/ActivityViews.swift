@@ -66,9 +66,9 @@ struct ActivityList: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    let roster = activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
+                    let roster = activity.rosterPlayerNames ?? (activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames)
                     if !roster.isEmpty {
-                        Text("\(activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"): \(roster.joined(separator: ", "))")
+                        Text("\(activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")): \(roster.joined(separator: ", "))")
                             .font(.caption)
                             .foregroundStyle(BSKTheme.secondary)
                             .lineLimit(2)
@@ -88,7 +88,180 @@ struct ActivityList: View {
     }
 }
 
+enum MatchWorkspaceSection: String, CaseIterable, Identifiable {
+    case overview
+    case roster
+    case matchCenter
+    case evaluation
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: return "Översikt"
+        case .roster: return "Trupp"
+        case .matchCenter: return "Matchcenter"
+        case .evaluation: return "Utvärdera"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .overview: return "rectangle.grid.1x2"
+        case .roster: return "person.3"
+        case .matchCenter: return "scoreboard"
+        case .evaluation: return "checklist"
+        }
+    }
+}
+
+struct MatchWorkspaceView: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let activity: ActivitySummary
+    let initialSection: MatchWorkspaceSection
+    @State private var selectedSection: MatchWorkspaceSection
+
+    init(activity: ActivitySummary, initialSection: MatchWorkspaceSection = .overview) {
+        self.activity = activity
+        self.initialSection = initialSection
+        _selectedSection = State(initialValue: initialSection)
+    }
+
+    private var availableSections: [MatchWorkspaceSection] {
+        var sections: [MatchWorkspaceSection] = [.overview, .roster]
+        guard activity.sourceTeam == "Gul", activity.matchId != nil else { return sections }
+        if model.user?.permissions.contains("report_matches") == true { sections.append(.matchCenter) }
+        if activity.evaluationReady,
+           model.user?.permissions.contains("manage_evaluations") == true {
+            sections.append(.evaluation)
+        }
+        return sections
+    }
+
+    private var selectionMatch: SelectionMatchSummary? {
+        model.selectionMatches.first(where: { $0.id == activity.id })
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            workspaceHeader
+            Divider().overlay(BSKTheme.border)
+            workspaceContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(BSKTheme.canvas)
+        .navigationTitle("Match")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { normalizeSection() }
+        .onChange(of: initialSection) { _, _ in normalizeSection(preferInitial: true) }
+        .onChange(of: activity.id) { _, _ in normalizeSection(preferInitial: true) }
+    }
+
+    private var workspaceHeader: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
+                Text(activity.sourceTeam.uppercased())
+                    .font(.system(size: 9, weight: .black))
+                    .tracking(1)
+                    .foregroundStyle(activity.sourceTeam == "Gul" ? BSKTheme.backgroundDeep : .white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent, in: Capsule())
+                Text(activity.title)
+                    .font(horizontalSizeClass == .compact ? .headline : .title3.bold())
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text([activity.date, activity.startTime].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption2.bold())
+                    .foregroundStyle(BSKTheme.secondary)
+                    .lineLimit(1)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 7) {
+                    ForEach(availableSections) { section in
+                        Button {
+                            withAnimation(.easeOut(duration: 0.16)) { selectedSection = section }
+                        } label: {
+                            Label(section.title, systemImage: section.icon)
+                                .font(.caption.bold())
+                                .foregroundStyle(selectedSection == section ? BSKTheme.backgroundDeep : BSKTheme.secondary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 36)
+                                .background(
+                                    selectedSection == section ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.62),
+                                    in: Capsule()
+                                )
+                                .overlay(Capsule().stroke(selectedSection == section ? BSKTheme.accent : BSKTheme.border))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selectedSection == section ? .isSelected : [])
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, horizontalSizeClass == .compact ? 12 : 18)
+        .padding(.vertical, 10)
+        .background(BSKTheme.elevated.opacity(0.96))
+    }
+
+    @ViewBuilder
+    private var workspaceContent: some View {
+        switch selectedSection {
+        case .overview:
+            MatchOverviewContent(activity: activity)
+        case .roster:
+            if activity.sourceTeam == "Gul",
+               model.user?.permissions.contains("manage_squads") == true,
+               let selectionMatch {
+                PremiumSelectionDetail(match: selectionMatch)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ActivityRosterSummary(activity: activity)
+                        if let matchID = activity.matchId,
+                           model.user?.permissions.contains("report_matches") == true {
+                            MatchLineupBoard(matchID: matchID)
+                        }
+                    }
+                    .padding(horizontalSizeClass == .compact ? 12 : 18)
+                    .bskCompactTabClearance()
+                    .frame(maxWidth: 820)
+                    .frame(maxWidth: .infinity)
+                }
+                .background(BSKTheme.canvas)
+            }
+        case .matchCenter:
+            if let matchID = activity.matchId {
+                MatchCenterView(matchID: matchID, title: activity.title, liveActivityEnabled: activity.sourceTeam == "Gul")
+            }
+        case .evaluation:
+            if let matchID = activity.matchId {
+                MatchEvaluationView(matchID: matchID, dismissOnComplete: false) {
+                    selectedSection = .overview
+                    Task { await model.reload() }
+                }
+            }
+        }
+    }
+
+    private func normalizeSection(preferInitial: Bool = false) {
+        let preferred = preferInitial ? initialSection : selectedSection
+        selectedSection = availableSections.contains(preferred) ? preferred : (availableSections.first ?? .overview)
+    }
+}
+
 struct ActivityDetail: View {
+    let activity: ActivitySummary
+
+    var body: some View {
+        MatchWorkspaceView(activity: activity, initialSection: .overview)
+    }
+}
+
+private struct MatchOverviewContent: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let activity: ActivitySummary
@@ -100,61 +273,30 @@ struct ActivityDetail: View {
 
                 if activity.sourceTeam == "Grön" {
                     greenInformationCard
-                } else if activity.type == "match", let matchID = activity.matchId {
-                    NavigationLink {
-                        MatchCenterView(matchID: matchID, title: activity.title, liveActivityEnabled: true)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "scoreboard.fill")
-                                .font(.title3.bold())
-                                .foregroundStyle(BSKTheme.backgroundDeep)
-                                .frame(width: 44, height: 44)
-                                .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("MATCHCENTER").font(.system(size: 9, weight: .black)).tracking(1.4).foregroundStyle(BSKTheme.accent)
-                                Text("Klocka, period och mål").font(.headline).foregroundStyle(.white)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
-                        }
-                        .padding(12)
-                        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(BSKTheme.accent.opacity(0.38)))
-                    }
-                    .buttonStyle(.plain)
                 }
 
-                if activity.sourceTeam != "Grön", let matchID = activity.matchId {
-                    MatchLineupBoard(matchID: matchID)
-                }
+                ActivityRosterSummary(activity: activity)
 
-                if activity.sourceTeam != "Grön" {
+                if activity.sourceTeam != "Grön", model.user?.permissions.contains("manage_evaluations") == true {
                     MatchObservationBoard(activity: activity)
                 }
             }
             .padding(horizontalSizeClass == .compact ? 12 : 18)
+            .bskCompactTabClearance()
             .frame(maxWidth: 820)
             .frame(maxWidth: .infinity)
         }
         .background(BSKTheme.canvas)
-        .navigationTitle("Match")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var greenInformationCard: some View {
-        let roster = activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames
         return VStack(alignment: .leading, spacing: 9) {
             Label("Endast information", systemImage: "info.circle.fill")
                 .font(.headline)
                 .foregroundStyle(BSKTheme.accent)
-            Text("Lag Grön ansvarar själva för matchen. Den kan därför inte hanteras i Matchcenter, Uttagning, Utvärdera eller Live Activity här.")
+            Text("Lag Grön ansvarar själva för matchen. Översikt och spelartrupp visas här, men Matchcenter, uttagning och utvärdering är skrivskyddade.")
                 .font(.subheadline)
                 .foregroundStyle(BSKTheme.secondary)
-            if !roster.isEmpty {
-                Text("\(activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"): \(roster.joined(separator: ", "))")
-                    .font(.caption)
-                    .foregroundStyle(BSKTheme.secondary)
-            }
         }
         .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +323,7 @@ struct ActivityDetail: View {
                 Text(activity.title)
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
-                Text(activity.sourceTeam == "Grön" ? "Information från Lag Grön" : "Laguppställning och matchcenter")
+                Text(activity.sourceTeam == "Grön" ? "Information från Lag Grön" : "Översikt, trupp, Matchcenter och utvärdering")
                     .font(.subheadline)
                     .foregroundStyle(BSKTheme.secondary)
             }
@@ -217,10 +359,58 @@ struct ActivityDetail: View {
 
 }
 
+private struct ActivityRosterSummary: View {
+    let activity: ActivitySummary
+
+    private var roster: [String] {
+        activity.rosterPlayerNames ?? (activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames)
+    }
+
+    private var label: String {
+        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("SPELARTRUPP")
+                        .font(.system(size: 10, weight: .black))
+                        .tracking(1.4)
+                        .foregroundStyle(BSKTheme.accent)
+                    Text(label)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+                Text("\(roster.count) SPELARE")
+                    .font(.system(size: 9, weight: .black))
+                    .tracking(0.8)
+                    .foregroundStyle(BSKTheme.secondary)
+            }
+            if roster.isEmpty {
+                Text("Ingen matchspecifik trupp är registrerad ännu.")
+                    .font(.subheadline)
+                    .foregroundStyle(BSKTheme.muted)
+            } else {
+                Text(roster.joined(separator: ", "))
+                    .font(.subheadline)
+                    .foregroundStyle(BSKTheme.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+    }
+}
+
 private struct MatchLineupBoard: View {
     @EnvironmentObject private var model: AppModel
     let matchID: Int
     @State private var state: LiveMatchState?
+    @State private var loadError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -253,6 +443,17 @@ private struct MatchLineupBoard: View {
                         .padding(.top, 2)
                     lineupGrid(state.players.filter { !state.onField.contains($0.id) })
                 }
+            } else if let loadError {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Kunde inte hämta laguppställningen", systemImage: "exclamationmark.triangle")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(BSKTheme.warning)
+                    Text(loadError).font(.caption).foregroundStyle(BSKTheme.secondary)
+                    Button("Försök igen") { Task { await load() } }
+                        .buttonStyle(.bordered)
+                        .tint(BSKTheme.accent)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 HStack(spacing: 9) {
                     ProgressView().tint(BSKTheme.accent)
@@ -290,8 +491,12 @@ private struct MatchLineupBoard: View {
     }
 
     @MainActor private func load() async {
+        loadError = nil
         do { state = try await model.liveMatch(id: matchID) }
-        catch { model.errorMessage = error.localizedDescription }
+        catch {
+            loadError = error.localizedDescription
+            model.errorMessage = error.localizedDescription
+        }
     }
 }
 
@@ -308,6 +513,7 @@ private struct MatchObservationBoard: View {
     @State private var players: [PlayerSummary] = []
     @State private var drafts: [Int: MatchObservationDraft] = [:]
     @State private var isLoading = true
+    @State private var loadError: String?
     @State private var isSaving = false
     @State private var confirmation: String?
 
@@ -352,6 +558,19 @@ private struct MatchObservationBoard: View {
                     Text("Hämtar matchtruppen...").foregroundStyle(BSKTheme.secondary)
                 }
                 .padding(.vertical, 20)
+            } else if let loadError {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Kunde inte hämta matchtruppen", systemImage: "exclamationmark.triangle")
+                        .font(.headline)
+                        .foregroundStyle(BSKTheme.warning)
+                    Text(loadError).font(.subheadline).foregroundStyle(BSKTheme.secondary)
+                    Button("Försök igen") { Task { await loadPlayers() } }
+                        .buttonStyle(.bordered)
+                        .tint(BSKTheme.accent)
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(BSKTheme.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             } else if playersWithGoals.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Inga aktiva utvecklingsmål ännu", systemImage: "scope")
@@ -524,6 +743,7 @@ private struct MatchObservationBoard: View {
     @MainActor
     private func loadPlayers() async {
         isLoading = true
+        loadError = nil
         defer { isLoading = false }
         do {
             players = try await model.activityPlayers(id: activity.id)
@@ -531,6 +751,7 @@ private struct MatchObservationBoard: View {
         } catch {
             players = []
             drafts = [:]
+            loadError = error.localizedDescription
             model.errorMessage = error.localizedDescription
         }
     }
@@ -888,7 +1109,13 @@ struct TodayList: View {
                             .buttonStyle(.plain)
                         }
                         ForEach(pendingEvaluations) { match in
-                            NavigationLink { MatchEvaluationView(matchID: match.id) } label: {
+                            NavigationLink {
+                                if let activity = model.activities.first(where: { $0.matchId == match.id }) {
+                                    MatchWorkspaceView(activity: activity, initialSection: .evaluation)
+                                } else {
+                                    ContentUnavailableView("Matchen saknas", systemImage: "questionmark.folder")
+                                }
+                            } label: {
                                 taskRow(
                                     icon: "checklist",
                                     title: "Utvärdera matchen mot \(match.opponent)",
@@ -952,6 +1179,7 @@ struct TodayList: View {
                 }
             }
             .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .bskCompactTabClearance()
             .frame(maxWidth: 840)
             .frame(maxWidth: .infinity)
         }
@@ -969,7 +1197,7 @@ struct TodayList: View {
 
     private var sortedPlayerLoads: [PlayerMatchLoad] {
         model.playerMatchLoads.sorted {
-            $0.windowMatchCount < $1.windowMatchCount || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
+            $0.windowMatchCount > $1.windowMatchCount || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
         }
     }
 
@@ -1399,7 +1627,7 @@ struct SelectionDetail: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(BSKTheme.accent)
-                    .disabled(isSaving)
+                        .disabled(isSaving || selectedCount == 0)
                     .padding()
                     .background(.bar)
                 }
@@ -1524,6 +1752,7 @@ struct MatchCenterView: View {
     @State private var showScorers = false
     @State private var showReset = false
     @State private var showFinish = false
+    @State private var loadError: String?
 
     var body: some View {
         Group {
@@ -1531,6 +1760,18 @@ struct MatchCenterView: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     ScrollView {
                         VStack(spacing: 14) {
+                            if loadError != nil {
+                                HStack(spacing: 9) {
+                                    Image(systemName: "wifi.exclamationmark")
+                                    Text("Anslutningen är bruten. Matchklockan är pausad i appen tills ny data har hämtats.")
+                                    Spacer()
+                                    Button("Försök igen") { Task { await load() } }
+                                }
+                                .font(.caption.bold())
+                                .foregroundStyle(BSKTheme.warning)
+                                .padding(11)
+                                .background(BSKTheme.warning.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
+                            }
                             scoreCard(state)
                             clockCard(state, at: context.date)
                             goalControls(state)
@@ -1541,6 +1782,14 @@ struct MatchCenterView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .refreshable { await load() }
+                }
+            } else if let loadError {
+                ContentUnavailableView {
+                    Label("Kunde inte öppna Matchcenter", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text(loadError)
+                } actions: {
+                    Button("Försök igen") { Task { await load() } }
                 }
             } else {
                 ProgressView("Öppnar matchcenter…")
@@ -1800,14 +2049,20 @@ struct MatchCenterView: View {
             let loaded = try await model.liveMatch(id: matchID)
             state = loaded
             loadedAt = Date()
+            loadError = nil
             if #available(iOS 16.1, *) { await MatchLiveActivityManager.sync(matchID: matchID, title: title, state: loaded, isEnabled: liveActivityEnabled) }
         } catch {
+            loadError = error.localizedDescription
             if reportErrors { model.errorMessage = error.localizedDescription }
         }
     }
 
     @MainActor private func send(_ command: LiveMatchCommand) async {
         guard !isMutating else { return }
+        guard loadError == nil else {
+            await load()
+            return
+        }
         isMutating = true
         defer { isMutating = false }
         do {
@@ -1838,7 +2093,7 @@ struct MatchEvaluationList: View {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("MATCHUPPFÖLJNING").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                    Text("Utvärdera").font(.title.bold())
+                    Text("Matcher att följa upp").font(.title.bold())
                     Text("Fortsätt där du slutade eller öppna en ny match.").foregroundStyle(BSKTheme.secondary)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 245), spacing: 10)], spacing: 10) {
@@ -1848,6 +2103,7 @@ struct MatchEvaluationList: View {
                 }
             }
             .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .bskCompactTabClearance()
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
@@ -1864,7 +2120,13 @@ struct MatchEvaluationList: View {
     @ViewBuilder
     private func evaluationLink(_ match: MatchEvaluationSummary) -> some View {
         if horizontalSizeClass == .compact {
-            NavigationLink { MatchEvaluationView(matchID: match.id) } label: { compactEvaluationRow(match) }
+            NavigationLink {
+                if let activity = model.activities.first(where: { $0.matchId == match.id }) {
+                    MatchWorkspaceView(activity: activity, initialSection: .evaluation)
+                } else {
+                    ContentUnavailableView("Matchen saknas", systemImage: "questionmark.folder")
+                }
+            } label: { compactEvaluationRow(match) }
                 .buttonStyle(.plain)
         } else {
             Button { selection = match.id } label: { evaluationCard(match) }
@@ -1936,6 +2198,7 @@ struct MatchEvaluationView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     let matchID: Int
+    var dismissOnComplete = true
     var onComplete: (() -> Void)? = nil
     @State private var workspace: MatchEvaluationWorkspace?
     @State private var answers: [Int: MatchEvaluationAnswer] = [:]
@@ -1947,6 +2210,7 @@ struct MatchEvaluationView: View {
     @State private var coachComment = ""
     @State private var showsMatchContext = false
     @State private var showsCompleteWithoutPlayersConfirmation = false
+    @State private var loadError: String?
 
     var body: some View {
         Group {
@@ -1968,6 +2232,14 @@ struct MatchEvaluationView: View {
                     Text("Spara resultat och kommentar och avsluta sedan uppföljningen utan spelarbedömningar.")
                 } actions: {
                     Button("Resultat & kommentar") { showsMatchContext = true }
+                }
+            } else if let loadError {
+                ContentUnavailableView {
+                    Label("Kunde inte läsa utvärderingen", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(loadError)
+                } actions: {
+                    Button("Försök igen") { Task { await load() } }
                 }
             } else {
                 ProgressView("Läser match…")
@@ -2279,8 +2551,14 @@ struct MatchEvaluationView: View {
             .background(BSKTheme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(isSaving)
-        .opacity(isSaving ? 0.5 : 1)
+        .disabled(isSaving || !currentAnswerIsComplete)
+        .opacity(isSaving || !currentAnswerIsComplete ? 0.5 : 1)
+    }
+
+    private var currentAnswerIsComplete: Bool {
+        guard let workspace, workspace.players.indices.contains(activeIndex) else { return false }
+        let player = workspace.players[activeIndex]
+        return answers[player.id].map(isHandled) ?? false
     }
 
     private func skipButton(_ playerID: Int) -> some View {
@@ -2333,6 +2611,7 @@ struct MatchEvaluationView: View {
 
     @MainActor
     private func load() async {
+        loadError = nil
         do {
             let loaded = try await model.matchEvaluation(id: matchID)
             workspace = loaded
@@ -2355,6 +2634,7 @@ struct MatchEvaluationView: View {
                 }) ?? max(0, loaded.players.count - 1)
             }
         } catch {
+            loadError = error.localizedDescription
             model.errorMessage = error.localizedDescription
         }
     }
@@ -2367,7 +2647,6 @@ struct MatchEvaluationView: View {
         do {
             guard let currentWorkspace = workspace else { return }
             let nextIndex = advance ? min(activeIndex + 1, currentWorkspace.players.count - 1) : activeIndex
-            if advance { activeIndex = nextIndex }
             let status = try await model.saveMatchEvaluation(
                 id: matchID,
                 answers: Array(answers.values),
@@ -2382,6 +2661,7 @@ struct MatchEvaluationView: View {
             case .queued:
                 savedMessage = "Väntar på synkning"
             }
+            if advance { activeIndex = nextIndex }
             finishAfterLastPlayerIfNeeded(in: currentWorkspace, advanced: advance)
         } catch {
             model.errorMessage = error.localizedDescription
@@ -2432,7 +2712,7 @@ struct MatchEvaluationView: View {
             case .saved:
                 showsMatchContext = false
                 onComplete?()
-                dismiss()
+                if dismissOnComplete { dismiss() }
             case .queued:
                 savedMessage = "Väntar på synkning"
             }
@@ -2466,10 +2746,10 @@ struct MatchEvaluationView: View {
         }
         if let firstIncomplete = incompleteIndices.first {
             activeIndex = firstIncomplete
-            savedMessage = "(incompleteIndices.count) spelare kvar"
+            savedMessage = "\(incompleteIndices.count) spelare kvar"
         } else {
             onComplete?()
-            dismiss()
+            if dismissOnComplete { dismiss() }
         }
     }
 }

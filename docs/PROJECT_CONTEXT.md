@@ -1,5 +1,39 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-26: ett gemensamt native-matchnav
+
+- Alla matchingångar i native — Idag, Matcher, Utvärdera och Uttagning — öppnar
+  samma matcharbetsyta i stället för separata detaljvyer.
+- Arbetsytan har en beständig matchrubrik och områdena `Översikt`, `Trupp`,
+  `Matchcenter` och `Utvärdera`. Ingången avgör vilket område som öppnas först,
+  men användaren stannar i samma matchkontext när området byts.
+- Översikt och trupp finns alltid. Matchcenter och Utvärdera visas bara för Lag
+  Gul med rätt behörighet; Utvärdera visas först när matchen är redo för
+  utvärdering. Lag Grön är fortsatt läsbar utan skrivfunktionerna.
+- Uttagningens befintliga redigerare och Matchcenters befintliga arbetsflöde är
+  inbäddade i matchnavet. Sparad trupp laddar om den gemensamma appmodellen och
+  slutförd utvärdering återgår till matchens översikt.
+
+## Beslut 2026-08-26: dockad native-meny med fri scrollbotten
+
+- Den kompakta native-navigationen är dockad mot skärmens nederkant i stället
+  för att ligga som en flytande kapsel ovanpå innehållet.
+- Idag, Matcher, Utvärdera, Spelare och Uttagning har ett gemensamt kompakt
+  bottenutrymme så sista kortet alltid kan rullas helt ovanför menyn och
+  telefonens safe area. iPadens ordinarie splitvy påverkas inte.
+
+## Beslut 2026-08-25: en gemensam spelartrupp per match
+
+- Matchkort, observation, native Matchcenter och matchutvärdering ska använda
+  samma serverside-resolver i `lib/matchRoster.ts` i stället för egna
+  definitioner av vilka spelare som hör till matchen.
+- För en spelad match är `match_players` facit. För en kommande match prioriteras
+  `match_squad`, därefter sparade uttagningsbeslut/deltagande och accepterade
+  kallelser som tydligt märkt preliminär trupp. En lagmedlemslista används inte
+  som påhittad matchtrupp när matchspecifikt underlag saknas.
+- `hasConfirmedSquad` betyder nu att en faktisk rad finns i `match_squad`; ett
+  fristående uttagningsbeslut räcker inte längre för att kalla truppen bekräftad.
+
 ## Beslut 2026-08-24: utvecklingsträdet är en aktiv del av spelarprofilen
 
 - Utvecklingsträdet har lyfts från "äldre utvecklingsarkiv" till en aktuell,
