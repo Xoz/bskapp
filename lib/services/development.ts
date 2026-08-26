@@ -4,7 +4,7 @@ import crypto from "crypto";
 import type { CurrentUser, Permission } from "../auth";
 import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
-import { matchCapacity } from "../matchCapacity";
+import { assessMatchLoad, matchCapacity, type MatchLoadLevel } from "../matchCapacity";
 import { resolveMatchRoster, resolveMatchRosters } from "../matchRoster";
 import {
   CATEGORIES as DEVELOPMENT_CATEGORIES,
@@ -141,6 +141,9 @@ export type MobilePlayerMatchLoad = {
   name: string;
   jerseyNumber: number | null;
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
+  loadLevel: MatchLoadLevel;
   /** @deprecated Behålls tillfälligt för äldre native-klienter. */
   capacity: number;
   recentMatches: {
@@ -223,6 +226,9 @@ export type MobileSelectionCandidate = {
   callupCount: number;
   plannedUpcomingCount: number;
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
+  loadLevel: MatchLoadLevel;
   lastSelectedDate: string | null;
 };
 
@@ -458,7 +464,7 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
        JOIN matches m ON m.id = mp.match_id
        LEFT JOIN groups g ON g.id = m.group_id
        WHERE mp.player_id IN (${marks})
-         AND (m.finished = 1 OR m.date <= ?)
+         AND (m.finished = 1 OR m.date < ?)
          AND m.date >= ? AND m.date <= ?
        ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id`,
       [...playerIds, today, cutoff, today]
@@ -530,14 +536,19 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
   return players
     .map((player) => {
       const recentMatches = recentByPlayer.get(player.id) ?? [];
+      const upcomingMatches = upcomingByPlayer.get(player.id) ?? [];
+      const load = assessMatchLoad(recentMatches.length, upcomingMatches.length);
       return {
         playerId: player.id,
         name: player.name,
         jerseyNumber: player.jersey_number,
-        windowMatchCount: recentMatches.length + (upcomingByPlayer.get(player.id) ?? []).length,
+        windowMatchCount: load.totalMatchCount,
+        recentMatchCount: load.recentMatchCount,
+        upcomingMatchCount: load.upcomingMatchCount,
+        loadLevel: load.level,
         capacity: matchCapacity(recentMatches, nowMs, swedishWallClockToEpoch),
         recentMatches,
-        upcomingMatches: upcomingByPlayer.get(player.id) ?? [],
+        upcomingMatches,
       };
     })
     .sort((left, right) => left.windowMatchCount - right.windowMatchCount || left.name.localeCompare(right.name, "sv"));
@@ -1260,6 +1271,8 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
     callup_count: number;
     planned_upcoming_count: number;
     window_match_count: number;
+    recent_match_count: number;
+    upcoming_match_count: number;
     last_selected_date: string | null;
   }>(
     `SELECT p.id AS player_id, p.name, p.jersey_number, p.position,
@@ -1296,6 +1309,31 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
              WHERE played_mp.player_id = p.id) AS match_count,
             (SELECT COUNT(*) FROM development_activity_callups ac WHERE ac.player_id = p.id) AS callup_count,
             (SELECT COUNT(*) FROM development_selection_decisions future_sd JOIN development_activities future_da ON future_da.id = future_sd.activity_id WHERE future_sd.player_id = p.id AND future_sd.decision = 'selected' AND future_da.activity_date >= ? AND future_da.id <> ?) AS planned_upcoming_count,
+            (SELECT COUNT(DISTINCT played_match.id)
+             FROM matches played_match
+             WHERE played_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND target.activity_date::date
+               AND (played_match.finished = 1 OR played_match.date::date < target.activity_date::date)
+               AND EXISTS (
+                 SELECT 1 FROM match_players played
+                 WHERE played.match_id = played_match.id AND played.player_id = p.id
+               )) AS recent_match_count,
+            (SELECT COUNT(DISTINCT upcoming_match.id)
+             FROM matches upcoming_match
+             WHERE upcoming_match.date::date BETWEEN target.activity_date::date AND (target.activity_date::date + INTERVAL '7 days')
+               AND COALESCE(upcoming_match.finished, 0) = 0
+               AND (
+                 EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = upcoming_match.id AND squad.player_id = p.id)
+                 OR EXISTS (
+                   SELECT 1 FROM development_activities upcoming_activity
+                   JOIN development_selection_decisions upcoming_selection ON upcoming_selection.activity_id = upcoming_activity.id
+                   WHERE upcoming_activity.match_id = upcoming_match.id AND upcoming_selection.player_id = p.id AND upcoming_selection.decision = 'selected'
+                 )
+                 OR EXISTS (
+                   SELECT 1 FROM development_activities upcoming_activity
+                   JOIN development_activity_callups upcoming_callup ON upcoming_callup.activity_id = upcoming_activity.id
+                   WHERE upcoming_activity.match_id = upcoming_match.id AND upcoming_callup.player_id = p.id AND upcoming_callup.attendance_status <> 'absent'
+                 )
+               )) AS upcoming_match_count,
             (SELECT COUNT(DISTINCT window_match.id)
              FROM matches window_match
              WHERE window_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND (target.activity_date::date + INTERVAL '7 days')
@@ -1337,6 +1375,9 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
       const currentCallupStatus = row.callup_status === "present" ? "accepted"
         : row.callup_status === "absent" ? "declined"
         : row.callup_status === "unknown" ? "pending" : null;
+      const recentMatchCount = Number(row.recent_match_count);
+      const upcomingMatchCount = Number(row.upcoming_match_count);
+      const load = assessMatchLoad(recentMatchCount, upcomingMatchCount);
       return {
         playerId: row.player_id,
         name: row.name,
@@ -1356,7 +1397,10 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         matchCount: Number(row.match_count),
         callupCount: Number(row.callup_count),
         plannedUpcomingCount: Number(row.planned_upcoming_count),
-        windowMatchCount: Number(row.window_match_count),
+        windowMatchCount: load.totalMatchCount,
+        recentMatchCount: load.recentMatchCount,
+        upcomingMatchCount: load.upcomingMatchCount,
+        loadLevel: load.level,
         lastSelectedDate: row.last_selected_date,
       };
     }),

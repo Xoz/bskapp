@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
+import { assessMatchLoad } from "@/lib/matchCapacity";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
@@ -27,6 +28,8 @@ type Candidate = {
   callupCount: number;
   plannedUpcomingCount: number;
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
   lastSelectedDate: string | null;
   currentCallupStatus: "accepted" | "declined" | "pending" | null;
   goals: { id: string; title: string }[];
@@ -59,7 +62,8 @@ export default function SelectionEditor({
   );
   const warnings = useMemo(
     () => squadBalanceWarnings(selected.map((candidate) => ({
-      windowMatchCount: candidate.windowMatchCount,
+      recentMatchCount: candidate.recentMatchCount,
+      upcomingMatchCount: candidate.upcomingMatchCount,
     }))),
     [selected]
   );
@@ -128,6 +132,8 @@ export default function SelectionEditor({
         teamNames: candidate.teams.map((team) => team.name),
         primaryTeamName: candidate.primaryTeam?.name ?? null,
         windowMatchCount: candidate.windowMatchCount,
+        recentMatchCount: candidate.recentMatchCount,
+        upcomingMatchCount: candidate.upcomingMatchCount,
         lastSelectedDate: candidate.lastSelectedDate,
         primaryLevel: candidate.player.preferred_level_primary,
         secondaryLevel: candidate.player.preferred_level_secondary,
@@ -238,6 +244,8 @@ export default function SelectionEditor({
             const selectedForMatch = selectedIds.has(candidate.player.id);
             const recommendationReason = recommendationReasons[candidate.player.id];
             const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
+            const load = assessMatchLoad(candidate.recentMatchCount, candidate.upcomingMatchCount);
+            const loadLabel = load.level === "high" ? "För hög belastning" : load.level === "maximum" ? "Vid maxgränsen" : "Normal belastning";
             return (
               <Fragment key={candidate.player.id}>
               {index === 0 && visibleCalledCount > 0 && (
@@ -289,8 +297,8 @@ export default function SelectionEditor({
                   <span className="selection-preference" title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}>
                     {candidate.player.preferred_position_primary || "—"}
                   </span>
-                  <span className="selection-number tabular-nums">
-                    {candidate.windowMatchCount}
+                  <span className="selection-number tabular-nums" title={`${loadLabel}: ${candidate.recentMatchCount} spelade och ${candidate.upcomingMatchCount} kommande`}>
+                    {candidate.recentMatchCount}+{candidate.upcomingMatchCount}
                   </span>
                   {candidate.currentCallupStatus ? (
                     <span className="selection-callup-status" data-callup-status={candidate.currentCallupStatus}>

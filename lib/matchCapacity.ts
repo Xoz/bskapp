@@ -1,10 +1,45 @@
 export const MATCH_CAPACITY_WINDOW_HOURS = 7 * 24;
 export const MATCH_CAPACITY_COST = 50;
 
+export type MatchLoadLevel = "normal" | "maximum" | "high";
+
+export type MatchLoadAssessment = {
+  level: MatchLoadLevel;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
+  totalMatchCount: number;
+};
+
 export type PlayedMatchMoment = {
   date: string;
   startTime: string | null;
 };
+
+/**
+ * Operativ belastningsregel för ett rullande sjudygnsfönster bakåt och framåt.
+ * Fyra matcher är normalt om högst två ligger framåt. Fem totalt eller tre
+ * kommande är maxgränsen. Sex totalt, fyra kommande eller fem redan spelade är
+ * för hög belastning.
+ */
+export function assessMatchLoad(
+  recentMatchCount: number,
+  upcomingMatchCount: number
+): MatchLoadAssessment {
+  const recent = Math.max(0, Math.floor(recentMatchCount));
+  const upcoming = Math.max(0, Math.floor(upcomingMatchCount));
+  const total = recent + upcoming;
+  const level: MatchLoadLevel = recent >= 5 || upcoming >= 4 || total >= 6
+    ? "high"
+    : upcoming === 3 || total === 5
+      ? "maximum"
+      : "normal";
+  return {
+    level,
+    recentMatchCount: recent,
+    upcomingMatchCount: upcoming,
+    totalMatchCount: total,
+  };
+}
 
 /**
  * Enkel exponeringsmätare för tränarens lånebeslut. Varje spelad match kostar

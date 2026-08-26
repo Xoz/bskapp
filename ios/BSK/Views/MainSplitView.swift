@@ -1176,7 +1176,7 @@ struct PremiumSelectionDetail: View {
                             Circle().fill(status == "accepted" ? BSKTheme.accent : status == "declined" ? BSKTheme.danger : BSKTheme.warning).frame(width: 6, height: 6)
                             Text(callupLabel(status)).font(.caption2).foregroundStyle(BSKTheme.muted)
                         }
-                        Text("\(candidate.windowMatchCount) matcher ±7 dagar").font(.caption2).foregroundStyle(BSKTheme.muted)
+                        Text("\(candidate.recentMatchCount) spelade · \(candidate.upcomingMatchCount) kommande").font(.caption2).foregroundStyle(loadColor(candidate))
                     }
                 }
                 Spacer(minLength: 4)
@@ -1264,8 +1264,12 @@ struct PremiumSelectionDetail: View {
                 decisionButton(candidate, value: "reserve", title: "Reserv")
                 decisionButton(candidate, value: "rested", title: "Vilar")
             }
-            Text("\(candidate.windowMatchCount) matcher under perioden ±7 dagar")
-                .font(.caption2).foregroundStyle(BSKTheme.muted)
+            HStack {
+                Text("\(candidate.recentMatchCount) spelade · \(candidate.upcomingMatchCount) kommande")
+                Spacer()
+                Text(loadLabel(candidate))
+            }
+            .font(.caption2.bold()).foregroundStyle(loadColor(candidate))
         }
         .padding(16)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -1310,6 +1314,18 @@ struct PremiumSelectionDetail: View {
         candidate.primaryPosition.isEmpty ? (candidate.position.isEmpty ? "Position saknas" : candidate.position) : candidate.primaryPosition
     }
     private func callupLabel(_ status: String) -> String { status == "accepted" ? "Ja" : status == "declined" ? "Nej" : "Väntar" }
+
+    private func loadLevel(_ candidate: SelectionCandidate) -> String {
+        candidate.loadLevel
+    }
+
+    private func loadLabel(_ candidate: SelectionCandidate) -> String {
+        loadLevel(candidate) == "high" ? "För hög" : loadLevel(candidate) == "maximum" ? "Vid maxgränsen" : "Normal"
+    }
+
+    private func loadColor(_ candidate: SelectionCandidate) -> Color {
+        loadLevel(candidate) == "high" ? BSKTheme.danger : loadLevel(candidate) == "maximum" ? BSKTheme.warning : BSKTheme.muted
+    }
 
     @MainActor private func load() async {
         loadError = nil

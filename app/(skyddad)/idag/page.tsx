@@ -24,7 +24,14 @@ export default async function TodayPage() {
   const yellowStaffing = staffing.filter((row) => row.activity.source_team === "Gul");
   const understaffed = yellowStaffing.filter((row) => (row.activity.has_confirmed_squad || row.called > 0) && row.missing > 0);
   const unanswered = yellowStaffing.reduce((sum, row) => sum + Number(row.activity.pending_callup_count), 0);
-  const highLoad = playerLoads.filter((player) => player.windowMatchCount >= 3).sort((a, b) => b.windowMatchCount - a.windowMatchCount);
+  const maximumLoad = playerLoads.filter((player) => player.loadLevel === "maximum");
+  const highLoad = playerLoads.filter((player) => player.loadLevel === "high");
+  const loadRank = { high: 0, maximum: 1, normal: 2 } as const;
+  const sortedPlayerLoads = [...playerLoads].sort((a, b) =>
+    loadRank[a.loadLevel] - loadRank[b.loadLevel]
+    || b.windowMatchCount - a.windowMatchCount
+    || a.name.localeCompare(b.name, "sv")
+  );
 
   return (
     <div className="core-page">
@@ -38,7 +45,7 @@ export default async function TodayPage() {
         </div>
       </header>
 
-      <section aria-label="Veckans läge" className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <section aria-label="Veckans läge" className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <Link href="#veckans-matcher" className="core-panel p-4 md:p-5">
           <span className="caption" style={{ color: "var(--ink-muted)" }}>Matcher</span>
           <strong className="mt-2 block text-2xl tabular-nums">{upcoming.length}</strong>
@@ -55,9 +62,14 @@ export default async function TodayPage() {
           <small style={{ color: "var(--ink-secondary)" }}>spelarsvar för Gul</small>
         </Link>
         <Link href="#belastning" className="core-panel p-4 md:p-5">
-          <span className="caption" style={{ color: "var(--ink-muted)" }}>Hög belastning</span>
-          <strong className="mt-2 block text-2xl tabular-nums" style={{ color: highLoad.length ? "var(--warning)" : "var(--ink)" }}>{highLoad.length}</strong>
-          <small style={{ color: "var(--ink-secondary)" }}>minst 3 matcher ±7 dagar</small>
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>Vid maxgränsen</span>
+          <strong className="mt-2 block text-2xl tabular-nums" style={{ color: maximumLoad.length ? "var(--warning)" : "var(--ink)" }}>{maximumLoad.length}</strong>
+          <small style={{ color: "var(--ink-secondary)" }}>3 kommande eller 5 totalt</small>
+        </Link>
+        <Link href="#belastning" className="core-panel p-4 md:p-5">
+          <span className="caption" style={{ color: "var(--ink-muted)" }}>För hög belastning</span>
+          <strong className="mt-2 block text-2xl tabular-nums" style={{ color: highLoad.length ? "var(--danger)" : "var(--ink)" }}>{highLoad.length}</strong>
+          <small style={{ color: "var(--ink-secondary)" }}>över den beslutade maxgränsen</small>
         </Link>
       </section>
 
@@ -121,10 +133,15 @@ export default async function TodayPage() {
           <span className="core-section-note">Spelade och planerade matcher</span>
         </div>
         <div className="core-panel divide-y" style={{ borderColor: "var(--border)" }}>
-          {playerLoads.map((player) => (
+          {sortedPlayerLoads.map((player) => (
             <Link key={player.playerId} href={`/spelare/${player.playerId}`} className="flex items-center gap-3 px-4 py-3">
               <span className="min-w-0 flex-1"><strong className="block truncate">{player.name}</strong><small style={{ color: "var(--ink-muted)" }}>{player.recentMatches.length} spelade · {player.upcomingMatches.length} planerade</small></span>
-              <strong className="tabular-nums" style={{ color: player.windowMatchCount >= 3 ? "var(--warning)" : "var(--ink)" }}>{player.windowMatchCount} {player.windowMatchCount === 1 ? "match" : "matcher"}</strong>
+              <span className="text-right">
+                <strong className="block tabular-nums" style={{ color: player.loadLevel === "high" ? "var(--danger)" : player.loadLevel === "maximum" ? "var(--warning)" : "var(--ink)" }}>{player.windowMatchCount} {player.windowMatchCount === 1 ? "match" : "matcher"}</strong>
+                <small style={{ color: player.loadLevel === "high" ? "var(--danger)" : player.loadLevel === "maximum" ? "var(--warning)" : "var(--ink-muted)" }}>
+                  {player.loadLevel === "high" ? "För hög" : player.loadLevel === "maximum" ? "Vid maxgränsen" : "Normal"}
+                </small>
+              </span>
               <span className="core-chevron" aria-hidden>›</span>
             </Link>
           ))}

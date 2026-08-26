@@ -209,13 +209,15 @@ describe("utvecklingskärnans kontrakt", () => {
   it("visar mobil belastning som antal spelade och planerade matcher ±7 dagar", () => {
     expect(mobileDevelopment).toContain("const windowEnd = swedishDateOffset(7)");
     expect(mobileDevelopment).toContain("da.activity_date >= ? AND da.activity_date <= ?");
-    expect(mobileDevelopment).toContain("windowMatchCount: recentMatches.length +");
+    expect(mobileDevelopment).toContain("const load = assessMatchLoad(recentMatches.length, upcomingMatches.length)");
+    expect(mobileDevelopment).toContain("windowMatchCount: load.totalMatchCount");
+    expect(mobileDevelopment).toContain("loadLevel: load.level");
     expect(nativeActivityViews).toContain('Text("Belastning ±7 dagar")');
     expect(nativeActivityViews).not.toContain('Text("\\(player.capacity) %")');
   });
 
   it("samlar veckans operativa signaler på Idag-vyn", () => {
-    for (const label of ["Underbemannade", "Inväntar svar", "Hög belastning", "Att göra"]) {
+    for (const label of ["Underbemannade", "Inväntar svar", "Vid maxgränsen", "För hög belastning", "Att göra"]) {
       expect(todayPage).toContain(label);
     }
     expect(todayPage).toContain("activity.has_confirmed_squad ? Number(activity.squad_count)");

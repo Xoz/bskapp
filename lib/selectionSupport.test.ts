@@ -17,6 +17,8 @@ function candidate(overrides: Partial<RecommendationCandidate> & Pick<Recommenda
     currentlySelected: false,
     currentCallupStatus: null,
     ...overrides,
+    recentMatchCount: overrides.recentMatchCount ?? overrides.windowMatchCount ?? 0,
+    upcomingMatchCount: overrides.upcomingMatchCount ?? 0,
   };
 }
 
@@ -25,6 +27,8 @@ describe("transparent uttagningsstöd", () => {
     expect(
       selectionSupport({
         windowMatchCount: 0,
+        recentMatchCount: 0,
+        upcomingMatchCount: 0,
         teamMinimumWindow: 0,
         activeGoalCount: 1,
         lastSelectedDate: null,
@@ -38,24 +42,27 @@ describe("transparent uttagningsstöd", () => {
     });
   });
 
-  it("varnar för minst tre matcher inom sjudagarsfönstret", () => {
+  it("markerar tre kommande matcher som maxgräns", () => {
     const result = selectionSupport({
       windowMatchCount: 3,
+      recentMatchCount: 0,
+      upcomingMatchCount: 3,
       teamMinimumWindow: 1,
       activeGoalCount: 0,
       lastSelectedDate: "2026-08-15",
     });
-    expect(result.cautions).toContain("3 matcher under perioden ±7 dagar");
+    expect(result.cautions).toContain("Vid maxgränsen: 0 spelade · 3 kommande");
   });
 
   it("visar lagbalans som varningar, inte automatval", () => {
     expect(
       squadBalanceWarnings([
-        { windowMatchCount: 3 },
-        { windowMatchCount: 4 },
+        { recentMatchCount: 2, upcomingMatchCount: 3 },
+        { recentMatchCount: 3, upcomingMatchCount: 3 },
       ])
     ).toEqual([
-      "Minst halva truppen har tre eller fler matcher inom ±7 dagar",
+      "1 spelare har för hög belastning",
+      "Minst halva truppen är vid maxgränsen eller över",
     ]);
   });
 

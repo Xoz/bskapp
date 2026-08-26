@@ -276,11 +276,15 @@ components:
           additionalProperties: { $ref: "#/components/schemas/SkillStatus" }
     PlayerMatchLoad:
       type: object
-      required: [playerId, name, capacity, recentMatches, upcomingMatches]
+      required: [playerId, name, windowMatchCount, recentMatchCount, upcomingMatchCount, loadLevel, capacity, recentMatches, upcomingMatches]
       properties:
         playerId: { type: integer }
         name: { type: string }
         jerseyNumber: { type: [integer, "null"] }
+        windowMatchCount: { type: integer, minimum: 0 }
+        recentMatchCount: { type: integer, minimum: 0 }
+        upcomingMatchCount: { type: integer, minimum: 0 }
+        loadLevel: { type: string, enum: [normal, maximum, high] }
         capacity: { type: integer, minimum: 0, maximum: 100 }
         recentMatches:
           type: array

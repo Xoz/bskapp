@@ -119,16 +119,16 @@ final class AppModel: ObservableObject {
             PlayerSummary(id: 4, name: "Mira", jerseyNumber: 1, position: "Målvakt", primaryPosition: "Målvakt", teamNames: ["Gul", "Grön"], activeGoals: [], lastObservation: nil)
         ]
         playerMatchLoads = [
-            PlayerMatchLoad(playerId: 1, name: "Alma", jerseyNumber: 7, windowMatchCount: 1, capacity: 100, recentMatches: [], upcomingMatches: [
+            PlayerMatchLoad(playerId: 1, name: "Alma", jerseyNumber: 7, windowMatchCount: 1, recentMatchCount: 0, upcomingMatchCount: 1, loadLevel: "normal", capacity: 100, recentMatches: [], upcomingMatches: [
                 .init(id: "sanktan-review-1", date: "2026-08-22", startTime: "10:15", title: "Hemma mot Spånga IS", sourceTeam: "Gul", status: "selected")
             ]),
-            PlayerMatchLoad(playerId: 2, name: "Adele", jerseyNumber: 11, windowMatchCount: 1, capacity: 82, recentMatches: [
+            PlayerMatchLoad(playerId: 2, name: "Adele", jerseyNumber: 11, windowMatchCount: 1, recentMatchCount: 1, upcomingMatchCount: 0, loadLevel: "normal", capacity: 82, recentMatches: [
                 .init(id: "recent-1", date: "2026-08-19", startTime: "18:30", title: "Mot AIK", sourceTeam: "Grön")
             ], upcomingMatches: []),
-            PlayerMatchLoad(playerId: 3, name: "Kerstin", jerseyNumber: 4, windowMatchCount: 1, capacity: 50, recentMatches: [
+            PlayerMatchLoad(playerId: 3, name: "Kerstin", jerseyNumber: 4, windowMatchCount: 1, recentMatchCount: 1, upcomingMatchCount: 0, loadLevel: "normal", capacity: 50, recentMatches: [
                 .init(id: "recent-2", date: "2026-08-21", startTime: "09:00", title: "Mot Sollentuna", sourceTeam: "Gul")
             ], upcomingMatches: []),
-            PlayerMatchLoad(playerId: 4, name: "Mira", jerseyNumber: 1, windowMatchCount: 2, capacity: 18, recentMatches: [
+            PlayerMatchLoad(playerId: 4, name: "Mira", jerseyNumber: 1, windowMatchCount: 2, recentMatchCount: 2, upcomingMatchCount: 0, loadLevel: "normal", capacity: 18, recentMatches: [
                 .init(id: "recent-3", date: "2026-08-20", startTime: "18:00", title: "Mot Brommapojkarna", sourceTeam: "Gul"),
                 .init(id: "recent-4", date: "2026-08-18", startTime: "18:30", title: "Mot Vasalund", sourceTeam: "Grön")
             ], upcomingMatches: [])

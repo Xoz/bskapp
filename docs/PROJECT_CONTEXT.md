@@ -1,5 +1,21 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-26: belastningsgränser för matcher
+
+- Matchbelastning bedöms i ett rullande fönster med spelade matcher de senaste
+  sju dagarna och bekräftade eller planerade matcher de kommande sju dagarna.
+- `Normal`: högst fyra matcher totalt och högst två kommande. Exempelvis 2
+  spelade + 2 kommande är normalt.
+- `Vid maxgränsen`: fem matcher totalt eller exakt tre kommande, så länge ingen
+  regel för för hög belastning träffar. Det omfattar bland annat 0–2 spelade +
+  3 kommande, 3 + 2 och 4 + 1.
+- `För hög belastning`: minst sex matcher totalt, minst fyra kommande eller
+  minst fem redan spelade.
+- `lib/matchCapacity.ts` är gemensam regelmotor. Webbens Idag-vy, mobile API,
+  native Idag och uttagningsstödet visar separata antal för spelade och
+  kommande matcher och använder samma tre nivåer. Regeln beskriver
+  matchexponering, inte medicinsk status.
+
 ## Beslut 2026-08-26: ett gemensamt native-matchnav
 
 - Alla matchingångar i native — Idag, Matcher, Utvärdera och Uttagning — öppnar

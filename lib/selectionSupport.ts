@@ -1,5 +1,9 @@
+import { assessMatchLoad } from "./matchCapacity";
+
 export type SelectionSignals = {
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
   teamMinimumWindow: number;
   activeGoalCount: number;
   lastSelectedDate: string | null;
@@ -18,6 +22,8 @@ export type RecommendationCandidate = {
   teamNames: string[];
   primaryTeamName: string | null;
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
   lastSelectedDate: string | null;
   primaryLevel: string;
   secondaryLevel: string;
@@ -56,21 +62,29 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
     );
   }
 
-  if (signals.windowMatchCount >= 3) {
-    cautions.push(`${signals.windowMatchCount} matcher under perioden ±7 dagar`);
+  const load = assessMatchLoad(signals.recentMatchCount, signals.upcomingMatchCount);
+  if (load.level === "maximum") {
+    cautions.push(`Vid maxgränsen: ${load.recentMatchCount} spelade · ${load.upcomingMatchCount} kommande`);
+  } else if (load.level === "high") {
+    cautions.push(`För hög belastning: ${load.recentMatchCount} spelade · ${load.upcomingMatchCount} kommande`);
   }
 
   return { opportunities, cautions };
 }
 
 export function squadBalanceWarnings(
-  selected: Array<{ windowMatchCount: number }>
+  selected: Array<{ recentMatchCount: number; upcomingMatchCount: number }>
 ): string[] {
   if (selected.length === 0) return ["Ingen spelare är uttagen ännu"];
 
   const warnings: string[] = [];
-  if (selected.filter((row) => row.windowMatchCount >= 3).length >= Math.ceil(selected.length / 2)) {
-    warnings.push("Minst halva truppen har tre eller fler matcher inom ±7 dagar");
+  const levels = selected.map((row) => assessMatchLoad(row.recentMatchCount, row.upcomingMatchCount).level);
+  const highCount = levels.filter((level) => level === "high").length;
+  if (highCount > 0) {
+    warnings.push(`${highCount} spelare har för hög belastning`);
+  }
+  if (levels.filter((level) => level !== "normal").length >= Math.ceil(selected.length / 2)) {
+    warnings.push("Minst halva truppen är vid maxgränsen eller över");
   }
   return warnings;
 }
@@ -99,10 +113,16 @@ function levelFit(candidate: RecommendationCandidate, matchLevel: number | null)
 
 function fairnessOrder(matchLevel: number | null) {
   return (left: RecommendationCandidate, right: RecommendationCandidate) => {
+    const loadRank = (candidate: RecommendationCandidate) => {
+      const level = assessMatchLoad(candidate.recentMatchCount, candidate.upcomingMatchCount).level;
+      return level === "normal" ? 0 : level === "maximum" ? 1 : 2;
+    };
+    const levelDiff = loadRank(left) - loadRank(right);
+    if (levelDiff !== 0) return levelDiff;
     const loadDiff = left.windowMatchCount - right.windowMatchCount;
     if (loadDiff !== 0) return loadDiff;
-    const levelDiff = levelFit(left, matchLevel).rank - levelFit(right, matchLevel).rank;
-    if (levelDiff !== 0) return levelDiff;
+    const fitDiff = levelFit(left, matchLevel).rank - levelFit(right, matchLevel).rank;
+    if (fitDiff !== 0) return fitDiff;
     const leftDate = left.lastSelectedDate ?? "";
     const rightDate = right.lastSelectedDate ?? "";
     return leftDate.localeCompare(rightDate) || left.name.localeCompare(right.name, "sv");
@@ -153,7 +173,7 @@ export function recommendYellowSelection(input: {
     for (const candidate of yellow) {
       if (selected.size >= targetSize) break;
       const fit = levelFit(candidate, input.matchLevel);
-      add(candidate, `Rättvist Gul-lån · ${candidate.windowMatchCount} matcher ±7 dagar · ${fit.label}`);
+      add(candidate, `Rättvist Gul-lån · ${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
     }
     const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
     return {
@@ -168,7 +188,7 @@ export function recommendYellowSelection(input: {
   for (const candidate of yellow) {
     if (selected.size >= targetSize) break;
     const fit = levelFit(candidate, input.matchLevel);
-    add(candidate, `${candidate.windowMatchCount} matcher ±7 dagar · ${fit.label}`);
+    add(candidate, `${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
   }
 
   const fillers = ["F15", "Grön"];

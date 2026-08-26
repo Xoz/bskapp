@@ -1087,7 +1087,8 @@ struct TodayList: View {
                         statusCard(title: "Matcher", value: thisWeeksMatches.count, note: "kvar i veckan", warning: false)
                         statusCard(title: "Underbemannade", value: understaffedMatches.count, note: "färre än 9 klara", warning: !understaffedMatches.isEmpty)
                         statusCard(title: "Inväntar svar", value: unansweredCount, note: "spelarsvar för Gul", warning: unansweredCount > 0)
-                        statusCard(title: "Hög belastning", value: highLoadPlayers.count, note: "minst 3 matcher", warning: !highLoadPlayers.isEmpty)
+                        statusCard(title: "Vid maxgränsen", value: maximumLoadPlayers.count, note: "3 kommande eller 5 totalt", tone: maximumLoadPlayers.isEmpty ? nil : BSKTheme.warning)
+                        statusCard(title: "För hög belastning", value: highLoadPlayers.count, note: "över maxgränsen", tone: highLoadPlayers.isEmpty ? nil : BSKTheme.danger)
                     }
                 }
 
@@ -1197,7 +1198,10 @@ struct TodayList: View {
 
     private var sortedPlayerLoads: [PlayerMatchLoad] {
         model.playerMatchLoads.sorted {
-            $0.windowMatchCount > $1.windowMatchCount || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)
+            loadRank($0.loadLevel) < loadRank($1.loadLevel)
+                || (loadRank($0.loadLevel) == loadRank($1.loadLevel)
+                    && ($0.windowMatchCount > $1.windowMatchCount
+                        || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)))
         }
     }
 
@@ -1205,8 +1209,12 @@ struct TodayList: View {
         model.matchEvaluations.filter { $0.total > 0 && $0.handled < $0.total }
     }
 
+    private var maximumLoadPlayers: [PlayerMatchLoad] {
+        model.playerMatchLoads.filter { $0.loadLevel == "maximum" }
+    }
+
     private var highLoadPlayers: [PlayerMatchLoad] {
-        model.playerMatchLoads.filter { $0.windowMatchCount >= 3 }
+        model.playerMatchLoads.filter { $0.loadLevel == "high" }
     }
 
     private var unansweredCount: Int {
@@ -1234,15 +1242,19 @@ struct TodayList: View {
     }
 
     private func statusCard(title: String, value: Int, note: String, warning: Bool) -> some View {
+        statusCard(title: title, value: value, note: note, tone: warning ? BSKTheme.warning : nil)
+    }
+
+    private func statusCard(title: String, value: Int, note: String, tone: Color?) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title.uppercased()).font(.system(size: 9, weight: .bold)).tracking(0.8).foregroundStyle(BSKTheme.muted)
-            Text("\(value)").font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(warning ? BSKTheme.warning : .white)
+            Text("\(value)").font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(tone ?? .white)
             Text(note).font(.caption2).foregroundStyle(BSKTheme.secondary).lineLimit(1).minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
         .padding(14)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(warning ? BSKTheme.warning.opacity(0.35) : BSKTheme.border))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(tone?.opacity(0.35) ?? BSKTheme.border))
     }
 
     private func taskRow(icon: String, title: String, note: String, tone: Color) -> some View {
@@ -1272,20 +1284,29 @@ struct TodayList: View {
             Text(player.windowMatchCount == 1 ? "1 match" : "\(player.windowMatchCount) matcher")
                 .font(.system(size: 15, weight: .black, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(loadColor(player.windowMatchCount))
+                .foregroundStyle(loadColor(player.loadLevel))
+            Text(loadLabel(player.loadLevel))
+                .font(.caption2.bold())
+                .foregroundStyle(loadColor(player.loadLevel))
             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(BSKTheme.muted)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(player.name), \(player.windowMatchCount) matcher inom sju dagar bakåt och framåt")
+        .accessibilityLabel("\(player.name), \(player.recentMatchCount) spelade, \(player.upcomingMatchCount) kommande, \(loadLabel(player.loadLevel))")
     }
 
-    private func loadColor(_ count: Int) -> Color {
-        if count <= 1 { return BSKTheme.accent }
-        if count == 2 { return BSKTheme.warning }
-        return BSKTheme.danger
+    private func loadRank(_ level: String) -> Int {
+        level == "high" ? 0 : level == "maximum" ? 1 : 2
+    }
+
+    private func loadLabel(_ level: String) -> String {
+        level == "high" ? "För hög" : level == "maximum" ? "Vid maxgränsen" : "Normal"
+    }
+
+    private func loadColor(_ level: String) -> Color {
+        level == "high" ? BSKTheme.danger : level == "maximum" ? BSKTheme.warning : BSKTheme.accent
     }
 
     @ViewBuilder
@@ -1434,6 +1455,9 @@ private struct PlayerMatchLoadDetail: View {
                         Text(player.windowMatchCount == 1 ? "1 match" : "\(player.windowMatchCount) matcher")
                             .font(.title.bold()).monospacedDigit().foregroundStyle(loadColor)
                     }
+                    Text(loadLabel)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(loadColor)
                     Text("Sju dagar bakåt och sju dagar framåt från idag")
                         .font(.caption).foregroundStyle(BSKTheme.muted)
                 }
@@ -1508,9 +1532,11 @@ private struct PlayerMatchLoadDetail: View {
     }
 
     private var loadColor: Color {
-        if player.windowMatchCount <= 1 { return BSKTheme.accent }
-        if player.windowMatchCount == 2 { return BSKTheme.warning }
-        return BSKTheme.danger
+        player.loadLevel == "high" ? BSKTheme.danger : player.loadLevel == "maximum" ? BSKTheme.warning : BSKTheme.accent
+    }
+
+    private var loadLabel: String {
+        player.loadLevel == "high" ? "För hög belastning" : player.loadLevel == "maximum" ? "Vid maxgränsen" : "Normal belastning"
     }
 
     private func statusLabel(_ status: String) -> String {
@@ -1676,9 +1702,9 @@ struct SelectionDetail: View {
                 }
             }
 
-            Text("\(candidate.windowMatchCount) matcher under perioden ±7 dagar")
+            Text("\(candidate.recentMatchCount) spelade · \(candidate.upcomingMatchCount) kommande")
+                .foregroundStyle(candidate.loadLevel == "high" ? BSKTheme.danger : candidate.loadLevel == "maximum" ? BSKTheme.warning : BSKTheme.secondary)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 5)
     }

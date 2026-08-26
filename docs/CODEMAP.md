@@ -88,7 +88,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
-- **matchCapacity.ts**: ren 0–100-mätare för nyligt matchspel; varje match kostar 50 procentenheter och avdraget tonas bort under sju dygn.
+- **matchCapacity.ts**: gemensam belastningsregel för spelade senaste sju dagar + kommande sju dagar (`normal`, `maximum`, `high`), samt det äldre kompatibilitetsmåttet 0–100 för nyligt matchspel.
 - **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, `matchEvaluationIsOpen` (öppnar 75 minuter efter avspark), konsensus/avvikelse och spelartrend utan poäng eller ELO.
 - **matchRoster.ts**: gemensam resolver för vilka spelare som hör till en match. Spelade matcher prioriterar `match_players`; kommande matcher prioriterar `match_squad`, därefter uttagningsbeslut/deltagande och accepterade kallelser.
 

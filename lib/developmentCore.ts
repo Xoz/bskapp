@@ -548,6 +548,8 @@ export type SelectionCandidate = PlayerCoreSummary & {
   lastSelectedDate: string | null;
   plannedUpcomingCount: number;
   windowMatchCount: number;
+  recentMatchCount: number;
+  upcomingMatchCount: number;
   currentCallupStatus: RecommendationCallupStatus;
   support: SelectionSupport;
 };
@@ -574,10 +576,14 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     last_selected_date: string | null;
     planned_upcoming_count: number;
     window_match_count: number;
+    recent_match_count: number;
+    upcoming_match_count: number;
     current_callup_status: RecommendationCallupStatus;
     decision: "selected" | "reserve" | "rested" | null;
   }>(
-     `WITH recent AS (
+     `WITH target AS (
+       SELECT ?::date AS activity_date
+     ), recent AS (
        SELECT id, activity_date,
               row_number() OVER (ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC) AS rn
        FROM development_activities
@@ -599,9 +605,42 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               WHEN ap.source = 'svenskalag_sanktan' AND ap.attendance_status = 'present' THEN r.activity_date
             END) AS last_selected_date,
             (
+              SELECT COUNT(DISTINCT played_match.id)
+              FROM matches played_match
+              WHERE played_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND (SELECT activity_date FROM target)
+                AND (played_match.finished = 1 OR played_match.date::date < (SELECT activity_date FROM target))
+                AND EXISTS (
+                  SELECT 1 FROM match_players played
+                  WHERE played.match_id = played_match.id AND played.player_id = p.id
+                )
+            ) AS recent_match_count,
+            (
+              SELECT COUNT(DISTINCT upcoming_match.id)
+              FROM matches upcoming_match
+              WHERE upcoming_match.date::date BETWEEN (SELECT activity_date FROM target) AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
+                AND COALESCE(upcoming_match.finished, 0) = 0
+                AND (
+                  EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = upcoming_match.id AND squad.player_id = p.id)
+                  OR EXISTS (
+                    SELECT 1 FROM development_activities upcoming_activity
+                    JOIN development_selection_decisions upcoming_selection
+                      ON upcoming_selection.activity_id = upcoming_activity.id
+                    WHERE upcoming_activity.match_id = upcoming_match.id
+                      AND upcoming_selection.player_id = p.id AND upcoming_selection.decision = 'selected'
+                  )
+                  OR EXISTS (
+                    SELECT 1 FROM development_activities upcoming_activity
+                    JOIN development_activity_callups upcoming_callup
+                      ON upcoming_callup.activity_id = upcoming_activity.id
+                    WHERE upcoming_activity.match_id = upcoming_match.id
+                      AND upcoming_callup.player_id = p.id AND upcoming_callup.attendance_status <> 'absent'
+                  )
+                )
+            ) AS upcoming_match_count,
+            (
               SELECT COUNT(DISTINCT window_match.id)
               FROM matches window_match
-              WHERE window_match.date::date BETWEEN (?::date - INTERVAL '7 days') AND (?::date + INTERVAL '7 days')
+              WHERE window_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
                 AND (
                   EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
                   OR EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = window_match.id AND squad.player_id = p.id)
@@ -658,11 +697,10 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
      WHERE p.id IN (${idSql})
      GROUP BY p.id, current_sd.decision`,
     [
+      detail.activity.activity_date,
       `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
-      detail.activity.activity_date,
-      detail.activity.activity_date,
       `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
       activityId,
@@ -680,12 +718,16 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     .map((summary) => history.get(summary.player.id))
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
   const minimum = yellowRows.length
-    ? Math.min(...yellowRows.map((row) => Number(row.window_match_count ?? 0)))
+    ? Math.min(...yellowRows.map((row) => Number(row.recent_match_count ?? 0) + Number(row.upcoming_match_count ?? 0)))
     : 0;
   const candidates: SelectionCandidate[] = candidateSummaries.map((summary) => {
     const row = history.get(summary.player.id);
+    const recentMatchCount = Number(row?.recent_match_count ?? 0);
+    const upcomingMatchCount = Number(row?.upcoming_match_count ?? 0);
     const signals = {
-      windowMatchCount: Number(row?.window_match_count ?? 0),
+      windowMatchCount: recentMatchCount + upcomingMatchCount,
+      recentMatchCount,
+      upcomingMatchCount,
       teamMinimumWindow: Number.isFinite(minimum) ? minimum : 0,
       activeGoalCount: summary.goals.length,
       lastSelectedDate: row?.last_selected_date ?? null,
@@ -702,6 +744,8 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       lastSelectedDate: signals.lastSelectedDate,
       plannedUpcomingCount: Number(row?.planned_upcoming_count ?? 0),
       windowMatchCount: signals.windowMatchCount,
+      recentMatchCount: signals.recentMatchCount,
+      upcomingMatchCount: signals.upcomingMatchCount,
       currentCallupStatus: row?.current_callup_status ?? null,
       support: selectionSupport(signals),
     };
@@ -724,6 +768,8 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     warnings: squadBalanceWarnings(
       selected.map((candidate) => ({
         windowMatchCount: candidate.windowMatchCount,
+        recentMatchCount: candidate.recentMatchCount,
+        upcomingMatchCount: candidate.upcomingMatchCount,
       }))
     ),
   };
