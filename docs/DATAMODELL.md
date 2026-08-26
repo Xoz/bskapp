@@ -16,6 +16,7 @@ och felsöka själva filimporten.
 |---|---|---|
 | Spelare | `players` | En identitet per spelare |
 | Tränarbedömning | `players.preferred_level_primary`, `players.preferred_level_secondary` | Normal Sanktan-nivå och frivillig utmaningsnivå; legacy-kolumnnamnen behålls för API-kompatibilitet |
+| Matchuppföljning | `matches.evaluation_closed_at`, `matches.evaluation_players_waived` | Avslutad uppföljning och om spelarbedömningar uttryckligen avstods |
 | Organisation | `groups`, `player_group_memberships` | Lag och aktuell grupptillhörighet |
 | Match | `matches` | En match oavsett om den skapats manuellt, via kalender eller import |
 | Planerad trupp | `match_squad` | Publicerat uttagningsbeslut, inte bevis på deltagande |

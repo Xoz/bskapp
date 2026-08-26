@@ -447,4 +447,5 @@ struct MatchEvaluationContext: Codable {
     let ourScore: Int?
     let opponentScore: Int?
     let coachComment: String
+    var completeWithoutPlayerEvaluations: Bool? = nil
 }

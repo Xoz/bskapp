@@ -1296,6 +1296,13 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
       )
     `);
   } },
+  { id: "0015-match-followup-completion", run: async () => {
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_closed_at TIMESTAMPTZ");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS evaluation_players_waived INTEGER NOT NULL DEFAULT 0");
+    await getClient().unsafe("ALTER TABLE matches ADD CONSTRAINT matches_evaluation_players_waived_check CHECK (evaluation_players_waived IN (0, 1))");
+    await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_closed_at IS 'Matchuppföljningen är avslutad och ska inte ligga kvar i arbetslistan'");
+    await getClient().unsafe("COMMENT ON COLUMN matches.evaluation_players_waived IS 'Spelarbedömningar avstod uttryckligen eftersom bedömningsunderlag saknades'");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

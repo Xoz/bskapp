@@ -3,6 +3,7 @@ import "server-only";
 import { batch, all, get, logActivity, type SqlArgs } from "../db";
 import type { CurrentUser } from "../auth";
 import { getMatchEvaluationWorkspace } from "../matchEvaluation";
+import { shouldCloseMatchFollowup } from "../matchFollowup";
 import { DevelopmentServiceError } from "./development";
 
 const SELF_VALUES = new Set(["below", "usual", "above"]);
@@ -52,6 +53,7 @@ export type MobileMatchEvaluationContext = {
   ourScore: number | null;
   opponentScore: number | null;
   coachComment: string;
+  completeWithoutPlayerEvaluations?: boolean;
 };
 
 function requireEvaluationPermission(actor: CurrentUser): void {
@@ -141,6 +143,7 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
                 <= now() AT TIME ZONE 'Europe/Stockholm'
          )
        )
+       AND m.evaluation_closed_at IS NULL
        AND EXISTS (
          SELECT 1
          FROM development_activities da
@@ -155,7 +158,7 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
      LIMIT 20`,
     scope.args
   );
-  return Promise.all(matches.map(async (match) => {
+  const summaries = await Promise.all(matches.map(async (match) => {
     const workspace = await getMobileMatchEvaluation(actor, match.id);
     const handled = workspace.players.filter((player) => player.skipped || (player.selfComparison && player.matchImpact)).length;
     return {
@@ -169,6 +172,7 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
       handled,
     };
   }));
+  return summaries.filter((match) => match.total === 0 || match.handled < match.total);
 }
 
 export async function saveMobileMatchEvaluation(
@@ -197,6 +201,7 @@ export async function saveMobileMatchEvaluation(
   }
   const byPlayer = new Map(workspace.players.map((player) => [player.id, player]));
   const seen = new Set<number>();
+  const acceptedAnswers: MobileMatchEvaluationAnswer[] = [];
   const statements: { sql: string; args: SqlArgs }[] = [];
   statements.push({
     sql: workspace.match.hasLiveData
@@ -215,6 +220,7 @@ export async function saveMobileMatchEvaluation(
       (!answer.skipped && (!SELF_VALUES.has(answer.selfComparison!) || !IMPACT_VALUES.has(answer.matchImpact!)))
       || !REASON_VALUES.has(answer.reasonTag)
     ) throw new DevelopmentServiceError("invalid", "Ogiltig matchbedömning.", 400);
+    acceptedAnswers.push(answer);
     statements.push({
       sql: `INSERT INTO match_player_evaluations
               (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot, skipped)
@@ -236,7 +242,32 @@ export async function saveMobileMatchEvaluation(
       ],
     });
   }
+  const closeFollowup = shouldCloseMatchFollowup(
+    workspace.players.map((player) => player.id),
+    workspace.players.map((player) => ({
+      playerId: player.id,
+      selfComparison: player.selfComparison,
+      matchImpact: player.matchImpact,
+      skipped: player.skipped,
+    })),
+    acceptedAnswers,
+    evaluationContext.completeWithoutPlayerEvaluations === true
+  );
+  if (closeFollowup) {
+    statements.push({
+      sql: `UPDATE matches SET evaluation_closed_at = COALESCE(evaluation_closed_at, now()),
+                               evaluation_players_waived = ?
+            WHERE id = ?`,
+      args: [evaluationContext.completeWithoutPlayerEvaluations === true ? 1 : 0, matchId],
+    });
+  }
   await batch(statements);
-  await logActivity(actor.name, "utvärderade match native", `${Math.max(0, statements.length - 1)} spelare`);
+  await logActivity(
+    actor.name,
+    evaluationContext.completeWithoutPlayerEvaluations === true
+      ? "avslutade matchuppföljning utan spelarbedömningar"
+      : "utvärderade match native",
+    `${acceptedAnswers.length} spelare`
+  );
   return getMobileMatchEvaluation(actor, matchId);
 }

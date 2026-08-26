@@ -35,6 +35,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     if (body.context && typeof body.context.coachComment !== "string") {
       throw new DevelopmentServiceError("invalid", "Ogiltig matchsammanfattning.", 400);
     }
+    if (body.context?.completeWithoutPlayerEvaluations != null && typeof body.context.completeWithoutPlayerEvaluations !== "boolean") {
+      throw new DevelopmentServiceError("invalid", "Ogiltigt val för spelarbedömning.", 400);
+    }
     return mobileResponse(await saveMobileMatchEvaluation(actor, matchId((await context.params).id), body.answers, body.context));
   } catch (error) {
     return mobileError(error);

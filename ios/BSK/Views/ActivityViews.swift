@@ -1946,6 +1946,7 @@ struct MatchEvaluationView: View {
     @State private var opponentScoreText = ""
     @State private var coachComment = ""
     @State private var showsMatchContext = false
+    @State private var showsCompleteWithoutPlayersConfirmation = false
 
     var body: some View {
         Group {
@@ -1961,7 +1962,13 @@ struct MatchEvaluationView: View {
                 }
                 .background(BSKTheme.background)
             } else if workspace != nil {
-                ContentUnavailableView("Ingen matchtrupp", systemImage: "person.3", description: Text("Lägg spelare i truppen före utvärderingen."))
+                ContentUnavailableView {
+                    Label("Ingen matchtrupp", systemImage: "person.3")
+                } description: {
+                    Text("Spara resultat och kommentar och avsluta sedan uppföljningen utan spelarbedömningar.")
+                } actions: {
+                    Button("Resultat & kommentar") { showsMatchContext = true }
+                }
             } else {
                 ProgressView("Läser match…")
             }
@@ -1986,6 +1993,18 @@ struct MatchEvaluationView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
+        }
+        .confirmationDialog(
+            "Avsluta utan spelarbedömningar?",
+            isPresented: $showsCompleteWithoutPlayersConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Avsluta matchuppföljningen", role: .destructive) {
+                Task { await completeWithoutPlayerEvaluations() }
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Resultat och kommentar sparas. Matchen tas bort från listan att följa upp, men redan gjorda spelarbedömningar behålls.")
         }
     }
 
@@ -2038,6 +2057,18 @@ struct MatchEvaluationView: View {
             .buttonStyle(.plain)
             .disabled(isSaving || !scoreInputIsValid)
             .opacity(isSaving || !scoreInputIsValid ? 0.5 : 1)
+
+            Button(role: .destructive) {
+                showsCompleteWithoutPlayersConfirmation = true
+            } label: {
+                Label("Avsluta utan spelarbedömningar", systemImage: "checkmark.circle")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+            }
+            .buttonStyle(.bordered)
+            .tint(BSKTheme.warning)
+            .disabled(isSaving || !scoreInputIsValid)
         }
         .padding(horizontalSizeClass == .compact ? 12 : 18)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -2374,6 +2405,34 @@ struct MatchEvaluationView: View {
             case .saved(let updated):
                 workspace = updated
                 savedMessage = "Sparat"
+            case .queued:
+                savedMessage = "Väntar på synkning"
+            }
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func completeWithoutPlayerEvaluations() async {
+        guard !isSaving, scoreInputIsValid, let currentWorkspace = workspace else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            var context = evaluationContext
+            context.completeWithoutPlayerEvaluations = true
+            let status = try await model.saveMatchEvaluation(
+                id: matchID,
+                answers: Array(answers.values),
+                context: context,
+                workspace: currentWorkspace,
+                activeIndex: activeIndex
+            )
+            switch status {
+            case .saved:
+                showsMatchContext = false
+                onComplete?()
+                dismiss()
             case .queued:
                 savedMessage = "Väntar på synkning"
             }
