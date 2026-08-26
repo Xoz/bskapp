@@ -1169,6 +1169,7 @@ struct TodayList: View {
                                     playerLoadRow(player)
                                 }
                                 .buttonStyle(.plain)
+                                .hoverEffect(.highlight)
                                 if player.id != sortedPlayerLoads.last?.id {
                                     Divider().overlay(BSKTheme.hairline).padding(.leading, 14)
                                 }
@@ -1317,6 +1318,7 @@ struct TodayList: View {
         } else {
             Button { selection = activity.id } label: { matchCard(activity, featured: featured) }
                 .buttonStyle(.plain)
+                .hoverEffect(.lift)
         }
     }
 
@@ -1554,30 +1556,120 @@ private struct PlayerMatchLoadDetail: View {
 
 struct TodayDetail: View {
     @EnvironmentObject private var model: AppModel
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("UTVECKLINGSVERKTYGET")
-                    .font(.caption2.bold())
-                    .tracking(1.6)
-                    .foregroundStyle(BSKTheme.accent)
-                Text("Hej \(model.user?.name.components(separatedBy: " ").first ?? "tränare")")
-                    .font(.largeTitle.bold())
-                Text("Veckans matcher, kallelseläget och det som behöver följas upp.")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Efterarbete och spelarbedömning finns under matchens flik Utvärdera.", systemImage: "checklist")
-                    Label("Spelarprofiler och utvecklingsmål finns under Spelare.", systemImage: "person.3")
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("DAGENS ARBETSYTA")
+                        .font(.caption2.bold())
+                        .tracking(1.7)
+                        .foregroundStyle(BSKTheme.accent)
+                    Text("Hej " + (model.user?.name.components(separatedBy: " ").first ?? "tränare"))
+                        .font(.system(size: 40, weight: .black, design: .rounded))
+                        .tracking(-1)
+                    Text("Här får du arbetsro för matchveckan. Välj en match i vänsterkolumnen för att behålla överblicken medan du arbetar.")
+                        .font(.title3)
+                        .foregroundStyle(BSKTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .foregroundStyle(.secondary)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    metricCard(value: String(upcomingMatches.count), title: "Kommande", icon: "calendar")
+                    metricCard(value: String(pendingEvaluationCount), title: "Att utvärdera", icon: "checklist")
+                    metricCard(value: String(playersWithFocus), title: "Med fokus", icon: "scope")
+                }
+
+                if let nextMatch = upcomingMatches.first {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Nästa match", systemImage: "sportscourt.fill")
+                                .font(.headline)
+                                .foregroundStyle(BSKTheme.accent)
+                            Spacer()
+                            BSKStatusChip(
+                                title: nextMatch.sourceTeam.isEmpty ? "Match" : nextMatch.sourceTeam,
+                                color: nextMatch.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent
+                            )
+                        }
+                        Text(nextMatch.title)
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                        Label(
+                            [nextMatch.date, nextMatch.startTime].compactMap { $0 }.joined(separator: " · "),
+                            systemImage: "clock"
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(BSKTheme.secondary)
+                        Text("Öppna matchen i vänsterkolumnen för trupp, matchcenter och utvärdering i den här ytan.")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.muted)
+                    }
+                    .padding(20)
+                    .bskCardSurface()
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Inget kräver ett matchval just nu", systemImage: "checkmark.seal.fill")
+                            .font(.headline)
+                            .foregroundStyle(BSKTheme.accent)
+                        Text("Använd Spelare för individuella mål eller Träningar för kommande pass. Huvudmenyn kan även styras med Kommando-1 till Kommando-5.")
+                            .font(.subheadline)
+                            .foregroundStyle(BSKTheme.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(20)
+                    .bskCardSurface()
+                }
+                }
+                .padding(26)
+                .frame(width: geometry.size.width, alignment: .leading)
             }
-            .padding(28)
-            .frame(maxWidth: 800, alignment: .leading)
         }
-        .background(BSKTheme.background)
+        .background(BSKBackdrop())
         .navigationTitle("Översikt")
     }
+
+    private func metricCard(value: String, title: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(BSKTheme.accent)
+            Text(value)
+                .font(.system(size: 30, weight: .black, design: .rounded))
+                .monospacedDigit()
+            Text(title)
+                .font(.caption.bold())
+                .foregroundStyle(BSKTheme.secondary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
+        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+    }
+
+    private var upcomingMatches: [ActivitySummary] {
+        model.activities
+            .filter { $0.type == "match" && !$0.finished && $0.date >= Self.today }
+            .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
+    }
+
+    private var pendingEvaluationCount: Int {
+        model.matchEvaluations.filter { $0.total > 0 && $0.handled < $0.total }.count
+    }
+
+    private var playersWithFocus: Int {
+        model.players.filter { !$0.activeGoals.isEmpty }.count
+    }
+
+    private static let today: String = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }()
 }
 
 struct SelectionList: View {

@@ -1,5 +1,23 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-26: iPad är primär arbetsyta
+
+- Nativeappens iPad-layout använder tre kolumner först från 1 050 punkters
+  fönsterbredd. Stående iPad och smala Split View-/Stage Manager-fönster får
+  en ren tvåkolumnsnavigation där arbetsytan använder hela detaljbredden och
+  vald post pushas ovanpå, i stället för att systemets innehållskolumn läggs
+  över och skymmer detaljen.
+- Listkolumnen har en uttrycklig idealbredd så match-, tränings-, spelar- och
+  uttagningskort inte pressas till en telefonlik smal remsa. Relevant första
+  match, träning eller spelare väljs automatiskt på iPad så detaljytan används
+  direkt.
+- Idag har ett aktivt iPad-startläge i den breda detaljkolumnen med kommande matcher,
+  kvarvarande utvärderingar och spelare med fokus. Innehållet binds till den
+  faktiska detaljbredden för rotation, Split View och Stage Manager.
+- Huvudarbetsytorna kan bytas med hårdvarutangentbordets Kommando-1 till
+  Kommando-5 och Konto med Kommando-komma. Interaktiva iPad-kort har synlig
+  pekarfeedback utan att ändra iPhone-navigationen.
+
 ## Beslut 2026-08-26: belastningsgränser för matcher
 
 - Matchbelastning bedöms i ett rullande fönster med spelade matcher de senaste

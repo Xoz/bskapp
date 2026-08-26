@@ -111,6 +111,7 @@ struct PlayerList: View {
         } else {
             Button { selection = player.id } label: { playerCard(player) }
                 .buttonStyle(.plain)
+                .hoverEffect(.lift)
         }
     }
 

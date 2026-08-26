@@ -30,6 +30,28 @@ private enum AppSection: String, CaseIterable, Identifiable {
         }
     }
 
+    var keyboardKey: KeyEquivalent {
+        switch self {
+        case .today: return "1"
+        case .matches: return "2"
+        case .trainings: return "3"
+        case .players: return "4"
+        case .selection: return "5"
+        case .settings: return ","
+        }
+    }
+
+    var keyboardLabel: String {
+        switch self {
+        case .today: return "Kommando-1"
+        case .matches: return "Kommando-2"
+        case .trainings: return "Kommando-3"
+        case .players: return "Kommando-4"
+        case .selection: return "Kommando-5"
+        case .settings: return "Kommando-komma"
+        }
+    }
+
     func isAvailable(to user: CurrentUser?) -> Bool {
         guard let user else { return false }
         switch self {
@@ -88,18 +110,63 @@ struct MainSplitView: View {
         }
         .background(BSKTheme.canvas)
         .toolbarBackground(BSKTheme.background.opacity(0.94), for: .navigationBar)
-        .onAppear { normalizeSection() }
-        .onChange(of: model.user?.id) { _, _ in normalizeSection() }
-        .onChange(of: horizontalSizeClass) { _, _ in compactNavigationID = UUID() }
+        .onAppear {
+            normalizeSection()
+            ensureDefaultSelection()
+        }
+        .onChange(of: model.user?.id) { _, _ in
+            normalizeSection()
+            ensureDefaultSelection()
+        }
+        .onChange(of: section) { _, _ in ensureDefaultSelection() }
+        .onChange(of: model.activities.map(\.id)) { _, _ in ensureDefaultSelection() }
+        .onChange(of: model.trainings.map(\.id)) { _, _ in ensureDefaultSelection() }
+        .onChange(of: model.players.map(\.id)) { _, _ in ensureDefaultSelection() }
+        .onChange(of: model.selectionMatches.map(\.id)) { _, _ in ensureDefaultSelection() }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            compactNavigationID = UUID()
+            ensureDefaultSelection()
+        }
     }
 
     private var regularRoot: some View {
+        GeometryReader { geometry in
+            if geometry.size.width >= 1050 {
+                wideRegularRoot
+            } else {
+                narrowRegularRoot
+            }
+        }
+    }
+
+    private var wideRegularRoot: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
+                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 260)
         } content: {
             sectionContent
+                .navigationSplitViewColumnWidth(min: 390, ideal: 440, max: 500)
         } detail: {
             sectionDetail
+        }
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    private var narrowRegularRoot: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            sidebar
+                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 260)
+        } detail: {
+            NavigationStack {
+                sectionContent
+                    .environment(\.horizontalSizeClass, .compact)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            compactMenu
+                        }
+                    }
+            }
+            .id(compactNavigationID)
         }
         .navigationSplitViewStyle(.balanced)
     }
@@ -250,12 +317,43 @@ struct MainSplitView: View {
             resetSelections()
             compactNavigationID = UUID()
         }
+        DispatchQueue.main.async { ensureDefaultSelection() }
     }
 
     private func resetSelections() {
         selectedPlayer = nil
         selectedActivity = nil
         selectedTraining = nil
+    }
+
+    private func ensureDefaultSelection() {
+        guard horizontalSizeClass == .regular else { return }
+        switch currentSection {
+        case .today:
+            if selectedActivity == nil {
+                selectedActivity = model.activities
+                    .filter { $0.type == "match" && !$0.finished && $0.date >= swedishDate(daysFromToday: 0) }
+                    .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
+                    .first?.id
+            }
+        case .matches:
+            if selectedActivity == nil {
+                selectedActivity = model.activities
+                    .filter { $0.type == "match" && !$0.evaluationReady }
+                    .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
+                    .first?.id
+            }
+        case .trainings:
+            if selectedTraining == nil { selectedTraining = model.trainings.first?.id }
+        case .players:
+            if selectedPlayer == nil {
+                selectedPlayer = model.players.first(where: { $0.teamNames.contains("Gul") })?.id ?? model.players.first?.id
+            }
+        case .selection:
+            if selectedActivity == nil { selectedActivity = model.selectionMatches.first?.id }
+        case .settings:
+            break
+        }
     }
 
     private func shouldStartEvaluation(_ activity: ActivitySummary) -> Bool {
@@ -375,6 +473,9 @@ struct MainSplitView: View {
             }
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(item.keyboardKey, modifiers: .command)
+        .hoverEffect(.highlight)
+        .accessibilityHint("Kortkommando " + item.keyboardLabel)
     }
 
     private var compactNavigation: some View {
@@ -659,6 +760,7 @@ private struct ActivityWorkspaceList: View {
         } else {
             Button { selection = activity.id } label: { activityCard(activity) }
                 .buttonStyle(.plain)
+                .hoverEffect(.lift)
         }
     }
 
@@ -935,6 +1037,7 @@ private struct TrainingWorkspaceList: View {
         } else {
             Button { selection = training.id } label: { trainingCard(training) }
                 .buttonStyle(.plain)
+                .hoverEffect(.lift)
         }
     }
 
@@ -1133,7 +1236,9 @@ private struct PremiumSelectionList: View {
         if horizontalSizeClass == .compact {
             NavigationLink(value: match.id) { matchRow(match) }.buttonStyle(.plain)
         } else {
-            Button { selection = match.id } label: { matchRow(match) }.buttonStyle(.plain)
+            Button { selection = match.id } label: { matchRow(match) }
+                .buttonStyle(.plain)
+                .hoverEffect(.lift)
         }
     }
 
