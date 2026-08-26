@@ -286,6 +286,9 @@ struct TrainingSummary: Codable, Identifiable {
     let challengeContext: String
     let participantCount: Int
     let observationCount: Int
+    let acceptedCallupCount: Int
+    let declinedCallupCount: Int
+    let pendingCallupCount: Int
 }
 
 struct LiveMatchState: Codable {

@@ -16,6 +16,7 @@ export type SvenskaLagWorkbookActivity = {
   endTime: string | null;
   title: string;
   isMatch: boolean;
+  isTraining: boolean;
   people: SvenskaLagWorkbookPerson[];
 };
 
@@ -71,6 +72,7 @@ function parseActivityLabel(label: string, year: string): Omit<SvenskaLagWorkboo
     endTime: match[4],
     title,
     isMatch: title.toLowerCase().includes("match"),
+    isTraining: title.toLowerCase().includes("träning"),
   };
 }
 

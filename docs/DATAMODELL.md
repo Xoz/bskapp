@@ -42,6 +42,7 @@ Svenska Lag-normaliseringen gör följande:
 3. för Sanktan räknas spelare som står kvar med svaret ja på kallelsen från kalenderdagen efter matchen som deltagande; Svenska Lags separata LOK-/närvarodel används inte i detta flöde;
 4. deltagandet skrivs idempotent till `match_players` och manuella korrigeringar i utvecklingsaktiviteten bevaras;
 5. statistik och mobil-API läser därefter samma tabeller som manuella matcher.
+6. Excel-exportens träningar importeras endast för Gul och endast i intervallet idag till 14 dagar framåt; aktiviteten skrivs till `development_activities` och ja/nej/inväntar svar till `development_activity_callups`, aldrig till faktiskt deltagande.
 
 ## Avsiktliga skillnader
 

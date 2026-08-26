@@ -408,7 +408,7 @@ components:
           items: { type: string }
     Training:
       type: object
-      required: [id, date, title, theme, challengeContext, participantCount, observationCount]
+      required: [id, date, title, theme, challengeContext, participantCount, observationCount, acceptedCallupCount, declinedCallupCount, pendingCallupCount]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -418,6 +418,9 @@ components:
         challengeContext: { type: string, enum: [safe, balanced, challenging] }
         participantCount: { type: integer, minimum: 0 }
         observationCount: { type: integer, minimum: 0 }
+        acceptedCallupCount: { type: integer, minimum: 0 }
+        declinedCallupCount: { type: integer, minimum: 0 }
+        pendingCallupCount: { type: integer, minimum: 0 }
     ObservationCommand:
       type: object
       required: [commandId, playerId, goalId, evidence, note]

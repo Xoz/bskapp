@@ -25,6 +25,8 @@ export type CallupWorkbookImportResult = {
   declined: number;
   pending: number;
   attendedPlayersAdded: number;
+  importedTrainings: number;
+  trainingCallups: number;
   ignoredPeople: number;
   dryRun: boolean;
   unmatched: string[];
@@ -46,6 +48,15 @@ type PreparedMatch = {
   attendedPlayerIds: number[];
 };
 
+type PreparedTraining = {
+  activityId: string;
+  date: string;
+  startTime: string | null;
+  title: string;
+  groupId: number;
+  callups: PreparedMatch["callups"];
+};
+
 function exactKey(date: string, startTime: string | null, opponent: string, team: string): string {
   return [date, startTime ?? "", normalizeMatchName(opponent), team].join("|");
 }
@@ -56,6 +67,19 @@ function bufferHash(buffer: ArrayBuffer): string {
 
 export function canImportPlayedAttendance(activityDate: string, today = swedishToday()): boolean {
   return activityDate <= today;
+}
+
+export function canImportUpcomingTraining(activityDate: string, today = swedishToday()): boolean {
+  const start = Date.parse(`${today}T00:00:00Z`);
+  const activity = Date.parse(`${activityDate}T00:00:00Z`);
+  return Number.isFinite(activity) && activity >= start && activity <= start + 14 * 86_400_000;
+}
+
+function trainingIdentity(date: string, startTime: string | null, title: string): string {
+  return crypto.createHash("sha256")
+    .update(["Gul", date, startTime ?? "", title.normalize("NFKC").trim().toLowerCase()].join("|"))
+    .digest("hex")
+    .slice(0, 24);
 }
 
 async function parseFiles(files: readonly WorkbookFileInput[]): Promise<{
@@ -80,7 +104,7 @@ export async function importSvenskaLagCallupWorkbooks(
   const teams = parsedFiles.map(({ workbook }) => workbook.sourceTeam);
   if (new Set(teams).size !== teams.length) throw new Error("Ladda endast upp en fil per lag och exporttillfälle.");
 
-  const [players, dbMatches, existingImports] = await Promise.all([
+  const [players, dbMatches, existingImports, yellowGroups] = await Promise.all([
     all<{ id: number; name: string }>("SELECT id, name FROM players WHERE active = 1 ORDER BY name"),
     all<DbMatch>(
       `SELECT DISTINCT ON (m.id) m.id AS match_id, da.id AS activity_id, m.date, m.start_time,
@@ -99,6 +123,11 @@ export async function importSvenskaLagCallupWorkbooks(
        WHERE file_hash IN (${parsedFiles.map(() => "?").join(", ")})`,
       parsedFiles.map(({ hash }) => hash),
     ),
+    all<{ id: number }>(
+      `SELECT id FROM groups
+       WHERE lower(name) = lower('Gul') AND group_type = 'subgroup'
+       ORDER BY id LIMIT 1`,
+    ),
   ]);
   const existingHashes = new Set(existingImports.map((row) => row.file_hash));
   const playerByName = new Map(players.map((player) => [normalizePersonName(player.name), player] as const));
@@ -109,12 +138,43 @@ export async function importSvenskaLagCallupWorkbooks(
   }
 
   const prepared: PreparedMatch[] = [];
+  const preparedTrainings: PreparedTraining[] = [];
   const unmatched: string[] = [];
   let parsedMatchActivities = 0;
   let ignoredPeople = 0;
   for (const { workbook } of parsedFiles) {
     for (const activity of workbook.activities) {
-      if (!activity.isMatch) continue;
+      if (!activity.isMatch) {
+        if (!activity.isTraining || workbook.sourceTeam !== "Gul" || !canImportUpcomingTraining(activity.date)) continue;
+        const groupId = yellowGroups[0]?.id;
+        if (!groupId) throw new Error("Laggruppen Gul saknas i appen.");
+        const callups: PreparedTraining["callups"] = [];
+        const seenCallups = new Set<number>();
+        for (const person of activity.people) {
+          if (!person.called) continue;
+          const player = playerByName.get(normalizePersonName(person.name));
+          if (!player) {
+            ignoredPeople++;
+            continue;
+          }
+          if (seenCallups.has(player.id)) continue;
+          seenCallups.add(player.id);
+          callups.push({
+            playerId: player.id,
+            status: person.accepted ? "present" : person.declined ? "absent" : "unknown",
+          });
+        }
+        const identity = trainingIdentity(activity.date, activity.startTime, activity.title);
+        preparedTrainings.push({
+          activityId: `svenskalag-training-${identity}`,
+          date: activity.date,
+          startTime: activity.startTime,
+          title: activity.title,
+          groupId,
+          callups,
+        });
+        continue;
+      }
       const opponent = workbookOpponent(activity.title);
       if (!opponent) continue;
       const relevantPeople = activity.people.filter((person) => person.called || person.attended);
@@ -176,6 +236,8 @@ export async function importSvenskaLagCallupWorkbooks(
     declined: prepared.reduce((sum, item) => sum + item.callups.filter((callup) => callup.status === "absent").length, 0),
     pending: prepared.reduce((sum, item) => sum + item.callups.filter((callup) => callup.status === "unknown").length, 0),
     attendedPlayersAdded: prepared.reduce((sum, item) => sum + item.attendedPlayerIds.length, 0),
+    importedTrainings: preparedTrainings.length,
+    trainingCallups: preparedTrainings.reduce((sum, item) => sum + item.callups.length, 0),
     ignoredPeople,
     dryRun: options.dryRun ?? false,
     unmatched,
@@ -228,6 +290,38 @@ export async function importSvenskaLagCallupWorkbooks(
         args: [item.db.activity_id, playerId],
       });
     }
+  }
+  for (const training of preparedTrainings) {
+    const externalKey = `svenskalag:training:${training.activityId.replace("svenskalag-training-", "")}`;
+    statements.push({
+      sql: `INSERT INTO development_activities
+            (id, activity_date, start_time, activity_type, title, external_source, external_key, group_id)
+            VALUES (?, ?, ?, 'training', ?, 'svenskalag_file', ?, ?)
+            ON CONFLICT (external_key) DO UPDATE SET
+              activity_date = excluded.activity_date, start_time = excluded.start_time,
+              title = excluded.title, group_id = excluded.group_id,
+              updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
+      args: [training.activityId, training.date, training.startTime, training.title, externalKey, training.groupId],
+    });
+    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [training.activityId] });
+    for (const callup of training.callups) {
+      statements.push({
+        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
+        args: [training.activityId, callup.playerId, callup.status],
+      });
+    }
+    const accepted = training.callups.filter((callup) => callup.status === "present").length;
+    const declined = training.callups.filter((callup) => callup.status === "absent").length;
+    const pending = training.callups.filter((callup) => callup.status === "unknown").length;
+    statements.push({
+      sql: `INSERT INTO development_activity_callup_summaries
+            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
+            VALUES (?, ?, ?, ?, 'svenskalag_file', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
+            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
+              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
+              source = excluded.source, updated_at = excluded.updated_at`,
+      args: [training.activityId, accepted, declined, pending],
+    });
   }
   await batch(statements);
   return result;

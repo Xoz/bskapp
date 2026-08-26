@@ -88,6 +88,7 @@ export default async function SettingsPage({
     sanktan_direkt_omatchade?: string;
     kallelsefil?: string;
     kallelsefil_matcher?: string;
+    kallelsefil_traningar?: string;
     kallelsefil_kallelser?: string;
     kallelsefil_omatchade?: string;
   }>;
@@ -118,7 +119,7 @@ export default async function SettingsPage({
     getLatestAttendanceImportSummary(),
   ]);
   const hasDemo = players.some((p) => p.name.startsWith("Exempel:"));
-  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher, sanktan_direkt, sanktan_direkt_matcher, sanktan_direkt_deltagare, sanktan_direkt_omatchade, kallelsefil, kallelsefil_matcher, kallelsefil_kallelser, kallelsefil_omatchade } =
+  const { sparad, kalender, narvaro, narvaro_spelare, narvaro_aktiviteter, narvaro_matchade, sanktan, sanktan_spelare, sanktan_historik, sanktan_matcher, sanktan_kommande, sanktan_kommande_matcher, sanktan_direkt, sanktan_direkt_matcher, sanktan_direkt_deltagare, sanktan_direkt_omatchade, kallelsefil, kallelsefil_matcher, kallelsefil_traningar, kallelsefil_kallelser, kallelsefil_omatchade } =
     await searchParams;
 
   return (
@@ -266,7 +267,7 @@ export default async function SettingsPage({
           {kallelsefil === "ok" && (
             <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm" style={{ background: "var(--ok-bg)", color: "var(--success)" }}>
               <IconCheck width={16} height={16} />
-              {`${kallelsefil_matcher ?? "0"} matcher och ${kallelsefil_kallelser ?? "0"} spelarkallelser uppdaterades från Excel.${Number(kallelsefil_omatchade ?? 0) > 0 ? ` ${kallelsefil_omatchade} aktiviteter kunde inte kopplas säkert och hoppades över.` : ""}`}
+              {`${kallelsefil_matcher ?? "0"} matcher, ${kallelsefil_traningar ?? "0"} Gul-träningar och ${kallelsefil_kallelser ?? "0"} spelarkallelser uppdaterades från Excel.${Number(kallelsefil_omatchade ?? 0) > 0 ? ` ${kallelsefil_omatchade} aktiviteter kunde inte kopplas säkert och hoppades över.` : ""}`}
             </div>
           )}
           {kallelsefil != null && kallelsefil !== "ok" && (
@@ -687,7 +688,7 @@ export default async function SettingsPage({
                   />
                 </div>
                 <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                  Välj en eller båda filerna. Endast aktiva spelarprofiler importeras. Bekräftade trupper och uttagningsbeslut ändras aldrig.
+                  Välj Gul-filen och vid behov även Grön-filen för matcher. Träningar importeras endast från Gul och endast från idag till 14 dagar framåt, tillsammans med kallelser och svar. Bekräftade trupper och uttagningsbeslut ändras aldrig.
                 </p>
                 <button type="submit" className="btn-primary">Importera Svenska Lag-data</button>
               </form>

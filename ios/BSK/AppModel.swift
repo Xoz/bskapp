@@ -174,7 +174,10 @@ final class AppModel: ObservableObject {
                 theme: "Spelbarhet och mod i första passningen",
                 challengeContext: "balanced",
                 participantCount: 13,
-                observationCount: 4
+                observationCount: 4,
+                acceptedCallupCount: 12,
+                declinedCallupCount: 1,
+                pendingCallupCount: 2
             )
         ]
         phase = .signedIn

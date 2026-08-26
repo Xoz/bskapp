@@ -6,7 +6,7 @@ async function main() {
   const apply = process.argv.includes("--apply");
   const paths = process.argv.slice(2).filter((arg) => arg !== "--apply");
   if (paths.length < 1 || paths.length > 2) {
-    throw new Error("Användning: npm run import:callups -- [--apply] fil-gul.xlsx [fil-grön.xlsx]");
+    throw new Error("Användning: npm run import:callups -- [--apply] fil-gul.xlsx [fil-grön.xlsx]. Träningar tas endast från Gul, idag till 14 dagar framåt.");
   }
   const files = await Promise.all(paths.map(async (path) => {
     const buffer = await readFile(path);

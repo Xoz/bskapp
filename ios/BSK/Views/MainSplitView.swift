@@ -956,8 +956,13 @@ private struct TrainingWorkspaceList: View {
                         .font(.caption).foregroundStyle(BSKTheme.secondary).lineLimit(1)
                 }
                 HStack(spacing: 12) {
-                    Label("\(training.participantCount) närvarande", systemImage: "person.2.fill")
-                    Label("\(training.observationCount) observationer", systemImage: "eye.fill")
+                    if training.acceptedCallupCount + training.declinedCallupCount + training.pendingCallupCount > 0 {
+                        Label("\(training.acceptedCallupCount) ja", systemImage: "checkmark.circle.fill")
+                        Label("\(training.pendingCallupCount) väntar", systemImage: "clock.fill")
+                    } else {
+                        Label("\(training.participantCount) närvarande", systemImage: "person.2.fill")
+                        Label("\(training.observationCount) observationer", systemImage: "eye.fill")
+                    }
                 }
                 .font(.caption2.bold())
                 .foregroundStyle(BSKTheme.muted)
@@ -1020,6 +1025,14 @@ private struct TrainingDetail: View {
                 HStack(spacing: 10) {
                     metricCard(value: training.participantCount, title: "Närvarande", icon: "person.2.fill")
                     metricCard(value: training.observationCount, title: "Observationer", icon: "eye.fill")
+                }
+
+                if training.acceptedCallupCount + training.declinedCallupCount + training.pendingCallupCount > 0 {
+                    HStack(spacing: 10) {
+                        metricCard(value: training.acceptedCallupCount, title: "Ja", icon: "checkmark.circle.fill")
+                        metricCard(value: training.declinedCallupCount, title: "Nej", icon: "xmark.circle.fill")
+                        metricCard(value: training.pendingCallupCount, title: "Väntar", icon: "clock.fill")
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 9) {

@@ -4,7 +4,7 @@ import {
   parseSvenskaLagCallupRows,
   workbookOpponent,
 } from "./callupWorkbook";
-import { canImportPlayedAttendance } from "./services/callupWorkbookImport";
+import { canImportPlayedAttendance, canImportUpcomingTraining } from "./services/callupWorkbookImport";
 
 function exampleRows(): unknown[][] {
   const rows = Array.from({ length: 15 }, () => [] as unknown[]);
@@ -28,6 +28,7 @@ describe("Svenska Lag-kallelsefil", () => {
       startTime: "10:00",
       title: "Match mot Ängby IF",
       isMatch: true,
+      isTraining: false,
     });
     expect(parsed.activities[0].people).toEqual([
       { name: "Ada Andersson", birthDate: "2014-01-02", called: true, accepted: true, declined: false, attended: true },
@@ -49,5 +50,28 @@ describe("Svenska Lag-kallelsefil", () => {
   it("importerar aldrig faktiskt deltagande för framtida matcher", () => {
     expect(canImportPlayedAttendance("2026-08-21", "2026-08-21")).toBe(true);
     expect(canImportPlayedAttendance("2026-08-22", "2026-08-21")).toBe(false);
+  });
+
+  it("importerar endast träningar från idag till 14 dagar framåt", () => {
+    expect(canImportUpcomingTraining("2026-08-21", "2026-08-21")).toBe(true);
+    expect(canImportUpcomingTraining("2026-09-04", "2026-08-21")).toBe(true);
+    expect(canImportUpcomingTraining("2026-09-05", "2026-08-21")).toBe(false);
+    expect(canImportUpcomingTraining("2026-08-20", "2026-08-21")).toBe(false);
+  });
+
+  it("tolkar träningens kallelser och svar", () => {
+    const rows = exampleRows();
+    rows[11][2] = "Lördag 22 aug, 10:00 - 11:30\nTräning Bromstens IP";
+    const parsed = parseSvenskaLagCallupRows(rows, "gul.xlsx");
+    expect(parsed.activities[0]).toMatchObject({
+      date: "2026-08-22",
+      title: "Träning Bromstens IP",
+      isMatch: false,
+      isTraining: true,
+    });
+    expect(parsed.activities[0].people.map((person) => ({ name: person.name, called: person.called, accepted: person.accepted, declined: person.declined }))).toEqual([
+      { name: "Ada Andersson", called: true, accepted: true, declined: false },
+      { name: "Bea Berg", called: true, accepted: false, declined: true },
+    ]);
   });
 });

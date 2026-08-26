@@ -1606,13 +1606,13 @@ export async function importSvenskaLagCallupFiles(formData: FormData) {
       await Promise.all(files.map(async (file) => ({ name: file.name, buffer: await file.arrayBuffer() }))),
       importedBy,
     );
-    await logActivity(importedBy, "Importerade Svenska Lag-filer", `${result.matchedMatches} matcher · ${result.callups} kallelser`);
+    await logActivity(importedBy, "Importerade Svenska Lag-filer", `${result.matchedMatches} matcher · ${result.importedTrainings} Gul-träningar · ${result.callups + result.trainingCallups} kallelser`);
     revalidatePath("/installningar");
     revalidatePath("/spelare");
     revalidatePath("/idag");
     revalidatePath("/observera");
     revalidatePath("/uttagning");
-    redirect(`/installningar?kallelsefil=ok&kallelsefil_matcher=${result.matchedMatches}&kallelsefil_kallelser=${result.callups}&kallelsefil_omatchade=${result.skippedUnmatchedMatches}#trupp`);
+    redirect(`/installningar?kallelsefil=ok&kallelsefil_matcher=${result.matchedMatches}&kallelsefil_traningar=${result.importedTrainings}&kallelsefil_kallelser=${result.callups + result.trainingCallups}&kallelsefil_omatchade=${result.skippedUnmatchedMatches}#trupp`);
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error;
     console.error("Kunde inte importera Svenska Lag-kallelser", error);
