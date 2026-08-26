@@ -1,7 +1,8 @@
-// Databaslager: Supabase (Postgres). Sätt DATABASE_URL i miljön.
+// Databaslager: Postgres. Sätt DATABASE_URL i miljön.
 //
-// En enda postgres.js-anslutning, körd mot Supabase Transaction pooler
-// (port 6543) – den stödjer inte prepared statements, därför `prepare: false`.
+// En enda postgres.js-anslutning. Produktionens DATABASE_URL kommer från VPS:ens
+// /etc/bsk/bsk.env; lokal utveckling använder en separat utvecklingsdatabas.
+// Prepared statements är avstängda eftersom anslutningspooler kan sakna stöd.
 // Lågnivå-API:t (all/get/run/batch) tar SQL med ?-placeholders precis som
 // tidigare mot Turso/libSQL, så actions.ts/queries.ts/live.ts är oförändrade.
 

@@ -1693,6 +1693,7 @@ struct SelectionDetail: View {
                 Text("Vilar").tag("rested")
             }
             .pickerStyle(.segmented)
+            .disabled(candidate.currentCallupStatus != nil)
 
             if decisions[candidate.playerId] == "selected" {
                 Picker("Position", selection: positionBinding(candidate)) {
@@ -1700,6 +1701,12 @@ struct SelectionDetail: View {
                         Text(position.isEmpty ? "Ej satt" : position).tag(position)
                     }
                 }
+            }
+
+            if candidate.currentCallupStatus != nil {
+                Text("Kallelse och svar är låsta")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
             Text("\(candidate.recentMatchCount) spelade · \(candidate.upcomingMatchCount) kommande")

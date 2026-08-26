@@ -1360,13 +1360,18 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
      LEFT JOIN development_activity_callups dac ON dac.activity_id = ? AND dac.player_id = p.id
      LEFT JOIN development_activities target ON target.id = ?
      LEFT JOIN match_squad ms ON ms.match_id = target.match_id AND ms.player_id = p.id
-     WHERE p.active = 1 AND p.selection_eligible = 1 AND ${scope.sql}
+     WHERE p.active = 1
+       AND (p.selection_eligible = 1 OR EXISTS (
+         SELECT 1 FROM development_activity_callups visible_callup
+         WHERE visible_callup.activity_id = ? AND visible_callup.player_id = p.id
+       ))
+       AND ${scope.sql}
      ORDER BY CASE
        WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
        WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
        WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
        ELSE 3 END, lower(p.name)`,
-    [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, ...scope.args]
+    [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, activityId, ...scope.args]
   );
   const hasSavedSquad = rows.some((row) => row.in_match_squad);
   return {
@@ -1388,9 +1393,13 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         primaryLevel: row.preferred_level_primary,
         secondaryLevel: row.preferred_level_secondary,
         teamNames: row.team_names ?? [],
-        decision: hasSavedSquad
-          ? (row.in_match_squad ? "selected" : (row.saved_decision === "reserve" ? "reserve" : "rested"))
-          : (currentCallupStatus === "accepted" ? "selected" : (row.saved_decision ?? "rested")),
+        decision: currentCallupStatus === "accepted"
+          ? "selected"
+          : currentCallupStatus
+            ? "rested"
+            : hasSavedSquad
+              ? (row.in_match_squad ? "selected" : (row.saved_decision === "reserve" ? "reserve" : "rested"))
+              : (row.saved_decision ?? "rested"),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),
@@ -1424,17 +1433,26 @@ export async function saveMobileSelection(
     if (position.length > 40) throw new DevelopmentServiceError("invalid", "Positionen är för lång.", 400);
     byPlayer.set(decision.playerId, { ...decision, position });
   }
+  const callups = new Map(workspace.candidates
+    .filter((candidate) => candidate.currentCallupStatus)
+    .map((candidate) => [candidate.playerId, candidate.currentCallupStatus!]));
   const activity = await get<{ match_id: number | null }>("SELECT match_id FROM development_activities WHERE id = ?", [activityId]);
   const statements: { sql: string; args: SqlArgs }[] = [];
   if (activity?.match_id != null) {
     statements.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [activity.match_id] });
   }
   for (const candidate of workspace.candidates) {
-    const input = byPlayer.get(candidate.playerId) ?? {
+    const submitted = byPlayer.get(candidate.playerId) ?? {
       playerId: candidate.playerId,
       decision: "rested" as const,
       position: candidate.primaryPosition || candidate.position,
     };
+    const callupStatus = callups.get(candidate.playerId);
+    const input = callupStatus === "accepted"
+      ? { ...submitted, decision: "selected" as const }
+      : callupStatus
+        ? { ...submitted, decision: "rested" as const }
+        : submitted;
     if (activity?.match_id != null && input.decision === "selected") {
       statements.push({ sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT DO NOTHING", args: [activity.match_id, input.playerId] });
     }

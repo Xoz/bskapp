@@ -96,18 +96,21 @@ describe("transparent uttagningsstöd", () => {
     expect(result.reasons[2]).toContain("normal nivå");
   });
 
-  it("bevarar skickade kallelser och väljer inte spelare som tackat nej", () => {
+  it("fyller tomma platser utan att ändra någon skickad kallelse", () => {
     const result = recommendYellowSelection({
       matchLevel: 3,
       targetSize: 2,
       candidates: [
-        candidate({ id: 1, name: "Redan kallad", teamNames: ["Gul"], currentCallupStatus: "pending" }),
+        candidate({ id: 1, name: "Ja-svar", teamNames: ["Gul"], currentCallupStatus: "accepted" }),
         candidate({ id: 2, name: "Tackat nej", teamNames: ["Gul"], currentCallupStatus: "declined" }),
+        candidate({ id: 4, name: "Inväntar", teamNames: ["Gul"], currentCallupStatus: "pending" }),
         candidate({ id: 3, name: "Tillgänglig", teamNames: ["Gul"] }),
       ],
     });
     expect(result.selectedIds).toEqual([1, 3]);
-    expect(result.reasons[1]).toBe("Redan kallad");
+    expect(result.reasons[1]).toBe("Kallad och svarat ja");
+    expect(result.selectedIds).not.toContain(2);
+    expect(result.selectedIds).not.toContain(4);
   });
 
   it("väljer inte en spelare som tillfälligt stängts av från automatiska förslag", () => {

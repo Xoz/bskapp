@@ -27,9 +27,11 @@ describe("kallelsesynk", () => {
     expect(callupTotalsCoverKnownPlayers({ accepted: 0, declined: 1, pending: 1 }, known)).toBe(false);
   });
 
-  it("låter en synkad kallelse styra vilka som är markerade", () => {
-    expect(selectionDecisionFromCallups(true, "declined", "rested")).toBe("selected");
-    expect(selectionDecisionFromCallups(true, null, "selected")).toBe("rested");
+  it("låser ja som uttagen men låter nej och inväntar vara utanför truppen", () => {
+    expect(selectionDecisionFromCallups(true, "accepted", "rested")).toBe("selected");
+    expect(selectionDecisionFromCallups(true, "declined", "selected")).toBe("rested");
+    expect(selectionDecisionFromCallups(true, "pending", "selected")).toBe("rested");
+    expect(selectionDecisionFromCallups(true, null, "selected")).toBe("selected");
   });
 
   it("behåller sparad uttagning när kallelse saknas", () => {

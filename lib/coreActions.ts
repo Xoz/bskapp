@@ -3,7 +3,7 @@
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { batch, get, logActivity, run } from "./db";
+import { all, batch, get, logActivity, run } from "./db";
 import {
   canAccessGroup,
   canAccessPlayer,
@@ -295,6 +295,16 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
   const reserves = new Set(formData.getAll("reserve_player").map(Number).filter((id) => accessibleIds.has(id)));
+  const callups = await all<{ player_id: number; attendance_status: "present" | "absent" | "unknown" }>(
+    "SELECT player_id, attendance_status FROM development_activity_callups WHERE activity_id = ?",
+    [activityId]
+  );
+  const callupByPlayer = new Map(callups.map((callup) => [Number(callup.player_id), callup.attendance_status]));
+  for (const [playerId, status] of callupByPlayer) {
+    if (status === "present") selected.add(playerId);
+    else selected.delete(playerId);
+    reserves.delete(playerId);
+  }
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
 
   if (activity.match_id != null) {
@@ -308,7 +318,12 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   }
 
   for (const player of accessiblePlayers) {
-    const decision = selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
+    const callupStatus = callupByPlayer.get(player.id);
+    const decision = callupStatus === "present"
+      ? "selected"
+      : callupStatus
+        ? "rested"
+        : selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
     const position = String(formData.get(`position_${player.id}`) ?? player.position ?? "").trim().slice(0, 40);
     statements.push({
       sql: `INSERT INTO development_selection_decisions

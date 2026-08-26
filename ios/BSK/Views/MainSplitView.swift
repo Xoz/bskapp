@@ -1206,6 +1206,7 @@ struct PremiumSelectionDetail: View {
                 .background(active ? decisionColor(value) : BSKTheme.backgroundDeep.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(candidate.currentCallupStatus != nil)
         .accessibilityLabel(label)
         .accessibilityAddTraits(active ? .isSelected : [])
     }
@@ -1286,6 +1287,7 @@ struct PremiumSelectionDetail: View {
                 .foregroundStyle(active ? BSKTheme.backgroundDeep : BSKTheme.secondary)
                 .background(active ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }.buttonStyle(.plain)
+        .disabled(candidate.currentCallupStatus != nil)
     }
 
     private var saveBar: some View {

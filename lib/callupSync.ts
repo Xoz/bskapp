@@ -74,15 +74,15 @@ export function callupTotalsCoverKnownPlayers(
 }
 
 /**
- * När en match har synkade kallelser är Svenska Lag facit för vilka som är
- * kallade. En äldre lokalt sparad uttagning ska då inte kunna ligga kvar och
- * visa ett annat urval.
+ * Kallelse och uttagningsbeslut är separata saker. Ett ja är en låst plats i
+ * truppen, medan nej och inväntar aldrig blir uttagna. Okallade spelare får
+ * behålla ett manuellt beslut tills tränaren ändrar det.
  */
 export function selectionDecisionFromCallups(
   hasSyncedCallups: boolean,
   currentCallupStatus: ImportedCallupStatus | null,
   savedDecision: SavedSelectionDecision | null
 ): SavedSelectionDecision {
-  if (!hasSyncedCallups) return savedDecision ?? "rested";
-  return currentCallupStatus ? "selected" : "rested";
+  if (!hasSyncedCallups || currentCallupStatus === null) return savedDecision ?? "rested";
+  return currentCallupStatus === "accepted" ? "selected" : "rested";
 }

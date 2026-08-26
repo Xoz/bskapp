@@ -152,18 +152,18 @@ export function recommendYellowSelection(input: {
     selectedIds.push(candidate.id);
     reasons[candidate.id] = reason;
   };
-  const selectable = input.candidates
-    .filter((candidate) => candidate.selectionEligible)
-    .filter((candidate) => candidate.currentCallupStatus !== "declined")
-    .filter((candidate) => !(input.matchLevel === 4 && candidate.primaryTeamName === "F15"));
-
-  // Befintliga uttagningar och skickade ja-/inväntande kallelser bevaras.
-  selectable
-    .filter((candidate) => candidate.currentlySelected
-      || candidate.currentCallupStatus === "accepted"
-      || candidate.currentCallupStatus === "pending")
+  // Ja-svarade kallelser och redan manuellt valda okallade spelare är fasta.
+  // Nej/inväntar får aldrig flyttas in i truppen av förslaget.
+  input.candidates
+    .filter((candidate) => candidate.currentCallupStatus === "accepted"
+      || (candidate.currentCallupStatus === null && candidate.currentlySelected))
     .sort((left, right) => left.name.localeCompare(right.name, "sv"))
-    .forEach((candidate) => add(candidate, candidate.currentlySelected ? "Redan uttagen" : "Redan kallad"));
+    .forEach((candidate) => add(candidate, candidate.currentCallupStatus === "accepted" ? "Kallad och svarat ja" : "Redan vald"));
+
+  const selectable = input.candidates
+    .filter((candidate) => candidate.currentCallupStatus === null)
+    .filter((candidate) => candidate.selectionEligible)
+    .filter((candidate) => !(input.matchLevel === 4 && candidate.primaryTeamName === "F15"));
 
   const yellow = selectable
     .filter((candidate) => candidate.primaryTeamName === "Gul" && levelFit(candidate, input.matchLevel).safe)

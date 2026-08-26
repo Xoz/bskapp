@@ -6,6 +6,7 @@ const coreActions = readFileSync(new URL("./coreActions.ts", import.meta.url), "
 const actions = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
 const mobileDevelopment = readFileSync(new URL("./services/development.ts", import.meta.url), "utf8");
 const mobileDevelopmentRoute = readFileSync(new URL("../app/api/mobile/v1/players/[id]/development/route.ts", import.meta.url), "utf8");
+const mobileConversationsRoute = readFileSync(new URL("../app/api/mobile/v1/players/[id]/conversations/route.ts", import.meta.url), "utf8");
 const mobileMatchEvaluation = readFileSync(new URL("./services/matchEvaluationMobile.ts", import.meta.url), "utf8");
 const mobileLive = readFileSync(new URL("./services/mobileLive.ts", import.meta.url), "utf8");
 const matchRoster = readFileSync(new URL("./matchRoster.ts", import.meta.url), "utf8");
@@ -52,6 +53,21 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativePlayerViews).toContain("Välj status för färdigheterna och spara allt samlat.");
     expect(nativePlayerViews).toContain("statuses[skill.id] = status");
     expect(nativePlayerViews).not.toContain(".pickerStyle(.menu)");
+  });
+
+  it("sparar spelarsamtal separat från utvecklingsträdets historik", () => {
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS player_conversations");
+    expect(schema).toContain("0016-player-conversations");
+    expect(queries).toContain("export async function getPlayerConversations");
+    expect(coreActions).toContain("export async function createPlayerConversation");
+    expect(mobileConversationsRoute).toContain("export async function POST");
+    expect(mobileDevelopment).toContain("export async function createMobilePlayerConversation");
+    expect(mobileDevelopment).toContain("Skriv minst en samtalsanteckning.");
+    expect(playerPage).toContain("Spara spelarsamtal");
+    expect(playerPage).toContain("Samtalet sparas separat från utvecklingsträdet.");
+    expect(nativePlayerViews).toContain("NewConversationSheet");
+    expect(nativePlayerViews).toContain('SectionTitle("Spelarsamtal")');
+    expect(nativePlayerViews).toContain("isSaving || isEmpty");
   });
 
   it("skyddar osynkat native-arbete och blockerar falska sparningar", () => {
@@ -259,7 +275,7 @@ describe("utvecklingskärnans kontrakt", () => {
   it("använder match_squad som facit efter bekräftad uttagning", () => {
     expect(mobileDevelopment).toContain("FROM match_squad squad WHERE squad.match_id = m.id");
     expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
-    expect(mobileDevelopment).toContain('currentCallupStatus === "accepted" ? "selected"');
+    expect(mobileDevelopment).toContain('currentCallupStatus === "accepted"\n          ? "selected"');
     const saveStart = mobileDevelopment.indexOf("export async function saveMobileSelection");
     const saveEnd = mobileDevelopment.indexOf("function validateCommand", saveStart);
     expect(mobileDevelopment.slice(saveStart, saveEnd)).not.toContain("INSERT INTO development_activity_participation");

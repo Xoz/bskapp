@@ -125,7 +125,7 @@ export default function SelectionEditor({
     const recommendation = recommendYellowSelection({
       matchLevel,
       sourceTeam,
-      targetSize: Math.max(9, selectedIds.size),
+      targetSize: 9,
       candidates: candidates.map((candidate) => ({
         id: candidate.player.id,
         name: candidate.player.name,
@@ -163,7 +163,7 @@ export default function SelectionEditor({
           <div className="selection-summary-count"><strong>{selected.length}</strong><span>markerade</span></div>
           <p className="selection-summary-copy">
             {calledCount > 0
-              ? `Urvalet speglar den synkade kallelsen.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
+              ? `Ja-svarade kallelser är låsta i truppen; nej och inväntar påverkas inte av förslag.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
               : "Ingen synkad kallelse finns ännu. Markera spelare manuellt i listan."}
           </p>
         </div>
@@ -197,7 +197,7 @@ export default function SelectionEditor({
                 <span className="selection-recommend-icon" aria-hidden="true">↻</span>
                 {recommendationSummary
                   ? "Räkna om förslag"
-                  : sourceTeam === "Grön" ? "Föreslå rättvisa Gul-lån" : "Föreslå rättvis trupp"}
+                  : sourceTeam === "Grön" ? "Föreslå Gul-lån för tomma platser" : "Föreslå spelare för tomma platser"}
               </button>
             )}
             <div className="selection-filter-group" role="group" aria-label="Filtrera spelare efter lag">
@@ -277,6 +277,7 @@ export default function SelectionEditor({
                     name="selected_player"
                     value={candidate.player.id}
                     checked={selectedForMatch}
+                    disabled={Boolean(candidate.currentCallupStatus)}
                     onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
                     className="selection-checkbox"
                   />
