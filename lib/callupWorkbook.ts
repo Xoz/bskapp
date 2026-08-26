@@ -103,7 +103,8 @@ export function parseSvenskaLagCallupRows(
     throw new Error("Fel Svenska Lag-export. Använd Kallelser, svar & närvaro.");
   }
   const exportedAt = clean(rows[2]?.[1]) || null;
-  const period = clean(rows[3]?.[1]);
+  const periodLabel = clean(rows[3]?.[1]);
+  const period = periodLabel.match(/\b(20\d{2})\b/)?.[1] ?? "";
   const teamName = clean(rows[4]?.[1]);
   if (!/^\d{4}$/.test(period) || !teamName) throw new Error("Filen saknar period eller lag.");
 

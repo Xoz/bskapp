@@ -74,4 +74,12 @@ describe("Svenska Lag-kallelsefil", () => {
       { name: "Bea Berg", called: true, accepted: false, declined: true },
     ]);
   });
+
+  it("accepterar Svenska Lags nya terminsformat", () => {
+    const rows = exampleRows();
+    rows[3][1] = "HT 2026";
+    rows[4][0] = "Lag/Grupper";
+    rows[4][1] = "F2014-Gul";
+    expect(parseSvenskaLagCallupRows(rows, "gul.xlsx").period).toBe("2026");
+  });
 });
