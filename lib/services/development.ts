@@ -226,6 +226,7 @@ export type MobileTraining = {
   acceptedCallupCount: number;
   declinedCallupCount: number;
   pendingCallupCount: number;
+  acceptedPlayerNames: string[];
 };
 
 export type MobileSelectionMatch = {
@@ -1332,13 +1333,20 @@ export async function listMobileTrainings(actor: CurrentUser): Promise<MobileTra
     accepted_callup_count: number;
     declined_callup_count: number;
     pending_callup_count: number;
+    accepted_player_names: string;
   }>(
     `SELECT da.id, da.activity_date, da.start_time, da.title, da.theme, da.challenge_context,
             COUNT(DISTINCT ap.player_id) FILTER (WHERE ap.attendance_status = 'present') AS participant_count,
             COUNT(DISTINCT o.id) AS observation_count,
             COALESCE(MAX(cs.accepted_count), 0) AS accepted_callup_count,
             COALESCE(MAX(cs.declined_count), 0) AS declined_callup_count,
-            COALESCE(MAX(cs.pending_count), 0) AS pending_callup_count
+            COALESCE(MAX(cs.pending_count), 0) AS pending_callup_count,
+            COALESCE((
+              SELECT string_agg(p.name, chr(31) ORDER BY p.name)
+              FROM development_activity_callups callup
+              JOIN players p ON p.id = callup.player_id AND p.active = 1
+              WHERE callup.activity_id = da.id AND callup.attendance_status = 'present'
+            ), '') AS accepted_player_names
      FROM development_activities da
      LEFT JOIN development_activity_participation ap ON ap.activity_id = da.id
      LEFT JOIN development_observations o ON o.activity_id = da.id
@@ -1363,6 +1371,7 @@ export async function listMobileTrainings(actor: CurrentUser): Promise<MobileTra
     acceptedCallupCount: Number(row.accepted_callup_count),
     declinedCallupCount: Number(row.declined_callup_count),
     pendingCallupCount: Number(row.pending_callup_count),
+    acceptedPlayerNames: row.accepted_player_names ? row.accepted_player_names.split("\u001f") : [],
   }));
 }
 

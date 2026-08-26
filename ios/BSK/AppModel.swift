@@ -177,7 +177,8 @@ final class AppModel: ObservableObject {
                 observationCount: 4,
                 acceptedCallupCount: 12,
                 declinedCallupCount: 1,
-                pendingCallupCount: 2
+                pendingCallupCount: 2,
+                acceptedPlayerNames: ["Adele", "Alma", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
             )
         ]
         phase = .signedIn

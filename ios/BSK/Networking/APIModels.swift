@@ -289,6 +289,7 @@ struct TrainingSummary: Codable, Identifiable {
     let acceptedCallupCount: Int
     let declinedCallupCount: Int
     let pendingCallupCount: Int
+    let acceptedPlayerNames: [String]
 }
 
 struct LiveMatchState: Codable {

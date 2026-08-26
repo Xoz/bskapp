@@ -408,7 +408,7 @@ components:
           items: { type: string }
     Training:
       type: object
-      required: [id, date, title, theme, challengeContext, participantCount, observationCount, acceptedCallupCount, declinedCallupCount, pendingCallupCount]
+      required: [id, date, title, theme, challengeContext, participantCount, observationCount, acceptedCallupCount, declinedCallupCount, pendingCallupCount, acceptedPlayerNames]
       properties:
         id: { type: string }
         date: { type: string, format: date }
@@ -421,6 +421,9 @@ components:
         acceptedCallupCount: { type: integer, minimum: 0 }
         declinedCallupCount: { type: integer, minimum: 0 }
         pendingCallupCount: { type: integer, minimum: 0 }
+        acceptedPlayerNames:
+          type: array
+          items: { type: string }
     ObservationCommand:
       type: object
       required: [commandId, playerId, goalId, evidence, note]

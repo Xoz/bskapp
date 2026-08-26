@@ -1030,6 +1030,30 @@ private struct TrainingDetail: View {
                     }
                 }
 
+                if !training.acceptedPlayerNames.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Tackat ja", systemImage: "person.2.fill")
+                            .font(.headline).foregroundStyle(BSKTheme.accent)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 8)], alignment: .leading, spacing: 8) {
+                            ForEach(training.acceptedPlayerNames, id: \.self) { name in
+                                HStack(spacing: 7) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption).foregroundStyle(BSKTheme.accent)
+                                    Text(name).font(.subheadline.bold()).foregroundStyle(.white).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 11).padding(.vertical, 9)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border))
+                }
+
                 VStack(alignment: .leading, spacing: 9) {
                     Label("Träningstema", systemImage: "scope").font(.headline).foregroundStyle(BSKTheme.accent)
                     Text(training.theme.isEmpty ? "Inget tema registrerat" : training.theme)
