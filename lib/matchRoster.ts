@@ -133,7 +133,15 @@ export async function resolveMatchRosters(matchIds: number[]): Promise<Map<numbe
        SELECT da.match_id, callup.player_id, 'accepted' AS source
        FROM development_activity_callups callup
        JOIN development_activities da ON da.id = callup.activity_id
-       WHERE da.match_id IN (${marks}) AND callup.attendance_status = 'present'
+       JOIN matches callup_match ON callup_match.id = da.match_id
+       WHERE da.match_id IN (${marks})
+         AND (
+           callup.attendance_status = 'present'
+           OR (
+             callup.attendance_status = 'unknown'
+             AND callup_match.date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+           )
+         )
        UNION ALL
        SELECT lineup.match_id, lineup.player_id, 'lineup' AS source
        FROM match_lineup lineup WHERE lineup.match_id IN (${marks})

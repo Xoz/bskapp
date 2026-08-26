@@ -290,6 +290,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(matchRoster).toContain('"played",');
     expect(matchRoster).toContain('"confirmed",');
     expect(matchRoster).toContain('"accepted",');
+    expect(matchRoster).toContain("callup.attendance_status = 'unknown'");
+    expect(matchRoster).toContain("callup_match.date >= to_char(now() AT TIME ZONE 'Europe/Stockholm'");
     expect(nativeActivityViews).toContain("activity.rosterPlayerNames");
     expect(nativeMainSplitView).toContain("activity.rosterLabel");
   });
