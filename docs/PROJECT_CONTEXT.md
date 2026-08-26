@@ -2,18 +2,18 @@
 
 ## Beslut 2026-08-26: iPad är primär arbetsyta
 
-- Nativeappens iPad-layout använder tre kolumner först från 1 050 punkters
-  fönsterbredd. Stående iPad och smala Split View-/Stage Manager-fönster får
-  en ren tvåkolumnsnavigation där arbetsytan använder hela detaljbredden och
-  vald post pushas ovanpå, i stället för att systemets innehållskolumn läggs
-  över och skymmer detaljen.
-- Listkolumnen har en uttrycklig idealbredd så match-, tränings-, spelar- och
-  uttagningskort inte pressas till en telefonlik smal remsa. Relevant första
-  match, träning eller spelare väljs automatiskt på iPad så detaljytan används
-  direkt.
-- Idag har ett aktivt iPad-startläge i den breda detaljkolumnen med kommande matcher,
-  kvarvarande utvärderingar och spelare med fokus. Innehållet binds till den
-  faktiska detaljbredden för rotation, Split View och Stage Manager.
+- Nativeappens iPad-layout bygger inte längre på ett krav om två eller tre
+  kolumner. iPad har en sammanhängande arbetsyta med en kompakt global
+  navigationsrad i toppen. Match, träning, spelare och uttagning öppnas i en
+  vanlig navigationsstack och använder hela arbetsytan.
+- Toppraden visar namnet endast på aktiv arbetsyta; övriga arbetsytor använder
+  tydliga symboler. Det håller navigeringen lugn och användbar även i stående
+  iPad och smalare Stage Manager-fönster.
+- Idag är omgjord som en prioriterad arbetsyta: lägesrubrik, en sammanhållen
+  veckosummering, aktuella handlingar, matchvecka och spelarbelastning. Separata
+  dashboardkort och passiva detaljytor är borttagna från grundmodellen.
+- Färg, typografi och ytor är nedtonade: färre konturer och skuggor, mjukare
+  accentfärg och tydligare innehållshierarki.
 - Huvudarbetsytorna kan bytas med hårdvarutangentbordets Kommando-1 till
   Kommando-5 och Konto med Kommando-komma. Interaktiva iPad-kort har synlig
   pekarfeedback utan att ändra iPhone-navigationen.
@@ -54,7 +54,7 @@
   för att ligga som en flytande kapsel ovanpå innehållet.
 - Idag, Matcher, Utvärdera, Spelare och Uttagning har ett gemensamt kompakt
   bottenutrymme så sista kortet alltid kan rullas helt ovanför menyn och
-  telefonens safe area. iPadens ordinarie splitvy påverkas inte.
+  telefonens safe area. iPadens separata toppnavigation påverkas inte.
 
 ## Beslut 2026-08-25: en gemensam spelartrupp per match
 

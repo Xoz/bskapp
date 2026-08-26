@@ -1,26 +1,21 @@
 import SwiftUI
 
 enum BSKTheme {
-    static let background = Color(red: 13 / 255, green: 18 / 255, blue: 24 / 255)
-    static let backgroundDeep = Color(red: 7 / 255, green: 12 / 255, blue: 16 / 255)
-    static let surface = Color(red: 20 / 255, green: 27 / 255, blue: 34 / 255)
-    static let elevated = Color(red: 27 / 255, green: 36 / 255, blue: 45 / 255)
-    static let border = Color(red: 39 / 255, green: 50 / 255, blue: 61 / 255)
-    static let accent = Color(red: 23 / 255, green: 201 / 255, blue: 100 / 255)
+    static let background = Color(red: 17 / 255, green: 21 / 255, blue: 27 / 255)
+    static let backgroundDeep = Color(red: 11 / 255, green: 14 / 255, blue: 18 / 255)
+    static let surface = Color(red: 25 / 255, green: 30 / 255, blue: 37 / 255)
+    static let elevated = Color(red: 31 / 255, green: 37 / 255, blue: 45 / 255)
+    static let border = Color.white.opacity(0.09)
+    static let accent = Color(red: 76 / 255, green: 196 / 255, blue: 125 / 255)
     static let teamYellow = Color(red: 250 / 255, green: 204 / 255, blue: 21 / 255)
     static let secondary = Color(red: 170 / 255, green: 180 / 255, blue: 194 / 255)
     static let muted = Color(red: 124 / 255, green: 135 / 255, blue: 152 / 255)
     static let warning = Color(red: 245 / 255, green: 165 / 255, blue: 36 / 255)
     static let danger = Color(red: 243 / 255, green: 18 / 255, blue: 96 / 255)
     static let hairline = Color.white.opacity(0.075)
-    static let glow = Color(red: 34 / 255, green: 238 / 255, blue: 126 / 255)
 
     static var canvas: some ShapeStyle {
-        LinearGradient(
-            colors: [background, backgroundDeep],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        background
     }
 
     static var hero: LinearGradient {
@@ -34,16 +29,7 @@ enum BSKTheme {
 
 struct BSKBackdrop: View {
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Rectangle().fill(BSKTheme.canvas)
-            Circle()
-                .fill(BSKTheme.glow.opacity(0.10))
-                .frame(width: 360, height: 360)
-                .blur(radius: 100)
-                .offset(x: 150, y: -170)
-            LinearGradient(colors: [.white.opacity(0.025), .clear], startPoint: .top, endPoint: .center)
-        }
-        .ignoresSafeArea()
+        Rectangle().fill(BSKTheme.canvas).ignoresSafeArea()
     }
 }
 
@@ -72,8 +58,8 @@ struct BSKPageHeader: View {
                 }
             }
             Text(title)
-                .font(.system(size: 38, weight: .black, design: .rounded))
-                .tracking(-1.1)
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .tracking(-0.7)
                 .fixedSize(horizontal: false, vertical: true)
             Text(message)
                 .font(.subheadline)
@@ -105,11 +91,6 @@ private struct BSKListSurface: ViewModifier {
             .background {
                 ZStack(alignment: .topTrailing) {
                     BSKBackdrop()
-                    Circle()
-                        .fill(BSKTheme.accent.opacity(0.075))
-                        .frame(width: 280, height: 280)
-                        .blur(radius: 70)
-                        .offset(x: 120, y: -120)
                 }
                 .ignoresSafeArea()
             }
@@ -128,7 +109,17 @@ private struct BSKCardSurface: ViewModifier {
                 in: RoundedRectangle(cornerRadius: 20, style: .continuous)
             )
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(BSKTheme.border, lineWidth: 1))
-            .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+    }
+}
+
+private struct BSKUsesStackNavigationKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var bskUsesStackNavigation: Bool {
+        get { self[BSKUsesStackNavigationKey.self] }
+        set { self[BSKUsesStackNavigationKey.self] = newValue }
     }
 }
 

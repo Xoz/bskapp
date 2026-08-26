@@ -3,6 +3,7 @@ import SwiftUI
 struct PlayerList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.bskUsesStackNavigation) private var usesStackNavigation
     @Binding var selection: Int?
     @State private var searchText = ""
     @State private var selectedTeam = "Gul"
@@ -52,7 +53,7 @@ struct PlayerList: View {
                 .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BSKTheme.border))
                 teamFilter
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 155), spacing: 10)], spacing: 10) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .compact ? 320 : 240), spacing: 12)], spacing: 12) {
                     ForEach(filteredPlayers) { player in
                         playerLink(player)
                     }
@@ -63,7 +64,7 @@ struct PlayerList: View {
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
-        .navigationTitle("Spelare")
+        .navigationTitle(horizontalSizeClass == .compact ? "Spelare" : "")
         .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
         .onAppear { selectTeam("Gul") }
@@ -105,8 +106,10 @@ struct PlayerList: View {
 
     @ViewBuilder
     private func playerLink(_ player: PlayerSummary) -> some View {
-        if horizontalSizeClass == .compact {
-            NavigationLink { PlayerDetailView(playerID: player.id) } label: { compactPlayerRow(player) }
+        if horizontalSizeClass == .compact || usesStackNavigation {
+            NavigationLink { PlayerDetailView(playerID: player.id) } label: {
+                if horizontalSizeClass == .compact { compactPlayerRow(player) } else { playerCard(player) }
+            }
                 .buttonStyle(.plain)
         } else {
             Button { selection = player.id } label: { playerCard(player) }

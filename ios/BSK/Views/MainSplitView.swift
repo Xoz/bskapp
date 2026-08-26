@@ -87,7 +87,6 @@ struct MainSplitView: View {
     @State private var selectedPlayer: Int?
     @State private var selectedActivity: String?
     @State private var selectedTraining: String?
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var compactNavigationID = UUID()
     @State private var showsAccount = false
 
@@ -112,63 +111,40 @@ struct MainSplitView: View {
         .toolbarBackground(BSKTheme.background.opacity(0.94), for: .navigationBar)
         .onAppear {
             normalizeSection()
-            ensureDefaultSelection()
         }
         .onChange(of: model.user?.id) { _, _ in
             normalizeSection()
-            ensureDefaultSelection()
         }
-        .onChange(of: section) { _, _ in ensureDefaultSelection() }
-        .onChange(of: model.activities.map(\.id)) { _, _ in ensureDefaultSelection() }
-        .onChange(of: model.trainings.map(\.id)) { _, _ in ensureDefaultSelection() }
-        .onChange(of: model.players.map(\.id)) { _, _ in ensureDefaultSelection() }
-        .onChange(of: model.selectionMatches.map(\.id)) { _, _ in ensureDefaultSelection() }
         .onChange(of: horizontalSizeClass) { _, _ in
             compactNavigationID = UUID()
-            ensureDefaultSelection()
         }
     }
 
     private var regularRoot: some View {
-        GeometryReader { geometry in
-            if geometry.size.width >= 1050 {
-                wideRegularRoot
-            } else {
-                narrowRegularRoot
+        NavigationStack {
+            VStack(spacing: 0) {
+                ipadNavigation
+                sectionContent
+                    .environment(\.bskUsesStackNavigation, true)
+                    .navigationTitle("")
+            }
+            .navigationDestination(for: String.self) { id in
+                compactStringDestination(id)
             }
         }
-    }
-
-    private var wideRegularRoot: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            sidebar
-                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 260)
-        } content: {
-            sectionContent
-                .navigationSplitViewColumnWidth(min: 390, ideal: 440, max: 500)
-        } detail: {
-            sectionDetail
-        }
-        .navigationSplitViewStyle(.balanced)
-    }
-
-    private var narrowRegularRoot: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            sidebar
-                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 260)
-        } detail: {
+        .id(compactNavigationID)
+        .sheet(isPresented: $showsAccount) {
             NavigationStack {
-                sectionContent
-                    .environment(\.horizontalSizeClass, .compact)
+                AccountDetail()
                     .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            compactMenu
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Klar") { showsAccount = false }
                         }
                     }
             }
-            .id(compactNavigationID)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
-        .navigationSplitViewStyle(.balanced)
     }
 
     private var compactRoot: some View {
@@ -317,43 +293,12 @@ struct MainSplitView: View {
             resetSelections()
             compactNavigationID = UUID()
         }
-        DispatchQueue.main.async { ensureDefaultSelection() }
     }
 
     private func resetSelections() {
         selectedPlayer = nil
         selectedActivity = nil
         selectedTraining = nil
-    }
-
-    private func ensureDefaultSelection() {
-        guard horizontalSizeClass == .regular else { return }
-        switch currentSection {
-        case .today:
-            if selectedActivity == nil {
-                selectedActivity = model.activities
-                    .filter { $0.type == "match" && !$0.finished && $0.date >= swedishDate(daysFromToday: 0) }
-                    .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
-                    .first?.id
-            }
-        case .matches:
-            if selectedActivity == nil {
-                selectedActivity = model.activities
-                    .filter { $0.type == "match" && !$0.evaluationReady }
-                    .sorted { ($0.date, $0.startTime ?? "") < ($1.date, $1.startTime ?? "") }
-                    .first?.id
-            }
-        case .trainings:
-            if selectedTraining == nil { selectedTraining = model.trainings.first?.id }
-        case .players:
-            if selectedPlayer == nil {
-                selectedPlayer = model.players.first(where: { $0.teamNames.contains("Gul") })?.id ?? model.players.first?.id
-            }
-        case .selection:
-            if selectedActivity == nil { selectedActivity = model.selectionMatches.first?.id }
-        case .settings:
-            break
-        }
     }
 
     private func shouldStartEvaluation(_ activity: ActivitySummary) -> Bool {
@@ -372,6 +317,71 @@ struct MainSplitView: View {
         formatter.timeZone = TimeZone(identifier: "Europe/Stockholm")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: calendar.date(byAdding: .day, value: daysFromToday, to: Date()) ?? Date())
+    }
+
+    private var ipadNavigation: some View {
+        HStack(spacing: 22) {
+            Button { selectSection(.today) } label: {
+                HStack(spacing: 11) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(BSKTheme.accent)
+                        Text("B")
+                            .font(.system(size: 19, weight: .black, design: .rounded))
+                            .foregroundStyle(BSKTheme.backgroundDeep)
+                    }
+                    .frame(width: 38, height: 38)
+                    Text("BSK F2014")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 3) {
+                ForEach(availableSections.filter { $0 != .settings }) { item in
+                    Button { selectSection(item) } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: item.icon)
+                            if currentSection == item {
+                                Text(item.title)
+                            }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(currentSection == item ? .white : BSKTheme.secondary)
+                        .padding(.horizontal, currentSection == item ? 12 : 10)
+                        .frame(height: 38)
+                        .background(
+                            currentSection == item ? Color.white.opacity(0.09) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(item.keyboardKey, modifiers: .command)
+                    .hoverEffect(.highlight)
+                    .accessibilityLabel(item.title)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button { showsAccount = true } label: {
+                ZStack {
+                    Circle().fill(Color.white.opacity(0.08))
+                    Text(String(model.user?.name.prefix(1) ?? "B"))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.plain)
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Öppna konto")
+        }
+        .padding(.horizontal, 22)
+        .frame(height: 64)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) { Rectangle().fill(BSKTheme.hairline).frame(height: 1) }
     }
 
     private var sidebar: some View {
@@ -652,6 +662,7 @@ private enum MatchListFilter: String, CaseIterable, Identifiable {
 private struct ActivityWorkspaceList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.bskUsesStackNavigation) private var usesStackNavigation
     @Binding var selection: String?
     @State private var filter: MatchListFilter = .upcoming
 
@@ -749,7 +760,7 @@ private struct ActivityWorkspaceList: View {
 
     @ViewBuilder
     private func activityLink(_ activity: ActivitySummary) -> some View {
-        if horizontalSizeClass == .compact {
+        if horizontalSizeClass == .compact || usesStackNavigation {
             NavigationLink {
                 MatchWorkspaceView(
                     activity: activity,
@@ -982,6 +993,7 @@ private struct ActivityWorkspaceList: View {
 private struct TrainingWorkspaceList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.bskUsesStackNavigation) private var usesStackNavigation
     @Binding var selection: String?
 
     var body: some View {
@@ -1031,7 +1043,7 @@ private struct TrainingWorkspaceList: View {
 
     @ViewBuilder
     private func trainingLink(_ training: TrainingSummary) -> some View {
-        if horizontalSizeClass == .compact {
+        if horizontalSizeClass == .compact || usesStackNavigation {
             NavigationLink { TrainingDetail(training: training) } label: { trainingCard(training) }
                 .buttonStyle(.plain)
         } else {
@@ -1193,6 +1205,7 @@ private struct TrainingDetail: View {
 private struct PremiumSelectionList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.bskUsesStackNavigation) private var usesStackNavigation
     @Binding var selection: String?
 
     var body: some View {
@@ -1233,7 +1246,7 @@ private struct PremiumSelectionList: View {
 
     @ViewBuilder
     private func matchLink(_ match: SelectionMatchSummary) -> some View {
-        if horizontalSizeClass == .compact {
+        if horizontalSizeClass == .compact || usesStackNavigation {
             NavigationLink(value: match.id) { matchRow(match) }.buttonStyle(.plain)
         } else {
             Button { selection = match.id } label: { matchRow(match) }

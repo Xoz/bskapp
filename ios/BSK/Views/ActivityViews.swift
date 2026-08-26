@@ -1070,25 +1070,44 @@ private struct ObservationComposer: View {
 struct TodayList: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.bskUsesStackNavigation) private var usesStackNavigation
     @Binding var selection: String?
     @State private var selectedPlayerLoad: PlayerMatchLoad?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
+                BSKPageHeader(
+                    eyebrow: todayLabel,
+                    title: "Laget idag",
+                    message: "Det viktigaste först – beslut som behöver tas och matcher som är på väg."
+                )
+
                 VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("VECKANS LÄGE").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
-                        Text("Överblick").font(.title.bold())
-                        Text("Matcher, bemanning, svar och belastning")
-                            .font(.caption).foregroundStyle(BSKTheme.muted)
-                    }
+                    Text("VECKAN I KORTHET")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(1.4)
+                        .foregroundStyle(BSKTheme.muted)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        statusCard(title: "Matcher", value: thisWeeksMatches.count, note: "kvar i veckan", warning: false)
-                        statusCard(title: "Underbemannade", value: understaffedMatches.count, note: "färre än 9 klara", warning: !understaffedMatches.isEmpty)
-                        statusCard(title: "Inväntar svar", value: unansweredCount, note: "spelarsvar för Gul", warning: unansweredCount > 0)
-                        statusCard(title: "Vid maxgränsen", value: maximumLoadPlayers.count, note: "3 kommande eller 5 totalt", tone: maximumLoadPlayers.isEmpty ? nil : BSKTheme.warning)
-                        statusCard(title: "För hög belastning", value: highLoadPlayers.count, note: "över maxgränsen", tone: highLoadPlayers.isEmpty ? nil : BSKTheme.danger)
+                        if horizontalSizeClass == .compact {
+                            statusMetric(title: "Matcher", value: thisWeeksMatches.count, tone: nil)
+                            statusMetric(title: "Saknar spelare", value: understaffedMatches.count, tone: understaffedMatches.isEmpty ? nil : BSKTheme.warning)
+                            statusMetric(title: "Inväntar svar", value: unansweredCount, tone: unansweredCount == 0 ? nil : BSKTheme.warning)
+                            statusMetric(title: "Hög belastning", value: maximumLoadPlayers.count + highLoadPlayers.count, tone: highLoadPlayers.isEmpty ? nil : BSKTheme.danger)
+                        }
+                    }
+                    if horizontalSizeClass != .compact {
+                        HStack(spacing: 0) {
+                            statusMetric(title: "Matcher", value: thisWeeksMatches.count, tone: nil)
+                            metricDivider
+                            statusMetric(title: "Saknar spelare", value: understaffedMatches.count, tone: understaffedMatches.isEmpty ? nil : BSKTheme.warning)
+                            metricDivider
+                            statusMetric(title: "Inväntar svar", value: unansweredCount, tone: unansweredCount == 0 ? nil : BSKTheme.warning)
+                            metricDivider
+                            statusMetric(title: "Hög belastning", value: maximumLoadPlayers.count + highLoadPlayers.count, tone: highLoadPlayers.isEmpty ? nil : BSKTheme.danger)
+                        }
+                        .padding(.vertical, 18)
+                        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
                 }
 
@@ -1180,12 +1199,12 @@ struct TodayList: View {
                     }
                 }
             }
-            .padding(horizontalSizeClass == .compact ? 14 : 18)
+            .padding(horizontalSizeClass == .compact ? 14 : 32)
             .bskCompactTabClearance()
-            .frame(maxWidth: 840)
+            .frame(maxWidth: 1040)
             .frame(maxWidth: .infinity)
         }
-        .navigationTitle("Idag")
+        .navigationTitle(horizontalSizeClass == .compact ? "Idag" : "")
         .background(BSKTheme.canvas)
         .refreshable { await model.reload() }
         .sheet(item: $selectedPlayerLoad) { player in
@@ -1204,6 +1223,13 @@ struct TodayList: View {
                     && ($0.windowMatchCount > $1.windowMatchCount
                         || ($0.windowMatchCount == $1.windowMatchCount && $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending)))
         }
+    }
+
+    private var todayLabel: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "sv_SE")
+        formatter.dateFormat = "EEEE d MMMM"
+        return formatter.string(from: Date())
     }
 
     private var pendingEvaluations: [MatchEvaluationSummary] {
@@ -1242,20 +1268,27 @@ struct TodayList: View {
         activity.hasConfirmedSquad || activity.acceptedCallupCount + activity.declinedCallupCount + activity.pendingCallupCount > 0
     }
 
-    private func statusCard(title: String, value: Int, note: String, warning: Bool) -> some View {
-        statusCard(title: title, value: value, note: note, tone: warning ? BSKTheme.warning : nil)
+    private func statusMetric(title: String, value: Int, tone: Color?) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text("\(value)")
+                .font(.system(size: horizontalSizeClass == .compact ? 27 : 30, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(tone ?? .white)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(BSKTheme.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, horizontalSizeClass == .compact ? 14 : 20)
+        .padding(.vertical, horizontalSizeClass == .compact ? 12 : 0)
+        .background(horizontalSizeClass == .compact ? Color.white.opacity(0.035) : Color.clear, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func statusCard(title: String, value: Int, note: String, tone: Color?) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title.uppercased()).font(.system(size: 9, weight: .bold)).tracking(0.8).foregroundStyle(BSKTheme.muted)
-            Text("\(value)").font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit().foregroundStyle(tone ?? .white)
-            Text(note).font(.caption2).foregroundStyle(BSKTheme.secondary).lineLimit(1).minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-        .padding(14)
-        .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(tone?.opacity(0.35) ?? BSKTheme.border))
+    private var metricDivider: some View {
+        Rectangle()
+            .fill(BSKTheme.hairline)
+            .frame(width: 1, height: 42)
     }
 
     private func taskRow(icon: String, title: String, note: String, tone: Color) -> some View {
@@ -1312,7 +1345,7 @@ struct TodayList: View {
 
     @ViewBuilder
     private func matchLink(_ activity: ActivitySummary, featured: Bool) -> some View {
-        if horizontalSizeClass == .compact {
+        if horizontalSizeClass == .compact || usesStackNavigation {
             NavigationLink { ActivityDetail(activity: activity) } label: { matchCard(activity, featured: featured) }
                 .buttonStyle(.plain)
         } else {
