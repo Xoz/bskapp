@@ -1465,7 +1465,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             p.preferred_position_primary, p.preferred_position_secondary,
             p.preferred_level_primary, p.preferred_level_secondary,
             ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id ORDER BY g.name) AS team_names,
-            roster.selection_status = 'selected' AS in_match_squad,
+            COALESCE(roster.selection_status = 'selected', false) AS in_match_squad,
             CASE roster.callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' WHEN 'pending' THEN 'unknown' END AS callup_status,
             (SELECT COUNT(*) FROM (
                SELECT history.id, EXISTS (
@@ -1559,7 +1559,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         secondaryLevel: row.preferred_level_secondary,
         teamNames: row.team_names ?? [],
         selected: currentCallupStatus === "accepted"
-          || (currentCallupStatus === null && row.in_match_squad),
+          || (currentCallupStatus === null && Boolean(row.in_match_squad)),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),

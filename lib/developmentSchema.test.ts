@@ -298,6 +298,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment).toContain("FROM match_roster roster WHERE roster.match_id = m.id");
     expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
     expect(mobileDevelopment).toContain('selected: currentCallupStatus === "accepted"');
+    expect(mobileDevelopment).toContain("COALESCE(roster.selection_status = 'selected', false) AS in_match_squad");
+    expect(mobileDevelopment).toContain("Boolean(row.in_match_squad)");
     expect(mobileDevelopment).toContain("typeof decision.selected !== \"boolean\"");
     const saveStart = mobileDevelopment.indexOf("export async function saveMobileSelection");
     const saveEnd = mobileDevelopment.indexOf("function validateCommand", saveStart);
