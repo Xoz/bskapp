@@ -19,7 +19,7 @@ type Candidate = {
     preferred_level_secondary: string;
     selection_eligible: number;
   };
-  decision: "selected" | "reserve" | "rested";
+  selected: boolean;
   teams: { id: number; name: string; isPrimary: boolean }[];
   primaryTeam: { id: number; name: string } | null;
   selectedLastEight: number;
@@ -49,7 +49,7 @@ export default function SelectionEditor({
   callupSummary: { accepted: number; declined: number; pending: number };
   action: (formData: FormData) => Promise<void>;
 }) {
-  const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.decision === "selected").map((candidate) => candidate.player.id)));
+  const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.selected).map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
   const [teamFilter, setTeamFilter] = useState<string>("Alla");
   const [recommendationReasons, setRecommendationReasons] = useState<Record<number, string>>({});

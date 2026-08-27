@@ -37,7 +37,12 @@ describe("utvecklingskärnans kontrakt", () => {
   it("har en enda kanonisk förmatchrelation och läser uttagningslistan från matches", () => {
     expect(schema).toContain('0017-canonical-match-roster');
     expect(schema).toContain('0019-normalize-accepted-callups');
+    expect(schema).toContain('0020-selection-checkbox-only');
     expect(schema).toContain("WHEN callup_status = 'accepted' THEN 'selected'");
+    for (const source of [schema, coreActions, mobileDevelopment, developmentCore, nativeActivityViews, nativeMainSplitView]) {
+      expect(source).not.toContain('"reserve"');
+      expect(source).not.toContain('"rested"');
+    }
     expect(schema).toContain("PRIMARY KEY (match_id, player_id)");
     expect(developmentCore).toContain("export async function getSelectionMatches");
     const listStart = developmentCore.indexOf("export async function getSelectionMatches");
@@ -292,7 +297,8 @@ describe("utvecklingskärnans kontrakt", () => {
   it("använder match_roster som facit efter bekräftad uttagning", () => {
     expect(mobileDevelopment).toContain("FROM match_roster roster WHERE roster.match_id = m.id");
     expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
-    expect(mobileDevelopment).toContain('currentCallupStatus === "accepted"\n          ? "selected"');
+    expect(mobileDevelopment).toContain('selected: currentCallupStatus === "accepted"');
+    expect(mobileDevelopment).toContain("typeof decision.selected !== \"boolean\"");
     const saveStart = mobileDevelopment.indexOf("export async function saveMobileSelection");
     const saveEnd = mobileDevelopment.indexOf("function validateCommand", saveStart);
     expect(mobileDevelopment.slice(saveStart, saveEnd)).not.toContain("INSERT INTO development_activity_participation");

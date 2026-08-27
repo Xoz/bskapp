@@ -1,5 +1,5 @@
 export type ImportedCallupStatus = "accepted" | "declined" | "pending";
-export type SavedSelectionDecision = "selected" | "reserve" | "rested";
+export type SavedSelectionDecision = "selected";
 
 export type ImportedCallupPlayer = {
   name: string;
@@ -82,7 +82,7 @@ export function selectionDecisionFromCallups(
   hasSyncedCallups: boolean,
   currentCallupStatus: ImportedCallupStatus | null,
   savedDecision: SavedSelectionDecision | null
-): SavedSelectionDecision {
-  if (!hasSyncedCallups || currentCallupStatus === null) return savedDecision ?? "rested";
-  return currentCallupStatus === "accepted" ? "selected" : "rested";
+): SavedSelectionDecision | null {
+  if (!hasSyncedCallups || currentCallupStatus === null) return savedDecision;
+  return currentCallupStatus === "accepted" ? "selected" : null;
 }

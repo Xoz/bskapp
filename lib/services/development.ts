@@ -255,7 +255,7 @@ export type MobileSelectionCandidate = {
   primaryLevel: string;
   secondaryLevel: string;
   teamNames: string[];
-  decision: "selected" | "reserve" | "rested";
+  selected: boolean;
   currentCallupStatus: "accepted" | "declined" | "pending" | null;
   selectedLastEight: number;
   selectedLastThree: number;
@@ -276,7 +276,7 @@ export type MobileSelectionWorkspace = {
 
 export type MobileSelectionDecision = {
   playerId: number;
-  decision: "selected" | "reserve" | "rested";
+  selected: boolean;
   position: string;
 };
 
@@ -1448,7 +1448,6 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
     preferred_level_primary: string;
     preferred_level_secondary: string;
     team_names: string[];
-    saved_decision: MobileSelectionCandidate["decision"] | null;
     in_match_squad: boolean;
     callup_status: "present" | "absent" | "unknown" | null;
     selected_last_eight: number;
@@ -1465,7 +1464,6 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             p.preferred_position_primary, p.preferred_position_secondary,
             p.preferred_level_primary, p.preferred_level_secondary,
             ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id ORDER BY g.name) AS team_names,
-            roster.selection_status AS saved_decision,
             roster.selection_status = 'selected' AS in_match_squad,
             CASE roster.callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' WHEN 'pending' THEN 'unknown' END AS callup_status,
             (SELECT COUNT(*) FROM (
@@ -1540,7 +1538,6 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
        ELSE 3 END, lower(p.name)`,
     [match.date, match.date, match.date, match.date, activityId, ...scope.args]
   );
-  const hasSavedSquad = rows.some((row) => row.in_match_squad);
   return {
     match,
     candidates: rows.map((row) => {
@@ -1560,13 +1557,8 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         primaryLevel: row.preferred_level_primary,
         secondaryLevel: row.preferred_level_secondary,
         teamNames: row.team_names ?? [],
-        decision: currentCallupStatus === "accepted"
-          ? "selected"
-          : currentCallupStatus
-            ? "rested"
-            : hasSavedSquad
-              ? (row.in_match_squad ? "selected" : (row.saved_decision === "reserve" ? "reserve" : "rested"))
-              : (row.saved_decision ?? "rested"),
+        selected: currentCallupStatus === "accepted"
+          || (currentCallupStatus === null && row.in_match_squad),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),
@@ -1593,7 +1585,7 @@ export async function saveMobileSelection(
   const candidateIds = new Set(workspace.candidates.map((candidate) => candidate.playerId));
   const byPlayer = new Map<number, MobileSelectionDecision>();
   for (const decision of decisions) {
-    if (!candidateIds.has(decision.playerId) || byPlayer.has(decision.playerId) || !["selected", "reserve", "rested"].includes(decision.decision)) {
+    if (!candidateIds.has(decision.playerId) || byPlayer.has(decision.playerId) || typeof decision.selected !== "boolean") {
       throw new DevelopmentServiceError("invalid", "Uttagningen innehåller ogiltiga spelare eller beslut.", 400);
     }
     const position = decision.position.trim();
@@ -1611,25 +1603,26 @@ export async function saveMobileSelection(
   for (const candidate of workspace.candidates) {
     const submitted = byPlayer.get(candidate.playerId) ?? {
       playerId: candidate.playerId,
-      decision: "rested" as const,
+      selected: false,
       position: candidate.primaryPosition || candidate.position,
     };
     const callupStatus = callups.get(candidate.playerId);
-    const input = callupStatus === "accepted"
-      ? { ...submitted, decision: "selected" as const }
-      : callupStatus
-        ? { ...submitted, decision: "rested" as const }
-        : submitted;
+    const selected = callupStatus === "accepted" || (callupStatus == null && submitted.selected);
+    if (!selected) continue;
     if (activity?.match_id != null) statements.push({
       sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
-            VALUES (?, ?, ?, ?, 'native')
+            VALUES (?, ?, 'selected', ?, 'native')
             ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
               selected_position = excluded.selected_position, source = excluded.source, updated_at = now()`,
-      args: [activity.match_id, input.playerId, input.decision, input.position],
+      args: [activity.match_id, submitted.playerId, submitted.position],
     });
   }
   await batch(statements);
-  await logActivity(actor.name, "sparade native-uttagning", `${[...byPlayer.values()].filter((item) => item.decision === "selected").length} uttagna`);
+  const selectedCount = workspace.candidates.filter((candidate) => {
+    const callupStatus = callups.get(candidate.playerId);
+    return callupStatus === "accepted" || (callupStatus == null && Boolean(byPlayer.get(candidate.playerId)?.selected));
+  }).length;
+  await logActivity(actor.name, "sparade native-uttagning", `${selectedCount} uttagna`);
   return getMobileSelectionWorkspace(actor, activityId);
 }
 

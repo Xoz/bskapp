@@ -1743,7 +1743,7 @@ struct SelectionDetail: View {
     @EnvironmentObject private var model: AppModel
     let match: SelectionMatchSummary
     @State private var workspace: SelectionWorkspace?
-    @State private var decisions: [Int: String] = [:]
+    @State private var selections: [Int: Bool] = [:]
     @State private var positions: [Int: String] = [:]
     @State private var isSaving = false
     @State private var savedMessage: String?
@@ -1791,7 +1791,7 @@ struct SelectionDetail: View {
     }
 
     private var selectedCount: Int {
-        decisions.values.filter { $0 == "selected" }.count
+        selections.values.filter { $0 }.count
     }
 
     @ViewBuilder
@@ -1812,15 +1812,11 @@ struct SelectionDetail: View {
                 }
             }
 
-            Picker("Beslut", selection: decisionBinding(candidate)) {
-                Text("Vald").tag("selected")
-                Text("Reserv").tag("reserve")
-                Text("Vilar").tag("rested")
-            }
-            .pickerStyle(.segmented)
+            Toggle("Uttagen i truppen", isOn: selectionBinding(candidate))
+                .tint(BSKTheme.accent)
             .disabled(candidate.currentCallupStatus != nil)
 
-            if decisions[candidate.playerId] == "selected" {
+            if selections[candidate.playerId] == true {
                 Picker("Position", selection: positionBinding(candidate)) {
                     ForEach(["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"], id: \.self) { position in
                         Text(position.isEmpty ? "Ej satt" : position).tag(position)
@@ -1841,10 +1837,10 @@ struct SelectionDetail: View {
         .padding(.vertical, 5)
     }
 
-    private func decisionBinding(_ candidate: SelectionCandidate) -> Binding<String> {
+    private func selectionBinding(_ candidate: SelectionCandidate) -> Binding<Bool> {
         Binding(
-            get: { decisions[candidate.playerId] ?? candidate.decision },
-            set: { decisions[candidate.playerId] = $0; savedMessage = nil }
+            get: { selections[candidate.playerId] ?? candidate.selected },
+            set: { selections[candidate.playerId] = $0; savedMessage = nil }
         )
     }
 
@@ -1860,7 +1856,7 @@ struct SelectionDetail: View {
         do {
             let loaded = try await model.selectionWorkspace(id: match.id)
             workspace = loaded
-            decisions = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.decision) })
+            selections = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.selected) })
             positions = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.primaryPosition.isEmpty ? $0.position : $0.primaryPosition) })
         } catch {
             model.errorMessage = error.localizedDescription
@@ -1876,7 +1872,7 @@ struct SelectionDetail: View {
         let payload = workspace.candidates.map { candidate in
             SelectionDecision(
                 playerId: candidate.playerId,
-                decision: decisions[candidate.playerId] ?? candidate.decision,
+                selected: selections[candidate.playerId] ?? candidate.selected,
                 position: positions[candidate.playerId] ?? candidate.primaryPosition
             )
         }

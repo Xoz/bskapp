@@ -2051,7 +2051,7 @@ export async function syncSanktanDirectTransfer(formData: FormData) {
       if (dbMatch.match_id === null) continue;
       statements.push({
         sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
-              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_direct')
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' END, 'svenskalag_direct')
               ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
                 selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
         args: [dbMatch.match_id, callup.playerId, callup.status, callup.status],
@@ -2183,7 +2183,7 @@ export async function syncUpcomingSanktanCallups(formData: FormData) {
       seenPlayers.add(player.id);
       statements.push({
         sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
-              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_callup')
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' END, 'svenskalag_callup')
               ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
                 selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
         args: [matchId, player.id, callup.status, callup.status],

@@ -28,14 +28,15 @@ describe("kallelsesynk", () => {
   });
 
   it("låser ja som uttagen men låter nej och inväntar vara utanför truppen", () => {
-    expect(selectionDecisionFromCallups(true, "accepted", "rested")).toBe("selected");
-    expect(selectionDecisionFromCallups(true, "declined", "selected")).toBe("rested");
-    expect(selectionDecisionFromCallups(true, "pending", "selected")).toBe("rested");
+    expect(selectionDecisionFromCallups(true, "accepted", null)).toBe("selected");
+    expect(selectionDecisionFromCallups(true, "declined", "selected")).toBeNull();
+    expect(selectionDecisionFromCallups(true, "pending", "selected")).toBeNull();
     expect(selectionDecisionFromCallups(true, null, "selected")).toBe("selected");
   });
 
   it("behåller sparad uttagning när kallelse saknas", () => {
-    expect(selectionDecisionFromCallups(false, null, "reserve")).toBe("reserve");
+    expect(selectionDecisionFromCallups(false, null, "selected")).toBe("selected");
+    expect(selectionDecisionFromCallups(false, null, null)).toBeNull();
   });
 
   it("avgränsar direktsynken till förra kalenderveckan och sju dagar framåt", () => {

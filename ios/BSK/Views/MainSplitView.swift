@@ -1465,7 +1465,7 @@ struct PremiumSelectionDetail: View {
     let match: SelectionMatchSummary
     @State private var workspace: SelectionWorkspace?
     @State private var loadError: String?
-    @State private var decisions: [Int: String] = [:]
+    @State private var selections: [Int: Bool] = [:]
     @State private var isSaving = false
     @State private var savedMessage: String?
     @State private var mobileFilter = "all"
@@ -1548,8 +1548,6 @@ struct PremiumSelectionDetail: View {
             }
             HStack(spacing: 12) {
                 Label("\(selectedCount) valda", systemImage: "checkmark.circle.fill").foregroundStyle(BSKTheme.accent)
-                Text("\(count("reserve", in: workspace)) reserv").foregroundStyle(BSKTheme.warning)
-                Text("\(count("rested", in: workspace)) vilar").foregroundStyle(BSKTheme.muted)
             }
             .font(.caption.bold())
             if selectedCount > 0 {
@@ -1609,8 +1607,6 @@ struct PremiumSelectionDetail: View {
         HStack(spacing: 6) {
             mobileFilterButton("Alla", value: "all", count: workspace.candidates.count)
             mobileFilterButton("Valda", value: "selected", count: selectedCount)
-            mobileFilterButton("Reserv", value: "reserve", count: count("reserve", in: workspace))
-            mobileFilterButton("Vilar", value: "rested", count: count("rested", in: workspace))
         }
         .padding(5)
         .background(BSKTheme.elevated, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
@@ -1637,8 +1633,8 @@ struct PremiumSelectionDetail: View {
         VStack(spacing: 7) {
             HStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(decisionColor(candidate).opacity(0.13))
-                    Text(String(candidate.name.prefix(1))).font(.subheadline.bold()).foregroundStyle(decisionColor(candidate))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selectionColor(candidate).opacity(0.13))
+                    Text(String(candidate.name.prefix(1))).font(.subheadline.bold()).foregroundStyle(selectionColor(candidate))
                 }
                 .frame(width: 40, height: 40)
 
@@ -1653,50 +1649,39 @@ struct PremiumSelectionDetail: View {
                     }
                 }
                 Spacer(minLength: 4)
-                HStack(spacing: 5) {
-                    compactDecisionButton(candidate, value: "selected", icon: "checkmark", label: "Vald")
-                    compactDecisionButton(candidate, value: "reserve", icon: "hourglass", label: "Reserv")
-                    compactDecisionButton(candidate, value: "rested", icon: "moon.zzz", label: "Vilar")
-                }
+                compactSelectionButton(candidate)
             }
 
         }
         .padding(9)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(decision(candidate) == "selected" ? BSKTheme.accent.opacity(0.4) : BSKTheme.border))
+        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(isSelected(candidate) ? BSKTheme.accent.opacity(0.4) : BSKTheme.border))
     }
 
-    private func compactDecisionButton(_ candidate: SelectionCandidate, value: String, icon: String, label: String) -> some View {
-        let active = decision(candidate) == value
+    private func compactSelectionButton(_ candidate: SelectionCandidate) -> some View {
+        let active = isSelected(candidate)
         return Button {
-            decisions[candidate.playerId] = value
+            selections[candidate.playerId] = !active
             savedMessage = nil
         } label: {
-            Image(systemName: icon)
+            Image(systemName: active ? "checkmark.square.fill" : "square")
                 .font(.system(size: 12, weight: .bold))
                 .frame(width: 34, height: 34)
                 .foregroundStyle(active ? BSKTheme.backgroundDeep : BSKTheme.muted)
-                .background(active ? decisionColor(value) : BSKTheme.backgroundDeep.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(active ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(candidate.currentCallupStatus != nil)
-        .accessibilityLabel(label)
+        .accessibilityLabel("Uttagen")
         .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     private func filteredCandidates(_ workspace: SelectionWorkspace) -> [SelectionCandidate] {
         guard mobileFilter != "all" else { return workspace.candidates }
-        return workspace.candidates.filter { decision($0) == mobileFilter }
+        return workspace.candidates.filter { isSelected($0) }
     }
 
-    private func count(_ value: String, in workspace: SelectionWorkspace) -> Int {
-        workspace.candidates.filter { decision($0) == value }.count
-    }
-
-    private func decisionColor(_ candidate: SelectionCandidate) -> Color { decisionColor(decision(candidate)) }
-    private func decisionColor(_ value: String) -> Color {
-        value == "selected" ? BSKTheme.accent : value == "reserve" ? BSKTheme.warning : BSKTheme.muted
-    }
+    private func selectionColor(_ candidate: SelectionCandidate) -> Color { isSelected(candidate) ? BSKTheme.accent : BSKTheme.muted }
 
     private var summaryCard: some View {
         HStack(spacing: 16) {
@@ -1733,11 +1718,7 @@ struct PremiumSelectionDetail: View {
                     BSKStatusChip(title: callupLabel(status), color: status == "declined" ? BSKTheme.danger : status == "accepted" ? BSKTheme.accent : BSKTheme.warning)
                 }
             }
-            HStack(spacing: 7) {
-                decisionButton(candidate, value: "selected", title: "Vald")
-                decisionButton(candidate, value: "reserve", title: "Reserv")
-                decisionButton(candidate, value: "rested", title: "Vilar")
-            }
+            selectionButton(candidate)
             HStack {
                 Text("\(candidate.recentMatchCount) spelade · \(candidate.upcomingMatchCount) kommande")
                 Spacer()
@@ -1747,16 +1728,17 @@ struct PremiumSelectionDetail: View {
         }
         .padding(16)
         .background(BSKTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(decision(candidate) == "selected" ? BSKTheme.accent.opacity(0.5) : BSKTheme.border))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(isSelected(candidate) ? BSKTheme.accent.opacity(0.5) : BSKTheme.border))
     }
 
-    private func decisionButton(_ candidate: SelectionCandidate, value: String, title: String) -> some View {
-        let active = decision(candidate) == value
+    private func selectionButton(_ candidate: SelectionCandidate) -> some View {
+        let active = isSelected(candidate)
         return Button {
-            decisions[candidate.playerId] = value
+            selections[candidate.playerId] = !active
             savedMessage = nil
         } label: {
-            Text(title).font(.caption.bold()).frame(maxWidth: .infinity).padding(.vertical, 10)
+            Label(active ? "Uttagen" : "Ta ut i truppen", systemImage: active ? "checkmark.square.fill" : "square")
+                .font(.caption.bold()).frame(maxWidth: .infinity).padding(.vertical, 10)
                 .foregroundStyle(active ? BSKTheme.backgroundDeep : BSKTheme.secondary)
                 .background(active ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }.buttonStyle(.plain)
@@ -1780,10 +1762,10 @@ struct PremiumSelectionDetail: View {
         .background(.ultraThinMaterial)
     }
 
-    private var selectedCount: Int { decisions.values.filter { $0 == "selected" }.count }
-    private func decision(_ candidate: SelectionCandidate) -> String { decisions[candidate.playerId] ?? candidate.decision }
+    private var selectedCount: Int { selections.values.filter { $0 }.count }
+    private func isSelected(_ candidate: SelectionCandidate) -> Bool { selections[candidate.playerId] ?? candidate.selected }
     private func selectedCandidates(in workspace: SelectionWorkspace) -> [SelectionCandidate] {
-        workspace.candidates.filter { decision($0) == "selected" }
+        workspace.candidates.filter { isSelected($0) }
     }
     private func primaryPosition(_ candidate: SelectionCandidate) -> String {
         candidate.primaryPosition.isEmpty ? (candidate.position.isEmpty ? "Position saknas" : candidate.position) : candidate.primaryPosition
@@ -1807,7 +1789,7 @@ struct PremiumSelectionDetail: View {
         do {
             let loaded = try await model.selectionWorkspace(id: match.id)
             workspace = loaded
-            decisions = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.decision) })
+            selections = Dictionary(uniqueKeysWithValues: loaded.candidates.map { ($0.playerId, $0.selected) })
         } catch {
             loadError = error.localizedDescription
             model.errorMessage = error.localizedDescription
@@ -1819,7 +1801,7 @@ struct PremiumSelectionDetail: View {
         isSaving = true
         savedMessage = nil
         defer { isSaving = false }
-        let payload = workspace.candidates.map { SelectionDecision(playerId: $0.playerId, decision: decision($0), position: primaryPosition($0)) }
+        let payload = workspace.candidates.map { SelectionDecision(playerId: $0.playerId, selected: isSelected($0), position: primaryPosition($0)) }
         do {
             self.workspace = try await model.saveSelection(id: match.id, decisions: payload)
             savedMessage = "Trupp bekräftad"

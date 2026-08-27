@@ -413,7 +413,7 @@ struct SelectionCandidate: Codable, Identifiable {
     let primaryLevel: String
     let secondaryLevel: String
     let teamNames: [String]
-    let decision: String
+    let selected: Bool
     let currentCallupStatus: String?
     let selectedLastEight: Int
     let selectedLastThree: Int
@@ -436,7 +436,7 @@ struct SelectionWorkspace: Codable {
 
 struct SelectionDecision: Encodable {
     let playerId: Int
-    let decision: String
+    let selected: Bool
     let position: String
 }
 

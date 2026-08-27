@@ -259,7 +259,7 @@ export async function importSvenskaLagCallupWorkbooks(
     for (const callup of item.callups) {
       statements.push({
         sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
-              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_file')
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' END, 'svenskalag_file')
               ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
                 selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
         args: [item.db.match_id, callup.playerId,

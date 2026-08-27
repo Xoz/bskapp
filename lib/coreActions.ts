@@ -294,7 +294,6 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const accessiblePlayers = await getPlayers();
   const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
-  const reserves = new Set(formData.getAll("reserve_player").map(Number).filter((id) => accessibleIds.has(id)));
   const callups = activity.match_id == null ? [] : await all<{ player_id: number; attendance_status: "present" | "absent" | "unknown" }>(
     `SELECT player_id, CASE callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' ELSE 'unknown' END AS attendance_status
      FROM match_roster WHERE match_id = ? AND callup_status IS NOT NULL`,
@@ -304,7 +303,6 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   for (const [playerId, status] of callupByPlayer) {
     if (status === "present") selected.add(playerId);
     else selected.delete(playerId);
-    reserves.delete(playerId);
   }
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
 
@@ -313,19 +311,14 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   }
 
   for (const player of accessiblePlayers) {
-    const callupStatus = callupByPlayer.get(player.id);
-    const decision = callupStatus === "present"
-      ? "selected"
-      : callupStatus
-        ? "rested"
-        : selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
+    if (!selected.has(player.id)) continue;
     const position = String(formData.get(`position_${player.id}`) ?? player.position ?? "").trim().slice(0, 40);
     if (activity.match_id != null) statements.push({
       sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
-            VALUES (?, ?, ?, ?, 'manual')
+            VALUES (?, ?, 'selected', ?, 'manual')
             ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
               selected_position = excluded.selected_position, source = 'manual', updated_at = now()`,
-      args: [activity.match_id, player.id, decision, position],
+      args: [activity.match_id, player.id, position],
     });
   }
 

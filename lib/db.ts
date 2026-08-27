@@ -406,7 +406,7 @@ async function applyBaselineSchema(): Promise<void> {
     `CREATE TABLE IF NOT EXISTS development_selection_decisions (
       activity_id TEXT NOT NULL REFERENCES development_activities(id) ON DELETE CASCADE,
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      decision TEXT NOT NULL CHECK (decision IN ('selected', 'reserve', 'rested')),
+      decision TEXT NOT NULL CHECK (decision = 'selected'),
       rationale TEXT NOT NULL DEFAULT '',
       decided_by TEXT NOT NULL DEFAULT '',
       decided_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
@@ -1341,7 +1341,7 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
       match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
       player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       callup_status TEXT CHECK (callup_status IN ('accepted', 'declined', 'pending')),
-      selection_status TEXT CHECK (selection_status IN ('selected', 'reserve', 'rested')),
+      selection_status TEXT CHECK (selection_status = 'selected'),
       selected_position TEXT NOT NULL DEFAULT '',
       lineup_x REAL,
       lineup_y REAL,
@@ -1368,7 +1368,7 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
       INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
       SELECT da.match_id, dac.player_id,
              CASE dac.attendance_status WHEN 'present' THEN 'accepted' WHEN 'absent' THEN 'declined' ELSE 'pending' END,
-             CASE dac.attendance_status WHEN 'present' THEN 'selected' ELSE 'rested' END,
+             CASE dac.attendance_status WHEN 'present' THEN 'selected' END,
              'migration-callup'
       FROM development_activity_callups dac
       JOIN development_activities da ON da.id = dac.activity_id
@@ -1379,13 +1379,13 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     `);
     await getClient().unsafe(`
       INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
-      SELECT da.match_id, sd.player_id, sd.decision,
+      SELECT da.match_id, sd.player_id, 'selected',
              COALESCE(ap.position, ''), 'migration-selection'
       FROM development_selection_decisions sd
       JOIN development_activities da ON da.id = sd.activity_id
       LEFT JOIN development_activity_participation ap
         ON ap.activity_id = sd.activity_id AND ap.player_id = sd.player_id
-      WHERE da.match_id IS NOT NULL
+      WHERE da.match_id IS NOT NULL AND sd.decision = 'selected'
       ON CONFLICT (match_id, player_id) DO UPDATE SET
         selection_status = excluded.selection_status,
         selected_position = excluded.selected_position,
@@ -1436,11 +1436,17 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
   } },
   { id: "0019-normalize-accepted-callups", run: async () => {
     await getClient().unsafe(`UPDATE match_roster
-      SET selection_status = CASE WHEN callup_status = 'accepted' THEN 'selected' ELSE 'rested' END,
+      SET selection_status = CASE WHEN callup_status = 'accepted' THEN 'selected' END,
           source = CASE WHEN source LIKE 'migration-%' THEN 'migration-callup-normalized' ELSE source END,
           updated_at = now()
       WHERE callup_status IS NOT NULL
-        AND selection_status IS DISTINCT FROM CASE WHEN callup_status = 'accepted' THEN 'selected' ELSE 'rested' END`);
+        AND selection_status IS DISTINCT FROM CASE WHEN callup_status = 'accepted' THEN 'selected' END`);
+  } },
+  { id: "0020-selection-checkbox-only", run: async () => {
+    await getClient().unsafe("UPDATE match_roster SET selection_status = NULL, selected_position = '' WHERE selection_status IS DISTINCT FROM 'selected'");
+    await getClient().unsafe("ALTER TABLE match_roster DROP CONSTRAINT IF EXISTS match_roster_selection_status_check");
+    await getClient().unsafe("ALTER TABLE match_roster ADD CONSTRAINT match_roster_selection_status_check CHECK (selection_status = 'selected')");
+    await getClient().unsafe("COMMENT ON COLUMN match_roster.selection_status IS 'Endast selected eller NULL: ibockad i truppen eller inget uttagningsbeslut'");
   } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";

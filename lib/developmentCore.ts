@@ -542,7 +542,7 @@ export async function getActivityDetail(activityId: string): Promise<{
 }
 
 export type SelectionCandidate = PlayerCoreSummary & {
-  decision: "selected" | "reserve" | "rested";
+  selected: boolean;
   selectedLastEight: number;
   selectedLastThree: number;
   lastSelectedDate: string | null;
@@ -645,7 +645,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     recent_match_count: number;
     upcoming_match_count: number;
     current_callup_status: RecommendationCallupStatus;
-    decision: "selected" | "reserve" | "rested" | null;
+    decision: "selected" | null;
   }>(
      `WITH target AS (
        SELECT ?::date AS activity_date
@@ -768,11 +768,11 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     };
     return {
       ...summary,
-      decision: selectionDecisionFromCallups(
+      selected: selectionDecisionFromCallups(
         hasSyncedCallups,
         row?.current_callup_status ?? null,
         row?.decision ?? null
-      ),
+      ) === "selected",
       selectedLastEight: Number(row?.selected_last_eight ?? 0),
       selectedLastThree: Number(row?.selected_last_three ?? 0),
       lastSelectedDate: signals.lastSelectedDate,
@@ -795,7 +795,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       return priority(left) - priority(right) || left.player.name.localeCompare(right.player.name, "sv");
     })
     : candidates;
-  const selected = orderedCandidates.filter((candidate) => candidate.decision === "selected");
+  const selected = orderedCandidates.filter((candidate) => candidate.selected);
   return {
     activity: detail.activity,
     candidates: orderedCandidates,

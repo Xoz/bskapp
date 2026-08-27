@@ -1,6 +1,6 @@
 # Kanonisk datamodell
 
-Status: beslutad och verifierad 2026-08-21.
+Status: beslutad och verifierad 2026-08-27.
 
 ## Grundregel
 
@@ -19,12 +19,13 @@ och felsöka själva filimporten.
 | Matchuppföljning | `matches.evaluation_closed_at`, `matches.evaluation_players_waived` | Avslutad uppföljning och om spelarbedömningar uttryckligen avstods |
 | Organisation | `groups`, `player_group_memberships` | Lag och aktuell grupptillhörighet |
 | Match | `matches` | En match oavsett om den skapats manuellt, via kalender eller import |
-| Planerad trupp | `match_squad` | Publicerat uttagningsbeslut, inte bevis på deltagande |
+| Förmatchrelation | `match_roster` | Kallelse/svar och uttagning per match och spelare; uttagning är endast `selected` eller `NULL` |
 | Faktiskt matchspel | `match_players` | En rad betyder att spelaren spelade; all matchräkning utgår härifrån |
 | Matchlogg | `match_events` | Händelser i tidsordning; statistikaggregat ligger i `match_players` |
-| Utvecklingsaktivitet | `development_activities` | Kontext för mål, observation och uttagning; match länkas med `match_id` |
-| Kallelse | `development_activity_callups` | Tillgänglighet/svar, inte uttagning eller deltagande |
-| Uttagningsutkast | `development_selection_decisions` | Tränarens arbetsbeslut; bekräftelse publicerar `match_squad` |
+| Utvecklingsaktivitet | `development_activities` | Kontext för mål och observation; match länkas med `match_id` |
+| Matchkallelse | `match_roster.callup_status` | Tillgänglighet/svar, inte deltagande |
+| Träningskallelse | `development_activity_callups` | Tillgänglighet/svar för träning |
+| Uttagning | `match_roster.selection_status` | `selected` för ibockad spelare, annars `NULL`; inga reserv- eller vilovärden |
 | Träning/närvaro | `development_activity_participation` | Närvaro och exponering för generella aktiviteter |
 | Matchutvärdering | `match_player_evaluations` | Bedömarens svar per match och spelare |
 
@@ -46,8 +47,10 @@ Svenska Lag-normaliseringen gör följande:
 
 ## Avsiktliga skillnader
 
-- `match_squad` och `match_players` får skilja sig: en uttagen spelare kan utebli
+- `match_roster` och `match_players` får skilja sig: en uttagen spelare kan utebli
   och en sen ersättare kan spela.
+- `match_squad`, `match_lineup` och `development_selection_decisions` är endast
+  skrivskyddade kompatibilitetsvyer över `match_roster` och lagrar ingen egen data.
 - `match_events` och `match_players` är logg respektive aktuellt aggregat.
   Manuella efterhandskorrigeringar kan därför göra att loggen avviker;
   dataauditen synliggör detta utan att använda loggen som facit.
