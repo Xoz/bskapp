@@ -1332,6 +1332,106 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_player_conversations_player_date ON player_conversations(player_id, conversation_date DESC, created_at DESC)");
     await getClient().unsafe("COMMENT ON TABLE player_conversations IS 'Separat historik för genomförda spelarsamtal; utvecklingsträdets checkpoints används endast som valfri kontext'");
   } },
+  { id: "0017-canonical-match-roster", run: async () => {
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS callup_accepted_count INTEGER NOT NULL DEFAULT 0");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS callup_declined_count INTEGER NOT NULL DEFAULT 0");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS callup_pending_count INTEGER NOT NULL DEFAULT 0");
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN IF NOT EXISTS callup_source TEXT NOT NULL DEFAULT ''");
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS match_roster (
+      match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      callup_status TEXT CHECK (callup_status IN ('accepted', 'declined', 'pending')),
+      selection_status TEXT CHECK (selection_status IN ('selected', 'reserve', 'rested')),
+      selected_position TEXT NOT NULL DEFAULT '',
+      lineup_x REAL,
+      lineup_y REAL,
+      source TEXT NOT NULL DEFAULT 'manual',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (match_id, player_id),
+      CHECK ((lineup_x IS NULL) = (lineup_y IS NULL)),
+      CHECK (lineup_x IS NULL OR (lineup_x BETWEEN 0 AND 1 AND lineup_y BETWEEN 0 AND 1))
+    )`);
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS idx_match_roster_player ON match_roster(player_id, match_id)");
+    await getClient().unsafe("COMMENT ON TABLE match_roster IS 'Kanonisk relation för kallelse, svar, uttagning och startplacering; matches och players är enda huvudlistorna'");
+    await getClient().unsafe(`
+      UPDATE matches m SET
+        callup_accepted_count = summary.accepted_count,
+        callup_declined_count = summary.declined_count,
+        callup_pending_count = summary.pending_count,
+        callup_source = summary.source
+      FROM development_activities da
+      JOIN development_activity_callup_summaries summary ON summary.activity_id = da.id
+      WHERE da.match_id = m.id
+    `);
+
+    await getClient().unsafe(`
+      INSERT INTO match_roster (match_id, player_id, callup_status, source)
+      SELECT da.match_id, dac.player_id,
+             CASE dac.attendance_status WHEN 'present' THEN 'accepted' WHEN 'absent' THEN 'declined' ELSE 'pending' END,
+             'migration-callup'
+      FROM development_activity_callups dac
+      JOIN development_activities da ON da.id = dac.activity_id
+      WHERE da.match_id IS NOT NULL
+      ON CONFLICT (match_id, player_id) DO UPDATE SET
+        callup_status = excluded.callup_status, source = excluded.source, updated_at = now()
+    `);
+    await getClient().unsafe(`
+      INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
+      SELECT da.match_id, sd.player_id, sd.decision,
+             COALESCE(ap.position, ''), 'migration-selection'
+      FROM development_selection_decisions sd
+      JOIN development_activities da ON da.id = sd.activity_id
+      LEFT JOIN development_activity_participation ap
+        ON ap.activity_id = sd.activity_id AND ap.player_id = sd.player_id
+      WHERE da.match_id IS NOT NULL
+      ON CONFLICT (match_id, player_id) DO UPDATE SET
+        selection_status = excluded.selection_status,
+        selected_position = excluded.selected_position,
+        source = excluded.source, updated_at = now()
+    `);
+    await getClient().unsafe(`
+      INSERT INTO match_roster (match_id, player_id, selection_status, source)
+      SELECT match_id, player_id, 'selected', 'migration-squad' FROM match_squad
+      ON CONFLICT (match_id, player_id) DO UPDATE SET
+        selection_status = 'selected', source = excluded.source, updated_at = now()
+    `);
+    await getClient().unsafe(`
+      INSERT INTO match_roster (match_id, player_id, selection_status, lineup_x, lineup_y, source)
+      SELECT match_id, player_id, 'selected',
+             CASE WHEN ABS(x) > 1 THEN x / 100.0 ELSE x END,
+             CASE WHEN ABS(y) > 1 THEN y / 100.0 ELSE y END,
+             'migration-lineup'
+      FROM match_lineup
+      ON CONFLICT (match_id, player_id) DO UPDATE SET
+        selection_status = 'selected', lineup_x = excluded.lineup_x, lineup_y = excluded.lineup_y,
+        source = excluded.source, updated_at = now()
+    `);
+  } },
+  { id: "0018-remove-parallel-match-rosters", run: async () => {
+    await getClient().unsafe("DROP TABLE match_lineup");
+    await getClient().unsafe("DROP TABLE match_squad");
+    await getClient().unsafe("DROP TABLE development_selection_decisions");
+    await getClient().unsafe(`CREATE VIEW match_squad AS
+      SELECT match_id, player_id FROM match_roster WHERE selection_status = 'selected'`);
+    await getClient().unsafe(`CREATE VIEW match_lineup AS
+      SELECT match_id, player_id, lineup_x AS x, lineup_y AS y
+      FROM match_roster WHERE lineup_x IS NOT NULL`);
+    await getClient().unsafe(`CREATE VIEW development_selection_decisions AS
+      SELECT activity.id AS activity_id, roster.player_id,
+             roster.selection_status AS decision, ''::text AS rationale,
+             roster.source AS decided_by,
+             to_char(roster.updated_at AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS') AS decided_at
+      FROM match_roster roster
+      JOIN LATERAL (
+        SELECT da.id FROM development_activities da
+        WHERE da.match_id = roster.match_id AND da.external_source = 'svenskalag_sanktan'
+        ORDER BY da.id LIMIT 1
+      ) activity ON true
+      WHERE roster.selection_status IS NOT NULL`);
+    await getClient().unsafe("COMMENT ON VIEW match_squad IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
+    await getClient().unsafe("COMMENT ON VIEW match_lineup IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
+    await getClient().unsafe("COMMENT ON VIEW development_selection_decisions IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

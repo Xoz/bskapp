@@ -37,7 +37,7 @@ if (!FORK_URL || !LIVE_URL) {
 const fork = createClient({ url: FORK_URL, authToken: FORK_TOKEN, intMode: "number" });
 const live = postgres(LIVE_URL, { prepare: false });
 
-const CHILD_TABLES = ["match_players", "match_events", "match_squad", "match_lineup", "match_subs"];
+const CHILD_TABLES = ["match_players", "match_events", "match_roster", "match_subs"];
 
 async function copyRows(table, whereSql, whereArgs, apply) {
   const res = await fork.execute({ sql: `SELECT * FROM ${table} WHERE ${whereSql}`, args: whereArgs });

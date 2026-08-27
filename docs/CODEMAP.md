@@ -31,12 +31,12 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | --- | --- |
 | **Primär utvecklingsloop** (Idag → mål → observation → historik; native Idag visar Gulspelarnas matchutrymme och Spelare startar lagfiltrerad på Gul; endast permanenta `subgroup`-lag blir filter) | `lib/developmentCore.ts`, `lib/coreActions.ts`, `lib/developmentSync.ts`, `lib/matchCapacity.ts`, `app/(skyddad)/{idag,observera,spelare}/`, `app/api/mobile/v1/{players,player-match-loads}/`, `components/{CoreActivityCard,PilotStartField}.tsx`, `ios/BSK/Views/{ActivityViews,PlayerViews}.swift` |
 | **Gemensamt native-matchnav** (Översikt, Trupp, Matchcenter och Utvärdera från alla matchingångar; behörighets- och matchstatusstyrt) | `ios/BSK/Views/{ActivityViews,MainSplitView}.swift`, `ios/BSK/AppModel.swift`, `lib/services/{development,matchEvaluationMobile,mobileLive}.ts`, `lib/matchRoster.ts` |
-| **Transparent uttagningsstöd** (Gul-rättvisa över all Sanktanexponering, rättvisa Gul-lån till Grön, möjligheter och varningar; inget automatval) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
+| **Transparent uttagningsstöd** (läser matcher från `matches`; kallelse, svar och beslut från `match_roster`) | `lib/selectionSupport.ts`, `lib/developmentCore.ts` (getSelectionMatches/getSelectionWorkspace), `lib/coreActions.ts` (saveDevelopmentSelection), `app/(skyddad)/uttagning/` |
 | **Live-matchrapportering** (klocka, mål, byten, händelser; gemensam truppkälla) | `components/LiveTracker.tsx`, `lib/live.ts`, `lib/liveTypes.ts`, `lib/matchRoster.ts`, `lib/services/mobileLive.ts`, `app/api/live/[id]/route.ts`, `app/api/mobile/v1/matches/[id]/live/route.ts`, `app/(skyddad)/matcher/[id]/live/page.tsx`, native `ios/BSK/{Views/ActivityViews,MatchLiveActivityManager,MatchLiveActivityAttributes}.swift` + `ios/BSKLiveActivity/` |
 | **Publik rapporteringscapability** | `lib/liveAccess.ts` (konstanttidsjämförelse), `lib/liveRateLimit.ts` (atomisk match-/rapportörsgräns), `app/api/live/[id]/route.ts`, `app/live/[id]/rapportera/page.tsx`, `components/LiveTracker.tsx`; tränaren kopierar tokenlänken från matchsidan |
 | **Live-publik vy / förälderrapport** | `components/LiveFeed.tsx`, `components/LiveScoreboard.tsx`, `components/LiveClock.tsx` (tickande svensk tid överst), `app/live/[id]/`, `lib/live.ts` |
 | **Match: skapa/redigera/ta bort, cup, nivå** | `lib/actions.ts` (save/delete/updateCup/setMatchLevel…), `components/MatchForm.tsx`, `app/(skyddad)/matcher/` |
-| **Laguttagning / trupp / formation** | `components/SquadBoard.tsx`, `lib/formations.ts`, `lib/positions.ts`, `lib/actions.ts` (saveSquad/saveLineup) |
+| **Laguttagning / trupp / formation** (samma `match_roster` som Uttagning) | `components/SquadBoard.tsx`, `lib/matchRoster.ts`, `lib/formations.ts`, `lib/positions.ts`, `lib/actions.ts` (saveSquad/saveLineup) |
 | **Cupgemensam laguttagning** (uttagna till cupen, default per match) | `components/CupSquadPicker.tsx`, `lib/actions.ts` (saveCupSquad → matchgruppens `player_group_memberships`), `lib/queries.ts` (getGroupMemberIds), `app/(skyddad)/matcher/cup/[slug]/page.tsx` + `…/matcher/[id]/laguttagning/page.tsx` (förväljer cupens trupp) |
 | **Utvecklingsträd + sparad utvecklingsbild** | `lib/skillTrappan.ts` (gemensam färdighetsmodell), `components/UtvecklingChecklist.tsx` (aktuellt träd), `components/DevelopmentCheckinForm.tsx` (daterad uppdatering), `lib/queries.ts` (getPlayerSkillStatuses/getDevelopmentCheckpoints/getLatestDevelopmentCheckpoint), `lib/actions.ts` (createDevelopmentCheckpoint), `lib/services/development.ts` (get/updateMobilePlayerDevelopment), `app/(skyddad)/spelare/[id]/page.tsx` (aktiv sammanfattning och ingång), `…/utveckling/` (nuläge + träd + historik), `…/utveckling/avstamning/` (uppdatera utvecklingsbild), `…/utvardera/` (kompatibilitetsredirect), `app/(skyddad)/utveckling/` (lagvy), `app/mitt-utvecklingstrad/` (spelarens låsta läsvy), `app/api/mobile/v1/players/[id]/development/`, `ios/BSK/Views/PlayerViews.swift` |
 | **Spelarsamtal** | `player_conversations` (separat samtalshistorik med valfri checkpoint-koppling), `lib/queries.ts` (getPlayerConversations), `lib/coreActions.ts` (createPlayerConversation), `lib/services/development.ts` (createMobilePlayerConversation + spelardetalj), `app/(skyddad)/spelare/[id]/page.tsx`, `app/api/mobile/v1/players/[id]/conversations/`, `ios/BSK/{Networking/APIModels,Networking/APIClient,AppModel,Views/PlayerViews}.swift` |
@@ -92,20 +92,22 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
 - **matchCapacity.ts**: gemensam belastningsregel för spelade senaste sju dagar + kommande sju dagar (`normal`, `maximum`, `high`), samt det äldre kompatibilitetsmåttet 0–100 för nyligt matchspel.
 - **matchEvaluation.ts**: tvåaxlig matchutvärdering, publika capability-länkar, matchstatus, `matchEvaluationIsOpen` (öppnar 75 minuter efter avspark), konsensus/avvikelse och spelartrend utan poäng eller ELO.
-- **matchRoster.ts**: gemensam resolver för vilka spelare som hör till en match. Spelade matcher prioriterar `match_players`; kommande matcher prioriterar `match_squad`, därefter uttagningsbeslut/deltagande och accepterade kallelser.
+- **matchRoster.ts**: gemensam resolver. Kommande matcher läser enbart `match_roster`; spelade matcher prioriterar faktiska deltagare i `match_players`.
 
 ---
 
 ## DB-tabeller (definieras i lib/db.ts)
 
 `schema_migrations` (journal över exakt en gång körda schemamigrationer), `settings`, `players` (inkl. `selection_eligible` för generell tillgänglighet i automatiska uttagningsförslag), `evaluations`, `evaluation_scores`, `matches` (inkl. `location`, `report_token`), `match_players`,
-`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_squad`, `match_lineup`, `match_subs` (inkl. `idempotency_key`), `match_evaluation_invites`, `match_player_evaluations`,
+`match_events` (inkl. lokal `reporter_key` för egen ångra + `idempotency_key` för offline-replay-skydd), `match_reporters`, `live_rate_limits`, `match_roster` (kanonisk kallelse/svar/uttagning/startplacering), `match_subs` (inkl. `idempotency_key`), `match_evaluation_invites`, `match_player_evaluations`,
 `player_self_evals`, `activity_log`, `login_throttle`, `users`, `user_roles`,
 `user_permissions`, `groups`, `player_group_memberships`, `user_group_access`, `user_player_links`, `attendance_imports`, `attendance_events`,
 `player_skill_status` (aktuellt utvecklingsträd, PK player_id+skill_id), `player_skill_notes`, `development_checkpoints` (daterad avstämning), `development_checkpoint_skills` (snapshot + föregående status + fokus per färdighet) och `player_conversations` (separata spelarsamtal).
 Utvecklingskärnan använder `development_activities`, `player_development_goals` (max två aktiva slots),
-`development_activity_participation`, `development_observations`, `development_selection_decisions`
-och `development_pilot_events`. `development_activity_callups` håller Svenska Lag-kallelser separat från faktiskt matchdeltagande.
+`development_activity_participation`, `development_observations` och `development_pilot_events`.
+`development_activity_callups` används endast för träningsaktiviteter. De gamla matchnamnen
+`match_squad`, `match_lineup` och `development_selection_decisions` är skrivskyddade
+kompatibilitetsvyer över `match_roster` och lagrar ingen egen data.
 
 ---
 

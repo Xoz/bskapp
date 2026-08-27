@@ -63,11 +63,11 @@ export async function getLiveState(
       WHERE p.active = 1
         AND (
           EXISTS (
-            SELECT 1 FROM match_squad ms
-             WHERE ms.match_id = ? AND ms.player_id = p.id
+            SELECT 1 FROM match_roster mr
+             WHERE mr.match_id = ? AND mr.player_id = p.id AND mr.selection_status = 'selected'
           )
           OR (
-            NOT EXISTS (SELECT 1 FROM match_squad WHERE match_id = ?)
+            NOT EXISTS (SELECT 1 FROM match_roster WHERE match_id = ? AND selection_status = 'selected')
             AND EXISTS (
               SELECT 1
                 FROM matches m
@@ -76,8 +76,8 @@ export async function getLiveState(
             )
           )
           OR EXISTS (
-            SELECT 1 FROM match_lineup ml
-             WHERE ml.match_id = ? AND ml.player_id = p.id
+            SELECT 1 FROM match_roster ml
+             WHERE ml.match_id = ? AND ml.player_id = p.id AND ml.lineup_x IS NOT NULL
           )
           OR EXISTS (
             SELECT 1 FROM match_players mp
@@ -142,7 +142,7 @@ export async function getLiveState(
   }));
 
   const starterRows = includeReportingDetails ? await all<{ player_id: number }>(
-    "SELECT player_id FROM match_lineup WHERE match_id = ?",
+    "SELECT player_id FROM match_roster WHERE match_id = ? AND lineup_x IS NOT NULL",
     [matchId]
   ) : [];
   const starters = starterRows.map((r) => r.player_id);

@@ -538,7 +538,7 @@ export async function getPlayerEvalAverage(playerId: number): Promise<number | n
 // Uttagen trupp för en match – lista med spelar-id
 export async function getMatchSquad(matchId: number): Promise<number[]> {
   const rows = await all<{ player_id: number }>(
-    "SELECT player_id FROM match_squad WHERE match_id = ?",
+    "SELECT player_id FROM match_roster WHERE match_id = ? AND selection_status = 'selected'",
     [matchId]
   );
   return rows.map((r) => r.player_id);
@@ -559,7 +559,7 @@ export async function getMatchesWithSquad(matchIds: number[]): Promise<Set<numbe
   if (matchIds.length === 0) return new Set();
   const placeholders = matchIds.map(() => "?").join(",");
   const rows = await all<{ match_id: number }>(
-    `SELECT DISTINCT match_id FROM match_squad WHERE match_id IN (${placeholders})`,
+    `SELECT DISTINCT match_id FROM match_roster WHERE match_id IN (${placeholders}) AND selection_status = 'selected'`,
     matchIds
   );
   return new Set(rows.map((r) => r.match_id));
@@ -574,7 +574,7 @@ export interface LineupSpot {
 
 export async function getMatchLineup(matchId: number): Promise<LineupSpot[]> {
   return all<LineupSpot>(
-    "SELECT player_id, x, y FROM match_lineup WHERE match_id = ?",
+    "SELECT player_id, lineup_x AS x, lineup_y AS y FROM match_roster WHERE match_id = ? AND lineup_x IS NOT NULL",
     [matchId]
   );
 }

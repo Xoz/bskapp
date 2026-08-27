@@ -73,7 +73,9 @@ try {
 
   // Hela truppen kallad.
   for (const p of players) {
-    await sql`INSERT INTO match_squad (match_id, player_id) VALUES (${matchId}, ${p.id}) ON CONFLICT DO NOTHING`;
+    await sql`INSERT INTO match_roster (match_id, player_id, selection_status, source)
+              VALUES (${matchId}, ${p.id}, 'selected', 'dev-seed')
+              ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = 'selected'`;
   }
 
   // Startelva: de 7 första spelarna med enkla planpositioner.
@@ -81,10 +83,10 @@ try {
   const positions = [
     [50, 90], [25, 65], [50, 65], [75, 65], [30, 35], [70, 35], [50, 12],
   ];
-  await sql`DELETE FROM match_lineup WHERE match_id = ${matchId}`;
+  await sql`UPDATE match_roster SET lineup_x = NULL, lineup_y = NULL WHERE match_id = ${matchId}`;
   for (let i = 0; i < starters.length; i++) {
     const [x, y] = positions[i];
-    await sql`INSERT INTO match_lineup (match_id, player_id, x, y) VALUES (${matchId}, ${starters[i].id}, ${x}, ${y})`;
+    await sql`UPDATE match_roster SET lineup_x = ${x / 100}, lineup_y = ${y / 100} WHERE match_id = ${matchId} AND player_id = ${starters[i].id}`;
   }
 
   console.log(`Klart: match #${matchId}, ${players.length} i truppen, ${starters.length} i startelvan.`);

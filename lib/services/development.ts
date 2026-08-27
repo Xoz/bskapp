@@ -1257,20 +1257,20 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
               )
             ) AS evaluation_ready,
             linked_match.evaluation_closed_at IS NOT NULL AS evaluation_completed,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'present'), 0) AS accepted_callup_count,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'absent'), 0) AS declined_callup_count,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups c WHERE c.activity_id = da.id AND c.attendance_status = 'unknown'), 0) AS pending_callup_count,
-            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = da.match_id), 0) AS squad_count,
-            EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = da.match_id) AS has_confirmed_squad,
+            linked_match.callup_accepted_count AS accepted_callup_count,
+            linked_match.callup_declined_count AS declined_callup_count,
+            linked_match.callup_pending_count AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM match_roster roster WHERE roster.match_id = da.match_id AND roster.selection_status = 'selected'), 0) AS squad_count,
+            EXISTS (SELECT 1 FROM match_roster roster WHERE roster.match_id = da.match_id AND roster.selection_status = 'selected') AS has_confirmed_squad,
             COALESCE((
               SELECT string_agg(p.name, E'\\x1f' ORDER BY lower(p.name))
-              FROM match_squad squad JOIN players p ON p.id = squad.player_id
-              WHERE squad.match_id = da.match_id
+              FROM match_roster roster JOIN players p ON p.id = roster.player_id
+              WHERE roster.match_id = da.match_id AND roster.selection_status = 'selected'
             ), '') AS squad_player_names,
             COALESCE((
               SELECT string_agg(p.name, E'\\x1f' ORDER BY lower(p.name))
-              FROM development_activity_callups callup JOIN players p ON p.id = callup.player_id
-              WHERE callup.activity_id = da.id AND callup.attendance_status = 'present'
+              FROM match_roster roster JOIN players p ON p.id = roster.player_id
+              WHERE roster.match_id = da.match_id AND roster.callup_status = 'accepted'
             ), '') AS accepted_player_names
      FROM development_activities da
      JOIN matches linked_match ON linked_match.id = da.match_id
@@ -1278,7 +1278,8 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
        AND da.activity_type = 'match'
-     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level, linked_match.evaluation_closed_at
+     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level, linked_match.evaluation_closed_at,
+              linked_match.callup_accepted_count, linked_match.callup_declined_count, linked_match.callup_pending_count
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
     scope.args
@@ -1394,11 +1395,11 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     `SELECT da.id, da.activity_date, da.start_time, da.title,
             COALESCE(g.name, '') AS source_team,
             CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'), 0) AS accepted_callup_count,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'), 0) AS declined_callup_count,
-            COALESCE((SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'), 0) AS pending_callup_count,
-            COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
-            EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id) AS has_confirmed_squad
+            m.callup_accepted_count AS accepted_callup_count,
+            m.callup_declined_count AS declined_callup_count,
+            m.callup_pending_count AS pending_callup_count,
+            COALESCE((SELECT COUNT(*) FROM match_roster roster WHERE roster.match_id = m.id AND roster.selection_status = 'selected'), 0) AS squad_count,
+            EXISTS (SELECT 1 FROM match_roster roster WHERE roster.match_id = m.id AND roster.selection_status = 'selected') AS has_confirmed_squad
      FROM development_activities da
      JOIN matches m ON m.id = da.match_id
      LEFT JOIN groups g ON g.id = da.group_id
@@ -1464,9 +1465,9 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             p.preferred_position_primary, p.preferred_position_secondary,
             p.preferred_level_primary, p.preferred_level_secondary,
             ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id ORDER BY g.name) AS team_names,
-            sd.decision AS saved_decision,
-            ms.player_id IS NOT NULL AS in_match_squad,
-            dac.attendance_status AS callup_status,
+            roster.selection_status AS saved_decision,
+            roster.selection_status = 'selected' AS in_match_squad,
+            CASE roster.callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' WHEN 'pending' THEN 'unknown' END AS callup_status,
             (SELECT COUNT(*) FROM (
                SELECT history.id, EXISTS (
                  SELECT 1 FROM match_players history_player
@@ -1492,8 +1493,10 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             (SELECT COUNT(DISTINCT played_mp.match_id)
              FROM match_players played_mp
              WHERE played_mp.player_id = p.id) AS match_count,
-            (SELECT COUNT(*) FROM development_activity_callups ac WHERE ac.player_id = p.id) AS callup_count,
-            (SELECT COUNT(*) FROM development_selection_decisions future_sd JOIN development_activities future_da ON future_da.id = future_sd.activity_id WHERE future_sd.player_id = p.id AND future_sd.decision = 'selected' AND future_da.activity_date >= ? AND future_da.id <> ?) AS planned_upcoming_count,
+            (SELECT COUNT(*) FROM match_roster history_roster WHERE history_roster.player_id = p.id AND history_roster.callup_status IS NOT NULL) AS callup_count,
+            (SELECT COUNT(*) FROM match_roster future_roster JOIN matches future_match ON future_match.id = future_roster.match_id
+             WHERE future_roster.player_id = p.id AND future_roster.selection_status = 'selected'
+               AND future_match.date >= ? AND future_match.id IS DISTINCT FROM target.match_id) AS planned_upcoming_count,
             (SELECT COUNT(DISTINCT played_match.id)
              FROM matches played_match
              WHERE played_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND target.activity_date::date
@@ -1507,56 +1510,35 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
              WHERE upcoming_match.date::date BETWEEN target.activity_date::date AND (target.activity_date::date + INTERVAL '7 days')
                AND COALESCE(upcoming_match.finished, 0) = 0
                AND (
-                 EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = upcoming_match.id AND squad.player_id = p.id)
-                 OR EXISTS (
-                   SELECT 1 FROM development_activities upcoming_activity
-                   JOIN development_selection_decisions upcoming_selection ON upcoming_selection.activity_id = upcoming_activity.id
-                   WHERE upcoming_activity.match_id = upcoming_match.id AND upcoming_selection.player_id = p.id AND upcoming_selection.decision = 'selected'
-                 )
-                 OR EXISTS (
-                   SELECT 1 FROM development_activities upcoming_activity
-                   JOIN development_activity_callups upcoming_callup ON upcoming_callup.activity_id = upcoming_activity.id
-                   WHERE upcoming_activity.match_id = upcoming_match.id AND upcoming_callup.player_id = p.id AND upcoming_callup.attendance_status <> 'absent'
-                 )
+                 EXISTS (SELECT 1 FROM match_roster upcoming_roster
+                         WHERE upcoming_roster.match_id = upcoming_match.id AND upcoming_roster.player_id = p.id
+                           AND (upcoming_roster.selection_status = 'selected' OR upcoming_roster.callup_status IN ('accepted', 'pending')))
                )) AS upcoming_match_count,
             (SELECT COUNT(DISTINCT window_match.id)
              FROM matches window_match
              WHERE window_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND (target.activity_date::date + INTERVAL '7 days')
                AND (
                  EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
-                 OR EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = window_match.id AND squad.player_id = p.id)
-                 OR EXISTS (
-                   SELECT 1 FROM development_activities window_activity
-                   JOIN development_selection_decisions window_selection ON window_selection.activity_id = window_activity.id
-                   WHERE window_activity.match_id = window_match.id AND window_selection.player_id = p.id AND window_selection.decision = 'selected'
-                 )
-                 OR EXISTS (
-                   SELECT 1 FROM development_activities window_activity
-                   JOIN development_activity_callups window_callup ON window_callup.activity_id = window_activity.id
-                   WHERE window_activity.match_id = window_match.id AND window_callup.player_id = p.id AND window_callup.attendance_status <> 'absent'
-                 )
+                 OR EXISTS (SELECT 1 FROM match_roster window_roster
+                            WHERE window_roster.match_id = window_match.id AND window_roster.player_id = p.id
+                              AND (window_roster.selection_status = 'selected' OR window_roster.callup_status IN ('accepted', 'pending')))
                )) AS window_match_count,
             (SELECT MAX(history.date)
              FROM match_players history_player
              JOIN matches history ON history.id = history_player.match_id
              WHERE history_player.player_id = p.id AND history.date <= ? AND history.finished = 1) AS last_selected_date
      FROM players p
-     LEFT JOIN development_selection_decisions sd ON sd.activity_id = ? AND sd.player_id = p.id
-     LEFT JOIN development_activity_callups dac ON dac.activity_id = ? AND dac.player_id = p.id
      LEFT JOIN development_activities target ON target.id = ?
-     LEFT JOIN match_squad ms ON ms.match_id = target.match_id AND ms.player_id = p.id
+     LEFT JOIN match_roster roster ON roster.match_id = target.match_id AND roster.player_id = p.id
      WHERE p.active = 1
-       AND (p.selection_eligible = 1 OR EXISTS (
-         SELECT 1 FROM development_activity_callups visible_callup
-         WHERE visible_callup.activity_id = ? AND visible_callup.player_id = p.id
-       ))
+       AND (p.selection_eligible = 1 OR roster.callup_status IS NOT NULL)
        AND ${scope.sql}
      ORDER BY CASE
        WHEN 'Gul' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 0
        WHEN 'F15' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 1
        WHEN 'Grön' = ANY(ARRAY(SELECT g.name FROM player_group_memberships pgm JOIN groups g ON g.id = pgm.group_id WHERE pgm.player_id = p.id)) THEN 2
        ELSE 3 END, lower(p.name)`,
-    [match.date, match.date, match.date, activityId, match.date, activityId, activityId, activityId, activityId, ...scope.args]
+    [match.date, match.date, match.date, match.date, activityId, ...scope.args]
   );
   const hasSavedSquad = rows.some((row) => row.in_match_squad);
   return {
@@ -1624,7 +1606,7 @@ export async function saveMobileSelection(
   const activity = await get<{ match_id: number | null }>("SELECT match_id FROM development_activities WHERE id = ?", [activityId]);
   const statements: { sql: string; args: SqlArgs }[] = [];
   if (activity?.match_id != null) {
-    statements.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [activity.match_id] });
+    statements.push({ sql: "UPDATE match_roster SET selection_status = NULL, selected_position = '', updated_at = now() WHERE match_id = ?", args: [activity.match_id] });
   }
   for (const candidate of workspace.candidates) {
     const submitted = byPlayer.get(candidate.playerId) ?? {
@@ -1638,14 +1620,12 @@ export async function saveMobileSelection(
       : callupStatus
         ? { ...submitted, decision: "rested" as const }
         : submitted;
-    if (activity?.match_id != null && input.decision === "selected") {
-      statements.push({ sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT DO NOTHING", args: [activity.match_id, input.playerId] });
-    }
-    statements.push({
-      sql: `INSERT INTO development_selection_decisions (activity_id, player_id, decision, decided_by)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (activity_id, player_id) DO UPDATE SET decision = excluded.decision, rationale = '', decided_by = excluded.decided_by, decided_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, input.playerId, input.decision, actor.name],
+    if (activity?.match_id != null) statements.push({
+      sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
+            VALUES (?, ?, ?, ?, 'native')
+            ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
+              selected_position = excluded.selected_position, source = excluded.source, updated_at = now()`,
+      args: [activity.match_id, input.playerId, input.decision, input.position],
     });
   }
   await batch(statements);

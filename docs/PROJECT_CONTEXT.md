@@ -61,12 +61,15 @@
 - Matchkort, observation, native Matchcenter och matchutvärdering ska använda
   samma serverside-resolver i `lib/matchRoster.ts` i stället för egna
   definitioner av vilka spelare som hör till matchen.
-- För en spelad match är `match_players` facit. För en kommande match prioriteras
-  `match_squad`, därefter sparade uttagningsbeslut/deltagande och accepterade
-  kallelser som tydligt märkt preliminär trupp. En lagmedlemslista används inte
-  som påhittad matchtrupp när matchspecifikt underlag saknas.
-- `hasConfirmedSquad` betyder nu att en faktisk rad finns i `match_squad`; ett
-  fristående uttagningsbeslut räcker inte längre för att kalla truppen bekräftad.
+- För en spelad match är `match_players` facit. För en kommande match är
+  `match_roster` enda sanningskälla för kallelse, svar, tränarbeslut, vald position
+  och startplacering. En lagmedlemslista används inte som påhittad matchtrupp.
+- `hasConfirmedSquad` betyder att minst en `match_roster`-rad har
+  `selection_status='selected'`.
+- Beslut 2026-08-27: `players` och `matches` är enda huvudlistorna. Uttagning
+  listar direkt från `matches`; `development_activities` är endast kontext för
+  observationer. Migration 0017 samlar förmatchdata i `match_roster`, och 0018
+  ersätter de gamla lagringstabellerna med skrivskyddade projektioner utan egen data.
 
 ## Beslut 2026-08-24: utvecklingsträdet är en aktiv del av spelarprofilen
 

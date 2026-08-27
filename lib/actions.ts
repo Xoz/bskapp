@@ -785,8 +785,6 @@ export async function deleteCupMatch(id: number, cupName: string, cupGroup: stri
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
-    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
-    { sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
   ]);
@@ -816,8 +814,6 @@ export async function deleteCup(cupName: string, cupGroup: string) {
     await batch([
       ...idList.map((id) => ({ sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] })),
-      ...idList.map((id) => ({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] })),
-      ...idList.map((id) => ({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] })),
       ...idList.map((id) => ({ sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] })),
       { sql: "DELETE FROM matches WHERE cup_name = ? AND cup_group = ?", args: [cupName, cupGroup] },
     ]);
@@ -858,7 +854,7 @@ export async function addCupPlayoffMatch(formData: FormData) {
 }
 
 // Spara cupens uttagna trupp som medlemskap i cupens matchgrupp. Truppen blir
-// default-trupp per match (kan justeras per match i laguttagningen, match_squad).
+// default-trupp per match (kan justeras per match i den kanoniska match_roster-relationen).
 export async function saveCupSquad(formData: FormData) {
   await requirePermission("manage_squads");
   const cupName = String(formData.get("cup_name") ?? "").trim();
@@ -1050,10 +1046,12 @@ export async function saveSquad(formData: FormData) {
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
   for (const mid of targetIds) {
-    stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
+    stmts.push({ sql: "UPDATE match_roster SET selection_status = NULL, lineup_x = NULL, lineup_y = NULL, updated_at = now() WHERE match_id = ?", args: [mid] });
     for (const pid of ids) {
       stmts.push({
-        sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
+        sql: `INSERT INTO match_roster (match_id, player_id, selection_status, source)
+              VALUES (?, ?, 'selected', 'manual')
+              ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = 'selected', source = 'manual', updated_at = now()`,
         args: [mid, pid],
       });
     }
@@ -1112,19 +1110,24 @@ export async function saveLineup(formData: FormData) {
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
   for (const mid of squadTargets) {
-    stmts.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [mid] });
+    stmts.push({ sql: "UPDATE match_roster SET selection_status = NULL, lineup_x = NULL, lineup_y = NULL, updated_at = now() WHERE match_id = ?", args: [mid] });
     for (const pid of squadIds) {
-      stmts.push({ sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT (match_id, player_id) DO NOTHING", args: [mid, pid] });
+      stmts.push({ sql: `INSERT INTO match_roster (match_id, player_id, selection_status, source)
+                         VALUES (?, ?, 'selected', 'manual')
+                         ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = 'selected', source = 'manual', updated_at = now()`, args: [mid, pid] });
     }
     stmts.push({ sql: "UPDATE matches SET formation = ? WHERE id = ?", args: [formation, mid] });
     revalidatePath(`/matcher/${mid}/laguttagning`);
     revalidatePath(`/matcher/${mid}`);
   }
   // Utplacering (positioner) sparas bara för den här matchen
-  stmts.push({ sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [matchId] });
+  stmts.push({ sql: "UPDATE match_roster SET lineup_x = NULL, lineup_y = NULL, updated_at = now() WHERE match_id = ?", args: [matchId] });
   for (const p of positions) {
     stmts.push({
-      sql: "INSERT INTO match_lineup (match_id, player_id, x, y) VALUES (?, ?, ?, ?) ON CONFLICT (match_id, player_id) DO NOTHING",
+      sql: `INSERT INTO match_roster (match_id, player_id, selection_status, lineup_x, lineup_y, source)
+            VALUES (?, ?, 'selected', ?, ?, 'manual')
+            ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = 'selected', lineup_x = excluded.lineup_x,
+              lineup_y = excluded.lineup_y, source = 'manual', updated_at = now()`,
       args: [matchId, p.id, p.x, p.y],
     });
   }
@@ -1145,8 +1148,6 @@ export async function deleteMatch(formData: FormData) {
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },
-    { sql: "DELETE FROM match_squad WHERE match_id = ?", args: [id] },
-    { sql: "DELETE FROM match_lineup WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_subs WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM matches WHERE id = ?", args: [id] },
   ]);
@@ -1286,10 +1287,9 @@ export async function importCalendarMatches() {
         `SELECT m.id FROM matches m
          WHERE m.source = 'calendar' AND m.external_uid IS NOT NULL
            AND m.date >= ? AND m.external_uid NOT IN (${marks})
-           AND NOT EXISTS (SELECT 1 FROM match_squad x WHERE x.match_id = m.id)
+           AND NOT EXISTS (SELECT 1 FROM match_roster x WHERE x.match_id = m.id)
            AND NOT EXISTS (SELECT 1 FROM match_players x WHERE x.match_id = m.id)
            AND NOT EXISTS (SELECT 1 FROM match_events x WHERE x.match_id = m.id)
-           AND NOT EXISTS (SELECT 1 FROM match_lineup x WHERE x.match_id = m.id)
            AND NOT EXISTS (SELECT 1 FROM match_subs x WHERE x.match_id = m.id)
            AND NOT EXISTS (SELECT 1 FROM match_reporters x WHERE x.match_id = m.id)
            AND NOT EXISTS (SELECT 1 FROM match_evaluation_invites x WHERE x.match_id = m.id)
@@ -1310,10 +1310,9 @@ export async function importCalendarMatches() {
         await run(
           `DELETE FROM matches m WHERE m.id = ?
              AND NOT EXISTS (SELECT 1 FROM development_activities da WHERE da.match_id = m.id)
-             AND NOT EXISTS (SELECT 1 FROM match_squad x WHERE x.match_id = m.id)
+             AND NOT EXISTS (SELECT 1 FROM match_roster x WHERE x.match_id = m.id)
              AND NOT EXISTS (SELECT 1 FROM match_players x WHERE x.match_id = m.id)
              AND NOT EXISTS (SELECT 1 FROM match_events x WHERE x.match_id = m.id)
-             AND NOT EXISTS (SELECT 1 FROM match_lineup x WHERE x.match_id = m.id)
              AND NOT EXISTS (SELECT 1 FROM match_subs x WHERE x.match_id = m.id)
              AND NOT EXISTS (SELECT 1 FROM match_reporters x WHERE x.match_id = m.id)
              AND NOT EXISTS (SELECT 1 FROM match_evaluation_invites x WHERE x.match_id = m.id)
@@ -1923,16 +1922,16 @@ export async function syncSanktanCallupHistory(formData: FormData) {
        ORDER BY p.name`,
       [swedishToday(), swedishToday()]
     ),
-    all<{ activity_id: string; external_id: string }>(
-      `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
+    all<{ match_id: number; external_id: string }>(
+      `SELECT da.match_id, replace(da.external_key, 'sanktan:', '') AS external_id
        FROM development_activities da JOIN groups g ON g.id = da.group_id
-       WHERE da.external_source = 'svenskalag_sanktan' AND da.activity_date LIKE ? AND da.activity_date <= ?
+       WHERE da.external_source = 'svenskalag_sanktan' AND da.match_id IS NOT NULL AND da.activity_date LIKE ? AND da.activity_date <= ?
          AND g.group_type = 'subgroup' AND g.name = 'Gul' ORDER BY da.activity_date, da.start_time, da.id`,
       [`${season}-%`, swedishToday()]
     ),
   ]);
   const yellowByName = new Map(yellowPlayers.map((player) => [normalizePersonName(player.name), player] as const));
-  const activityByExternalId = new Map(historicalMatches.map((match) => [match.external_id, match.activity_id] as const));
+  const matchByExternalId = new Map(historicalMatches.map((match) => [match.external_id, match.match_id] as const));
   const seen = new Set<string>();
   const statements: { sql: string; args: (string | number)[] }[] = [];
   for (const match of imported) {
@@ -1942,7 +1941,7 @@ export async function syncSanktanCallupHistory(formData: FormData) {
       : Array.isArray(match.called)
         ? match.called.map((name) => ({ name, status: "pending" as const }))
         : null;
-    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !activityByExternalId.has(externalId) || !importedPlayers) redirect("/installningar?sanktan_kallelser=match#trupp");
+    if (!/^\d+$/.test(externalId) || seen.has(externalId) || !matchByExternalId.has(externalId) || !importedPlayers) redirect("/installningar?sanktan_kallelser=match#trupp");
     seen.add(externalId);
     const called = new Set<number>();
     for (const importedPlayer of importedPlayers) {
@@ -1950,19 +1949,17 @@ export async function syncSanktanCallupHistory(formData: FormData) {
       if (!player || called.has(player.id)) redirect(`/installningar?sanktan_kallelser=spelare&sanktan_kallelse_match=${externalId}&sanktan_kallelse_index=${called.size}#trupp`);
       if (!["accepted", "declined", "pending"].includes(importedPlayer.status)) redirect("/installningar?sanktan_kallelser=fel#trupp");
       called.add(player.id);
-      const attendanceStatus = importedPlayer.status === "accepted"
-        ? "present"
-        : importedPlayer.status === "declined" ? "absent" : "unknown";
       statements.push({
-        sql: `INSERT INTO development_activity_callups (activity_id, player_id, attendance_status)
-              VALUES (?, ?, ?) ON CONFLICT (activity_id, player_id) DO UPDATE SET attendance_status = excluded.attendance_status`,
-        args: [activityByExternalId.get(externalId)!, player.id, attendanceStatus],
+        sql: `INSERT INTO match_roster (match_id, player_id, callup_status, source)
+              VALUES (?, ?, ?, 'svenskalag_history') ON CONFLICT (match_id, player_id) DO UPDATE SET
+                callup_status = excluded.callup_status, source = excluded.source, updated_at = now()`,
+        args: [matchByExternalId.get(externalId)!, player.id, importedPlayer.status],
       });
     }
   }
-  if (seen.size !== historicalMatches.length || seen.size !== activityByExternalId.size) redirect("/installningar?sanktan_kallelser=ofullstandig#trupp");
-  const activityIds = historicalMatches.map((match) => match.activity_id);
-  if (activityIds.length) statements.unshift({ sql: `DELETE FROM development_activity_callups WHERE activity_id IN (${activityIds.map(() => "?").join(", ")})`, args: activityIds });
+  if (seen.size !== historicalMatches.length || seen.size !== matchByExternalId.size) redirect("/installningar?sanktan_kallelser=ofullstandig#trupp");
+  const matchIds = historicalMatches.map((match) => match.match_id);
+  if (matchIds.length) statements.unshift({ sql: `UPDATE match_roster SET callup_status = NULL WHERE match_id IN (${matchIds.map(() => "?").join(", ")})`, args: matchIds });
   await batch(statements);
 
   const importedBy = (await getCoachName()) ?? "Tränare";
@@ -2044,21 +2041,20 @@ export async function syncSanktanDirectTransfer(formData: FormData) {
       linkedCallups.push({ playerId: player.id, status: callup.status });
     }
 
-    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [dbMatch.activity_id] });
+    if (dbMatch.match_id !== null) statements.push({ sql: "UPDATE match_roster SET callup_status = NULL, updated_at = now() WHERE match_id = ?", args: [dbMatch.match_id] });
     statements.push({
-      sql: `INSERT INTO development_activity_callup_summaries
-            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
-            VALUES (?, ?, ?, ?, 'svenskalag_direct', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
-            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
-              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
-              source = excluded.source, updated_at = excluded.updated_at`,
-      args: [dbMatch.activity_id, importedMatch.totals.accepted, importedMatch.totals.declined, importedMatch.totals.pending],
+      sql: `UPDATE matches SET callup_accepted_count = ?, callup_declined_count = ?, callup_pending_count = ?,
+            callup_source = 'svenskalag_direct' WHERE id = ?`,
+      args: [importedMatch.totals.accepted, importedMatch.totals.declined, importedMatch.totals.pending, dbMatch.match_id ?? 0],
     });
     for (const callup of linkedCallups) {
-      const attendanceStatus = callup.status === "accepted" ? "present" : callup.status === "declined" ? "absent" : "unknown";
+      if (dbMatch.match_id === null) continue;
       statements.push({
-        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
-        args: [dbMatch.activity_id, callup.playerId, attendanceStatus],
+        sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_direct')
+              ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
+                selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
+        args: [dbMatch.match_id, callup.playerId, callup.status, callup.status],
       });
     }
 
@@ -2150,10 +2146,11 @@ export async function syncUpcomingSanktanCallups(formData: FormData) {
   const placeholders = externalIds.map(() => "?").join(", ");
   const [players, matches] = await Promise.all([
     all<{ id: number; name: string }>("SELECT id, name FROM players WHERE active = 1 ORDER BY name"),
-    all<{ activity_id: string; external_id: string }>(
-      `SELECT da.id AS activity_id, replace(da.external_key, 'sanktan:', '') AS external_id
+    all<{ match_id: number; external_id: string }>(
+      `SELECT da.match_id, replace(da.external_key, 'sanktan:', '') AS external_id
        FROM development_activities da
        WHERE da.external_source = 'svenskalag_sanktan'
+         AND da.match_id IS NOT NULL
          AND da.activity_date >= ?
          AND replace(da.external_key, 'sanktan:', '') IN (${placeholders})`,
       [swedishToday(), ...externalIds]
@@ -2162,7 +2159,7 @@ export async function syncUpcomingSanktanCallups(formData: FormData) {
   if (matches.length !== imported.length) redirect("/installningar?sanktan_kommande=match#trupp");
 
   const playerByName = new Map(players.map((player) => [normalizePersonName(player.name), player] as const));
-  const activityByExternalId = new Map(matches.map((match) => [match.external_id, match.activity_id] as const));
+  const matchByExternalId = new Map(matches.map((match) => [match.external_id, match.match_id] as const));
   const statements: { sql: string; args: (string | number)[] }[] = [];
   for (const match of imported) {
     if (!Array.isArray(match.callups)
@@ -2171,27 +2168,25 @@ export async function syncUpcomingSanktanCallups(formData: FormData) {
       || !callupTotalsCoverKnownPlayers(match.totals, match.callups)) {
       redirect("/installningar?sanktan_kommande=fel#trupp");
     }
-    const activityId = activityByExternalId.get(String(match.id));
-    if (!activityId) redirect("/installningar?sanktan_kommande=match#trupp");
+    const matchId = matchByExternalId.get(String(match.id));
+    if (!matchId) redirect("/installningar?sanktan_kommande=match#trupp");
     const seenPlayers = new Set<number>();
-    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [activityId] });
+    statements.push({ sql: "UPDATE match_roster SET callup_status = NULL, updated_at = now() WHERE match_id = ?", args: [matchId] });
     statements.push({
-      sql: `INSERT INTO development_activity_callup_summaries
-            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
-            VALUES (?, ?, ?, ?, 'svenskalag_callup', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
-            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
-              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
-              source = excluded.source, updated_at = excluded.updated_at`,
-      args: [activityId, match.totals.accepted, match.totals.declined, match.totals.pending],
+      sql: `UPDATE matches SET callup_accepted_count = ?, callup_declined_count = ?, callup_pending_count = ?,
+            callup_source = 'svenskalag_callup' WHERE id = ?`,
+      args: [match.totals.accepted, match.totals.declined, match.totals.pending, matchId],
     });
     for (const callup of match.callups) {
       const player = playerByName.get(normalizePersonName(String(callup.name ?? "")));
       if (!player || seenPlayers.has(player.id)) redirect("/installningar?sanktan_kommande=spelare#trupp");
       seenPlayers.add(player.id);
-      const attendanceStatus = callup.status === "accepted" ? "present" : callup.status === "declined" ? "absent" : "unknown";
       statements.push({
-        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
-        args: [activityId, player.id, attendanceStatus],
+        sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_callup')
+              ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
+                selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
+        args: [matchId, player.id, callup.status, callup.status],
       });
     }
   }

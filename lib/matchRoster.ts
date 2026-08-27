@@ -3,10 +3,6 @@ import { all, get, type SqlArgs } from "./db";
 export type MatchRosterSource =
   | "played"
   | "confirmed"
-  | "selection"
-  | "participation"
-  | "accepted"
-  | "lineup"
   | "none";
 
 export type MatchRosterPlayer = {
@@ -28,32 +24,17 @@ export type MatchRoster = {
   players: MatchRosterPlayer[];
 };
 
-const UPCOMING_PRIORITY: MatchRosterCandidate["source"][] = [
-  "confirmed",
-  "selection",
-  "participation",
-  "accepted",
-  "played",
-  "lineup",
-];
+const UPCOMING_PRIORITY: MatchRosterCandidate["source"][] = ["confirmed", "played"];
 
 const PLAYED_PRIORITY: MatchRosterCandidate["source"][] = [
   "played",
   "confirmed",
-  "selection",
-  "participation",
-  "accepted",
-  "lineup",
 ];
 
 export function matchRosterLabel(source: MatchRosterSource): string {
   switch (source) {
     case "played": return "Deltog";
     case "confirmed": return "Trupp";
-    case "lineup": return "Laguppställning";
-    case "selection":
-    case "participation":
-    case "accepted": return "Preliminär trupp";
     default: return "Ingen trupp";
   }
 }
@@ -110,41 +91,16 @@ export async function resolveMatchRosters(matchIds: number[]): Promise<Map<numbe
      WHERE m.id IN (${marks})`,
     ids
   );
-  const repeatedIds: SqlArgs = [ids, ids, ids, ids, ids, ids].flat() as SqlArgs;
+  const repeatedIds: SqlArgs = [ids, ids].flat() as SqlArgs;
   const candidates = await all<MatchRosterCandidate>(
     `SELECT source.match_id, source.source, p.id, p.name, p.jersey_number
      FROM (
        SELECT mp.match_id, mp.player_id, 'played' AS source
        FROM match_players mp WHERE mp.match_id IN (${marks})
        UNION ALL
-       SELECT squad.match_id, squad.player_id, 'confirmed' AS source
-       FROM match_squad squad WHERE squad.match_id IN (${marks})
-       UNION ALL
-       SELECT da.match_id, decision.player_id, 'selection' AS source
-       FROM development_selection_decisions decision
-       JOIN development_activities da ON da.id = decision.activity_id
-       WHERE da.match_id IN (${marks}) AND decision.decision = 'selected'
-       UNION ALL
-       SELECT da.match_id, participation.player_id, 'participation' AS source
-       FROM development_activity_participation participation
-       JOIN development_activities da ON da.id = participation.activity_id
-       WHERE da.match_id IN (${marks}) AND participation.selected = 1
-       UNION ALL
-       SELECT da.match_id, callup.player_id, 'accepted' AS source
-       FROM development_activity_callups callup
-       JOIN development_activities da ON da.id = callup.activity_id
-       JOIN matches callup_match ON callup_match.id = da.match_id
-       WHERE da.match_id IN (${marks})
-         AND (
-           callup.attendance_status = 'present'
-           OR (
-             callup.attendance_status = 'unknown'
-             AND callup_match.date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-           )
-         )
-       UNION ALL
-       SELECT lineup.match_id, lineup.player_id, 'lineup' AS source
-       FROM match_lineup lineup WHERE lineup.match_id IN (${marks})
+       SELECT roster.match_id, roster.player_id, 'confirmed' AS source
+       FROM match_roster roster
+       WHERE roster.match_id IN (${marks}) AND roster.selection_status = 'selected'
      ) source
      JOIN players p ON p.id = source.player_id AND p.active = 1`,
     repeatedIds

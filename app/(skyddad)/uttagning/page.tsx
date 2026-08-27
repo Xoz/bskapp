@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
-import { getCoreActivities, getSelectionWorkspace } from "@/lib/developmentCore";
+import { getSelectionMatches, getSelectionWorkspace } from "@/lib/developmentCore";
 import { saveDevelopmentSelection } from "@/lib/coreActions";
 import CoreActivityCard from "@/components/CoreActivityCard";
 import SelectionEditor from "@/components/SelectionEditor";
@@ -29,9 +29,7 @@ export default async function SelectionPage({
   const listHref = "/uttagning";
 
   if (!aktivitet) {
-    const matches = (await getCoreActivities(100, "sanktan")).filter(
-      (activity) => activity.is_upcoming && activity.source_team === "Gul"
-    );
+    const matches = await getSelectionMatches();
     const weekEnd = endOfCurrentWeek(swedishToday());
     const thisWeek = matches.filter((activity) => activity.activity_date <= weekEnd);
     const later = matches.filter((activity) => activity.activity_date > weekEnd);

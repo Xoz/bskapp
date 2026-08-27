@@ -1,7 +1,6 @@
 // Återställer dev-testmatchen ("Dev Testmatch") till ett rent pågående tillstånd
 // inför/efter ett test: raderar händelser, räknare, byten och rapportörer och
-// nollställer klocka/resultat — men BEHÅLLER trupp (match_squad) och startelva
-// (match_lineup). Speglar resetMatch() i lib/actions.ts.
+// nollställer klocka/resultat — men BEHÅLLER match_roster (trupp + startelva).
 //
 //   DATABASE_URL=postgresql://xozozmen@localhost:5432/bskdev node scripts/reset-dev-match.mjs
 //

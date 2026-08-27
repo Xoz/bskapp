@@ -295,9 +295,10 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
   const reserves = new Set(formData.getAll("reserve_player").map(Number).filter((id) => accessibleIds.has(id)));
-  const callups = await all<{ player_id: number; attendance_status: "present" | "absent" | "unknown" }>(
-    "SELECT player_id, attendance_status FROM development_activity_callups WHERE activity_id = ?",
-    [activityId]
+  const callups = activity.match_id == null ? [] : await all<{ player_id: number; attendance_status: "present" | "absent" | "unknown" }>(
+    `SELECT player_id, CASE callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' ELSE 'unknown' END AS attendance_status
+     FROM match_roster WHERE match_id = ? AND callup_status IS NOT NULL`,
+    [activity.match_id]
   );
   const callupByPlayer = new Map(callups.map((callup) => [Number(callup.player_id), callup.attendance_status]));
   for (const [playerId, status] of callupByPlayer) {
@@ -308,13 +309,7 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
 
   if (activity.match_id != null) {
-    statements.push({ sql: "DELETE FROM match_squad WHERE match_id = ?", args: [activity.match_id] });
-    for (const playerId of selected) {
-      statements.push({
-        sql: "INSERT INTO match_squad (match_id, player_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
-        args: [activity.match_id, playerId],
-      });
-    }
+    statements.push({ sql: "UPDATE match_roster SET selection_status = NULL, selected_position = '', updated_at = now() WHERE match_id = ?", args: [activity.match_id] });
   }
 
   for (const player of accessiblePlayers) {
@@ -325,27 +320,12 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
         ? "rested"
         : selected.has(player.id) ? "selected" : reserves.has(player.id) ? "reserve" : "rested";
     const position = String(formData.get(`position_${player.id}`) ?? player.position ?? "").trim().slice(0, 40);
-    statements.push({
-      sql: `INSERT INTO development_selection_decisions
-              (activity_id, player_id, decision, decided_by)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (activity_id, player_id) DO UPDATE SET
-              decision = excluded.decision,
-              rationale = '',
-              decided_by = excluded.decided_by,
-              decided_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, player.id, decision, actor],
-    });
-    statements.push({
-      sql: `INSERT INTO development_activity_participation
-              (activity_id, player_id, attendance_status, selected, position, source)
-            VALUES (?, ?, 'unknown', ?, ?, 'manual')
-            ON CONFLICT (activity_id, player_id) DO UPDATE SET
-              selected = excluded.selected,
-              position = excluded.position,
-              source = 'manual',
-              updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')`,
-      args: [activityId, player.id, decision === "selected" ? 1 : 0, position],
+    if (activity.match_id != null) statements.push({
+      sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
+            VALUES (?, ?, ?, ?, 'manual')
+            ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
+              selected_position = excluded.selected_position, source = 'manual', updated_at = now()`,
+      args: [activity.match_id, player.id, decision, position],
     });
   }
 

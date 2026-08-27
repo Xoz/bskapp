@@ -89,7 +89,7 @@ const checks = [
     severity: "error",
     name: "matchutvärderingar för spelare utanför matchen",
     query: `SELECT COUNT(*)::int AS count FROM match_player_evaluations evaluation
-      WHERE NOT EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = evaluation.match_id AND squad.player_id = evaluation.player_id)
+      WHERE NOT EXISTS (SELECT 1 FROM match_roster roster WHERE roster.match_id = evaluation.match_id AND roster.player_id = evaluation.player_id AND roster.selection_status = 'selected')
         AND NOT EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = evaluation.match_id AND played.player_id = evaluation.player_id)`,
   },
   {

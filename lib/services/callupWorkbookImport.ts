@@ -255,24 +255,25 @@ export async function importSvenskaLagCallupWorkbooks(
     });
   }
   for (const item of prepared) {
-    statements.push({ sql: "DELETE FROM development_activity_callups WHERE activity_id = ?", args: [item.db.activity_id] });
+    statements.push({ sql: "UPDATE match_roster SET callup_status = NULL, updated_at = now() WHERE match_id = ?", args: [item.db.match_id] });
     for (const callup of item.callups) {
       statements.push({
-        sql: "INSERT INTO development_activity_callups (activity_id, player_id, attendance_status) VALUES (?, ?, ?)",
-        args: [item.db.activity_id, callup.playerId, callup.status],
+        sql: `INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
+              VALUES (?, ?, ?, CASE WHEN ? = 'accepted' THEN 'selected' ELSE 'rested' END, 'svenskalag_file')
+              ON CONFLICT (match_id, player_id) DO UPDATE SET callup_status = excluded.callup_status,
+                selection_status = excluded.selection_status, source = excluded.source, updated_at = now()`,
+        args: [item.db.match_id, callup.playerId,
+          callup.status === "present" ? "accepted" : callup.status === "absent" ? "declined" : "pending",
+          callup.status === "present" ? "accepted" : callup.status === "absent" ? "declined" : "pending"],
       });
     }
     const accepted = item.callups.filter((callup) => callup.status === "present").length;
     const declined = item.callups.filter((callup) => callup.status === "absent").length;
     const pending = item.callups.filter((callup) => callup.status === "unknown").length;
     statements.push({
-      sql: `INSERT INTO development_activity_callup_summaries
-            (activity_id, accepted_count, declined_count, pending_count, source, updated_at)
-            VALUES (?, ?, ?, ?, 'svenskalag_file', to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'))
-            ON CONFLICT (activity_id) DO UPDATE SET accepted_count = excluded.accepted_count,
-              declined_count = excluded.declined_count, pending_count = excluded.pending_count,
-              source = excluded.source, updated_at = excluded.updated_at`,
-      args: [item.db.activity_id, accepted, declined, pending],
+      sql: `UPDATE matches SET callup_accepted_count = ?, callup_declined_count = ?,
+            callup_pending_count = ?, callup_source = 'svenskalag_file' WHERE id = ?`,
+      args: [accepted, declined, pending, item.db.match_id],
     });
     for (const playerId of item.attendedPlayerIds) {
       statements.push({

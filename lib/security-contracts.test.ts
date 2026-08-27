@@ -15,9 +15,9 @@ describe("säkerhetskontrakt", () => {
     expect(implementation).toContain("getMatchEvaluationWorkspace(matchId, contributorType, contributorId)");
     expect(evaluation).toContain("resolveMatchRoster(matchId)");
     expect(evaluation).toContain("p.id IN (${marks})");
-    expect(roster).toContain("FROM match_squad squad");
+    expect(roster).toContain("FROM match_roster roster");
     expect(roster).toContain("FROM match_players mp");
-    expect(roster).toContain("callup.attendance_status = 'present'");
+    expect(roster).toContain("roster.selection_status = 'selected'");
     expect(roster).toContain('"played",');
     expect(roster).toContain('"confirmed",');
   });

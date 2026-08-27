@@ -27,11 +27,25 @@ describe("utvecklingskärnans kontrakt", () => {
       "player_development_goals",
       "development_activity_participation",
       "development_observations",
-      "development_selection_decisions",
+      "match_roster",
       "development_pilot_events",
     ]) {
       expect(schema).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
     }
+  });
+
+  it("har en enda kanonisk förmatchrelation och läser uttagningslistan från matches", () => {
+    expect(schema).toContain('0017-canonical-match-roster');
+    expect(schema).toContain("PRIMARY KEY (match_id, player_id)");
+    expect(developmentCore).toContain("export async function getSelectionMatches");
+    const listStart = developmentCore.indexOf("export async function getSelectionMatches");
+    const workspaceStart = developmentCore.indexOf("export async function getSelectionWorkspace", listStart);
+    const list = developmentCore.slice(listStart, workspaceStart);
+    expect(list).toContain("FROM matches m");
+    expect(list).toContain("FROM match_roster mr");
+    expect(coreActions).toContain("INSERT INTO match_roster");
+    expect(actions).toContain("INSERT INTO match_roster");
+    expect(mobileDevelopment).toContain("INSERT INTO match_roster");
   });
 
   it("begränsar spelaren till två aktiva mål genom slots och unikt index", () => {
@@ -160,7 +174,8 @@ describe("utvecklingskärnans kontrakt", () => {
 
   it("sparar tränarens explicita beslut i stället för automatval", () => {
     expect(coreActions).toContain('formData.getAll("selected_player")');
-    expect(coreActions).toContain('decision === "selected" ? 1 : 0');
+    expect(coreActions).toContain("INSERT INTO match_roster");
+    expect(coreActions).toContain("selection_status = excluded.selection_status");
     expect(coreActions).not.toMatch(/auto.?select|automatic.?selection/i);
   });
 
@@ -238,7 +253,7 @@ describe("utvecklingskärnans kontrakt", () => {
     }
     expect(todayPage).toContain("activity.has_confirmed_squad ? Number(activity.squad_count)");
     expect(mobileDevelopment).toContain("acceptedCallupCount: Number(row.accepted_callup_count)");
-    expect(nativeActivityViews).toContain('Text("VECKANS LÄGE")');
+    expect(nativeActivityViews).toContain('Text("MATCHDAG")');
     expect(nativeActivityViews).toContain("activity.hasConfirmedSquad ? activity.squadCount : activity.acceptedCallupCount");
     expect(nativeActivityViews).toContain('$0.sourceTeam == "Gul" || $0.sourceTeam == "Grön"');
     expect(todayPage).toContain('row.activity.source_team === "Gul"');
@@ -252,7 +267,7 @@ describe("utvecklingskärnans kontrakt", () => {
   it("städar bort oanvända framtida kalendermatcher som försvunnit ur källan", () => {
     expect(actions).toContain("m.external_uid NOT IN (${marks})");
     expect(actions).toContain("m.source = 'calendar'");
-    expect(actions).toContain("NOT EXISTS (SELECT 1 FROM match_squad");
+    expect(actions).toContain("NOT EXISTS (SELECT 1 FROM match_roster");
     expect(actions).toContain("DELETE FROM development_activities da");
     expect(schema).toContain('id: "0011-remove-stale-erikslund-calendar-match"');
     expect(schema).toContain('id: "0012-svenskalag-file-imports"');
@@ -272,8 +287,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain('activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent');
   });
 
-  it("använder match_squad som facit efter bekräftad uttagning", () => {
-    expect(mobileDevelopment).toContain("FROM match_squad squad WHERE squad.match_id = m.id");
+  it("använder match_roster som facit efter bekräftad uttagning", () => {
+    expect(mobileDevelopment).toContain("FROM match_roster roster WHERE roster.match_id = m.id");
     expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
     expect(mobileDevelopment).toContain('currentCallupStatus === "accepted"\n          ? "selected"');
     const saveStart = mobileDevelopment.indexOf("export async function saveMobileSelection");
@@ -289,9 +304,8 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(matchRoster).toContain("const PLAYED_PRIORITY");
     expect(matchRoster).toContain('"played",');
     expect(matchRoster).toContain('"confirmed",');
-    expect(matchRoster).toContain('"accepted",');
-    expect(matchRoster).toContain("callup.attendance_status = 'unknown'");
-    expect(matchRoster).toContain("callup_match.date >= to_char(now() AT TIME ZONE 'Europe/Stockholm'");
+    expect(matchRoster).toContain("FROM match_roster roster");
+    expect(matchRoster).toContain("roster.selection_status = 'selected'");
     expect(nativeActivityViews).toContain("activity.rosterPlayerNames");
     expect(nativeMainSplitView).toContain("activity.rosterLabel");
   });

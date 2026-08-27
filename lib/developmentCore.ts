@@ -554,6 +554,42 @@ export type SelectionCandidate = PlayerCoreSummary & {
   support: SelectionSupport;
 };
 
+// Uttagningslistan läser alltid den kanoniska matchtabellen. Aktivitets-id:t är
+// bara en kompatibilitetsnyckel för observationer och formulär, aldrig matchdata.
+export async function getSelectionMatches(): Promise<CoreActivity[]> {
+  return all<CoreActivity>(
+    `SELECT da.id, m.date AS activity_date, m.start_time, 'match' AS activity_type,
+            CASE WHEN m.home_away = 'away' THEN 'Borta mot ' ELSE 'Hemma mot ' END || m.opponent AS title,
+            'svenskalag_sanktan' AS external_source, COALESCE(m.external_uid, 'match:' || m.id::text) AS external_key,
+            m.id AS match_id, m.group_id, '' AS theme, 'balanced' AS challenge_context,
+            0 AS observation_count, 0 AS participant_count,
+            (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS selection_count,
+            g.name AS source_team,
+            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
+            ARRAY[]::text[] AS participant_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status IS NOT NULL ORDER BY p.name) AS called_player_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'accepted' ORDER BY p.name) AS accepted_player_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'declined' ORDER BY p.name) AS declined_player_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'pending' ORDER BY p.name) AS pending_player_names,
+            m.callup_accepted_count AS accepted_callup_count,
+            m.callup_declined_count AS declined_callup_count,
+            m.callup_pending_count AS pending_callup_count,
+            (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS squad_count,
+            EXISTS(SELECT 1 FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS has_confirmed_squad,
+            true AS is_upcoming
+     FROM matches m
+     JOIN groups g ON g.id = m.group_id AND g.group_type = 'subgroup' AND g.name = 'Gul'
+     JOIN LATERAL (
+       SELECT linked.id FROM development_activities linked
+       WHERE linked.match_id = m.id AND linked.external_source = 'svenskalag_sanktan'
+       ORDER BY linked.id LIMIT 1
+     ) da ON true
+     WHERE m.date >= ? AND COALESCE(m.finished, 0) = 0
+     ORDER BY m.date, m.start_time NULLS LAST, m.id`,
+    [swedishToday()]
+  );
+}
+
 export async function getSelectionWorkspace(activityId: string): Promise<{
   activity: CoreActivity;
   candidates: SelectionCandidate[];
@@ -565,6 +601,36 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     || detail.activity.external_source !== "svenskalag_sanktan"
     || !detail.activity.is_upcoming
   ) return null;
+  if (detail.activity.match_id == null) return null;
+  const canonical = await get<{
+    accepted_count: number; declined_count: number; pending_count: number;
+    accepted_names: string[]; declined_names: string[]; pending_names: string[];
+    squad_count: number;
+  }>(
+    `SELECT m.callup_accepted_count AS accepted_count,
+            m.callup_declined_count AS declined_count,
+            m.callup_pending_count AS pending_count,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
+                  WHERE mr.match_id = m.id AND mr.callup_status = 'accepted' ORDER BY p.name) AS accepted_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
+                  WHERE mr.match_id = m.id AND mr.callup_status = 'declined' ORDER BY p.name) AS declined_names,
+            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
+                  WHERE mr.match_id = m.id AND mr.callup_status = 'pending' ORDER BY p.name) AS pending_names,
+            (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS squad_count
+     FROM matches m WHERE m.id = ?`,
+    [detail.activity.match_id]
+  );
+  if (canonical) Object.assign(detail.activity, {
+    accepted_callup_count: Number(canonical.accepted_count),
+    declined_callup_count: Number(canonical.declined_count),
+    pending_callup_count: Number(canonical.pending_count),
+    accepted_player_names: canonical.accepted_names,
+    declined_player_names: canonical.declined_names,
+    pending_player_names: canonical.pending_names,
+    called_player_names: [...canonical.accepted_names, ...canonical.declined_names, ...canonical.pending_names].sort((a, b) => a.localeCompare(b, "sv")),
+    squad_count: Number(canonical.squad_count),
+    has_confirmed_squad: Number(canonical.squad_count) > 0,
+  });
   const candidateSummaries = await getPlayerCoreSummaries();
   const ids = candidateSummaries.map((row) => row.player.id);
   if (ids.length === 0) return { activity: detail.activity, candidates: [], warnings: [] };
@@ -620,20 +686,10 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               WHERE upcoming_match.date::date BETWEEN (SELECT activity_date FROM target) AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
                 AND COALESCE(upcoming_match.finished, 0) = 0
                 AND (
-                  EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = upcoming_match.id AND squad.player_id = p.id)
-                  OR EXISTS (
-                    SELECT 1 FROM development_activities upcoming_activity
-                    JOIN development_selection_decisions upcoming_selection
-                      ON upcoming_selection.activity_id = upcoming_activity.id
-                    WHERE upcoming_activity.match_id = upcoming_match.id
-                      AND upcoming_selection.player_id = p.id AND upcoming_selection.decision = 'selected'
-                  )
-                  OR EXISTS (
-                    SELECT 1 FROM development_activities upcoming_activity
-                    JOIN development_activity_callups upcoming_callup
-                      ON upcoming_callup.activity_id = upcoming_activity.id
-                    WHERE upcoming_activity.match_id = upcoming_match.id
-                      AND upcoming_callup.player_id = p.id AND upcoming_callup.attendance_status <> 'absent'
+                  EXISTS (
+                    SELECT 1 FROM match_roster upcoming_roster
+                    WHERE upcoming_roster.match_id = upcoming_match.id AND upcoming_roster.player_id = p.id
+                      AND (upcoming_roster.selection_status = 'selected' OR upcoming_roster.callup_status IN ('accepted', 'pending'))
                   )
                 )
             ) AS upcoming_match_count,
@@ -643,59 +699,37 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               WHERE window_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
                 AND (
                   EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
-                  OR EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = window_match.id AND squad.player_id = p.id)
                   OR EXISTS (
-                    SELECT 1 FROM development_activities window_activity
-                    JOIN development_selection_decisions window_selection
-                      ON window_selection.activity_id = window_activity.id
-                    WHERE window_activity.match_id = window_match.id
-                      AND window_selection.player_id = p.id AND window_selection.decision = 'selected'
-                  )
-                  OR EXISTS (
-                    SELECT 1 FROM development_activities window_activity
-                    JOIN development_activity_callups window_callup
-                      ON window_callup.activity_id = window_activity.id
-                    WHERE window_activity.match_id = window_match.id
-                      AND window_callup.player_id = p.id AND window_callup.attendance_status <> 'absent'
+                    SELECT 1 FROM match_roster window_roster
+                    WHERE window_roster.match_id = window_match.id AND window_roster.player_id = p.id
+                      AND (window_roster.selection_status = 'selected' OR window_roster.callup_status IN ('accepted', 'pending'))
                   )
                 )
             ) AS window_match_count,
             (
-              SELECT COUNT(DISTINCT future_sd.activity_id)
-              FROM development_selection_decisions future_sd
-              JOIN development_activities future_da ON future_da.id = future_sd.activity_id
-              WHERE future_sd.player_id = p.id
-                AND future_sd.decision = 'selected'
-                AND future_da.activity_type = 'match'
-                AND future_da.external_source = 'svenskalag_sanktan'
-                AND future_da.activity_date LIKE ?
-                AND future_da.activity_date >= ?
-                AND future_da.id <> ?
-                AND NOT EXISTS (
-                SELECT 1
-                  FROM development_activity_callups future_dac
-                  WHERE future_dac.activity_id = future_sd.activity_id
-                    AND future_dac.player_id = future_sd.player_id
-                )
+              SELECT COUNT(DISTINCT future_roster.match_id)
+              FROM match_roster future_roster
+              JOIN matches future_match ON future_match.id = future_roster.match_id
+              WHERE future_roster.player_id = p.id
+                AND future_roster.selection_status = 'selected'
+                AND future_match.source = 'svenskalag_sanktan'
+                AND future_match.date LIKE ?
+                AND future_match.date >= ?
+                AND future_match.id IS DISTINCT FROM ?
+                AND future_roster.callup_status IS NULL
             ) AS planned_upcoming_count,
             (
-              SELECT CASE
-                WHEN current_dac.attendance_status = 'present' THEN 'accepted'
-                WHEN current_dac.attendance_status = 'absent' THEN 'declined'
-                ELSE 'pending'
-              END
-              FROM development_activity_callups current_dac
-              WHERE current_dac.activity_id = ?
-                AND current_dac.player_id = p.id
-              LIMIT 1
+              SELECT current_roster.callup_status
+              FROM match_roster current_roster
+              WHERE current_roster.match_id = ? AND current_roster.player_id = p.id
             ) AS current_callup_status,
-            current_sd.decision
+            current_roster.selection_status AS decision
      FROM players p
      LEFT JOIN recent r ON TRUE
      LEFT JOIN development_activity_participation ap ON ap.activity_id = r.id AND ap.player_id = p.id
-     LEFT JOIN development_selection_decisions current_sd ON current_sd.activity_id = ? AND current_sd.player_id = p.id
+     LEFT JOIN match_roster current_roster ON current_roster.match_id = ? AND current_roster.player_id = p.id
      WHERE p.id IN (${idSql})
-     GROUP BY p.id, current_sd.decision`,
+     GROUP BY p.id, current_roster.selection_status`,
     [
       detail.activity.activity_date,
       `${detail.activity.activity_date.slice(0, 4)}-%`,
@@ -703,9 +737,9 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       activityId,
       `${detail.activity.activity_date.slice(0, 4)}-%`,
       detail.activity.activity_date,
-      activityId,
-      activityId,
-      activityId,
+      detail.activity.match_id,
+      detail.activity.match_id,
+      detail.activity.match_id,
       ...ids,
     ]
   );

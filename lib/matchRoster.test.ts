@@ -10,10 +10,8 @@ const candidate = (matchId: number, id: number, source: Parameters<typeof select
 });
 
 describe("gemensam matchtrupp", () => {
-  it("använder bekräftad trupp före preliminära källor på en kommande match", () => {
+  it("använder den kanoniska uttagningen på en kommande match", () => {
     const roster = selectMatchRoster(10, false, [
-      candidate(10, 1, "accepted"),
-      candidate(10, 2, "selection"),
       candidate(10, 3, "confirmed"),
     ]);
     expect(roster.source).toBe("confirmed");
@@ -21,18 +19,10 @@ describe("gemensam matchtrupp", () => {
     expect(roster.players.map((player) => player.id)).toEqual([3]);
   });
 
-  it("visar sparat uttagningsbeslut och därefter accepterade kallelser som preliminär trupp", () => {
-    const selection = selectMatchRoster(11, false, [
-      candidate(11, 1, "accepted"),
-      candidate(11, 2, "selection"),
-    ]);
-    expect(selection.source).toBe("selection");
-    expect(selection.label).toBe("Preliminär trupp");
-    expect(selection.players.map((player) => player.id)).toEqual([2]);
-
-    const accepted = selectMatchRoster(12, false, [candidate(12, 4, "accepted")]);
-    expect(accepted.source).toBe("accepted");
-    expect(accepted.players.map((player) => player.id)).toEqual([4]);
+  it("hittar inte på en trupp av andra statuskällor", () => {
+    const roster = selectMatchRoster(11, false, []);
+    expect(roster.source).toBe("none");
+    expect(roster.players).toEqual([]);
   });
 
   it("använder faktiska deltagare som facit efter spelad match", () => {
