@@ -70,6 +70,8 @@
   listar direkt från `matches`; `development_activities` är endast kontext för
   observationer. Migration 0017 samlar förmatchdata i `match_roster`, och 0018
   ersätter de gamla lagringstabellerna med skrivskyddade projektioner utan egen data.
+  Migration 0019 säkerställer att historiska ja-svar alltid blir uttagna och att
+  nej/inväntar blir vilade enligt samma regel som nya importer.
 
 ## Beslut 2026-08-24: utvecklingsträdet är en aktiv del av spelarprofilen
 

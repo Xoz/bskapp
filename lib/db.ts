@@ -1365,15 +1365,17 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     `);
 
     await getClient().unsafe(`
-      INSERT INTO match_roster (match_id, player_id, callup_status, source)
+      INSERT INTO match_roster (match_id, player_id, callup_status, selection_status, source)
       SELECT da.match_id, dac.player_id,
              CASE dac.attendance_status WHEN 'present' THEN 'accepted' WHEN 'absent' THEN 'declined' ELSE 'pending' END,
+             CASE dac.attendance_status WHEN 'present' THEN 'selected' ELSE 'rested' END,
              'migration-callup'
       FROM development_activity_callups dac
       JOIN development_activities da ON da.id = dac.activity_id
       WHERE da.match_id IS NOT NULL
       ON CONFLICT (match_id, player_id) DO UPDATE SET
-        callup_status = excluded.callup_status, source = excluded.source, updated_at = now()
+        callup_status = excluded.callup_status, selection_status = excluded.selection_status,
+        source = excluded.source, updated_at = now()
     `);
     await getClient().unsafe(`
       INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
@@ -1431,6 +1433,14 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("COMMENT ON VIEW match_squad IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
     await getClient().unsafe("COMMENT ON VIEW match_lineup IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
     await getClient().unsafe("COMMENT ON VIEW development_selection_decisions IS 'Kompatibilitetsprojektion från match_roster; lagrar ingen egen data'");
+  } },
+  { id: "0019-normalize-accepted-callups", run: async () => {
+    await getClient().unsafe(`UPDATE match_roster
+      SET selection_status = CASE WHEN callup_status = 'accepted' THEN 'selected' ELSE 'rested' END,
+          source = CASE WHEN source LIKE 'migration-%' THEN 'migration-callup-normalized' ELSE source END,
+          updated_at = now()
+      WHERE callup_status IS NOT NULL
+        AND selection_status IS DISTINCT FROM CASE WHEN callup_status = 'accepted' THEN 'selected' ELSE 'rested' END`);
   } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";

@@ -36,6 +36,8 @@ describe("utvecklingskärnans kontrakt", () => {
 
   it("har en enda kanonisk förmatchrelation och läser uttagningslistan från matches", () => {
     expect(schema).toContain('0017-canonical-match-roster');
+    expect(schema).toContain('0019-normalize-accepted-callups');
+    expect(schema).toContain("WHEN callup_status = 'accepted' THEN 'selected'");
     expect(schema).toContain("PRIMARY KEY (match_id, player_id)");
     expect(developmentCore).toContain("export async function getSelectionMatches");
     const listStart = developmentCore.indexOf("export async function getSelectionMatches");
