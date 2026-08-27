@@ -87,7 +87,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 - **skillTrappan.ts**: Utvecklingsträdet — `CATEGORIES`/`SKILLS`/`LEVEL_INFO` (12 kategorier × nivå 1–5), skillsByCategory/skill, statuslogik: isUnlocked/categoryProgress/allCategoryProgress/totalProgress/priorityAreas/nextRecommendedSkill/filterSkills, `SkillStatus`/`StatusMap`/`STATUS_LABEL`/`STATUS_COLOR`.
 - **stats.ts**: `STAT_FIELDS`/`CARD_FIELDS`/`LIVE_COUNT_IDS` (definition av vilka stats som finns).
 - **levels.ts**: `LEVELS`, level/levelByRank/suggestLevel, fit() (matchar spelarnivå mot matchnivå).
-- **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel/positionFocus.
+- **formations.ts**: `FORMATIONS`, formation(), positionRole(). **positions.ts**: `POSITIONS`, positionLabel och gemensam positionsordning för Uttagning.
 - **ical.ts**: parseEvents/extractMatches/fetchCalendar/calendarName/calendarGroup, `CalendarMatch`.
 - **dates.ts**: swedishToday/swedishDate/swedishDateOffset, swedishMinutesSinceMidnight, reportingAutoOpen (föräldrarapportering öppnar auto 60 min före avspark) + `AUTO_OPEN_MINUTES_BEFORE`, swedishWallClockToEpoch (svensk väggklocka→epoch, DST-säkert).
 - **matchCapacity.ts**: gemensam belastningsregel för spelade senaste sju dagar + kommande sju dagar (`normal`, `maximum`, `high`), samt det äldre kompatibilitetsmåttet 0–100 för nyligt matchspel.

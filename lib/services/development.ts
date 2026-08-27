@@ -6,6 +6,7 @@ import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
 import { assessMatchLoad, matchCapacity, type MatchLoadLevel } from "../matchCapacity";
 import { resolveMatchRoster, resolveMatchRosters } from "../matchRoster";
+import { selectionPositionRank } from "../positions";
 import {
   CATEGORIES as DEVELOPMENT_CATEGORIES,
   SKILLS as DEVELOPMENT_SKILLS,
@@ -1541,7 +1542,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
   return {
     match,
     candidates: rows.map((row) => {
-      const currentCallupStatus = row.callup_status === "present" ? "accepted"
+      const currentCallupStatus: MobileSelectionCandidate["currentCallupStatus"] = row.callup_status === "present" ? "accepted"
         : row.callup_status === "absent" ? "declined"
         : row.callup_status === "unknown" ? "pending" : null;
       const recentMatchCount = Number(row.recent_match_count);
@@ -1571,7 +1572,11 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         loadLevel: load.level,
         lastSelectedDate: row.last_selected_date,
       };
-    }),
+    }).sort((left, right) =>
+      selectionPositionRank(left.primaryPosition, left.position)
+      - selectionPositionRank(right.primaryPosition, right.position)
+      || left.name.localeCompare(right.name, "sv")
+    ),
   };
 }
 
