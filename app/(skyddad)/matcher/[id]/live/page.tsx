@@ -1,20 +1,23 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole, getCoachName } from "@/lib/auth";
+import { canAccessGroup, getCoachName, getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getMatch } from "@/lib/queries";
 import { getLiveState } from "@/lib/live";
 import LiveTracker from "@/components/LiveTracker";
 import { IconArrowLeft } from "@/components/Icons";
+import { getOrganizationGroups } from "@/lib/organization";
 
 export const dynamic = "force-dynamic";
 
 export default async function LivePage({ params }: { params: Promise<{ id: string }> }) {
-  const role = await getRole();
-  if (role !== "coach") redirect("/matcher");
+  const user = await getCurrentUser();
+  if (!user || !isStaffRole(user.primaryRole)) redirect("/matcher");
+  if (!user.permissions.includes("report_matches")) redirect("/idag?behorighet=saknas");
 
   const { id } = await params;
-  const match = await getMatch(Number(id));
-  if (!match) notFound();
+  const [match, groups] = await Promise.all([getMatch(Number(id)), getOrganizationGroups()]);
+  if (!match || !(await canAccessGroup(match.group_id))) notFound();
+  if (groups.find((group) => group.id === match.group_id)?.name !== "Gul") redirect(`/matcher/${match.id}`);
 
   const [initial, coachName] = await Promise.all([getLiveState(match.id, true), getCoachName()]);
 

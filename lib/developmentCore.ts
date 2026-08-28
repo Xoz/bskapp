@@ -585,6 +585,12 @@ export async function getSelectionMatches(): Promise<CoreActivity[]> {
        ORDER BY linked.id LIMIT 1
      ) da ON true
      WHERE m.date >= ? AND COALESCE(m.finished, 0) = 0
+       AND (
+         m.date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
+         OR m.start_time IS NULL
+         OR m.date::date + m.start_time::time + INTERVAL '90 minutes'
+              > now() AT TIME ZONE 'Europe/Stockholm'
+       )
      ORDER BY m.date, m.start_time NULLS LAST, m.id`,
     [swedishToday()]
   );

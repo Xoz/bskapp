@@ -1,5 +1,18 @@
 # BSK App - Project Context
 
+## Beslut 2026-08-28: samma matcharbetsflöden i webb och native
+
+- Webbens matchöversikt använder samma kanoniska truppresolver som native och
+  länkar kommande Lag Gul-matcher till den gemensamma checkbox-uttagningen.
+  Den äldre matchbundna laguttagningssidan omdirigerar dit och är endast kvar
+  för cup- och övriga matchgrupper som ännu använder formationer.
+- Webbens matchutvärdering använder samma servertjänst, 90-minutersgräns,
+  slutresultat, Matchcenter-låsning, tränarkommentar, spelarbedömningar och
+  avslutningsregler som native.
+- Matchcenter och Utvärdera visas och kan öppnas i webben endast för Lag Gul
+  och när användaren har motsvarande behörighet. Lag Grön är fortsatt
+  skrivskyddad matchinformation.
+
 ## Beslut 2026-08-26: iPad är primär arbetsyta
 
 - Nativeappens iPad-layout bygger inte längre på ett krav om två eller tre

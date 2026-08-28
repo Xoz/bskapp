@@ -19,6 +19,10 @@ const nativePlayerViews = readFileSync(new URL("../ios/BSK/Views/PlayerViews.swi
 const nativeLiveActivity = readFileSync(new URL("../ios/BSK/MatchLiveActivityManager.swift", import.meta.url), "utf8");
 const todayPage = readFileSync(new URL("../app/(skyddad)/idag/page.tsx", import.meta.url), "utf8");
 const playerPage = readFileSync(new URL("../app/(skyddad)/spelare/[id]/page.tsx", import.meta.url), "utf8");
+const matchPage = readFileSync(new URL("../app/(skyddad)/matcher/[id]/page.tsx", import.meta.url), "utf8");
+const legacySelectionPage = readFileSync(new URL("../app/(skyddad)/matcher/[id]/laguttagning/page.tsx", import.meta.url), "utf8");
+const webMatchEvaluationPage = readFileSync(new URL("../app/(skyddad)/matcher/[id]/utvardera/page.tsx", import.meta.url), "utf8");
+const matchEvaluationForm = readFileSync(new URL("../components/MatchEvaluationForm.tsx", import.meta.url), "utf8");
 
 describe("utvecklingskärnans kontrakt", () => {
   it("har alla fyra beständiga kärnobjekt och pilotmätning", () => {
@@ -346,11 +350,29 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain('Label("Spara matchinfo"');
   });
 
+  it("håller webbens matchflöden på samma kanoniska tjänster som native", () => {
+    expect(matchPage).toContain("getSelectionMatches");
+    expect(matchPage).toContain("resolveMatchRoster");
+    expect(matchPage).toContain("/uttagning?aktivitet=");
+    expect(legacySelectionPage).toContain("getSelectionMatches");
+    expect(legacySelectionPage).toContain("redirect(`/uttagning?aktivitet=");
+    expect(webMatchEvaluationPage).toContain("getMobileMatchEvaluation");
+    expect(webMatchEvaluationPage).toContain("matchEvaluationIsOpen");
+    expect(actions).toContain("saveMobileMatchEvaluation");
+    expect(actions).toContain('formData.get("save_context")');
+    expect(actions).toContain('formData.get("complete_without_players")');
+    expect(matchEvaluationForm).toContain("matchContext.hasLiveData");
+    expect(matchEvaluationForm).toContain("Spara matchinfo");
+    expect(matchEvaluationForm).toContain("Avsluta utan spelarbedömningar");
+  });
+
   it("flyttar matchen från kommande till utvärdering efter 90 minuter", () => {
     expect(mobileDevelopment.match(/INTERVAL '90 minutes'/g)?.length).toBeGreaterThanOrEqual(2);
     expect(mobileMatchEvaluation).toContain("m.finished = 1");
     expect(mobileMatchEvaluation).toContain("INTERVAL '90 minutes'");
-    expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(2);
+    // Kärnaktiviteter, aktivitetsdetalj och webbens uttagningslista använder
+    // samma gräns som nativeflödet.
+    expect(developmentCore.match(/INTERVAL '90 minutes'/g)?.length).toBe(3);
     expect(nativeMainSplitView).toContain(".filter(needsEvaluation)");
     expect(nativeMainSplitView).toContain('case .evaluate: return "Att utvärdera"');
   });

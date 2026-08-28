@@ -18,7 +18,16 @@ export default async function PublicMatchEvaluationPage({ params, searchParams }
       <h1 className="core-title">{workspace.match.opponent}</h1>
       <p className="core-lead">{workspace.match.date} · Bedöm en spelare i taget eller hoppa över om hon inte går att bedöma.</p></div></header>
     {sparad && <div className="core-panel p-4 mb-4"><p className="body-small">Tack, utvärderingen är sparad. Länken kan användas igen för att justera svar.</p></div>}
-    {workspace.players.length ? <MatchEvaluationForm players={workspace.players} saveAction={save} /> :
+    {workspace.players.length ? <MatchEvaluationForm players={workspace.players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      jerseyNumber: player.jersey_number,
+      level: player.level,
+      selfComparison: player.self_comparison,
+      matchImpact: player.match_impact,
+      reasonTag: player.reason_tag,
+      skipped: Boolean(player.skipped),
+    }))} saveAction={save} /> :
       <div className="core-panel p-6"><p>Det finns ingen registrerad matchtrupp att utvärdera.</p></div>}
   </main>;
 }

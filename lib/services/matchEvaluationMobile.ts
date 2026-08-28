@@ -271,7 +271,7 @@ export async function saveMobileMatchEvaluation(
     actor.name,
     evaluationContext.completeWithoutPlayerEvaluations === true
       ? "avslutade matchuppföljning utan spelarbedömningar"
-      : "utvärderade match native",
+      : "utvärderade match",
     `${acceptedAnswers.length} spelare`
   );
   return getMobileMatchEvaluation(actor, matchId);

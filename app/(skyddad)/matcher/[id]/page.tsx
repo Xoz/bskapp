@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getCurrentUser, getRole } from "@/lib/auth";
 import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
 import { createMatchEvaluationInvite, deleteMatch, resetMatch, revokeMatchEvaluationInvite, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
 import { FEATURES } from "@/lib/features";
-import { getMatchEvaluationInvites, getMatchEvaluationStatus } from "@/lib/matchEvaluation";
+import { getMatchEvaluationInvites, getMatchEvaluationStatus, matchEvaluationIsOpen } from "@/lib/matchEvaluation";
 import LiveFeed from "@/components/LiveFeed";
 import Avatar from "@/components/Avatar";
 import ConfirmForm from "@/components/ConfirmForm";
@@ -15,6 +15,9 @@ import EventEditor from "@/components/EventEditor";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft, IconArrowRight, IconLive } from "@/components/Icons";
 import { swedishToday, reportingAutoOpen } from "@/lib/dates";
+import { getSelectionMatches } from "@/lib/developmentCore";
+import { getOrganizationGroups } from "@/lib/organization";
+import { resolveMatchRoster } from "@/lib/matchRoster";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +25,17 @@ export default async function MatchPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ evalLink?: string }>;
 }) {
-  const role = await getRole();
-  if (!role) redirect("/login");
+  const [role, user] = await Promise.all([getRole(), getCurrentUser()]);
+  if (!role || !user) redirect("/login");
 
   const { id } = await params;
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites] = await Promise.all([
+  const canManageSquads = user.permissions.includes("manage_squads");
+  const canReportMatches = user.permissions.includes("report_matches");
+  const canManageEvaluations = user.permissions.includes("manage_evaluations");
+  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites, groups, selectionMatches, roster] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
@@ -37,11 +43,21 @@ export default async function MatchPage({ params, searchParams }: {
     getMatchSquad(match.id),
     getMatchEvaluationStatus(match.id),
     getMatchEvaluationInvites(match.id),
+    getOrganizationGroups(),
+    canManageSquads ? getSelectionMatches() : Promise.resolve([]),
+    resolveMatchRoster(match.id),
   ]);
   const { evalLink } = await searchParams;
   const mLevel = levelInfo(match.level);
   const today = swedishToday();
   const isUpcoming = match.date >= today;
+  const matchGroup = groups.find((group) => group.id === match.group_id);
+  const isYellowMatch = matchGroup?.name === "Gul";
+  const evaluationOpen = matchEvaluationIsOpen(match.date, match.start_time);
+  const selectionActivity = selectionMatches.find((activity) => activity.match_id === match.id);
+  const selectionHref = selectionActivity
+    ? `/uttagning?aktivitet=${encodeURIComponent(selectionActivity.id)}`
+    : `#trupp`;
   // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
   // report_open är tränarens manuella override – effektivt öppen = endera.
   const reportAutoOpen = !match.finished && reportingAutoOpen(match.date, match.start_time);
@@ -103,6 +119,19 @@ export default async function MatchPage({ params, searchParams }: {
           </div>
         )}
       </div>
+
+      {role === "coach" && (
+        <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Matchområden">
+          <Link href={`/matcher/${match.id}`} className="badge badge-primary whitespace-nowrap">Översikt</Link>
+          <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Trupp</Link>
+          {FEATURES.liveScore && isYellowMatch && canReportMatches && (
+            <Link href={`/matcher/${match.id}/live`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Matchcenter</Link>
+          )}
+          {isYellowMatch && canManageEvaluations && evaluationOpen && (
+            <Link href={`/matcher/${match.id}/utvardera`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Utvärdera</Link>
+          )}
+        </nav>
+      )}
 
       {/* Matchsammanställning – totaler, synlig för båda roller */}
       {matchPlayers.length > 0 && (() => {
@@ -171,30 +200,34 @@ export default async function MatchPage({ params, searchParams }: {
 
       {role === "coach" && (
         <>
-          {/* Laguttagning */}
-          <Link
-            href={`/matcher/${match.id}/laguttagning`}
-            className="card card-hover p-5 flex items-center gap-4"
-            style={isUpcoming ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
-          >
-            <span className="text-2xl">📋</span>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold body">Laguttagning</p>
-              <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                {squadIds.length > 0
-                  ? `${squadIds.length} spelare uttagna${mLevel ? ` · nivå ${mLevel.label}` : ""}`
-                  : mLevel
-                    ? `Ta ut truppen för en ${mLevel.label.toLowerCase()} match`
-                    : "Sätt matchnivå och ta ut truppen"}
-              </p>
-            </div>
-            <span className="badge badge-primary">
-              {squadIds.length > 0 ? "Ändra" : "Öppna"}
-            </span>
-          </Link>
+          {/* Samma kanoniska trupp som native: spelad match visar deltagare,
+              kommande match visar selected från match_roster. */}
+          {(() => {
+            const content = <>
+              <span className="text-2xl">📋</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold body">Trupp</p>
+                <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
+                  {roster && roster.players.length > 0
+                    ? `${roster.label}: ${roster.players.map((player) => player.name).join(", ")}`
+                    : "Ingen trupp registrerad"}
+                </p>
+              </div>
+              {canManageSquads && selectionActivity && (
+                <span className="badge badge-primary">{squadIds.length > 0 ? "Ändra" : "Öppna"}</span>
+              )}
+            </>;
+            return canManageSquads && selectionActivity ? (
+              <Link id="trupp" href={selectionHref} className="card card-hover p-5 flex items-center gap-4" style={isUpcoming ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}>
+                {content}
+              </Link>
+            ) : (
+              <section id="trupp" className="card p-5 flex items-center gap-4 scroll-mt-20">{content}</section>
+            );
+          })()}
 
           {/* Liverapportering (dold när liveScore är av) */}
-          {FEATURES.liveScore && (
+          {FEATURES.liveScore && isYellowMatch && canReportMatches && (
           <Link
             href={`/matcher/${match.id}/live`}
             className="card card-hover p-5 flex items-center gap-4"
@@ -222,7 +255,7 @@ export default async function MatchPage({ params, searchParams }: {
           )}
 
           {/* Föräldrarapportering – publik Livescore + tränar-toggle för hjälpare (dold när liveScore är av) */}
-          {FEATURES.liveScore && !match.finished && (
+          {FEATURES.liveScore && isYellowMatch && canReportMatches && !match.finished && (
             <div
               className="card p-5 flex items-center gap-4 flex-wrap"
               style={reportOpen ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}
@@ -272,7 +305,7 @@ export default async function MatchPage({ params, searchParams }: {
             </div>
           )}
 
-          {evaluationStatus.total > 0 && (!isUpcoming || match.finished) && (
+          {isYellowMatch && canManageEvaluations && evaluationOpen && evaluationStatus.total > 0 && (
             <section className="card p-5 md:p-6 space-y-5">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
@@ -314,7 +347,7 @@ export default async function MatchPage({ params, searchParams }: {
             </section>
           )}
 
-          {FEATURES.matchStats && events.length > 0 && (
+          {FEATURES.matchStats && canReportMatches && events.length > 0 && (
             <details className="card overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
                 <h2 className="font-semibold body">Matchflöde</h2>
@@ -329,7 +362,7 @@ export default async function MatchPage({ params, searchParams }: {
             </details>
           )}
 
-          {FEATURES.matchStats && events.length > 0 && (
+          {FEATURES.matchStats && canReportMatches && events.length > 0 && (
             <details className="card overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer list-none select-none">
                 <div className="flex items-baseline gap-3">
@@ -347,7 +380,7 @@ export default async function MatchPage({ params, searchParams }: {
             </details>
           )}
 
-          {FEATURES.matchStats && (
+          {FEATURES.matchStats && canReportMatches && (
           <details className="card overflow-hidden">
             <summary className="p-6 md:p-7 flex items-center justify-between cursor-pointer list-none select-none">
               <h2 className="font-semibold body">Lägg till händelse</h2>

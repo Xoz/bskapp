@@ -38,6 +38,7 @@ import {
 import { evaluationTokenHash, getMatchEvaluationWorkspace } from "./matchEvaluation";
 import { isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluationTypes";
 import { importSvenskaLagCallupWorkbooks } from "./services/callupWorkbookImport";
+import { getMobileMatchEvaluation, saveMobileMatchEvaluation } from "./services/matchEvaluationMobile";
 
 async function requirePermission(permission: Permission): Promise<void> {
   if (!(await hasPermission(permission))) redirect("/oversikt?behorighet=saknas");
@@ -974,11 +975,32 @@ export async function saveCoachMatchEvaluations(matchId: number, formData: FormD
   await requireMatchPermission("manage_evaluations", matchId);
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const saved = await persistMatchEvaluations(matchId, "coach", String(user.id), formData);
-  await logActivity(user.name || "Tränare", "Utvärderade match", `${saved} spelare`);
+  const workspace = await getMobileMatchEvaluation(user, matchId);
+  const contextOnly = String(formData.get("save_context") ?? "") === "1";
+  const completeWithoutPlayers = String(formData.get("complete_without_players") ?? "") === "1";
+  const parseScore = (key: string): number | null => {
+    const value = String(formData.get(key) ?? "").trim();
+    return value === "" ? null : Number(value);
+  };
+  const answers = contextOnly ? [] : workspace.players.map((player) => ({
+    playerId: player.id,
+    selfComparison: String(formData.get(`self_${player.id}`) ?? "") || null,
+    matchImpact: String(formData.get(`impact_${player.id}`) ?? "") || null,
+    reasonTag: String(formData.get(`reason_${player.id}`) ?? ""),
+    skipped: String(formData.get(`skip_${player.id}`) ?? "") === "1",
+  }));
+  await saveMobileMatchEvaluation(user, matchId, answers, {
+    ourScore: parseScore("our_score"),
+    opponentScore: parseScore("opponent_score"),
+    coachComment: String(formData.get("coach_comment") ?? ""),
+    completeWithoutPlayerEvaluations: completeWithoutPlayers,
+  });
   revalidatePath(`/matcher/${matchId}`);
   revalidatePath("/idag");
-  redirect(`/matcher/${matchId}/utvardera?sparad=1`);
+  if (completeWithoutPlayers || (!contextOnly && workspace.players.length > 0)) {
+    redirect(`/matcher/${matchId}`);
+  }
+  redirect(`/matcher/${matchId}/utvardera?sparad=matchinfo`);
 }
 
 export async function createMatchEvaluationInvite(formData: FormData) {
