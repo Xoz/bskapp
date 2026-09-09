@@ -1448,6 +1448,16 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     await getClient().unsafe("ALTER TABLE match_roster ADD CONSTRAINT match_roster_selection_status_check CHECK (selection_status = 'selected')");
     await getClient().unsafe("COMMENT ON COLUMN match_roster.selection_status IS 'Endast selected eller NULL: ibockad i truppen eller inget uttagningsbeslut'");
   } },
+  { id: "0021-training-plans", run: async () => {
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS training_plans (
+      id TEXT PRIMARY KEY,
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      document JSONB NOT NULL,
+      revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
+    await getClient().unsafe("CREATE INDEX IF NOT EXISTS training_plans_owner ON training_plans(created_by, updated_at DESC)");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

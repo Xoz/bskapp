@@ -209,3 +209,10 @@ Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsn
 - `lib/theme.ts`, `lib/theme.test.ts`, `components/ThemeToggle.tsx`: ljust/mörkt/system, tidig init och lagringsfallback.
 - `components/SettingsMenu.tsx`: dialog med befintliga verktyg filtrerade på behörighet.
 - `docs/WEB_DESIGN_2026-09-09.md`: designbeslut, omfattning och verifiering.
+
+## Träningsbyggare med projektets KLVR-ritare (2026-09-09, granskningsgren)
+
+- `/traning` och `/traning/[id]`: personliga pass under huvudappens inloggning. `components/training/TrainingBuilder.tsx` sätter ordning/minuter och bäddar in `DiagramEditor.tsx` direkt.
+- `lib/training/drawing.js`: SVG-renderaren extraherad från projektets `outputs/ovningsritare/index.html`; `model.ts` validerar originalets version 1-format. `bank.json` bevarar de 15 originalövningarna från `outputs/ovningsritare/bank.js`.
+- `lib/training/actions.ts`: ägarskap, revisionskontroll och identiska återförsök. `training_plans` skapas i `lib/db.ts`, migration `0021-training-plans`. Ingen import från Coach i detta steg.
+- Tester `lib/training/{model,actions}.test.ts`. Se `docs/TRAINING_BUILDER.md` för kompatibilitet och publiceringsgräns.

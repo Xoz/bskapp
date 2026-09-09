@@ -3,6 +3,7 @@ import {
   IconPlayers,
   IconPitch,
   IconChart,
+  IconWhistle,
 } from "@/components/Icons";
 import type { Permission } from "@/lib/auth";
 
@@ -17,13 +18,14 @@ export interface NavItem {
  * Enda källan för navigationslänkar. Används av både NavLinks (desktop)
  * och BottomNav (mobil). Eliminerar duplicering av nav-config.
  *
- * Produktens fyra primära arbetsytor. Kalender, matchadministration och statistik
+ * Produktens primära arbetsytor. Kalender, matchadministration och statistik
  * är sekundära verktyg och ska inte konkurrera om huvudnavigationen.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/idag", label: "Idag", Icon: IconOverview },
   { href: "/observera", label: "Observera", Icon: IconChart, permission: "manage_evaluations" },
   { href: "/spelare", label: "Spelare", Icon: IconPlayers, permission: "view_players" },
+  { href: "/traning", label: "Träning", Icon: IconWhistle, permission: "manage_evaluations" },
   { href: "/uttagning", label: "Uttagning", Icon: IconPitch, permission: "manage_squads" },
 ];
 

@@ -32,6 +32,32 @@ git -C "$repo" archive "$commit" | tar -x -C "$release"
 # Preserve any filesystem-backed data without copying it into Git or logs.
 if [[ -d "$repo/data" ]]; then ln -s "$repo/data" "$release/data"; fi
 cd "$release"
+training_marker_before=$(docker exec bsk-db psql -U bsk -d bsk -Atc "SELECT count(*) FROM schema_migrations WHERE id = '0021-training-plans'")
+switched=0
+rollback() {
+  code=$?
+  trap - ERR
+  if [[ "$switched" = 1 ]]; then systemctl stop bsk.service; fi
+  # Migration 0021 is additive. Preserve plans; retract only a newly applied marker.
+  if [[ "$training_marker_before" = 0 ]]; then
+    docker exec bsk-db psql -U bsk -d bsk -v ON_ERROR_STOP=1 -c "DELETE FROM schema_migrations WHERE id = '0021-training-plans';"
+  fi
+  if [[ "$switched" = 1 ]]; then
+    cp -a "$backup/development.conf" "$snippet"
+    if [[ -f "$backup/release.conf" ]]; then
+      cp -a "$backup/release.conf" "$override"
+    else
+      rm -f "$override"
+    fi
+    if [[ -n "$previous" ]]; then ln -sfn "$previous" "$root/current"; else rm -f "$root/current"; fi
+    systemctl daemon-reload
+    systemctl restart bsk.service
+    nginx -t && systemctl reload nginx.service
+  fi
+  echo "Deployment failed. Previous service configuration restored; backup: $backup" >&2
+  exit "$code"
+}
+trap rollback ERR
 npm ci --include=dev
 npm test
 npm run build
@@ -49,26 +75,6 @@ elif new not in text:
     raise SystemExit('Unknown development entry configuration; refusing to replace it')
 Path(sys.argv[2]).write_text(text)
 PY
-switched=0
-rollback() {
-  code=$?
-  trap - ERR
-  if [[ "$switched" = 1 ]]; then
-    cp -a "$backup/development.conf" "$snippet"
-    if [[ -f "$backup/release.conf" ]]; then
-      cp -a "$backup/release.conf" "$override"
-    else
-      rm -f "$override"
-    fi
-    if [[ -n "$previous" ]]; then ln -sfn "$previous" "$root/current"; else rm -f "$root/current"; fi
-    systemctl daemon-reload
-    systemctl restart bsk.service
-    nginx -t && systemctl reload nginx.service
-  fi
-  echo "Deployment failed. Previous service configuration restored; backup: $backup" >&2
-  exit "$code"
-}
-trap rollback ERR
 switched=1
 ln -sfn "$release" "$root/current"
 install -d -m 755 /etc/systemd/system/bsk.service.d

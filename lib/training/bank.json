@@ -1,0 +1,2056 @@
+[
+  {
+    "id": "byt-kon",
+    "category": "Passning",
+    "players": "2",
+    "area": "7 m mellan konerna",
+    "time": "6 min",
+    "focus": "Passning och rörelse efter pass.",
+    "model": {
+      "version": 1,
+      "title": "Passa och byt kon",
+      "notes": "2 spelare · 7 m mellan konerna · 6 min\nSyfte: Passning och rörelse efter pass.\n1. A passar B och löper till den lediga konen.\n2. B passar A på den nya platsen och löper till konen A lämnade.\nByt riktning efter 1 minut. Fokus: öppen kropp och rätt passningsfart.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank1",
+          "type": "cone",
+          "x": 470,
+          "y": 150,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank2",
+          "type": "cone",
+          "x": 230,
+          "y": 550,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank3",
+          "type": "cone",
+          "x": 780,
+          "y": 550,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank4",
+          "type": "player",
+          "x": 520,
+          "y": 150,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank5",
+          "type": "player",
+          "x": 265,
+          "y": 495,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank6",
+          "type": "ball",
+          "x": 550,
+          "y": 195,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank7",
+          "type": "pass",
+          "x": 485,
+          "y": 205,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 315,
+          "y2": 455,
+          "cx": 400,
+          "cy": 330
+        },
+        {
+          "id": "bank8",
+          "type": "run",
+          "x": 570,
+          "y": 170,
+          "label": "2",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 780,
+          "y2": 500,
+          "cx": 795,
+          "cy": 220
+        },
+        {
+          "id": "bank9",
+          "type": "text",
+          "x": 780,
+          "y": 620,
+          "label": "Ledig kon",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "fyrkant",
+    "category": "Passning",
+    "players": "5",
+    "area": "12 × 12 m",
+    "time": "8 min",
+    "focus": "Mottagning i nästa passnings riktning.",
+    "model": {
+      "version": 1,
+      "title": "Passa runt fyrkanten",
+      "notes": "5 spelare · 12 × 12 m · 8 min\nSyfte: Mottagning i nästa passnings riktning.\n1. A passar B och följer passningen till B:s hörn.\n2. B tar emot och passar C, C passar D och D passar E. Alla följer sin passning.\nE väntar vid starthörnet. En boll i spel. Byt håll efter 2 minuter.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank10",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank11",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank12",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank13",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank14",
+          "type": "player",
+          "x": 220,
+          "y": 210,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank15",
+          "type": "player",
+          "x": 110,
+          "y": 230,
+          "label": "E",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank16",
+          "type": "player",
+          "x": 770,
+          "y": 210,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank17",
+          "type": "player",
+          "x": 770,
+          "y": 490,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank18",
+          "type": "player",
+          "x": 220,
+          "y": 490,
+          "label": "D",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank19",
+          "type": "ball",
+          "x": 270,
+          "y": 215,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank20",
+          "type": "pass",
+          "x": 280,
+          "y": 210,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 720,
+          "y2": 210,
+          "cx": 500,
+          "cy": 210
+        },
+        {
+          "id": "bank21",
+          "type": "pass",
+          "x": 770,
+          "y": 265,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 770,
+          "y2": 440,
+          "cx": 770,
+          "cy": 352.5
+        },
+        {
+          "id": "bank22",
+          "type": "pass",
+          "x": 710,
+          "y": 490,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 280,
+          "y2": 490,
+          "cx": 495,
+          "cy": 490
+        },
+        {
+          "id": "bank23",
+          "type": "pass",
+          "x": 220,
+          "y": 440,
+          "label": "4",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 220,
+          "y2": 275,
+          "cx": 220,
+          "cy": 357.5
+        },
+        {
+          "id": "bank24",
+          "type": "run",
+          "x": 285,
+          "y": 165,
+          "label": "",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 715,
+          "y2": 165,
+          "cx": 500,
+          "cy": 165
+        },
+        {
+          "id": "bank25",
+          "type": "text",
+          "x": 500,
+          "y": 630,
+          "label": "Passa och följ efter",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "vaggspel",
+    "category": "Passning",
+    "players": "3",
+    "area": "15 × 10 m",
+    "time": "8 min",
+    "focus": "Tajma löpningen efter en väggpassning.",
+    "model": {
+      "version": 1,
+      "title": "Väggspel runt en kon",
+      "notes": "3 spelare · 15 × 10 m · 8 min\nSyfte: Tajma löpningen efter en väggpassning.\n1. A passar B.\n2. A löper förbi mittkonen; B spelar tillbaka framför A.\n3. A passar C vid slutkonen.\nA tar B:s plats, B tar C:s plats och C startar nästa omgång åt andra hållet.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank26",
+          "type": "cone",
+          "x": 230,
+          "y": 550,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank27",
+          "type": "cone",
+          "x": 480,
+          "y": 345,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank28",
+          "type": "cone",
+          "x": 760,
+          "y": 160,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank29",
+          "type": "player",
+          "x": 260,
+          "y": 490,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank30",
+          "type": "player",
+          "x": 690,
+          "y": 410,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank31",
+          "type": "player",
+          "x": 760,
+          "y": 200,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank32",
+          "type": "ball",
+          "x": 300,
+          "y": 460,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank33",
+          "type": "pass",
+          "x": 310,
+          "y": 460,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 640,
+          "y2": 410,
+          "cx": 475,
+          "cy": 435
+        },
+        {
+          "id": "bank34",
+          "type": "pass",
+          "x": 650,
+          "y": 370,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 460,
+          "y2": 235,
+          "cx": 555,
+          "cy": 302.5
+        },
+        {
+          "id": "bank35",
+          "type": "run",
+          "x": 300,
+          "y": 410,
+          "label": "",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 470,
+          "y2": 210,
+          "cx": 240,
+          "cy": 255
+        },
+        {
+          "id": "bank36",
+          "type": "pass",
+          "x": 490,
+          "y": 210,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 710,
+          "y2": 200,
+          "cx": 600,
+          "cy": 205
+        }
+      ]
+    }
+  },
+  {
+    "id": "tredje",
+    "category": "Passning",
+    "players": "3",
+    "area": "15 × 12 m",
+    "time": "8 min",
+    "focus": "Hitta en tredje spelare via tillbakaspel.",
+    "model": {
+      "version": 1,
+      "title": "Tredje spelare",
+      "notes": "3 spelare · 15 × 12 m · 8 min\nSyfte: Hitta en tredje spelare via tillbakaspel.\n1. A passar B.\n2. B lägger tillbaka till A och C startar en löpning framåt.\n3. A spelar diagonalt framför C.\nÅtergå till start efter varje sekvens. Byt roller efter 5 repetitioner.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank37",
+          "type": "cone",
+          "x": 230,
+          "y": 560,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank38",
+          "type": "cone",
+          "x": 470,
+          "y": 330,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank39",
+          "type": "cone",
+          "x": 800,
+          "y": 200,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank40",
+          "type": "player",
+          "x": 260,
+          "y": 490,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank41",
+          "type": "player",
+          "x": 480,
+          "y": 310,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank42",
+          "type": "player",
+          "x": 790,
+          "y": 460,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank43",
+          "type": "ball",
+          "x": 300,
+          "y": 475,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank44",
+          "type": "pass",
+          "x": 295,
+          "y": 450,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 440,
+          "y2": 340,
+          "cx": 367.5,
+          "cy": 395
+        },
+        {
+          "id": "bank45",
+          "type": "pass",
+          "x": 430,
+          "y": 385,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 310,
+          "y2": 500,
+          "cx": 370,
+          "cy": 442.5
+        },
+        {
+          "id": "bank46",
+          "type": "pass",
+          "x": 330,
+          "y": 465,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 780,
+          "y2": 210,
+          "cx": 555,
+          "cy": 337.5
+        },
+        {
+          "id": "bank47",
+          "type": "run",
+          "x": 790,
+          "y": 410,
+          "label": "",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 810,
+          "y2": 220,
+          "cx": 800,
+          "cy": 315
+        },
+        {
+          "id": "bank48",
+          "type": "text",
+          "x": 500,
+          "y": 100,
+          "label": "Passa • lägg tillbaka • hitta tredje",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "rondo",
+    "category": "Bollinnehav",
+    "players": "5",
+    "area": "10 × 10 m",
+    "time": "8 min",
+    "focus": "Skapa passningsvinklar runt en försvarare.",
+    "model": {
+      "version": 1,
+      "title": "Rondo 4 mot 1",
+      "notes": "5 spelare · 10 × 10 m · 8 min\nSyfte: Skapa passningsvinklar runt en försvarare.\nFyra gula behåller bollen mot en röd försvarare. Flytta längs varsin sida för att ge bollhållaren två alternativ.\nFörsvararen byter med den som tappar bollen vid brytning eller utspel. Börja med fria tillslag.\nPilen visar ett alternativ, inte en fast passningsordning.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank49",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank50",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank51",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank52",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank53",
+          "type": "player",
+          "x": 500,
+          "y": 155,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank54",
+          "type": "player",
+          "x": 820,
+          "y": 345,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank55",
+          "type": "player",
+          "x": 500,
+          "y": 545,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank56",
+          "type": "player",
+          "x": 180,
+          "y": 345,
+          "label": "D",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank57",
+          "type": "player",
+          "x": 490,
+          "y": 345,
+          "label": "1",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank58",
+          "type": "ball",
+          "x": 450,
+          "y": 185,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank59",
+          "type": "pass",
+          "x": 445,
+          "y": 190,
+          "label": "Exempel",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 220,
+          "y2": 310,
+          "cx": 332.5,
+          "cy": 250
+        },
+        {
+          "id": "bank60",
+          "type": "text",
+          "x": 500,
+          "y": 630,
+          "label": "Gul: behåll bollen. Röd: bryt.",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "jokrar",
+    "category": "Bollinnehav",
+    "players": "10",
+    "area": "25 × 20 m",
+    "time": "12 min",
+    "focus": "Spelbarhet och numerärt överläge.",
+    "model": {
+      "version": 1,
+      "title": "Bollinnehav 4 mot 4 + 2",
+      "notes": "10 spelare · 25 × 20 m · 12 min\nSyfte: Spelbarhet och numerärt överläge.\nGult och rött spelar om bollen. Två blå jokrar hjälper alltid bollhållande lag inne i ytan.\nFem passningar i följd ger en poäng. Vid brytning fortsätter spelet direkt med det nya laget.\nByt jokrar varannan minut. Pilen visar ett möjligt pass till en joker.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank61",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank62",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank63",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank64",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank65",
+          "type": "player",
+          "x": 240,
+          "y": 230,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank66",
+          "type": "player",
+          "x": 740,
+          "y": 225,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank67",
+          "type": "player",
+          "x": 730,
+          "y": 485,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank68",
+          "type": "player",
+          "x": 240,
+          "y": 480,
+          "label": "D",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank69",
+          "type": "player",
+          "x": 375,
+          "y": 260,
+          "label": "1",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank70",
+          "type": "player",
+          "x": 640,
+          "y": 300,
+          "label": "2",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank71",
+          "type": "player",
+          "x": 380,
+          "y": 460,
+          "label": "3",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank72",
+          "type": "player",
+          "x": 610,
+          "y": 460,
+          "label": "4",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank73",
+          "type": "player",
+          "x": 480,
+          "y": 170,
+          "label": "J",
+          "color": "#76d9ff",
+          "size": 1
+        },
+        {
+          "id": "bank74",
+          "type": "player",
+          "x": 480,
+          "y": 550,
+          "label": "J",
+          "color": "#76d9ff",
+          "size": 1
+        },
+        {
+          "id": "bank75",
+          "type": "ball",
+          "x": 275,
+          "y": 220,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank76",
+          "type": "pass",
+          "x": 285,
+          "y": 205,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 430,
+          "y2": 175,
+          "cx": 357.5,
+          "cy": 190
+        }
+      ]
+    }
+  },
+  {
+    "id": "slalom",
+    "category": "Bollkontroll",
+    "players": "2",
+    "area": "18 × 8 m",
+    "time": "6 min",
+    "focus": "Nära bollkontroll och tempoväxling.",
+    "model": {
+      "version": 1,
+      "title": "Slalom med riktningsbyte",
+      "notes": "2 spelare · 18 × 8 m · 6 min\nSyfte: Nära bollkontroll och tempoväxling.\nA driver mellan konerna med små tillslag och vänder runt sista konen. Driv tillbaka i den fria korridoren till höger. B väntar vid start.\nLämna över bollen till B. Byt fot varje omgång.\nBlå prickad pil visar drivning med boll; följ hela konraden.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank77",
+          "type": "player",
+          "x": 290,
+          "y": 550,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank78",
+          "type": "player",
+          "x": 180,
+          "y": 550,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank79",
+          "type": "ball",
+          "x": 340,
+          "y": 525,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank80",
+          "type": "cone",
+          "x": 430,
+          "y": 460,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank81",
+          "type": "cone",
+          "x": 430,
+          "y": 365,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank82",
+          "type": "cone",
+          "x": 430,
+          "y": 270,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank83",
+          "type": "cone",
+          "x": 430,
+          "y": 175,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank84",
+          "type": "dribble",
+          "x": 350,
+          "y": 515,
+          "label": "1",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 490,
+          "y2": 410,
+          "cx": 280,
+          "cy": 440
+        },
+        {
+          "id": "bank85",
+          "type": "dribble",
+          "x": 490,
+          "y": 410,
+          "label": "",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 365,
+          "y2": 320,
+          "cx": 530,
+          "cy": 350
+        },
+        {
+          "id": "bank86",
+          "type": "dribble",
+          "x": 365,
+          "y": 320,
+          "label": "",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 490,
+          "y2": 220,
+          "cx": 310,
+          "cy": 260
+        },
+        {
+          "id": "bank87",
+          "type": "dribble",
+          "x": 490,
+          "y": 220,
+          "label": "2",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 590,
+          "y2": 165,
+          "cx": 360,
+          "cy": 85
+        },
+        {
+          "id": "bank88",
+          "type": "dribble",
+          "x": 590,
+          "y": 165,
+          "label": "3",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 590,
+          "y2": 545,
+          "cx": 590,
+          "cy": 355
+        },
+        {
+          "id": "bank89",
+          "type": "text",
+          "x": 760,
+          "y": 350,
+          "label": "Tillbaka",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "portar",
+    "category": "Bollkontroll",
+    "players": "4",
+    "area": "20 × 20 m",
+    "time": "8 min",
+    "focus": "Lyfta blicken under drivning.",
+    "model": {
+      "version": 1,
+      "title": "Hitta en ledig port",
+      "notes": "4 spelare · 20 × 20 m · 8 min\nSyfte: Lyfta blicken under drivning.\nAlla har varsin boll. Driv genom en ledig konport och sök direkt en annan. Samma port får inte tas två gånger i rad.\nRäkna portar under 45 sekunder, vila 20 sekunder och upprepa. Undvik kollisioner genom att titta upp.\nPilen visar A:s första vägval.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank90",
+          "type": "cone",
+          "x": 280,
+          "y": 170,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank91",
+          "type": "cone",
+          "x": 390,
+          "y": 170,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank92",
+          "type": "cone",
+          "x": 650,
+          "y": 210,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank93",
+          "type": "cone",
+          "x": 760,
+          "y": 210,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank94",
+          "type": "cone",
+          "x": 250,
+          "y": 460,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank95",
+          "type": "cone",
+          "x": 360,
+          "y": 460,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank96",
+          "type": "cone",
+          "x": 650,
+          "y": 510,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank97",
+          "type": "cone",
+          "x": 760,
+          "y": 510,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank98",
+          "type": "player",
+          "x": 340,
+          "y": 330,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank99",
+          "type": "ball",
+          "x": 375,
+          "y": 300,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank100",
+          "type": "player",
+          "x": 600,
+          "y": 360,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank101",
+          "type": "ball",
+          "x": 640,
+          "y": 385,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank102",
+          "type": "player",
+          "x": 480,
+          "y": 520,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank103",
+          "type": "ball",
+          "x": 520,
+          "y": 545,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank104",
+          "type": "player",
+          "x": 510,
+          "y": 130,
+          "label": "D",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank105",
+          "type": "ball",
+          "x": 550,
+          "y": 150,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank106",
+          "type": "dribble",
+          "x": 355,
+          "y": 285,
+          "label": "1",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 335,
+          "y2": 120,
+          "cx": 345,
+          "cy": 202.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "vandning",
+    "category": "Bollkontroll",
+    "players": "2",
+    "area": "12 × 6 m",
+    "time": "6 min",
+    "focus": "Vändning och passning efter bollkontroll.",
+    "model": {
+      "version": 1,
+      "title": "Driv, vänd och passa",
+      "notes": "2 spelare · 12 × 6 m · 6 min\nSyfte: Vändning och passning efter bollkontroll.\n1. A driver fram till vändkonen.\n2. Vänd med insidan eller utsidan och driv några steg tillbaka.\n3. Passa B vid start. B gör samma sak medan A väntar vid start.\nVisa tydligt vilken vändning som tränas; byt fot efter varje omgång.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank107",
+          "type": "player",
+          "x": 400,
+          "y": 530,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank108",
+          "type": "player",
+          "x": 230,
+          "y": 550,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank109",
+          "type": "ball",
+          "x": 440,
+          "y": 500,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank110",
+          "type": "cone",
+          "x": 460,
+          "y": 180,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank111",
+          "type": "cone",
+          "x": 320,
+          "y": 595,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank112",
+          "type": "dribble",
+          "x": 440,
+          "y": 490,
+          "label": "1",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 445,
+          "y2": 235,
+          "cx": 442.5,
+          "cy": 362.5
+        },
+        {
+          "id": "bank113",
+          "type": "dribble",
+          "x": 445,
+          "y": 235,
+          "label": "2",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 530,
+          "y2": 300,
+          "cx": 570,
+          "cy": 160
+        },
+        {
+          "id": "bank114",
+          "type": "pass",
+          "x": 510,
+          "y": 330,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 275,
+          "y2": 520,
+          "cx": 392.5,
+          "cy": 425
+        },
+        {
+          "id": "bank115",
+          "type": "text",
+          "x": 700,
+          "y": 190,
+          "label": "Vändkon",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "en-mot-en",
+    "category": "Anfall",
+    "players": "2",
+    "area": "15 × 12 m",
+    "time": "8 min",
+    "focus": "Utmana försvararen och byta riktning.",
+    "model": {
+      "version": 1,
+      "title": "1 mot 1 genom två portar",
+      "notes": "2 spelare · 15 × 12 m · 8 min\nSyfte: Utmana försvararen och byta riktning.\nGul A startar med boll och försöker driva genom någon av de två portarna bakom röd försvarare.\nVid brytning försöker röd driva över startlinjen. Avsluta vid mål eller när bollen lämnar ytan.\nByt roller efter varje duell. Pilen visar ett möjligt vägval.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank116",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank117",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank118",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank119",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank120",
+          "type": "cone",
+          "x": 250,
+          "y": 175,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank121",
+          "type": "cone",
+          "x": 360,
+          "y": 175,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank122",
+          "type": "cone",
+          "x": 640,
+          "y": 175,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank123",
+          "type": "cone",
+          "x": 750,
+          "y": 175,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank124",
+          "type": "player",
+          "x": 500,
+          "y": 490,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank125",
+          "type": "player",
+          "x": 500,
+          "y": 310,
+          "label": "1",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank126",
+          "type": "ball",
+          "x": 540,
+          "y": 460,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank127",
+          "type": "dribble",
+          "x": 540,
+          "y": 435,
+          "label": "",
+          "color": "#76d9ff",
+          "size": 1,
+          "x2": 700,
+          "y2": 155,
+          "cx": 700,
+          "cy": 365
+        },
+        {
+          "id": "bank128",
+          "type": "text",
+          "x": 500,
+          "y": 630,
+          "label": "Startlinje",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "tva-mot-en",
+    "category": "Anfall",
+    "players": "3",
+    "area": "20 × 15 m",
+    "time": "10 min",
+    "focus": "Binda försvararen och välja passning.",
+    "model": {
+      "version": 1,
+      "title": "2 mot 1 till mål",
+      "notes": "3 spelare · 20 × 15 m · 10 min\nSyfte: Binda försvararen och välja passning.\nA och B anfaller målet mot en röd försvarare. A startar med boll. Driv mot försvararen och välj att passa B eller avsluta själv.\nIngen målvakt; avsluta med markskott. Vid brytning eller utspel startar en ny omgång.\nByt försvarare efter tre anfall. Pilarna visar passning och avslut via B.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank129",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank130",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank131",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank132",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank133",
+          "type": "goal",
+          "x": 500,
+          "y": 95,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank134",
+          "type": "player",
+          "x": 340,
+          "y": 470,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank135",
+          "type": "player",
+          "x": 740,
+          "y": 350,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank136",
+          "type": "player",
+          "x": 495,
+          "y": 290,
+          "label": "1",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank137",
+          "type": "ball",
+          "x": 380,
+          "y": 440,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank138",
+          "type": "pass",
+          "x": 390,
+          "y": 420,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 685,
+          "y2": 350,
+          "cx": 537.5,
+          "cy": 385
+        },
+        {
+          "id": "bank139",
+          "type": "pass",
+          "x": 715,
+          "y": 300,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 535,
+          "y2": 120,
+          "cx": 625,
+          "cy": 210
+        },
+        {
+          "id": "bank140",
+          "type": "text",
+          "x": 500,
+          "y": 630,
+          "label": "Gul anfaller uppåt",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "vagg-avslut",
+    "category": "Avslut",
+    "players": "3",
+    "area": "20 × 15 m",
+    "time": "10 min",
+    "focus": "Väggspel följt av avslut i rörelse.",
+    "model": {
+      "version": 1,
+      "title": "Väggspel och avslut",
+      "notes": "3 spelare · 20 × 15 m · 10 min\nSyfte: Väggspel följt av avslut i rörelse.\n1. A passar B och löper mot mål.\n2. B spelar tillbaka framför A.\n3. A avslutar mot målvakten.\nHämta bollen och byt A/B efter varje försök; byt målvakt efter 3 minuter. Vänta tills målvakten är redo.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank141",
+          "type": "goal",
+          "x": 500,
+          "y": 90,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank142",
+          "type": "player",
+          "x": 500,
+          "y": 150,
+          "label": "MV",
+          "color": "#76d9ff",
+          "size": 1
+        },
+        {
+          "id": "bank143",
+          "type": "player",
+          "x": 350,
+          "y": 520,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank144",
+          "type": "player",
+          "x": 750,
+          "y": 350,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank145",
+          "type": "ball",
+          "x": 400,
+          "y": 495,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank146",
+          "type": "cone",
+          "x": 320,
+          "y": 580,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank147",
+          "type": "pass",
+          "x": 410,
+          "y": 480,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 700,
+          "y2": 355,
+          "cx": 555,
+          "cy": 417.5
+        },
+        {
+          "id": "bank148",
+          "type": "pass",
+          "x": 705,
+          "y": 305,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 450,
+          "y2": 260,
+          "cx": 577.5,
+          "cy": 282.5
+        },
+        {
+          "id": "bank149",
+          "type": "run",
+          "x": 345,
+          "y": 450,
+          "label": "",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 430,
+          "y2": 250,
+          "cx": 300,
+          "cy": 325
+        },
+        {
+          "id": "bank150",
+          "type": "pass",
+          "x": 450,
+          "y": 235,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 480,
+          "y2": 115,
+          "cx": 465,
+          "cy": 175
+        }
+      ]
+    }
+  },
+  {
+    "id": "inspel",
+    "category": "Avslut",
+    "players": "3",
+    "area": "25 × 20 m",
+    "time": "10 min",
+    "focus": "Tajma löpningen till ett lågt inspel.",
+    "model": {
+      "version": 1,
+      "title": "Inspel och avslut",
+      "notes": "3 spelare · 25 × 20 m · 10 min\nSyfte: Tajma löpningen till ett lågt inspel.\n1. A spelar ett lågt inspel från kanten mot ytan framför mål.\n2. B tajmar sin löpning och avslutar på inspel mot målvakten.\nÅtergå till start och hämta bollen. Byt A/B efter fem försök; byt målvakt efter 3 minuter.\nB startar löpningen när A förbereder passningen.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank151",
+          "type": "goal",
+          "x": 500,
+          "y": 90,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank152",
+          "type": "player",
+          "x": 500,
+          "y": 155,
+          "label": "MV",
+          "color": "#76d9ff",
+          "size": 1
+        },
+        {
+          "id": "bank153",
+          "type": "player",
+          "x": 810,
+          "y": 270,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank154",
+          "type": "player",
+          "x": 320,
+          "y": 530,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank155",
+          "type": "ball",
+          "x": 770,
+          "y": 255,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank156",
+          "type": "cone",
+          "x": 870,
+          "y": 250,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank157",
+          "type": "pass",
+          "x": 755,
+          "y": 250,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 490,
+          "y2": 300,
+          "cx": 622.5,
+          "cy": 275
+        },
+        {
+          "id": "bank158",
+          "type": "run",
+          "x": 340,
+          "y": 465,
+          "label": "2",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 470,
+          "y2": 310,
+          "cx": 405,
+          "cy": 387.5
+        },
+        {
+          "id": "bank159",
+          "type": "pass",
+          "x": 480,
+          "y": 265,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 490,
+          "y2": 115,
+          "cx": 485,
+          "cy": 190
+        },
+        {
+          "id": "bank160",
+          "type": "text",
+          "x": 500,
+          "y": 625,
+          "label": "Lågt inspel från kanten",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "spelvandning",
+    "category": "Passning",
+    "players": "4",
+    "area": "24 × 15 m",
+    "time": "8 min",
+    "focus": "Öppen kropp och spel till motsatt kant.",
+    "model": {
+      "version": 1,
+      "title": "Spelvändning via mitten",
+      "notes": "4 spelare · 24 × 15 m · 8 min\nSyfte: Öppen kropp och spel till motsatt kant.\n1. A spelar in till B centralt.\n2. B vänder upp och spelar C på andra kanten.\n3. C passar D längs kanten. D spelar tillbaka via B till A.\nByt mittspelare efter 90 sekunder. Ytterspelarna håller bredd och tar emot bort från konen.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank161",
+          "type": "cone",
+          "x": 180,
+          "y": 330,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank162",
+          "type": "cone",
+          "x": 500,
+          "y": 300,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank163",
+          "type": "cone",
+          "x": 820,
+          "y": 180,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank164",
+          "type": "cone",
+          "x": 820,
+          "y": 550,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank165",
+          "type": "player",
+          "x": 230,
+          "y": 340,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank166",
+          "type": "player",
+          "x": 500,
+          "y": 340,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank167",
+          "type": "player",
+          "x": 770,
+          "y": 210,
+          "label": "C",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank168",
+          "type": "player",
+          "x": 770,
+          "y": 500,
+          "label": "D",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank169",
+          "type": "ball",
+          "x": 280,
+          "y": 340,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank170",
+          "type": "pass",
+          "x": 290,
+          "y": 335,
+          "label": "1",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 450,
+          "y2": 335,
+          "cx": 370,
+          "cy": 335
+        },
+        {
+          "id": "bank171",
+          "type": "pass",
+          "x": 540,
+          "y": 300,
+          "label": "2",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 715,
+          "y2": 225,
+          "cx": 627.5,
+          "cy": 262.5
+        },
+        {
+          "id": "bank172",
+          "type": "pass",
+          "x": 770,
+          "y": 270,
+          "label": "3",
+          "color": "#ffffff",
+          "size": 1,
+          "x2": 770,
+          "y2": 440,
+          "cx": 770,
+          "cy": 355
+        }
+      ]
+    }
+  },
+  {
+    "id": "press-tackning",
+    "category": "Försvar",
+    "players": "4",
+    "area": "18 × 15 m",
+    "time": "10 min",
+    "focus": "Samarbete mellan pressande och täckande försvarare.",
+    "model": {
+      "version": 1,
+      "title": "Press och täckning 2 mot 2",
+      "notes": "4 spelare · 18 × 15 m · 10 min\nSyfte: Samarbete mellan pressande och täckande försvarare.\nGula A/B försöker driva över linjen bakom röda 1/2. När A har boll pressar röd 1 medan röd 2 ger täckning snett bakom.\nVid pass till B byter försvararna roller. Vid brytning anfaller rött mot motsatt linje.\nByt startande lag efter varje utspel. Pilarna visar försvararnas första förflyttning.\nBilden visar startläget och en exempelaktion. Anpassa ytan till gruppen.",
+      "objects": [
+        {
+          "id": "bank173",
+          "type": "cone",
+          "x": 160,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank174",
+          "type": "cone",
+          "x": 840,
+          "y": 140,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank175",
+          "type": "cone",
+          "x": 160,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank176",
+          "type": "cone",
+          "x": 840,
+          "y": 570,
+          "label": "",
+          "color": "#ff962f",
+          "size": 1
+        },
+        {
+          "id": "bank177",
+          "type": "player",
+          "x": 310,
+          "y": 480,
+          "label": "A",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank178",
+          "type": "player",
+          "x": 710,
+          "y": 480,
+          "label": "B",
+          "color": "#ffdf4c",
+          "size": 1
+        },
+        {
+          "id": "bank179",
+          "type": "ball",
+          "x": 350,
+          "y": 450,
+          "label": "",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank180",
+          "type": "player",
+          "x": 380,
+          "y": 290,
+          "label": "1",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank181",
+          "type": "player",
+          "x": 690,
+          "y": 250,
+          "label": "2",
+          "color": "#ff8585",
+          "size": 1
+        },
+        {
+          "id": "bank182",
+          "type": "run",
+          "x": 380,
+          "y": 340,
+          "label": "Press",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 340,
+          "y2": 400,
+          "cx": 360,
+          "cy": 370
+        },
+        {
+          "id": "bank183",
+          "type": "run",
+          "x": 675,
+          "y": 300,
+          "label": "Täck",
+          "color": "#ffdf4c",
+          "size": 1,
+          "x2": 520,
+          "y2": 330,
+          "cx": 597.5,
+          "cy": 315
+        },
+        {
+          "id": "bank184",
+          "type": "text",
+          "x": 500,
+          "y": 100,
+          "label": "Gul anfaller uppåt",
+          "color": "#ffffff",
+          "size": 1
+        },
+        {
+          "id": "bank185",
+          "type": "text",
+          "x": 500,
+          "y": 635,
+          "label": "Röd anfaller nedåt efter brytning",
+          "color": "#ffffff",
+          "size": 1
+        }
+      ]
+    }
+  }
+]
