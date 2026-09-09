@@ -32,7 +32,7 @@ git -C "$repo" archive "$commit" | tar -x -C "$release"
 # Preserve any filesystem-backed data without copying it into Git or logs.
 if [[ -d "$repo/data" ]]; then ln -s "$repo/data" "$release/data"; fi
 cd "$release"
-npm ci
+npm ci --include=dev
 npm test
 npm run build
 npm run db:audit
