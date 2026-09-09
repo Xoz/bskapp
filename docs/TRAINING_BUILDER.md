@@ -26,3 +26,10 @@ Den ursprungliga SVG-renderaren är extraherad till `lib/training/drawing.js`. S
 Detta är ännu inte publicerat. Coach-data, huvudappens produktionsdata och klvr.se/ritare har inte ändrats. Före publicering ska den additiva migrationen provas på en återläst produktionskopia. Föregående appversion avvisar okända migrations-id:n vid init; den generella automatiska kodåterställningen räcker därför inte ensam. För en återgång måste endast migrationsmarkören 0021 återtas under kontrollerat stopp, medan tabellen och eventuella sparade pass bevaras. Dokumentera och prova detta före driftsättning.
 
 Coachs gamla övningsdata/normaliserade koordinater är ännu inte migrerade. Konvertera först efter inventering; blanda inte modellerna genom en direkt JSON-kopiering. Native och teamdelning ingår inte i första versionen.
+
+
+## Releaseförberedelse 2026-09-09
+
+Produktionsdump återläst till separat databas på VPS. Faktisk migration körd via appens databaslager, kontrollpass skrivet, endast markör 0021 återtagen, föregående appversion startad mot kopian och därefter migrationen körd igen. 67 spelare och kontrollpasset bevarade genom hela provet. Kontrolldatabasen borttagen; privat provbackup i `/opt/bsk/training-check.55FJF2`.
+
+Deployskriptets felhantering startar nu före bygget. Om 0021 inte fanns före försöket återtas endast dess markör vid misslyckad publicering; tabellen och pass behålls. Redan publicerad migration återtas inte av senare releasers felhantering.
