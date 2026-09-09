@@ -23,6 +23,7 @@ export default function NavLinks({
           <Link
             key={href}
             href={href}
+            aria-current={active ? "page" : undefined}
             className={`nav-link whitespace-nowrap ${active ? "active" : ""}`}
           >
             <Icon />

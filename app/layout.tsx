@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
+import "./calm.css";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getAllSettings } from "@/lib/db";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // Mobil först: viewport-fit=cover ger oss env(safe-area-inset-*) för notch och
-// home-indikator. Mörk theme-color så statusbaren smälter ihop med nav-baren.
+// home-indikator. Temainit och temaväljaren håller statusradens färg i synk.
 // Vi behåller användarens möjlighet att zooma (tillgänglighet).
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0B0F14",
-  colorScheme: "dark light",
+  themeColor: "#F7F7F3",
+  colorScheme: "light dark",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,14 +45,14 @@ export default async function RootLayout({
   const settings = await getAllSettings();
   return (
     <html lang="sv" className="h-full antialiased" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
       <body
         className="min-h-full flex flex-col"
         style={
           {
-            // Klubbens accentfärg vinner över temats default-accent (sätts bara om
-            // den finns – annars styr CSS: amber i mörkt, djupare amber i ljust läge).
+            // Klubbfärgen bevaras separat; den får inte skriva över UI-temats kontrast.
             ...(settings.accent_color
-              ? { "--primary": settings.accent_color, "--accent": settings.accent_color }
+              ? { "--club-primary": settings.accent_color }
               : {}),
             // Matchtröjefärger för spelaravatarerna
             "--jersey": settings.jersey_color || "#ffd23f",
@@ -61,9 +62,6 @@ export default async function RootLayout({
           } as React.CSSProperties
         }
       >
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem('bsk_theme');if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}`}
-        </Script>
         <ServiceWorkerRegistration />
         {children}
       </body>

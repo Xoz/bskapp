@@ -258,7 +258,7 @@ describe("utvecklingskärnans kontrakt", () => {
   });
 
   it("samlar veckans operativa signaler på Idag-vyn", () => {
-    for (const label of ["Underbemannade", "Inväntar svar", "Vid maxgränsen", "För hög belastning", "Att göra"]) {
+    for (const label of ["Trupp att se över", "Inväntar svar", "Vid maxgränsen", "För hög belastning", "Att följa upp"]) {
       expect(todayPage).toContain(label);
     }
     expect(todayPage).toContain("activity.has_confirmed_squad ? Number(activity.squad_count)");

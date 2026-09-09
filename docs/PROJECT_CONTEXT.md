@@ -1,5 +1,12 @@
 # BSK App - Project Context
 
+## Beslut och implementation 2026-09-09: webbapp och lugn klubbidentitet
+
+Användaren pausar iOS-utvecklingen och prioriterar en gemensam webbapp. Den godkända lugna designriktningen är nu implementerad lokalt i huvudappen: varmvit bas, dämpat mörkt läge, originalmärke, neutral spelarnummeravatar, mobilnavigation och behörighetsstyrd verktygsmeny. Idag prioriterar nästa match inom veckans befintliga datakälla samt spelarutveckling; veckosiffror och matchutrymme finns som fördjupning. Träd, fokus, samtal, behörigheter och datamodell bevaras. Ingen nativekod ändrad.
+
+Se `docs/WEB_DESIGN_2026-09-09.md` för omfattning och verifiering. Ändringarna är ännu inte publicerade. Detta är ett visuellt steg i huvudappen, inte full sammanslagning av Coach/Development.
+
+
 ## Beslut 2026-08-28: samma matcharbetsflöden i webb och native
 
 - Webbens matchöversikt använder samma kanoniska truppresolver som native och

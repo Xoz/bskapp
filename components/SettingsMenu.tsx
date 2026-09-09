@@ -1,15 +1,10 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import Link from "next/link";
-import {
-  IconSettings,
-  IconPitch,
-  IconOverview,
-  IconPlayers,
-  IconShield,
-  IconWhistle,
-} from "@/components/Icons";
+import type { Permission } from "@/lib/auth";
+import { IconSettings, IconPitch, IconOverview, IconPlayers, IconShield, IconWhistle } from "@/components/Icons";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export const SETTINGS_SECTIONS = [
   { id: "profil", label: "Profil", Icon: IconWhistle },
@@ -19,97 +14,27 @@ export const SETTINGS_SECTIONS = [
   { id: "tranare", label: "Tränare", Icon: IconShield },
 ] as const;
 
-const SECONDARY_TOOLS = [
-  { href: "/matcher", label: "Matcharkiv" },
-  { href: "/statistik", label: "Äldre statistik" },
-  { href: "/administration", label: "Administration" },
-  { href: "/guide", label: "Guide" },
-] as const;
-
-export default function SettingsMenu() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
+export default function SettingsMenu({ permissions = [] }: { permissions?: Permission[] }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const close = () => dialog.current?.close();
+  const can = (permission: Permission) => permissions.includes(permission);
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Inställningar"
-        aria-label="Inställningar"
-        className="icon-btn"
-        style={{
-          width: 32,
-          height: 32,
-          color: open ? "var(--primary)" : undefined,
-          borderColor: open ? "var(--primary)" : undefined,
-        }}
-      >
-        <IconSettings width={17} height={17} />
+    <>
+      <button type="button" className="bsk-icon-button" onClick={() => dialog.current?.showModal()} aria-label="Öppna verktyg och konto" aria-haspopup="dialog">
+        <IconSettings width={21} height={21} />
       </button>
-
-      {open && (
-        <div
-          className="absolute right-0 top-full mt-2 z-50 fade-in"
-          style={{
-            width: 208,
-            borderRadius: "var(--r-card)",
-            padding: "6px",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-xl)",
-          }}
-        >
-          <p
-            className="caption px-3 pt-2 pb-1.5"
-            style={{
-              color: "var(--ink-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              fontWeight: 600,
-            }}
-          >
-            Inställningar
-          </p>
-          {SETTINGS_SECTIONS.map(({ id, label, Icon }) => (
-            <Link
-              key={id}
-              href={`/installningar#${id}`}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 body-small transition-colors"
-              style={{
-                color: "var(--ink)",
-                borderRadius: "var(--r-button)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--elevated)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <Icon width={16} height={16} style={{ color: "var(--ink-muted)" }} />
-              {label}
-            </Link>
-          ))}
-          <p className="caption px-3 pt-3 pb-1.5" style={{ color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
-            Sekundära verktyg
-          </p>
-          {SECONDARY_TOOLS.map(({ href, label }) => (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="block px-3 py-2 body-small" style={{ color: "var(--ink-secondary)", borderRadius: "var(--r-button)" }}>
-              {label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+      <dialog ref={dialog} className="bsk-tools-dialog" aria-labelledby="tools-heading" onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+        <div className="bsk-tools-heading"><h2 id="tools-heading">Verktyg och konto</h2><button type="button" onClick={close} className="bsk-icon-button" aria-label="Stäng">✕</button></div>
+        <nav className="bsk-tool-list" aria-label="Verktyg">
+          {can("view_matches") && <Link onClick={close} href="/matcher"><IconPitch width={20} />Matcher och cuper</Link>}
+          {can("view_players") && <Link onClick={close} href="/spelare"><IconPlayers width={20} />Spelarutveckling och samtal</Link>}
+          {can("view_statistics") && <Link onClick={close} href="/statistik"><IconOverview width={20} />Statistik</Link>}
+          {(can("manage_users") || can("manage_groups")) && <Link onClick={close} href="/administration"><IconShield width={20} />Administration</Link>}
+          <Link onClick={close} href="/guide"><IconWhistle width={20} />Guide</Link>
+        </nav>
+        {can("manage_settings") && <section className="bsk-tools-section"><h3>Inställningar</h3><nav className="bsk-tool-list" aria-label="Inställningar">{SETTINGS_SECTIONS.map(({ id, label, Icon }) => <Link key={id} onClick={close} href={`/installningar#${id}`}><Icon width={20} />{label}</Link>)}</nav></section>}
+        <section className="bsk-tools-section"><ThemeToggle /></section>
+      </dialog>
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Separat byggkatalog gör lokala designprov möjliga utan att stoppa en annan dev-server.
+  distDir: process.env.BSK_BUILD_DIR || ".next",
   async headers() {
     return [
       {

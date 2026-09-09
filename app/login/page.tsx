@@ -1,70 +1,24 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getAllSettings } from "@/lib/db";
 import LoginForm from "./LoginForm";
-import PitchLines from "@/components/PitchLines";
 
 export default async function LoginPage() {
   const role = await getRole();
   if (role === "coach") redirect("/idag");
   if (role === "parent" || role === "player") redirect("/mina-spelare");
-
   const settings = await getAllSettings();
-
-  return (
-    <main
-      className="flex-1 flex items-center justify-center p-6 relative overflow-hidden"
-      style={{ background: "var(--bg)" }}
-    >
-      <PitchLines className="pointer-events-none absolute -left-28 top-1/2 -translate-y-1/2 h-[130%] text-white/[0.025]" />
-      <PitchLines className="pointer-events-none absolute -right-36 -bottom-40 h-[110%] rotate-12 text-white/[0.02]" />
-
-      <div className="w-full max-w-sm relative rise">
-        <div className="text-center mb-10">
-          <div
-            className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-3xl font-bold"
-            style={{
-              background: "var(--primary)",
-              color: "var(--primary-deep)",
-              fontFamily: "var(--font-display)",
-              borderRadius: "10px",
-            }}
-          >
-            {settings.club_name?.slice(0, 1) || "B"}
-          </div>
-          <h1
-            className="text-3xl font-semibold"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink)", letterSpacing: "-0.5px" }}
-          >
-            {settings.team_name}
-          </h1>
-          <p
-            className="mt-2 caption uppercase tracking-[0.12em]"
-            style={{ color: "var(--ink-muted)" }}
-          >
-            {settings.club_name} · Spelarutveckling &amp; matchstatistik
-          </p>
-        </div>
-
-        <div
-          className="p-8"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          <Suspense>
-            <LoginForm />
-          </Suspense>
-        </div>
-
-        <div
-          className="mt-8 flex items-center justify-center gap-3 caption tracking-[0.14em] uppercase"
-          style={{ color: "var(--ink-muted)" }}
-        >
-          <span className="h-px w-8" style={{ background: "var(--border)" }} />
-          Enligt SvFF:s riktlinjer
-          <span className="h-px w-8" style={{ background: "var(--border)" }} />
-        </div>
-      </div>
-    </main>
-  );
+  return <main className="flex-1 flex items-center justify-center p-6">
+    <div className="w-full max-w-sm">
+      <header className="text-center mb-8">
+        <Image className="mx-auto mb-5" src="/bsk-club.png" width={74} height={80} alt={settings.club_name || "Bollstanäs SK"} unoptimized />
+        <h1>Välkommen till BSK</h1>
+        <p className="mt-3" style={{ color: "var(--ink-secondary)" }}>{settings.team_name} · Matcher, utveckling och samtal</p>
+      </header>
+      <div className="bsk-login"><Suspense><LoginForm /></Suspense></div>
+      <p className="mt-6 text-center text-sm" style={{ color: "var(--ink-secondary)" }}>En gemensam plats för laget.</p>
+    </div>
+  </main>;
 }

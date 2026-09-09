@@ -10,12 +10,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
+      <a href="#main-content" className="bsk-skip">Hoppa till innehållet</a>
       <Navbar />
       <main
-        className="flex-1 w-full mx-auto rise pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8"
-        style={{ maxWidth: "1120px", paddingTop: "12px", paddingInline: "16px" }}
+        id="main-content"
+        className="bsk-content"
       >
-        <div className="md:px-5 md:py-7">{children}</div>
+        <div>{children}</div>
       </main>
       <BottomNav permissions={user.permissions} staff={isStaffRole(user.primaryRole)} />
       <InstallPrompt />

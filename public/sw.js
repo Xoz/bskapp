@@ -1,10 +1,10 @@
-const CACHE = "bsk-v2";
+const CACHE = "bsk-v3-calm";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(["/rapportera", "/manifest.webmanifest", "/icon.svg"]))
+      .then((c) => c.addAll(["/rapportera", "/manifest.webmanifest", "/icon.svg", "/bsk-club.png"]))
       .catch(() => {})
   );
   self.skipWaiting();

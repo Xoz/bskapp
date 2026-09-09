@@ -201,3 +201,11 @@ kontrollerar behörighet och spelarägande, bygger texten på servern och sparar
 befintliga `player_conversations`. Samma spar-id ger ingen dubblett eller överskrivning.
 Tester: `lib/treeConversation.test.ts`, `lib/treeConversationActions.test.ts`.
 Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsning.
+
+## Webbdesign 2026-09-09
+
+- `app/calm.css`: gemensamma färgvariabler, ytor, mobil/iPad/desktop, fokus och mörkt läge; läses efter globals.
+- `components/BrandLockup.tsx`, `public/bsk-club.png`: originalklubbmärke och responsivt klubbnamn.
+- `lib/theme.ts`, `lib/theme.test.ts`, `components/ThemeToggle.tsx`: ljust/mörkt/system, tidig init och lagringsfallback.
+- `components/SettingsMenu.tsx`: dialog med befintliga verktyg filtrerade på behörighet.
+- `docs/WEB_DESIGN_2026-09-09.md`: designbeslut, omfattning och verifiering.
