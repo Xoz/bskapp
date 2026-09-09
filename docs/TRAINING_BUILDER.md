@@ -19,11 +19,11 @@ Den ursprungliga SVG-renderaren är extraherad till `lib/training/drawing.js`. S
 - Utkast sparas lokalt per användare/pass i webbläsaren. Ingen synkning av osparade utkast mellan enheter. Ett osäkert sparförsök låser innehållet tills det får svar.
 - Postgres-parametrar använder text→JSONB-cast så att dokumentet lagras som objekt, inte dubbelt JSON-kodad sträng.
 
-## Verifiering och nästa publicering
+## Verifiering och publicering
 
 130 tester godkända, inklusive de 15 originalmallarna, validering, säker SVG-text, behörighet och revisionskonflikt. TypeScript och produktionsbygge provas mot den separata lokala testdatabasen. Webbläsarprov: mall → flytta spelare → ångra/gör om → två block → ändra ordning/minuter → spara → återöppna. Sparad ritposition kontrolleras också.
 
-Detta är ännu inte publicerat. Coach-data, huvudappens produktionsdata och klvr.se/ritare har inte ändrats. Före publicering ska den additiva migrationen provas på en återläst produktionskopia. Föregående appversion avvisar okända migrations-id:n vid init; den generella automatiska kodåterställningen räcker därför inte ensam. För en återgång måste endast migrationsmarkören 0021 återtas under kontrollerat stopp, medan tabellen och eventuella sparade pass bevaras. Dokumentera och prova detta före driftsättning.
+Publicerat 2026-09-09 via PR #7, produktionscommit `3095f1d70b617b9283efd464c4dacdf6925fc1eb`. Migration och återgång har provats på en återläst produktionskopia (se nedan). Coach-data och klvr.se/ritare är orörda. Föregående appversion avvisar migrationsmarkör 0021; vid en återgång ska endast markören återtas under kontrollerat stopp, medan tabellen och sparade pass behålls. Deployskriptet hanterar detta om 0021 applicerades av det misslyckade försöket.
 
 Coachs gamla övningsdata/normaliserade koordinater är ännu inte migrerade. Konvertera först efter inventering; blanda inte modellerna genom en direkt JSON-kopiering. Native och teamdelning ingår inte i första versionen.
 
@@ -33,3 +33,12 @@ Coachs gamla övningsdata/normaliserade koordinater är ännu inte migrerade. Ko
 Produktionsdump återläst till separat databas på VPS. Faktisk migration körd via appens databaslager, kontrollpass skrivet, endast markör 0021 återtagen, föregående appversion startad mot kopian och därefter migrationen körd igen. 67 spelare och kontrollpasset bevarade genom hela provet. Kontrolldatabasen borttagen; privat provbackup i `/opt/bsk/training-check.55FJF2`.
 
 Deployskriptets felhantering startar nu före bygget. Om 0021 inte fanns före försöket återtas endast dess markör vid misslyckad publicering; tabellen och pass behålls. Redan publicerad migration återtas inte av senare releasers felhantering.
+
+
+## Produktionskontroll
+
+- Godkänd GitHub-körning: https://github.com/Xoz/bskapp/actions/runs/34352997532 . 130 tester, produktionsbygge och datamodellsgranskning godkända på VPS.
+- Release `/opt/bsk/releases/3095f1d70b61.OiBCpV`, länkad via `/opt/bsk/current`. Backup `/opt/bsk/backups/main-3095f1d70b61.NwNPan`.
+- Befintlig inloggad Chrome-session verifierade `/traning`, den nya navigationslänken och `/traning/nytt` med alla 15 övningar. Inga testpass skapades på användarens produktionskonto.
+- Efter release: 67 spelare, 144 matcher, 0 träningspass och en 0021-markör. BSK, Coach och Development-API fortsatt aktiva.
+- Befintliga datavarningar om nio spelare utan primär grupp och en resultatskillnad oförändrade. De hör inte till träningsbyggarens release.
