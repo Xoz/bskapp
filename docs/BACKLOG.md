@@ -18,13 +18,14 @@ Gul är utgångspunkt; ingen generell dataradering ingår i beslutet.
 
 Aktuell arbetsordning:
 
-1. **Sammanhållet webbflöde – implementerat lokalt, väntar publicering.**
+1. **Sammanhållet webbflöde – publicerat 2026-09-09.**
    Fyra ingångar: Idag–Spelare–Matcher–Träning. Gul är förvalt i spelare och
    matcher. Uttagning ligger under matchen, gamla länkar leder dit.
    Matchen visar nästa steg före/efter match. Manuella mål kan inte längre
    skapas från webbprofilen; befintliga mål ligger under historik.
    Trädfokus och samtalsflödet är kvar. 132 tester, typkontroll och bygge godkända;
    lokal webbläsarkontroll inklusive sparad testuttagning genomförd.
+   Produktionsnavigation, Gulfilter och match → uttagning verifierade.
 2. **Verifiera vardagsanvändningen med Gul.** Ett verkligt spelar-/samtalsflöde
    och ett helt lagpass på mobil/iPad-webb, återöppning och nätavbrott.
    Checkin-formulärets återförsök och serverutkast för samtal återstår.

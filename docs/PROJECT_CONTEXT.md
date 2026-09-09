@@ -244,3 +244,16 @@ personliga; faktisk lagkoppling återstår.
 Verifierat: 132 tester, typkontroll och produktionsbygge. Lokal webbläsare med
 syntetisk Gulmatch: öppna match, välj spelare och spara uttagning; databasen
 bekräftar valet. Produktionsdata har inte ändrats.
+
+## Gul-flödet publicerat 2026-09-09
+
+PR #8 publicerad på bsk2014.se, commit `1c14f9255b64b42e3a3c686e4036b7d65b54fac4`.
+GitHub Actions: https://github.com/Xoz/bskapp/actions/runs/34355120448 — godkänd.
+Aktiv release `/opt/bsk/releases/1c14f9255b64.bvLcVu`; backup
+`/opt/bsk/backups/main-1c14f9255b64.okXSFY`.
+132 tester, produktionsbygge, datagranskning och hälsokontroller godkända.
+Befintlig Chrome-session fungerar. Fyra huvudingångar, Gul-förvald matchlista,
+matchens nästa steg och uttagningen under matchen verifierade i produktion.
+67 spelare, 144 matcher och 0 träningspass före/efter. Inga testuttagningar
+eller andra verksamhetsuppgifter skrivna i produktion vid kontrollen.
+Träningspassens faktiska lagkoppling återstår; pass är fortfarande personliga.

@@ -45,3 +45,16 @@ Vercel Preview saknar separat Postgres enligt STAGING.md och är inte denna prod
 Efter användarens instruktion publicerades designen på https://bsk2014.se, commit `9eacc854d18f3e0e93b6a2e65dd6d11b41c5dfc7`. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34344433886 passerade tester, produktionsbygge, datagranskning och hälsokontroller. Aktiv release `/opt/bsk/releases/9eacc854d18f.aedBpv`; backup `/opt/bsk/backups/main-9eacc854d18f.yN4Yzv`.
 
 Inloggad Idag-vy och originalmärke verifierade visuellt i produktion. 67 spelare, 144 matcher och 0 samtal efter publicering, samma antal som före ändringen. Inga verksamhetsuppgifter skrivna under kontrollen. iOS fortsatt pausad.
+
+## Gul-flödet publicerat 2026-09-09
+
+PR #8 publicerad på bsk2014.se, commit `1c14f9255b64b42e3a3c686e4036b7d65b54fac4`.
+GitHub Actions: https://github.com/Xoz/bskapp/actions/runs/34355120448 — godkänd.
+Aktiv release `/opt/bsk/releases/1c14f9255b64.bvLcVu`; backup
+`/opt/bsk/backups/main-1c14f9255b64.okXSFY`.
+132 tester, produktionsbygge, datagranskning och hälsokontroller godkända.
+Befintlig Chrome-session fungerar. Fyra huvudingångar, Gul-förvald matchlista,
+matchens nästa steg och uttagningen under matchen verifierade i produktion.
+67 spelare, 144 matcher och 0 träningspass före/efter. Inga testuttagningar
+eller andra verksamhetsuppgifter skrivna i produktion vid kontrollen.
+Träningspassens faktiska lagkoppling återstår; pass är fortfarande personliga.
