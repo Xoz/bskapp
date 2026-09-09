@@ -1,29 +1,31 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getRole } from "@/lib/auth";
+import { getRole, hasPermission } from "@/lib/auth";
 import { getMatch, getPlayersLevelInfo, getMatchSquad, getMatchLineup, getMatchesByCup, getGroupMemberIds } from "@/lib/queries";
 import { level as levelInfo, fit } from "@/lib/levels";
 import SquadBoard from "@/components/SquadBoard";
 import { IconArrowLeft } from "@/components/Icons";
-import { getSelectionMatches } from "@/lib/developmentCore";
+import { getSelectionMatches, getSelectionWorkspace } from "@/lib/developmentCore";
+import MatchSelection from "@/components/MatchSelection";
 import { getOrganizationGroups } from "@/lib/organization";
 
 export const dynamic = "force-dynamic";
 
 export default async function SquadPage({ params }: { params: Promise<{ id: string }> }) {
   const role = await getRole();
-  if (role !== "coach") redirect("/matcher");
+  if (role !== "coach" || !(await hasPermission("manage_squads"))) redirect("/matcher");
 
   const { id } = await params;
   const match = await getMatch(Number(id));
   if (!match) notFound();
 
-  // Gul Sanktan använder samma kanoniska kryssruteflöde som nativeappen.
+  // Gul Sanktan använder samma kryssruteflöde, direkt i matchens arbetsyta.
   // Den äldre formationsytan finns kvar för cup/övriga matcher, men får inte
   // skapa ett parallellt uttagningsflöde för de ordinarie Gulmatcherna.
   const canonicalSelection = (await getSelectionMatches()).find((activity) => activity.match_id === match.id);
   if (canonicalSelection) {
-    redirect(`/uttagning?aktivitet=${encodeURIComponent(canonicalSelection.id)}`);
+    const workspace = await getSelectionWorkspace(canonicalSelection.id);
+    if (workspace) return <MatchSelection workspace={workspace} />;
   }
   const matchGroup = (await getOrganizationGroups()).find((group) => group.id === match.group_id);
   if (matchGroup?.group_type === "subgroup") redirect(`/matcher/${match.id}#trupp`);

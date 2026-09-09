@@ -78,9 +78,7 @@ export default function PlayerDirectory({ players }: { players: PlayerDirectoryI
                   </span>
                 </div>
                 <p className="player-directory-preferences">{preferenceSummary(player)}</p>
-                <p className={`player-directory-goal ${player.goals.length === 0 ? "player-directory-goal-empty" : ""}`}>
-                  {player.goals.length > 0 ? player.goals.join(" · ") : "Inget aktivt utvecklingsmål"}
-                </p>
+                <p className="player-directory-goal">Utvecklingsträd och samtal</p>
               </div>
               <div className="player-directory-stats">
                 <span><strong>{player.matchCount}</strong> {player.matchCount === 1 ? "match" : "matcher"}</span>

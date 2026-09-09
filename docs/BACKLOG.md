@@ -12,25 +12,28 @@ Publicerat: spelarträd → fokus → samtalsunderlag/historik, ny webbdesign oc
 träningsbyggare med originalritaren samt 15 mallövningar. Se
 `UNIFIED_PLAYER_FLOW.md`, `TRAINING_BUILDER.md` och `MAIN_RELEASE.md`.
 
-Kvar för en fullt samlad lagapp, i rekommenderad arbetsordning:
+Beslut 2026-09-09: användaren är ensam användare och tidigare innehåll är testdata.
+Historisk datamigrering och delning mellan tränare är inte kritiska och pausas.
+Gul är utgångspunkt; ingen generell dataradering ingår i beslutet.
 
-1. **Inventera kvarvarande Coach-/Development-data.** Återläs Coach-databasen
-   separat, skilj verklig data från demo, mappa original-id:n och provimportera
-   användbara övningar, ritningar, pass och historik utan dubbletter.
-2. **Gör träningen gemensam för laget.** Nuvarande pass är personliga. Kvar:
-   lagkoppling, behörig delning mellan tränare, återanvändbara egna övningar,
-   koppling till befintlig träningsaktivitet och ett genomförandeläge.
-3. **Förenkla den sammanhållna vägen.** Samla match/uttagning/efterarbete under
-   samma match. Gör nästa steg tydligt och undvik att separata gamla mål och
-   trädfokus uppfattas som dubbla krav. Navigationens föreslagna målbild
-   Idag–Spelare–Matcher–Träning är ännu inte helt genomförd.
-4. **Verifiera vardagsanvändningen.** Ett verkligt spelar-/samtalsflöde och ett
-   helt lagpass på mobil/iPad-webb, med återöppning, nätavbrott, flera tränare
-   och korrekta rättigheter. Checkin-formulärets återförsök och serverutkast
-   för samtal återstår; dagens utkast är lokala i webbläsaren.
-5. **Avveckla sidoprodukterna sist.** När data och motsvarande funktioner är
-   verifierade: stäng gamla skrivvägar, omdirigera gamla länkar och stäng
-   överflödiga tjänster. Kontrollera sammanhängande utdrag/radering/backup.
+Aktuell arbetsordning:
+
+1. **Sammanhållet webbflöde – implementerat lokalt, väntar publicering.**
+   Fyra ingångar: Idag–Spelare–Matcher–Träning. Gul är förvalt i spelare och
+   matcher. Uttagning ligger under matchen, gamla länkar leder dit.
+   Matchen visar nästa steg före/efter match. Manuella mål kan inte längre
+   skapas från webbprofilen; befintliga mål ligger under historik.
+   Trädfokus och samtalsflödet är kvar. 132 tester, typkontroll och bygge godkända;
+   lokal webbläsarkontroll inklusive sparad testuttagning genomförd.
+2. **Verifiera vardagsanvändningen med Gul.** Ett verkligt spelar-/samtalsflöde
+   och ett helt lagpass på mobil/iPad-webb, återöppning och nätavbrott.
+   Checkin-formulärets återförsök och serverutkast för samtal återstår.
+3. **Träningens lagkoppling.** Pass är fortfarande personliga. Koppling till Gul
+   och träningsaktivitet samt genomförandeläge återstår. Delning mellan flera
+   tränare kan vänta tills det behövs.
+4. **Avveckla sidoprodukterna.** Kontrollera kvarvarande funktionsbehov och
+   länkar och stäng sedan gamla skrivvägar/tjänster. Ingen omfattande migrering
+   av testdata ska prioriteras före vardagsflödet.
 
 Kända datavarningar från senaste release: 9 aktiva spelare utan primär grupp
 samt en skillnad mellan målhändelser och matchresultat. Kräver separat kontroll;

@@ -326,7 +326,11 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   await pilotEvent("selection_saved", actor, activityId, measuredSeconds(formData), selected.size);
   await logActivity(actor, "sparade utvecklingsuttagning", `${selected.size} uttagna`);
   revalidatePath(`/uttagning?aktivitet=${encodeURIComponent(activityId)}`);
-  if (activity.match_id != null) revalidatePath(`/matcher/${activity.match_id}/utvardera`);
+  if (activity.match_id != null) {
+    revalidatePath(`/matcher/${activity.match_id}`);
+    revalidatePath(`/matcher/${activity.match_id}/laguttagning`);
+    revalidatePath(`/matcher/${activity.match_id}/utvardera`);
+  }
   revalidatePath("/idag");
 }
 

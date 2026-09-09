@@ -227,3 +227,20 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 Efter användarens instruktion publicerades designen på https://bsk2014.se, commit `9eacc854d18f3e0e93b6a2e65dd6d11b41c5dfc7`. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34344433886 passerade tester, produktionsbygge, datagranskning och hälsokontroller. Aktiv release `/opt/bsk/releases/9eacc854d18f.aedBpv`; backup `/opt/bsk/backups/main-9eacc854d18f.yN4Yzv`.
 
 Inloggad Idag-vy och originalmärke verifierade visuellt i produktion. 67 spelare, 144 matcher och 0 samtal efter publicering, samma antal som före ändringen. Inga verksamhetsuppgifter skrivna under kontrollen. iOS fortsatt pausad.
+
+## 2026-09-09 – Gul och ett samlat webbflöde
+
+Användaren är ensam användare och gammalt innehåll är testdata. Datamigrering
+från sidoprodukter och delning mellan tränare prioriteras ned. Ingen data raderad.
+Huvudappen ska utgå från Gul.
+
+Implementerat på `feat/gul-unified-navigation`, ännu inte publicerat: fyra
+huvudingångar Idag, Spelare, Matcher, Träning; Gul förvalt i spelare/matcher;
+uttagningsredigeraren under matchen; nästa steg före/efter match; gamla länkar
+omdirigeras. Webbprofilen skapar inte längre parallella manuella mål, befintliga
+mål nås i historiken. Trädet och samtal behålls. Träningspass är fortfarande
+personliga; faktisk lagkoppling återstår.
+
+Verifierat: 132 tester, typkontroll och produktionsbygge. Lokal webbläsare med
+syntetisk Gulmatch: öppna match, välj spelare och spara uttagning; databasen
+bekräftar valet. Produktionsdata har inte ändrats.

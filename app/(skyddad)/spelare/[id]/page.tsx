@@ -2,13 +2,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCore } from "@/lib/developmentCore";
-import { closeDevelopmentGoal, createDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
+import { closeDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
 import { getLatestDevelopmentCheckpoint, getPlayerConversations, getPlayerSkillStatuses } from "@/lib/queries";
 import { swedishToday } from "@/lib/dates";
 import TreeConversationForm from "@/components/TreeConversationForm";
 import { prepareTreeConversation } from "@/lib/treeConversation";
 import Avatar from "@/components/Avatar";
-import PilotStartField from "@/components/PilotStartField";
 import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
 import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
@@ -47,7 +46,6 @@ export default async function PlayerPage({ params, searchParams }: {
   const { summary, goalHistory, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
-  const addGoal = createDevelopmentGoal.bind(null, playerId);
   const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
   const conversationPreparation = prepareTreeConversation(latestDevelopmentUpdate?.id ?? null, latestDevelopmentUpdate?.date ?? null, latestDevelopmentUpdate?.skills ?? []);
   const positionSummary = summary.player.preferred_position_primary || summary.player.position || "";
@@ -173,10 +171,10 @@ export default async function PlayerPage({ params, searchParams }: {
         )}
       </details>
 
-      <details className="core-panel core-form-panel" open={Boolean(mal)}>
+      {summary.goals.length > 0 && <details className="core-panel core-form-panel" open={Boolean(mal)}>
         <summary className="core-section-head cursor-pointer list-none">
-          <div><p className="core-kicker">Fokus</p><h2 className="core-section-title mt-2">Aktiva utvecklingsmål</h2></div>
-          <div className="flex items-center gap-3"><span className="core-section-note">{summary.goals.length}/2 aktiva</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
+          <div><p className="core-kicker">Historik</p><h2 className="core-section-title mt-2">Tidigare manuella mål</h2></div>
+          <div className="flex items-center gap-3"><span className="core-section-note">{summary.goals.length} kvar</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
         </summary>
         {mal === "max" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--warn-bg)" }}>Avsluta eller pausa ett mål innan ett nytt läggs till.</p>}
         {mal === "ogiltigt" && <p className="mt-3 rounded-xl p-3 body-small" style={{ background: "var(--danger-bg)" }}>Kontrollera måltexten och datumet.</p>}
@@ -196,17 +194,8 @@ export default async function PlayerPage({ params, searchParams }: {
             );
           })}
         </div>
-        {canEdit && summary.goals.length < 2 && (
-          <form action={addGoal} className="core-panel core-form-panel mt-3 grid md:grid-cols-2 gap-4">
-            <PilotStartField />
-            <div className="md:col-span-2"><p className="core-kicker">Nytt mål</p><h3 className="mt-2">Ett observerbart nästa steg</h3></div>
-            <label><span className="label">Utvecklingsmål</span><input name="title" className="input mt-1" required minLength={3} maxLength={120} placeholder="Exempel: söka spelbar yta före mottagning" /></label>
-            <label><span className="label">Vad kan tränaren se?</span><input name="evidence_hint" className="input mt-1" maxLength={240} placeholder="Ett konkret beteende, frivilligt" /></label>
-            <label><span className="label">Följ upp senast</span><input name="review_on" type="date" className="input mt-1" /></label>
-            <div className="flex items-end"><button type="submit" className="btn-primary">Lägg till mål</button></div>
-          </form>
-        )}
-      </details>
+
+      </details>}
 
       {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel core-form-panel"><summary className="font-semibold cursor-pointer list-none flex items-center justify-between"><span>Tidigare mål</span><span aria-hidden="true" style={{ color: "var(--ink-muted)" }}>⌄</span></summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
 

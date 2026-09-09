@@ -56,7 +56,7 @@ export default async function MatchPage({ params, searchParams }: {
   const evaluationOpen = matchEvaluationIsOpen(match.date, match.start_time);
   const selectionActivity = selectionMatches.find((activity) => activity.match_id === match.id);
   const selectionHref = selectionActivity
-    ? `/uttagning?aktivitet=${encodeURIComponent(selectionActivity.id)}`
+    ? `/matcher/${match.id}/laguttagning`
     : `#trupp`;
   // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
   // report_open är tränarens manuella override – effektivt öppen = endera.
@@ -97,7 +97,9 @@ export default async function MatchPage({ params, searchParams }: {
           </p>
         </div>
         {role === "coach" && (
-          <div className="flex gap-3 items-center">
+          <details className="relative">
+            <summary className="body-small cursor-pointer">Hantera match</summary>
+            <div className="flex gap-3 items-center mt-3">
             <ConfirmForm
               action={resetMatch}
               message="Nollställa all statistik och klocka för den här matchen?"
@@ -116,9 +118,17 @@ export default async function MatchPage({ params, searchParams }: {
                 Ta bort match
               </button>
             </ConfirmForm>
-          </div>
+            </div>
+          </details>
         )}
       </div>
+
+      {isYellowMatch && <section className="core-panel p-5" aria-label="Nästa steg i matchen">
+        <p className="core-kicker">{evaluationOpen ? "Efter matchen" : "Inför matchen"}</p>
+        <h2 className="mt-2">{evaluationOpen ? "Följ upp spelarnas insats" : "Förbered laget"}</h2>
+        <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{evaluationOpen ? "Bedöm en spelare i taget. Du kan hoppa över den du inte hunnit se." : "Se kallelser och svar, välj spelare och spara truppen."}</p>
+        {evaluationOpen && canManageEvaluations ? <Link href={`/matcher/${match.id}/utvardera`} className="btn-primary mt-4">Utvärdera matchen</Link> : !evaluationOpen && canManageSquads && selectionActivity ? <Link href={selectionHref} className="btn-primary mt-4">Ta ut laget</Link> : null}
+      </section>}
 
       {role === "coach" && (
         <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Matchområden">

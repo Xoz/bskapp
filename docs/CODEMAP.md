@@ -6,11 +6,15 @@
 
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
-Primär produktkärna sedan 2026-08-18: `/idag`, `/observera`, `/spelare` och
-`/uttagning`. Svenska Lag äger kalender/kallelser/närvaro; appen speglar bara
-aktivitetsreferenser och äger utvecklingsmål, målkopplad evidens, exponering och
-tränarens explicita uttagningsbeslut. Äldre match-, statistik- och Planlinjen-flöden
-är sekundära och får inte styra huvudnavigationen.
+Primära webbytor: `/idag`, `/spelare`, `/matcher`, `/traning`. Gul är förvalt
+för spelare och matcher. Uttagning ligger i `/matcher/[id]/laguttagning` och
+uppföljning i `/matcher/[id]/utvardera`; gamla `/uttagning`/`observera`-länkar
+leder vidare. Äldre observationssida finns endast som fallback för aktiviteter
+utan matchkoppling. Spelarnas utveckling börjar i trädet, utan manuellt målkrav.
+
+`components/MatchSelection.tsx` återanvänder SelectionEditor i matchens uttagning.
+`lib/nav.ts` delar de fyra länkarna och aktiv områdesmarkering mellan mobil och
+större skärmar; `lib/nav.test.ts` testar områden och behörighetsfiltrering.
 
 Drift: `main` deployas till VPS av `.github/workflows/deploy.yml` via `deploy/main-vps.sh`. Huvudappen byggs i en separat releasekatalog och växlas med `/opt/bsk/current`; Coach byggs/migreras/startas inte om av huvudappens publicering. Se `docs/MAIN_RELEASE.md`. `vercel.json`
 stänger av Vercels automatiska `main`-byggen; Vercel är reserverat för Preview
