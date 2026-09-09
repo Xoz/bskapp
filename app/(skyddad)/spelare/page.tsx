@@ -27,7 +27,7 @@ export default async function PlayersPage({ searchParams }: {
   const hasUnassigned = players.some(({ teams }) => teams.length === 0);
   const selectedTeam = typeof requestedTeam === "string" && (teamNames.includes(requestedTeam) || (requestedTeam === UNASSIGNED_TEAM && hasUnassigned))
     ? requestedTeam
-    : null;
+    : requestedTeam === "alla" ? null : "Gul";
   const visiblePlayers = selectedTeam === UNASSIGNED_TEAM
     ? players.filter(({ teams }) => teams.length === 0)
     : selectedTeam
@@ -51,7 +51,7 @@ export default async function PlayersPage({ searchParams }: {
         </div>
       </header>
       <nav className="core-team-filters" aria-label="Filtrera spelare efter lagtillhörighet">
-        <Link href="/spelare" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
+        <Link href="/spelare?lag=alla" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>
           Alla <span>{players.length}</span>
         </Link>
         {teamNames.map((teamName) => (

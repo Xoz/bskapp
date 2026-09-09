@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import { getMatches, getCupScorers, cupMatchCompare, cupRoundLabel, cupMootRounds, matchTitle, type Match as MatchType, type CupScorerRow } from "@/lib/queries";
+import { getOrganizationGroups } from "@/lib/organization";
 import { swedishToday } from "@/lib/dates";
 import { level as levelInfo } from "@/lib/levels";
 import { IconPitch } from "@/components/Icons";
@@ -15,23 +16,30 @@ const TYPE_LABELS: Record<string, string> = {
   traningsmatch: "Träningsmatch",
 };
 
-export default async function MatchesPage() {
+export default async function MatchesPage({ searchParams }: { searchParams: Promise<{ lag?: string }> }) {
   const role = await getRole();
   if (!role) redirect("/login");
 
-  const [matches, cupScorers] = await Promise.all([
+  const [allMatches, cupScorers, groups] = await Promise.all([
     getMatches(),
     getCupScorers(),
+    getOrganizationGroups(),
   ]);
+
+  const requestedTeam = (await searchParams).lag;
+  const teams = groups.filter((group) => group.group_type === "subgroup" && group.active);
+  const selectedTeam = requestedTeam === "alla" ? null : teams.find((group) => group.name === requestedTeam)?.name ?? "Gul";
+  const selectedGroupIds = new Set(groups.filter((group) => group.name === selectedTeam && group.group_type === "subgroup").map((group) => group.id));
+  const matches = selectedTeam ? allMatches.filter((match) => match.group_id != null && selectedGroupIds.has(match.group_id)) : allMatches;
 
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="eyebrow">Säsongen</p>
+          <p className="eyebrow">{selectedTeam ? `Lag ${selectedTeam}` : "Alla lag och cuper"}</p>
           <h1 className="mt-1" style={{ fontSize: "40px" }}>Matcher</h1>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            {matches.length} {matches.length === 1 ? "match registrerad" : "matcher registrerade"}
+            Öppna en match för att ta ut laget, följa spelet och utvärdera efteråt.
           </p>
         </div>
         {role === "coach" && (
@@ -45,6 +53,11 @@ export default async function MatchesPage() {
           </div>
         )}
       </div>
+
+      <nav className="core-team-filters" aria-label="Filtrera matcher efter lag">
+        {["Gul", ...teams.map((team) => team.name).filter((name) => name !== "Gul")].map((name) => <Link key={name} href={`/matcher?lag=${encodeURIComponent(name)}`} className={`core-team-filter ${selectedTeam === name ? "core-team-filter-active" : ""}`}>{name}</Link>)}
+        <Link href="/matcher?lag=alla" className={`core-team-filter ${selectedTeam === null ? "core-team-filter-active" : ""}`}>Alla lag och cuper</Link>
+      </nav>
 
       {matches.length === 0 ? (
         <EmptyState
@@ -404,7 +417,7 @@ function MatchSections({
       </section>
 
       {past.length > 0 && (
-        <section>
+        <section id="spelade">
           <div className="flex items-baseline gap-2.5 mb-3">
             <h2 className="font-semibold text-[18px]">Spelade</h2>
             <span className="caption" style={{ color: "var(--ink-muted)" }}>

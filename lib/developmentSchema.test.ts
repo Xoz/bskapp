@@ -352,9 +352,9 @@ describe("utvecklingskärnans kontrakt", () => {
   it("håller webbens matchflöden på samma kanoniska tjänster som native", () => {
     expect(matchPage).toContain("getSelectionMatches");
     expect(matchPage).toContain("resolveMatchRoster");
-    expect(matchPage).toContain("/uttagning?aktivitet=");
+    expect(matchPage).toContain("/matcher/${match.id}/laguttagning");
     expect(legacySelectionPage).toContain("getSelectionMatches");
-    expect(legacySelectionPage).toContain("redirect(`/uttagning?aktivitet=");
+    expect(legacySelectionPage).toContain("<MatchSelection workspace={workspace}");
     expect(webMatchEvaluationPage).toContain("getMobileMatchEvaluation");
     expect(webMatchEvaluationPage).toContain("matchEvaluationIsOpen");
     expect(actions).toContain("saveMobileMatchEvaluation");

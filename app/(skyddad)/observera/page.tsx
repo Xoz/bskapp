@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
-import { getActivityDetail, getCoreActivities, type Evidence } from "@/lib/developmentCore";
+import { getActivityDetail, type Evidence } from "@/lib/developmentCore";
 import { saveQuickObservations } from "@/lib/coreActions";
 import { matchEvaluationIsOpen } from "@/lib/matchEvaluation";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
-import CoreActivityCard from "@/components/CoreActivityCard";
 import PilotStartField from "@/components/PilotStartField";
 
 export const dynamic = "force-dynamic";
@@ -25,44 +24,9 @@ export default async function ObservePage({
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("manage_evaluations")) redirect("/idag?behorighet=saknas");
   const { aktivitet } = await searchParams;
-  const listHref = "/observera";
+  const listHref = "/matcher#spelade";
 
-  if (!aktivitet) {
-    const playedActivities = (await getCoreActivities(80, "sanktan"))
-      .filter((activity) => activity.source_team === "Gul")
-      .filter((activity) => !activity.is_upcoming);
-    return (
-      <div className="core-page">
-        <header className="core-header">
-          <div className="core-header-copy">
-          <p className="core-kicker">Efter matchen</p>
-          <h1 className="core-title">Observera</h1>
-          <p className="core-lead">
-            Utvärdera spelarna efter match och gå tillbaka till gula lagets spelade Sanktanmatcher.
-          </p>
-          </div>
-        </header>
-        {playedActivities.length > 0 ? <section>
-          <div className="core-section-head">
-            <div><p className="core-section-eyebrow">Gul · Sanktan</p><h2 className="core-section-title">Matchhistorik</h2></div>
-            <span className="core-section-note">Öppna en match för efterarbete</span>
-          </div>
-          <div className="core-list core-list-2">
-            {playedActivities.map((activity) => (
-              <CoreActivityCard
-                key={activity.id}
-                activity={activity}
-                href={`${listHref}?aktivitet=${encodeURIComponent(activity.id)}`}
-              />
-            ))}
-          </div>
-        </section> : <section className="core-panel p-6">
-          <h2>Inga spelade gula Sanktanmatcher ännu</h2>
-          <p className="body mt-2" style={{ color: "var(--ink-secondary)" }}>Efter en spelad match visas den här för utvärdering och historik.</p>
-        </section>}
-      </div>
-    );
-  }
+  if (!aktivitet) redirect("/matcher#spelade");
 
   const detail = await getActivityDetail(aktivitet);
   if (
@@ -70,6 +34,8 @@ export default async function ObservePage({
     detail.activity.source_team !== "Gul" ||
     detail.activity.external_source !== "svenskalag_sanktan"
   ) redirect("/observera");
+  if (detail.activity.match_id != null) redirect(`/matcher/${detail.activity.match_id}/utvardera`);
+
   const playersWithGoals = detail.players.filter((row) => row.goals.length > 0);
   const teamTone = "yellow";
   const isSanktan = detail.activity.external_source === "svenskalag_sanktan";

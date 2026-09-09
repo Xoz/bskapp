@@ -2,9 +2,8 @@ import {
   IconOverview,
   IconPlayers,
   IconPitch,
-  IconChart,
   IconWhistle,
-} from "@/components/Icons";
+} from "../components/Icons";
 import type { Permission } from "@/lib/auth";
 
 export interface NavItem {
@@ -18,20 +17,18 @@ export interface NavItem {
  * Enda källan för navigationslänkar. Används av både NavLinks (desktop)
  * och BottomNav (mobil). Eliminerar duplicering av nav-config.
  *
- * Produktens primära arbetsytor. Kalender, matchadministration och statistik
- * är sekundära verktyg och ska inte konkurrera om huvudnavigationen.
+ * Fyra arbetsytor. Uttagning och uppföljning hör till Matcher.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/idag", label: "Idag", Icon: IconOverview },
-  { href: "/observera", label: "Observera", Icon: IconChart, permission: "manage_evaluations" },
   { href: "/spelare", label: "Spelare", Icon: IconPlayers, permission: "view_players" },
+  { href: "/matcher", label: "Matcher", Icon: IconPitch },
   { href: "/traning", label: "Träning", Icon: IconWhistle, permission: "manage_evaluations" },
-  { href: "/uttagning", label: "Uttagning", Icon: IconPitch, permission: "manage_squads" },
 ];
 
 /**
  * Filtrera nav-items efter behörigheter.
- * `mobile` = true exkluderar desktopOnly-items.
+ * Samma arbetsytor på mobil och större skärmar.
  */
 export function filterNavItems(
   permissions: Permission[],
@@ -45,11 +42,12 @@ export function filterNavItems(
 
 /**
  * Kontrollera om en path är aktiv för en given href.
- * /idag och / är exakta matchningar; övriga använder startsWith.
+ * Undersidor markeras inom sitt område. Äldre matchlänkar hör till Matcher.
  */
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/idag" || href === "/") {
     return pathname === href;
   }
-  return pathname === href || pathname.startsWith(href);
+  if (href === "/matcher" && ["/uttagning", "/observera"].includes(pathname)) return true;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
