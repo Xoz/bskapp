@@ -191,3 +191,13 @@ grep -E "CREATE TABLE" lib/db.ts
   simulatorbyggen. Live Activity startas när appen körs inom 45 minuter före
   avspark, visar samling/nedräkning och uppdateras från matchcentret; exakt start
   med helt stängd app kräver framtida APNs-stöd.
+
+## Samlad spelarväg – första steg 2026-09-09
+
+Huvudappens spelarprofil använder nu `components/TreeConversationForm.tsx` för
+samtal från befintligt utvecklingsträd. `lib/treeConversation.ts` bygger ett
+underlag från en daterad utvecklingsbild; `lib/treeConversationActions.ts`
+kontrollerar behörighet och spelarägande, bygger texten på servern och sparar i
+befintliga `player_conversations`. Samma spar-id ger ingen dubblett eller överskrivning.
+Tester: `lib/treeConversation.test.ts`, `lib/treeConversationActions.test.ts`.
+Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsning.

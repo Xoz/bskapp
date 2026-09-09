@@ -174,12 +174,13 @@ export default function DevelopmentCheckinForm({
         </div>
       </div>
 
-      <div className="core-panel p-5 md:p-6 space-y-5">
+      <details className="core-panel p-5 md:p-6 space-y-5">
+        <summary className="cursor-pointer font-semibold">Frivilliga noteringar</summary>
         <div>
-          <p className="core-kicker mb-1">3 · Sammanfattning</p>
+          <p className="core-kicker mb-1">Valfritt</p>
           <h2 className="font-semibold">Styrkor, fokus och mående</h2>
           <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-            Färdigheter och mående hålls isär. Glädje och lagkänsla räknas aldrig som en färdighet som ska bli “klar”.
+            Du kan spara enbart dina val i trädet. Färdigheter och mående hålls isär. Glädje och lagkänsla räknas aldrig som en färdighet som ska bli “klar”.
           </p>
         </div>
         <div>
@@ -197,7 +198,7 @@ export default function DevelopmentCheckinForm({
           <label className="label" htmlFor="wellbeing_note">Mående och spelarens upplevelse</label>
           <textarea id="wellbeing_note" name="wellbeing_note" rows={3} className="input" defaultValue={initialWellbeingNote} placeholder="Glädje, trygghet, motivation eller något spelaren själv har lyft…" />
         </div>
-      </div>
+      </details>
 
       <div className="flex items-center gap-3 flex-wrap">
         <SubmitButton changedCount={changedCount} />
