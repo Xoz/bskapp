@@ -12,7 +12,7 @@ aktivitetsreferenser och äger utvecklingsmål, målkopplad evidens, exponering 
 tränarens explicita uttagningsbeslut. Äldre match-, statistik- och Planlinjen-flöden
 är sekundära och får inte styra huvudnavigationen.
 
-Drift: `main` deployas till VPS av `.github/workflows/deploy.yml`. `vercel.json`
+Drift: `main` deployas till VPS av `.github/workflows/deploy.yml` via `deploy/main-vps.sh`. Huvudappen byggs i en separat releasekatalog och växlas med `/opt/bsk/current`; Coach byggs/migreras/startas inte om av huvudappens publicering. Se `docs/MAIN_RELEASE.md`. `vercel.json`
 stänger av Vercels automatiska `main`-byggen; Vercel är reserverat för Preview
 när en separat staging-Postgres finns. Se `docs/STAGING.md`.
 

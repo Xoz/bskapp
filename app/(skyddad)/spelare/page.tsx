@@ -42,7 +42,7 @@ export default async function PlayersPage({ searchParams }: {
         <p className="core-kicker">Individuell utveckling</p>
         <h1 className="core-title">Spelare</h1>
         <p className="core-lead">
-          Sök fram en spelare för att se matchpreferenser, utvecklingsmål och matchhistorik.
+          Välj en spelare för att öppna utvecklingsträdet, välja fokus och förbereda samtal.
         </p>
         </div>
         <div className="core-panel px-4 py-3 text-right">
