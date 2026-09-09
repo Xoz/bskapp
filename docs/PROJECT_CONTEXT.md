@@ -4,7 +4,7 @@
 
 Användaren pausar iOS-utvecklingen och prioriterar en gemensam webbapp. Den godkända lugna designriktningen är nu implementerad lokalt i huvudappen: varmvit bas, dämpat mörkt läge, originalmärke, neutral spelarnummeravatar, mobilnavigation och behörighetsstyrd verktygsmeny. Idag prioriterar nästa match inom veckans befintliga datakälla samt spelarutveckling; veckosiffror och matchutrymme finns som fördjupning. Träd, fokus, samtal, behörigheter och datamodell bevaras. Ingen nativekod ändrad.
 
-Se `docs/WEB_DESIGN_2026-09-09.md` för omfattning och verifiering. Ändringarna är ännu inte publicerade. Detta är ett visuellt steg i huvudappen, inte full sammanslagning av Coach/Development.
+Se `docs/WEB_DESIGN_2026-09-09.md` för omfattning och verifiering. Ändringarna publicerades 2026-09-09; se releaseprotokoll nedan. Detta är ett visuellt steg i huvudappen, inte full sammanslagning av Coach/Development.
 
 
 ## Beslut 2026-08-28: samma matcharbetsflöden i webb och native
@@ -220,3 +220,10 @@ BSK App ar en Next.js-app for Bollstanas SK F2014 med fokus pa spelarutveckling,
 - Hall denna fil och `docs/CODEMAP.md` i sync nar projektets viktiga orienteringspunkter andras
 - Spelarens read-only-vy `/mitt-utvecklingstrad` visar samma aktuella fokus och tranarsammanfattning som den gemensamma utvecklingssidan, men inga privata tranaranteckningar.
 - Fraga om att ta bort/flytta pass-/skottstatistik fran spelarniva till lagniva ar medvetet uppskjuten, ror inte utan att anvandaren tar upp det igen
+
+
+## Webbdesign publicerad 2026-09-09
+
+Efter användarens instruktion publicerades designen på https://bsk2014.se, commit `9eacc854d18f3e0e93b6a2e65dd6d11b41c5dfc7`. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34344433886 passerade tester, produktionsbygge, datagranskning och hälsokontroller. Aktiv release `/opt/bsk/releases/9eacc854d18f.aedBpv`; backup `/opt/bsk/backups/main-9eacc854d18f.yN4Yzv`.
+
+Inloggad Idag-vy och originalmärke verifierade visuellt i produktion. 67 spelare, 144 matcher och 0 samtal efter publicering, samma antal som före ändringen. Inga verksamhetsuppgifter skrivna under kontrollen. iOS fortsatt pausad.

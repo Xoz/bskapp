@@ -1,6 +1,6 @@
 # Webbdesign – lugn klubbidentitet
 
-Status 2026-09-09: implementerad lokalt i huvudappen, inte publicerad. Användaren prioriterar webb och pausar iOS.
+Status 2026-09-09: publicerad i huvudappen (se releaseprotokoll nedan). Användaren prioriterar webb och pausar iOS.
 
 ## Ändrat
 
@@ -28,3 +28,10 @@ Originalmärke: https://cdn06.svenskalag.se/img/clubmarks/1762.png?9 (200 × 216
 ## Underlag
 
 Godkänd bild och kompletterande specifikationer ligger i ../outputs/bsk-designpaket-v1 räknat från huvudrepots rot. Konceptbilderna är riktning, inte en exakt bild av alla implementerade funktioner. Koden och denna status anger vad som faktiskt är infört.
+
+
+## Webbdesign publicerad 2026-09-09
+
+Efter användarens instruktion publicerades designen på https://bsk2014.se, commit `9eacc854d18f3e0e93b6a2e65dd6d11b41c5dfc7`. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34344433886 passerade tester, produktionsbygge, datagranskning och hälsokontroller. Aktiv release `/opt/bsk/releases/9eacc854d18f.aedBpv`; backup `/opt/bsk/backups/main-9eacc854d18f.yN4Yzv`.
+
+Inloggad Idag-vy och originalmärke verifierade visuellt i produktion. 67 spelare, 144 matcher och 0 samtal efter publicering, samma antal som före ändringen. Inga verksamhetsuppgifter skrivna under kontrollen. iOS fortsatt pausad.

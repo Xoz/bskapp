@@ -38,3 +38,10 @@ Vercel Preview saknar separat Postgres enligt STAGING.md och är inte denna prod
 - Oförändrat före/efter: 67 spelare, 144 matcher, 0 samtal, 0 checkpoints och 2 färdighetsstatusposter. Inga testsamtal eller testbedömningar skapades i produktion.
 - Coach och Development-processerna fortsatt aktiva; Coach-databasen fortfarande stoppad och orörd.
 - Dokumentationsuppföljningen använder `[skip ci]` för att undvika ett nytt bygge utan kodändring. Ovanstående SHA är den publicerade koden.
+
+
+## Webbdesign publicerad 2026-09-09
+
+Efter användarens instruktion publicerades designen på https://bsk2014.se, commit `9eacc854d18f3e0e93b6a2e65dd6d11b41c5dfc7`. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34344433886 passerade tester, produktionsbygge, datagranskning och hälsokontroller. Aktiv release `/opt/bsk/releases/9eacc854d18f.aedBpv`; backup `/opt/bsk/backups/main-9eacc854d18f.yN4Yzv`.
+
+Inloggad Idag-vy och originalmärke verifierade visuellt i produktion. 67 spelare, 144 matcher och 0 samtal efter publicering, samma antal som före ändringen. Inga verksamhetsuppgifter skrivna under kontrollen. iOS fortsatt pausad.
