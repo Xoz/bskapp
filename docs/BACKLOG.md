@@ -3,7 +3,45 @@
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
-## Öppet
+## Aktuellt efter publiceringarna 2026-09-09
+
+Denna sammanställning har företräde framför äldre pilotstatus nedan. Målet är en
+samlad huvudapp på bsk2014.se. Observation är inte ett obligatoriskt förstasteg.
+
+Publicerat: spelarträd → fokus → samtalsunderlag/historik, ny webbdesign och
+träningsbyggare med originalritaren samt 15 mallövningar. Se
+`UNIFIED_PLAYER_FLOW.md`, `TRAINING_BUILDER.md` och `MAIN_RELEASE.md`.
+
+Kvar för en fullt samlad lagapp, i rekommenderad arbetsordning:
+
+1. **Inventera kvarvarande Coach-/Development-data.** Återläs Coach-databasen
+   separat, skilj verklig data från demo, mappa original-id:n och provimportera
+   användbara övningar, ritningar, pass och historik utan dubbletter.
+2. **Gör träningen gemensam för laget.** Nuvarande pass är personliga. Kvar:
+   lagkoppling, behörig delning mellan tränare, återanvändbara egna övningar,
+   koppling till befintlig träningsaktivitet och ett genomförandeläge.
+3. **Förenkla den sammanhållna vägen.** Samla match/uttagning/efterarbete under
+   samma match. Gör nästa steg tydligt och undvik att separata gamla mål och
+   trädfokus uppfattas som dubbla krav. Navigationens föreslagna målbild
+   Idag–Spelare–Matcher–Träning är ännu inte helt genomförd.
+4. **Verifiera vardagsanvändningen.** Ett verkligt spelar-/samtalsflöde och ett
+   helt lagpass på mobil/iPad-webb, med återöppning, nätavbrott, flera tränare
+   och korrekta rättigheter. Checkin-formulärets återförsök och serverutkast
+   för samtal återstår; dagens utkast är lokala i webbläsaren.
+5. **Avveckla sidoprodukterna sist.** När data och motsvarande funktioner är
+   verifierade: stäng gamla skrivvägar, omdirigera gamla länkar och stäng
+   överflödiga tjänster. Kontrollera sammanhängande utdrag/radering/backup.
+
+Kända datavarningar från senaste release: 9 aktiva spelare utan primär grupp
+samt en skillnad mellan målhändelser och matchresultat. Kräver separat kontroll;
+inte automatiska korrigeringar. Vercel Preview saknar ännu en egen databas;
+aktuell backupdrift ska kontrolleras mot faktiska tjänster, inte äldre påståenden.
+
+iOS är pausad enligt senaste PROJECT_CONTEXT. Utskrift behövs inte.
+Generativ AI/Graphiti är inte prioriterade. Äldre observationskvoter nedan är
+historik från tidigare produktinriktning och ska inte återinföras som aktuella krav.
+
+## Äldre backlog och granskningshistorik
 
 ### Produktomstart – fyraveckorspilot
 
