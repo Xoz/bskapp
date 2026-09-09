@@ -61,6 +61,7 @@ export default async function PlayerDevelopmentPage({
       {query.sparad === "1" && (
         <div className="rounded-xl p-4 body-small" style={{ background: "var(--ok-bg)", border: "1px solid var(--success)", color: "var(--success)" }}>
           Utvecklingsbilden är uppdaterad. Trädet och historiken visar nu samma nuläge.
+          <Link href={`/spelare/${player.id}?samtal=forbered#samtal`} className="block mt-3 underline">Förbered samtal från dina val</Link>
         </div>
       )}
 

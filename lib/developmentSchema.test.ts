@@ -88,8 +88,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileConversationsRoute).toContain("export async function POST");
     expect(mobileDevelopment).toContain("export async function createMobilePlayerConversation");
     expect(mobileDevelopment).toContain("Skriv minst en samtalsanteckning.");
-    expect(playerPage).toContain("Spara spelarsamtal");
-    expect(playerPage).toContain("Samtalet sparas separat från utvecklingsträdet.");
+    expect(playerPage).toContain("TreeConversationForm");
     expect(nativePlayerViews).toContain("NewConversationSheet");
     expect(nativePlayerViews).toContain('SectionTitle("Spelarsamtal")');
     expect(nativePlayerViews).toContain("isSaving || isEmpty");

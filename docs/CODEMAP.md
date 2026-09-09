@@ -12,7 +12,7 @@ aktivitetsreferenser och äger utvecklingsmål, målkopplad evidens, exponering 
 tränarens explicita uttagningsbeslut. Äldre match-, statistik- och Planlinjen-flöden
 är sekundära och får inte styra huvudnavigationen.
 
-Drift: `main` deployas till VPS av `.github/workflows/deploy.yml`. `vercel.json`
+Drift: `main` deployas till VPS av `.github/workflows/deploy.yml` via `deploy/main-vps.sh`. Huvudappen byggs i en separat releasekatalog och växlas med `/opt/bsk/current`; Coach byggs/migreras/startas inte om av huvudappens publicering. Se `docs/MAIN_RELEASE.md`. `vercel.json`
 stänger av Vercels automatiska `main`-byggen; Vercel är reserverat för Preview
 när en separat staging-Postgres finns. Se `docs/STAGING.md`.
 
@@ -191,3 +191,13 @@ grep -E "CREATE TABLE" lib/db.ts
   simulatorbyggen. Live Activity startas när appen körs inom 45 minuter före
   avspark, visar samling/nedräkning och uppdateras från matchcentret; exakt start
   med helt stängd app kräver framtida APNs-stöd.
+
+## Samlad spelarväg – första steg 2026-09-09
+
+Huvudappens spelarprofil använder nu `components/TreeConversationForm.tsx` för
+samtal från befintligt utvecklingsträd. `lib/treeConversation.ts` bygger ett
+underlag från en daterad utvecklingsbild; `lib/treeConversationActions.ts`
+kontrollerar behörighet och spelarägande, bygger texten på servern och sparar i
+befintliga `player_conversations`. Samma spar-id ger ingen dubblett eller överskrivning.
+Tester: `lib/treeConversation.test.ts`, `lib/treeConversationActions.test.ts`.
+Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsning.
