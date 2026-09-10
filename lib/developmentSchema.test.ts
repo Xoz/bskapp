@@ -257,16 +257,20 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).not.toContain('Text("\\(player.capacity) %")');
   });
 
-  it("samlar veckans operativa signaler på Idag-vyn", () => {
-    for (const label of ["Trupp att se över", "Inväntar svar", "Vid maxgränsen", "För hög belastning", "Att följa upp"]) {
+  it("visar veckans matcher en gång och håller spelaruppföljning utanför Idag", () => {
+    for (const label of ["Den här veckan", "Alla matcher", "Matchutrymme · Gulspelare"]) {
       expect(todayPage).toContain(label);
     }
-    expect(todayPage).toContain("activity.has_confirmed_squad ? Number(activity.squad_count)");
+    expect(todayPage.match(/<CoreActivityCard /g)).toHaveLength(1);
+    for (const removed of ["Nästa match", "Spelarutveckling", "Att följa upp", "Veckan i siffror"]) expect(todayPage).not.toContain(removed);
+    const playersPage = readFileSync(new URL("../app/(skyddad)/spelare/page.tsx", import.meta.url), "utf8");
+    expect(playersPage).toContain("Spelarbedömningar efter match");
+    expect(playersPage).toContain('user.permissions.includes("manage_evaluations")');
     expect(mobileDevelopment).toContain("acceptedCallupCount: Number(row.accepted_callup_count)");
     expect(nativeActivityViews).toContain('Text("MATCHDAG")');
     expect(nativeActivityViews).toContain("activity.hasConfirmedSquad ? activity.squadCount : activity.acceptedCallupCount");
     expect(nativeActivityViews).toContain('$0.sourceTeam == "Gul" || $0.sourceTeam == "Grön"');
-    expect(todayPage).toContain('row.activity.source_team === "Gul"');
+    expect(todayPage).toContain('activity.source_team === "Gul"');
     expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');
   });
 
@@ -335,7 +339,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(mobileDevelopment.slice(selectionStart, workspaceStart)).toContain("g.name = 'Gul'");
     expect(nativeMainSplitView).toContain('activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"');
     expect(nativeMainSplitView).toContain("activity.acceptedPlayerNames");
-    expect(todayPage).toContain('row.activity.source_team === "Gul"');
+    expect(todayPage).toContain('activity.source_team === "Gul"');
     expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');
   });
 
