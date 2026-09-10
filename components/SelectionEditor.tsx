@@ -160,18 +160,18 @@ export default function SelectionEditor({
     <>
       <section className="selection-summary">
         <div className="selection-summary-main">
-          <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Truppen just nu</div>
-          <div className="selection-summary-count"><strong>{selected.length}</strong><span>markerade</span></div>
+          <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Svar i Svenska Lag</div>
+          <div className="selection-summary-count"><strong>{calledCount > 0 ? callupSummary.accepted : "—"}</strong><span>har tackat ja</span></div>
           <p className="selection-summary-copy">
             {calledCount > 0
-              ? `Svaren kommer från Svenska Lag. Du bestämmer uttagningen.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
+              ? `${calledCount} kallade · ${callupSummary.declined} nej · ${callupSummary.pending} inväntar svar. Du bestämmer laguppställningen.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
               : "Ingen synkad kallelse finns ännu. Markera spelare manuellt i listan."}
           </p>
         </div>
         <div className="selection-summary-stat">
-          <span>Kallelse</span>
-          <strong>{calledCount}</strong>
-          <small>{callupSummary.accepted} ja · {callupSummary.declined} nej · {callupSummary.pending} inväntar</small>
+          <span>Laguppställning</span>
+          <strong>{selected.length}</strong>
+          <small>markerade · separat från ja-svaren</small>
         </div>
         <div className="selection-summary-stat selection-summary-stat-accent">
           <span>Balans</span>

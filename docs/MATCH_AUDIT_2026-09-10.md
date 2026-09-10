@@ -55,3 +55,7 @@ Publiceringskontrollen avslöjade dessutom två falska dubblettgrupper: Mini Tig
 Slutkontrollen av publicerad Idag-vy upptäckte att kallelsesvar för matcher lästes från träningarnas aktivitetstabeller. Det gav ”Ingen kallelse registrerad ännu” trots tio ja på AIK-matchen. Gemensamma läsfragment i `lib/activityCallups.ts` hämtar nu matchtotaler från matches och namn/svar från match_roster, medan träningskällan behålls. Tillämpat både i aktivitetslistan och aktivitetsdetaljen. Testet verifierar att äldre aktivitetssvar inte övertrumfar matchens källa och att enbart uttagen inte räknas som kallad.
 
 Slutpublicering: `3ffc3b8c`, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34525351050. Inloggad produktionskontroll bekräftade sju kommande Gulmatcher, korrekt borttagningsbesked på `/matcher/6`, samt AIK/Örby med 10 kallade och 10 ja vardera på Idag. Uttagen trupp visas separat (8/6). Automatisk synkarbetare `d4c74436` och timer aktiva.
+
+## Förtydligande efter användarens AIK-fråga
+
+Ny direktkontroll: Svenska Lag visar `Kommer10+1` (10 spelare och 1 ledare). Appens källtotal och tio spelarposter med ja-svar stämmer. Åtta är markerade i laguppställningen; startsidans dominerande ”8 uttagna” och ”8 klara” skapade en missvisande bild. Ja-svaren lyfts nu främst på Idag och i uttagningsvyn, med separat uttrycklig markering av laguppställningen. Varningar anger om de gäller uppställningen eller ja-svaren. Inga svar eller spelarval ändrades. Typkontroll och produktionsbygge godkända.

@@ -39,7 +39,7 @@ export default function CoreActivityCard({
               <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
             )}
             {activity.competition_level && <span>{sanktanLevelLabel(activity.competition_level)}</span>}
-            {needsMoreAccepted && <span className="core-understaffed-badge">Saknar {playersMissing}</span>}
+            {needsMoreAccepted && <span className="core-understaffed-badge">{activity.has_confirmed_squad ? "Uppställning: saknar" : "Ja-svar: saknar"} {playersMissing}</span>}
             {activity.start_time && <span className="core-match-time">{activity.start_time}</span>}
           </div>
         ) : (
@@ -57,7 +57,7 @@ export default function CoreActivityCard({
               <span className={needsMoreAccepted ? "core-callup-accepted core-callup-accepted-warning" : "core-callup-accepted"}>{activity.accepted_callup_count} ja</span>
               <span className="core-callup-declined">{activity.declined_callup_count} nej</span>
               <span>{activity.pending_callup_count} inväntar svar</span>
-              {activity.has_confirmed_squad && <span><strong>{activity.squad_count}</strong> i truppen</span>}
+              {activity.has_confirmed_squad && <span><strong>{activity.squad_count}</strong> markerade i laguppställningen</span>}
             </div>
           ) : <p className="core-activity-sub">Ingen kallelse registrerad ännu</p>
         ) : activity.activity_type === "match" ? (

@@ -51,7 +51,7 @@ export default async function TodayPage() {
             <p className="core-kicker">Nästa match{nextMatch.source_team ? ` · ${nextMatch.source_team}` : ""}</p>
             <h2>{nextMatch.title}</h2>
             <p className="bsk-match-meta">{new Date(`${nextMatch.activity_date}T12:00:00Z`).toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "short", timeZone: "Europe/Stockholm" })}{nextMatch.start_time ? ` · ${nextMatch.start_time}` : ""}</p>
-            <div>{nextMatch.has_confirmed_squad ? <span className="badge" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>{nextMatch.squad_count} uttagna</span> : <span className="badge" style={{ background: "var(--elevated)", color: "var(--ink-secondary)" }}>{Number(nextMatch.accepted_callup_count)} har tackat ja</span>}</div>
+            <div><span className="badge" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>{Number(nextMatch.accepted_callup_count)} har tackat ja i Svenska Lag</span>{nextMatch.has_confirmed_squad && <p className="body-small mt-2">{nextMatch.squad_count} markerade i laguppställningen</p>}</div>
             <Link href={matchHref(nextMatch)} className="btn-primary">Öppna match <IconArrowRight width={20} height={20} /></Link>
           </section> : <section className="core-panel p-6"><h2>Inga fler matcher den här veckan</h2><p className="core-lead">Kommande matcher och tidigare resultat finns i matchöversikten.</p><Link href="/matcher" className="btn-secondary mt-4">Visa matcher</Link></section>}
 
@@ -63,7 +63,7 @@ export default async function TodayPage() {
           {((canSquads && understaffed.length > 0) || pendingEvaluations.length > 0) && <section id="att-gora">
             <div className="core-section-head"><h2 className="core-section-title">Att följa upp</h2></div>
             <div className="core-list">
-              {canSquads && understaffed.map(({ activity, ready, missing }) => <Link key={activity.id} href={matchHref(activity)} className="core-action-card"><span className="core-action-index">Trupp</span><span><strong>{activity.title}</strong><small>{ready} klara · saknar {missing} till 9</small></span><span className="core-chevron" aria-hidden>›</span></Link>)}
+              {canSquads && understaffed.map(({ activity, ready, missing }) => <Link key={activity.id} href={matchHref(activity)} className="core-action-card"><span className="core-action-index">Trupp</span><span><strong>{activity.title}</strong><small>{activity.has_confirmed_squad ? `${ready} markerade i laguppställningen · ${Number(activity.accepted_callup_count)} har tackat ja` : `${ready} har tackat ja · saknar ${missing} ja-svar till 9`}</small></span><span className="core-chevron" aria-hidden>›</span></Link>)}
               {pendingEvaluations.map((evaluation) => <Link key={evaluation.id} href={`/matcher/${evaluation.id}/utvardera`} className="core-action-card"><span className="core-action-index">Efter</span><span><strong>Utvärdera matchen mot {evaluation.opponent}</strong><small>{evaluation.evaluated} av {evaluation.total} spelare klara</small></span><span className="core-chevron" aria-hidden>›</span></Link>)}
             </div>
           </section>}
@@ -74,7 +74,7 @@ export default async function TodayPage() {
           </section>
           <details className="core-panel"><summary className="p-5 cursor-pointer font-semibold">Veckan i siffror</summary><div className="bsk-week-summary">
             <Link href="#veckans-matcher"><span className="block caption">Matcher</span><strong className="block mt-1">{yellowUpcoming.length}</strong><small>kvar den här veckan</small></Link>
-            <Link href={canSquads && understaffed.length ? "#att-gora" : "#veckans-matcher"}><span className="block caption">Trupp att se över</span><strong className="block mt-1">{understaffed.length}</strong><small>färre än 9 klara</small></Link>
+            <Link href={canSquads && understaffed.length ? "#att-gora" : "#veckans-matcher"}><span className="block caption">Trupp att se över</span><strong className="block mt-1">{understaffed.length}</strong><small>uttagning eller ja-svar att se över</small></Link>
             <Link href={canSquads && understaffed.length ? "#att-gora" : "#veckans-matcher"}><span className="block caption">Inväntar svar</span><strong className="block mt-1">{unanswered}</strong><small>spelarsvar för Gul</small></Link>
             {canPlayers && <><Link href="#belastning"><span className="block caption">Vid maxgränsen</span><strong className="block mt-1">{maximumLoad.length}</strong><small>3 kommande eller 5 totalt</small></Link>
             <Link href="#belastning"><span className="block caption">För hög belastning</span><strong className="block mt-1">{highLoad.length}</strong><small>över maxgränsen</small></Link></>}
