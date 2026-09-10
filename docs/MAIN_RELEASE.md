@@ -124,3 +124,21 @@ utkast tills publicering. Kallelser skickas i Svenska Lag. Positions-/formations
 överföring, permanenta person-id:n och full avstämning av borttagna poster utanför
 kalenderfönstret ingår inte ännu. Ingen atomisk versionskontroll finns på källans
 spara-adress; en liten samtidighetsrisk mellan sista kontroll och sparande kvarstår.
+
+
+## Matchkontroll publicerad 2026-09-10
+
+Huvudappen är publicerad från `3ffc3b8c2bafd1a85024e34ec0541cd61f59ac6d`:
+https://github.com/Xoz/bskapp/actions/runs/34525351050 (godkänd).
+Synkarbetaren är `d4c74436`; full körning 22.10 svensk tid gav 45 aktiviteter och
+66 kontrollerade importerade Gulposter, med tre bekräftade borttagningar.
+Hammarby 12 september, Vaxholm 30 augusti och gamla Värtan 29 augusti är inaktiva.
+Idag och Matcher döljer dem; direktlänken till Hammarby anger borttagen i Svenska Lag.
+Idag verifierad i publicerad app: AIK 12 september 09.00 och Örby 16.30, båda med
+10 kallade/10 ja, separat från uttagna 8 respektive 6. Kallelsernas läskälla är nu
+korrekt även i aktivitetslistan och aktivitetsdetaljen. 143 tester, typkontroll,
+produktionsbygge, Playwright-kontroll och publiceringskontroll godkända.
+Kompletterande kalenderkontroll av 40 importerade Gulposter från 2025 gav inga
+borttagnings- eller datum-/tidsavvikelser. Historiska cupgrupper, cupaktiviteter och
+manuella poster återstår att normalisera. Grön är inte inventerat på samma sätt.
+Se `docs/MATCH_AUDIT_2026-09-10.md` för resultat och avgränsningar.
