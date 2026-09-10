@@ -6,6 +6,8 @@ port. Inga skrivverktyg.
 
 ## Verktyg
 
+- `aktiviteter`: hitta lagets matcher och träningar inom ett datumintervall.
+- `kallelsesvar`: namn för ja/nej/obesvarat och separat uttagen matchtrupp.
 - `status`: lag, svensk tid och effektiva läsbehörigheter.
 - `hitta_spelare`: aktiva spelare med giltigt medlemskap i anslutna laget.
 - `matcher`: datumavgränsade matcher för laget och dess matchgrupper.
@@ -63,7 +65,7 @@ Pythonmiljö för serverns beroenden.
 
 1. `uv venv .venv --python 3.12` och `uv pip sync --python .venv/bin/python requirements.lock`.
 2. `.venv/bin/python test_integration.py`: isolerad temporär PostgreSQL-databas
-   och roll med syntetiskt innehåll. Nio testfall, inklusive MCP-protokoll,
+   och roll med syntetiskt innehåll. Tolv testfall, inklusive MCP-protokoll,
    nekat lag/ägarskap, återkallad behörighet, SQL-injektion och förbjudna
    databasoperationer även när klientens read-only-inställning slås av.
    Testdatabas, roll och privat anslutningsfil tas bort i `finally`.
@@ -80,7 +82,7 @@ bsk:
   timeout: 30
   trust: untrusted
   tools:
-    include: [status, hitta_spelare, matcher, spelarutveckling, traningsnarvaro, traningspass]
+    include: [status, hitta_spelare, matcher, spelarutveckling, traningsnarvaro, traningspass, aktiviteter, kallelsesvar]
     resources: false
     prompts: false
 ```
@@ -147,3 +149,42 @@ Inga verksamhetsdata ska raderas och den ordinarie BSK-appen påverkas inte.
 - Konfigurationsbackup: `/root/backups/hermes-pre-bsk-mcp-20260910T192949Z.yaml`.
   SOUL-backup: `/root/backups/hermes-soul-pre-bsk-20260910.md`.
   Kodbackup före SDK-rättning: `/root/backups/mcp_tool_registration-pre-bsk-sdk2.py`.
+
+
+## Kallelsesvar – utökning 2026-09-10
+
+Version 1.1.0 har åtta verktyg. `aktiviteter` hittar rätt match/träning;
+`kallelsesvar` tar exakt ID (`match:7` eller `training:<aktivitets-id>`).
+Flera möjliga aktiviteter ska preciseras, inte väljas godtyckligt.
+
+Matchsvar läses från `match_roster.callup_status`; träningens äldre fältnamn
+`development_activity_callups.attendance_status` avser här kallelsesvar:
+present→ja, absent→nej, unknown→obesvarat. Faktisk närvaro läses aldrig för
+att gissa vilka som kommer. `selection_status=selected` ger en separat lista;
+en uttagen spelare som tackat nej visas i båda kategorierna så konflikten syns.
+
+Behörigheten följer den lagavgränsade aktiviteten. En gästande spelares namn
+får visas i Guls kallelse, men det ger ingen åtkomst till gästens privata
+utvecklingsprofil eller andra lags aktiviteter. Matchgrupper under Gul ingår.
+`view_matches` krävs för aktivitetsåtkomst och `view_players` för namn.
+
+Svaret jämför de kopplade namnen med matchens källtotaler eller
+`development_activity_callup_summaries`. Saknade totaler, skillnader och
+trunkering redovisas. Ingen tom/ofullständig lista får beskrivas som att alla
+har svarat eller att ingen kommer. Radändringstid är inte ett löfte om en
+helt aktuell synk. Länken leder till matchen eller appens Idag-vy för träning.
+
+`callups.sql` är en additiv migration med två skyddade vyer och SELECT-grants.
+Den körs efter `views.sql` även vid första installation. Ingen verksamhetsdata
+eller befintlig vy ändras. Release `/opt/bsk/hermes-mcp-releases/20260910T194836Z`.
+Tolv isolerade DB-/MCP-tester passerade; verklig stdio och Hermes-dispatch
+verifierar match och träning. Alla verktyg är fortsatt skrivskyddade.
+
+Återgång: återställ tidigare kodlänk och ta bort `aktiviteter`/`kallelsesvar`
+från endast BSK:s tool-allowlist, ladda om privata gatewayen. De två oanvända
+vyerna kan ligga kvar; för full borttagning, släpp `bsk_hermes.callups` först,
+sedan `bsk_hermes.events`. Ingen verksamhetsdata berörs. Konfigurationsbackup:
+`/root/backups/hermes-pre-bsk-callups-structural-20260910.yaml`.
+
+Vanlig Hermes-fråga om antalet ja-svar till nästa träning verifierades i
+kontrollsession `20260910_195043_dce43b`: korrekt antal, datum och tid.

@@ -9,12 +9,16 @@ async def main():
         async with ClientSession(r,w) as session:
             await session.initialize()
             tools=(await session.list_tools()).tools
-            assert len(tools)==6 and all(t.annotations.read_only_hint for t in tools)
+            assert len(tools)==8 and all(t.annotations.read_only_hint for t in tools)
             async def call(name,args):
                 result=await session.call_tool(name,args)
                 assert not result.is_error, name+' failed'
                 return result.structured_content or json.loads(result.content[0].text)
             status=await call('status',{})
+            events=await call('aktiviteter',{})
+            for kind in ['match','traning']:
+                event=next((e for e in events['events'] if e['kind']==kind),None)
+                if event: await call('kallelsesvar',{'aktivitets_id':event['id']})
             players=await call('hitta_spelare',{})
             matches=await call('matcher',{})
             attendance=await call('traningsnarvaro',{})

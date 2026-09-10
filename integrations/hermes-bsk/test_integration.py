@@ -68,6 +68,21 @@ INSERT INTO training_plans VALUES
  ('22222222-2222-4222-8222-222222222222',2,'{"title":"Annans pass","date":"2026-01-01","blocks":[]}',1,now());
 '''
 
+FIXTURE += """
+ALTER TABLE matches ADD COLUMN callup_accepted_count int;
+ALTER TABLE matches ADD COLUMN callup_declined_count int;
+ALTER TABLE matches ADD COLUMN callup_pending_count int;
+ALTER TABLE matches ADD COLUMN callup_source text;
+ALTER TABLE development_activities ADD COLUMN title text DEFAULT 'Testträning';
+CREATE TABLE match_roster(match_id int,player_id int,callup_status text,selection_status text,updated_at timestamptz);
+CREATE TABLE development_activity_callups(activity_id text,player_id int,attendance_status text);
+CREATE TABLE development_activity_callup_summaries(activity_id text,accepted_count int,declined_count int,pending_count int,source text,updated_at text);
+INSERT INTO match_roster VALUES (1,1,'accepted','selected',now()),(1,2,'declined','selected',now()),(1,3,'pending',NULL,now()),(3,1,NULL,'selected',now()),(2,2,'accepted','selected',now());
+UPDATE matches SET callup_accepted_count=2,callup_declined_count=1,callup_pending_count=1,callup_source='svenskalag_browser' WHERE id=1;
+INSERT INTO development_activity_callups VALUES ('a1',1,'present'),('a1',2,'absent'),('a1',3,'unknown'),('other',2,'present');
+INSERT INTO development_activity_callup_summaries VALUES ('a1',1,1,1,'svenskalag_browser','2026-01-01');
+"""
+
 
 class Integration(unittest.TestCase):
     def test_01_team_and_inactive_scope(self):
@@ -133,13 +148,48 @@ class Integration(unittest.TestCase):
         finally:
             admin("UPDATE users SET active=1; DELETE FROM user_permissions; DELETE FROM user_group_access; DELETE FROM user_roles WHERE user_id=1; INSERT INTO user_roles VALUES(1,'admin')")
 
+    def test_callups_guests_and_selection_are_separate(self):
+        r=server.kallelsesvar('match:1')
+        self.assertEqual([p['player_id'] for p in r['players']['accepted']],[1])
+        self.assertEqual([p['player_id'] for p in r['players']['declined']],[2])
+        self.assertEqual(len(r['players']['selected']),2)
+        self.assertEqual(r['source_counts']['accepted'],2)
+        self.assertFalse(r['named_counts_match_source'])
+        with self.assertRaises(ValueError): server.spelarutveckling(2)
+        missing=server.kallelsesvar('match:3')
+        self.assertEqual(len(missing['players']['no_response_data']),1)
+        self.assertEqual(missing['players']['accepted'],[])
+        self.assertIsNone(missing['named_counts_match_source'])
+
+    def test_training_responses_not_actual_attendance(self):
+        r=server.kallelsesvar('training:a1')
+        self.assertEqual(r['named_counts'],{'accepted':1,'declined':1,'pending':1})
+        self.assertTrue(r['named_counts_match_source'])
+        # a2 has actual absence but no invitation responses: do not invent a no.
+        empty=server.kallelsesvar('training:a2')
+        self.assertEqual(empty['players']['declined'],[])
+        self.assertIsNone(empty['named_counts_match_source'])
+
+    def test_activity_scope_validation_and_permission(self):
+        events=server.aktiviteter('2026-01-01','2026-01-31')['events']
+        self.assertNotIn('match:2',[e['id'] for e in events])
+        self.assertNotIn('training:other',[e['id'] for e in events])
+        for event in ['match:2','training:other','match:999',"match:1' OR 1=1"]:
+            with self.assertRaises(ValueError): server.kallelsesvar(event)
+        with self.assertRaises(ValueError): server.aktiviteter(typ='other')
+        admin("DELETE FROM user_roles WHERE user_id=1; INSERT INTO user_roles VALUES(1,'coach'); INSERT INTO user_permissions VALUES(1,'view_matches',0)")
+        try:
+            with self.assertRaises(ValueError): server.kallelsesvar('match:1')
+        finally:
+            admin("DELETE FROM user_permissions; DELETE FROM user_roles WHERE user_id=1; INSERT INTO user_roles VALUES(1,'admin')")
+
     def test_09_mcp_protocol(self):
         async def check():
             async with Client(server.mcp) as c:
                 listed=(await c.list_tools()).tools
-                self.assertEqual(len(listed),6)
+                self.assertEqual(len(listed),8)
                 self.assertTrue(all(t.annotations.read_only_hint for t in listed))
-                for name,args in [('status',{}),('hitta_spelare',{}),('matcher',{'fran':'2026-01-01','till':'2026-01-31'}),('spelarutveckling',{'spelar_id':1}),('traningsnarvaro',{'fran':'2026-01-01','till':'2026-01-31'}),('traningspass',{})]:
+                for name,args in [('status',{}),('hitta_spelare',{}),('matcher',{'fran':'2026-01-01','till':'2026-01-31'}),('spelarutveckling',{'spelar_id':1}),('traningsnarvaro',{'fran':'2026-01-01','till':'2026-01-31'}),('traningspass',{}),('aktiviteter',{'fran':'2026-01-01','till':'2026-01-31'}),('kallelsesvar',{'aktivitets_id':'match:1'})]:
                     result=await c.call_tool(name,args)
                     self.assertFalse(result.is_error,name)
                 bad=await c.call_tool('spelarutveckling',{'spelar_id':2})
@@ -154,6 +204,7 @@ if __name__=='__main__':
         admin(FIXTURE)
         view_sql=Path(__file__).with_name('views.sql').read_text().replace('bsk_hermes_read',ROLE).replace(':user_id','1').replace(':group_id','1')
         admin(view_sql)
+        admin(Path(__file__).with_name('callups.sql').read_text().replace('bsk_hermes_read',ROLE))
         CONFIG.touch(mode=0o600)
         CONFIG.write_text(json.dumps({'dsn':f'postgresql://{ROLE}:{PW}@127.0.0.1:5433/{DB}'}))
         os.environ['BSK_HERMES_CONFIG']=str(CONFIG)

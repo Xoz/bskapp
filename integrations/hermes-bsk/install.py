@@ -37,7 +37,7 @@ except KeyError:
 stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 release=Path('/opt/bsk/hermes-mcp-releases')/stamp
 release.mkdir(parents=True)
-for filename in ['server.py','views.sql','skills.json','requirements.in','requirements.lock','launch.sh']:
+for filename in ['server.py','views.sql','skills.json','requirements.in','requirements.lock','launch.sh','callups.sql']:
     shutil.copy2(ROOT/filename,release/filename)
 subprocess.run(['/root/.local/bin/uv','venv',str(release/'.venv'),'--python','3.12'],check=True)
 subprocess.run(['/root/.local/bin/uv','pip','sync','--python',str(release/'.venv/bin/python'),str(release/'requirements.lock'),'--quiet'],check=True)
@@ -46,7 +46,7 @@ os.chown(CONF.parent,0,account.pw_gid)
 password=secrets.token_urlsafe(48)
 views=(ROOT/'views.sql').read_text().replace(':user_id',str(a.user_id)).replace(':group_id',str(a.group_id))
 # Password is generated server-side and sent only on psql stdin, never argv/logs.
-db("BEGIN; CREATE ROLE bsk_hermes_read LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD '"+password+"';\n"+views+'\nCOMMIT;')
+db("BEGIN; CREATE ROLE bsk_hermes_read LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD '"+password+"';\n"+views+'\n'+(ROOT/'callups.sql').read_text()+'\nCOMMIT;')
 fd=os.open(CONF,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o640)
 with os.fdopen(fd,'w') as f:
     json.dump({'dsn':'postgresql://bsk_hermes_read:'+password+'@127.0.0.1:5433/bsk'},f)

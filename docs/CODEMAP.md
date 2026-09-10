@@ -232,3 +232,14 @@ OS-användare utan ärvda hemligheter), `install.py` (första installation),
 Se dess README för installation, återställning och närvarotäckning. Ändringar
 i `lib/auth.ts`, träningsägarskap eller berörda databasfält kräver samtidig
 adaptergranskning. Ingen Next-route eller apprelease ingår.
+
+
+### 2026-09-10 – kallelsesvar i Hermes
+
+`integrations/hermes-bsk/callups.sql` lägger till lagavgränsade aktivitets- och
+kallelsevyer. `server.py` har nu `aktiviteter` och `kallelsesvar`: matcher och
+träningar, ja/nej/obesvarat samt separat uttagen matchtrupp. Gäster i den
+behöriga aktiviteten ingår utan åtkomst till deras privata profil. Källtotaler,
+namntäckning och radändringstid redovisas. Tolv isolerade tester passerade;
+stdio och Hermes-dispatch verifierade mot produktion. Ingen verksamhetsdata
+ändrad av integrationen. Se integrationsguiden för drift och återställning.
