@@ -451,3 +451,7 @@ Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https
 ## Matchplanens spelarurval rättat 2026-09-10
 
 Både visning och sparande tillåter nu ja-svar (accepted) samt redan uttagna spelare. Tidigare krävdes selected även för ja-svar. Inga kallelser eller uttagningar ändras när matchplanen sparas. Rubriken är Spelare att placera. 153 tester och produktionsbygge godkända; databastest verifierar ja utan uttagning och oförändrad match_roster.
+
+## Ja-svar i matchplan publicerat – 2026-09-10
+
+Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34532750201. Formationsverktygets visning och sparande använder samma urval: accepted ELLER selected i match_roster. Inloggad AIK-match verifierad: 11 tillgängliga i matchplanen, befintlig uttagning fortsatt 8. Rubriken är Spelare att placera. 153 tester och bygge godkända. Matchplanstest verifierar ja utan uttagning, nekade övriga spelare och oförändrade kallelser/uttagning. Inga verksamhetsuppgifter ändrades under produktionskontrollen.

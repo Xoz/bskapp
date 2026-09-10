@@ -166,3 +166,7 @@ Rättningen är publicerad på https://bsk2014.se/spelare, commit bc1f88a0b3a685
 ## Matchplan och design publicerad – 2026-09-10
 
 Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34532385619 godkänd. 152 lokala tester och produktionsbygge godkända. Inloggad AIK-match på https://bsk2014.se/matcher/7 verifierad med ny matchplan, fyra formationer, klubbtröjor, separat målvaktsfärg, lediga positioner, klickbara avbytare och spelidépanel. Ljust läge kontrollerat lokalt och mörkt läge i produktion. Placering från avbytarlistan och sparande provat endast med lokala exempelspelare. Inga riktiga matchplaner eller uttagningar ändrades vid kontrollen. Tidigare anteckning om ej publicerad matchplan är ersatt.
+
+## Ja-svar i matchplan publicerat – 2026-09-10
+
+Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34532750201. Formationsverktygets visning och sparande använder samma urval: accepted ELLER selected i match_roster. Inloggad AIK-match verifierad: 11 tillgängliga i matchplanen, befintlig uttagning fortsatt 8. Rubriken är Spelare att placera. 153 tester och bygge godkända. Matchplanstest verifierar ja utan uttagning, nekade övriga spelare och oförändrade kallelser/uttagning. Inga verksamhetsuppgifter ändrades under produktionskontrollen.
