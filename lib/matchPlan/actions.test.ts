@@ -7,6 +7,7 @@ vi.mock('../db', () => ({
   run: async (query: string, args: unknown[]) => execute(query, args),
 }));
 import { getCurrentUser, canAccessGroup } from '../auth';
+import { matchPlanPlayersSql } from './players';
 import { saveMatchPlan } from './actions';
 import { emptyMatchPlan, validMatchPlan, readMatchPlan } from './model';
 let sql: ReturnType<typeof postgres>;
@@ -37,7 +38,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('matchplanens sparande'
       CREATE TEMP TABLE matches(id int PRIMARY KEY, group_id int, cancelled int);
       CREATE TEMP TABLE match_roster(match_id int, player_id int, selection_status text, callup_status text, lineup_x float);
       INSERT INTO matches VALUES(1,1,0),(2,2,0),(3,1,1);
-      INSERT INTO match_roster VALUES(1,10,'selected','declined',0.2),(1,11,NULL,'accepted',NULL),(2,20,'selected','pending',NULL);`);
+      INSERT INTO match_roster VALUES(1,10,'selected','declined',0.2),(1,11,NULL,'accepted',NULL),(1,12,NULL,'pending',NULL),(1,13,NULL,'declined',NULL),(2,20,'selected','pending',NULL);`);
   });
   afterAll(async () => { await sql?.end(); });
   beforeEach(async () => {
@@ -53,11 +54,21 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('matchplanens sparande'
     expect(await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`).toEqual(before);
     expect(await sql`SELECT * FROM settings WHERE key='match_plan:2'`).toHaveLength(0);
   });
-  it('nekar annan match, ej uttagen spelare och inställd match', async () => {
+  it('visar och sparar ja-svar utan uttagning med oförändrade kallelsesvar', async () => {
+    const rows = await execute(matchPlanPlayersSql, [1]);
+    expect(rows.map(r => r.player_id).sort()).toEqual([10, 11]);
+    const before = await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`;
+    const p = emptyMatchPlan(); p.spots[0].playerId = 11;
+    expect(await saveMatchPlan(1, 0, p)).toEqual({ revision: 1 });
+    expect(await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`).toEqual(before);
+  });
+  it('nekar annan match, obesvarad eller nej utan uttagning och inställd match', async () => {
     const p = emptyMatchPlan();
     p.spots[0].playerId = 20;
     expect((await saveMatchPlan(1, 0, p)).error).toBeTruthy();
-    p.spots[0].playerId = 11;
+    p.spots[0].playerId = 12;
+    expect((await saveMatchPlan(1, 0, p)).error).toBeTruthy();
+    p.spots[0].playerId = 13;
     expect((await saveMatchPlan(1, 0, p)).error).toBeTruthy();
     expect((await saveMatchPlan(3, 0, emptyMatchPlan())).error).toBeTruthy();
     expect(await sql`SELECT * FROM settings`).toHaveLength(0);

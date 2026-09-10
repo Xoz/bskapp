@@ -97,10 +97,10 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
             {plan.spots.map((s, i) => {
               const player = s.playerId === null ? null : byId.get(s.playerId);
               const role = ROLE_LABELS[fm.slots[i].role];
-              const name = player?.name ?? (s.playerId ? 'Ej i truppen' : role);
+              const name = player?.name ?? (s.playerId ? 'Ej tillgänglig' : role);
               return <button type="button" key={i} className="match-plan-spot" data-active={active === i} data-goalkeeper={i === 0} data-empty={!player} title={name}
                 style={{ left: `${s.x * 100}%`, top: `${s.y * 100}%` }} aria-pressed={active === i}
-                aria-label={`Position ${i + 1}: ${role}, ${player?.name ?? (s.playerId ? 'inte längre i truppen' : 'ledig')}`}
+                aria-label={`Position ${i + 1}: ${role}, ${player?.name ?? (s.playerId ? 'inte längre tillgänglig' : 'ledig')}`}
                 onClick={() => setActive(i)}
                 onPointerDown={e => { setActive(i); dragging.current = { index: i, x: e.clientX, y: e.clientY }; e.currentTarget.setPointerCapture(e.pointerId); }}
                 onPointerMove={e => {
@@ -123,21 +123,21 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
             <label className="label" htmlFor="position-player">Position {active + 1} · {ROLE_LABELS[fm.slots[active].role]}</label>
             <select id="position-player" className="input" value={plan.spots[active].playerId ?? ''} onChange={e => assign(e.target.value ? Number(e.target.value) : null)}>
               <option value="">Ledig position</option>
-              {plan.spots[active].playerId && !byId.has(plan.spots[active].playerId) && <option value={plan.spots[active].playerId!}>Inte längre i truppen – välj en annan spelare</option>}
+              {plan.spots[active].playerId && !byId.has(plan.spots[active].playerId) && <option value={plan.spots[active].playerId!}>Inte längre tillgänglig – välj en annan spelare</option>}
               {players.map(p => <option value={p.id} key={p.id}>{p.name}{placed.has(p.id) && plan.spots[active].playerId !== p.id ? ' · flytta hit' : ''}</option>)}
             </select>
             <button type="button" className="btn-secondary btn-sm" onClick={() => changeFormation(plan.formation)}>Återställ positionernas form</button>
             <p className="match-plan-help">Du kan även flytta vald position med piltangenterna.</p>
           </div>}
-          <div className="match-plan-reserves"><h3>Avbytare · {reserves.length}</h3>
+          <div className="match-plan-reserves"><h3>Spelare att placera · {reserves.length}</h3><p className="match-plan-help">Spelare som tackat ja och spelare i laguppställningen kan placeras här.</p>
             {reserves.length > 0 ? <>
               {editable && <p className="match-plan-help">Tryck på en spelare för att placera henne på vald position.</p>}
               <div className="match-plan-bench">{reserves.map(p => <button type="button" key={p.id} className="match-plan-bench-player" onClick={() => assign(p.id)}>
                 <PlayerShirt number={p.jersey_number ?? '•'}/><span>{p.name}</span>
               </button>)}</div>
-            </> : <p className="body-small">{players.length ? 'Alla uttagna spelare är placerade.' : 'Ingen trupp är uttagen ännu. Du kan börja med formationen och spelidén.'}</p>}
+            </> : <p className="body-small">{players.length ? 'Alla tillgängliga spelare är placerade.' : 'Inga ja-svar eller uttagna spelare finns ännu. Du kan börja med formationen och spelidén.'}</p>}
           </div>
-          {missing && <p role="alert">Truppen har ändrats. Byt ut spelare som är markerade ”Ej i truppen” innan du sparar.</p>}
+          {missing && <p role="alert">Kallelsesvaren eller laguppställningen har ändrats. Byt ut spelare som är markerade ”Ej tillgänglig” innan du sparar.</p>}
         </div>
         <div className="match-plan-ideas">
           <h3>Så vill vi spela</h3>

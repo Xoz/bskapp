@@ -447,3 +447,7 @@ Matchplanens design förfinad: skalbara matchtröjor i klubbfärger, separat må
 ## Matchplan och design publicerad – 2026-09-10
 
 Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34532385619 godkänd. 152 lokala tester och produktionsbygge godkända. Inloggad AIK-match på https://bsk2014.se/matcher/7 verifierad med ny matchplan, fyra formationer, klubbtröjor, separat målvaktsfärg, lediga positioner, klickbara avbytare och spelidépanel. Ljust läge kontrollerat lokalt och mörkt läge i produktion. Placering från avbytarlistan och sparande provat endast med lokala exempelspelare. Inga riktiga matchplaner eller uttagningar ändrades vid kontrollen. Tidigare anteckning om ej publicerad matchplan är ersatt.
+
+## Matchplanens spelarurval rättat 2026-09-10
+
+Både visning och sparande tillåter nu ja-svar (accepted) samt redan uttagna spelare. Tidigare krävdes selected även för ja-svar. Inga kallelser eller uttagningar ändras när matchplanen sparas. Rubriken är Spelare att placera. 153 tester och produktionsbygge godkända; databastest verifierar ja utan uttagning och oförändrad match_roster.

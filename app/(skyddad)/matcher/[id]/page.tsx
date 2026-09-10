@@ -1,8 +1,8 @@
-import {getSetting} from "@/lib/db";
+import {all, getSetting} from "@/lib/db";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, getRole } from "@/lib/auth";
-import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters, getMatchSquad } from "@/lib/queries";
+import { getMatch, getMatchPlayers, getPlayers, getMatchEvents, getMatchReporters } from "@/lib/queries";
 import { createMatchEvaluationInvite, deleteMatch, resetMatch, revokeMatchEvaluationInvite, toggleMatchReporting } from "@/lib/actions";
 import { STAT_FIELDS } from "@/lib/stats";
 import { level as levelInfo } from "@/lib/levels";
@@ -16,6 +16,7 @@ import EventEditor from "@/components/EventEditor";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft, IconArrowRight, IconLive } from "@/components/Icons";
 import { swedishToday, reportingAutoOpen } from "@/lib/dates";
+import { matchPlanPlayersSql } from "@/lib/matchPlan/players";
 import MatchPlanEditor from "@/components/MatchPlanEditor";
 import { emptyMatchPlan, readMatchPlan } from "@/lib/matchPlan/model";
 import { getOrganizationGroups } from "@/lib/organization";
@@ -39,12 +40,12 @@ export default async function MatchPage({ params, searchParams }: {
   const canManageSquads = user.permissions.includes("manage_squads");
   const canReportMatches = user.permissions.includes("report_matches");
   const canManageEvaluations = user.permissions.includes("manage_evaluations");
-  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites, groups, roster] = await Promise.all([
+  const [players, matchPlayers, events, reporters, planPlayerRows, evaluationStatus, evaluationInvites, groups, roster] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
     getMatchReporters(match.id),
-    getMatchSquad(match.id),
+    all<{ player_id: number }>(matchPlanPlayersSql, [match.id]),
     getMatchEvaluationStatus(match.id),
     getMatchEvaluationInvites(match.id),
     getOrganizationGroups(),
@@ -58,7 +59,7 @@ export default async function MatchPage({ params, searchParams }: {
   const evaluationOpen = matchEvaluationIsOpen(match.date, match.start_time);
   const selectionHref = `/matcher/${match.id}/laguttagning`;
   const savedPlan = role === "coach" ? readMatchPlan(await getSetting(`match_plan:${match.id}`)) : null;
-  const planPlayers = players.filter(player => squadIds.includes(player.id));
+  const planPlayers = players.filter(player => planPlayerRows.some(row => row.player_id === player.id));
   // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
   // report_open är tränarens manuella override – effektivt öppen = endera.
   const reportAutoOpen = !match.finished && reportingAutoOpen(match.date, match.start_time);

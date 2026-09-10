@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, canAccessGroup } from '../auth';
 import { get, run } from '../db';
+import { matchPlanPlayerPredicate } from './players';
 import { validMatchPlan } from './model';
 
 export async function saveMatchPlan(matchId: number, revision: number, document: unknown): Promise<{ revision?: number; error?: string }> {
@@ -25,7 +26,7 @@ export async function saveMatchPlan(matchId: number, revision: number, document:
     WHERE NOT EXISTS (
       SELECT pid FROM jsonb_array_elements_text(?::text::jsonb) AS wanted(pid)
       WHERE NOT EXISTS (SELECT 1 FROM match_roster mr WHERE mr.match_id = m.id
-        AND mr.player_id = wanted.pid::int AND mr.selection_status = 'selected')
+        AND mr.player_id = wanted.pid::int AND ${matchPlanPlayerPredicate})
     ) AND (? = 0 OR EXISTS (SELECT 1 FROM settings WHERE key = ?))
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
       WHERE (settings.value::jsonb->>'revision')::int = ? OR settings.value = excluded.value
