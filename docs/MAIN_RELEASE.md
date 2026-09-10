@@ -170,3 +170,7 @@ Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https
 ## Ja-svar i matchplan publicerat – 2026-09-10
 
 Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34532750201. Formationsverktygets visning och sparande använder samma urval: accepted ELLER selected i match_roster. Inloggad AIK-match verifierad: 11 tillgängliga i matchplanen, befintlig uttagning fortsatt 8. Rubriken är Spelare att placera. 153 tester och bygge godkända. Matchplanstest verifierar ja utan uttagning, nekade övriga spelare och oförändrade kallelser/uttagning. Inga verksamhetsuppgifter ändrades under produktionskontrollen.
+
+## Endast ja-svar publicerat – 2026-09-10
+
+Commit 09449e2658de70dc9432bd0cd6b06309bce46441 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533040176. Matchplanens urval och sparvalidering använder endast accepted. Tidigare OR selected är borttaget. Inloggad AIK-match verifierad: 10 valbara ja-svarande spelare, spelare med nej-svar saknas i formationsvalet. Befintlig laguppställning och kallelsesvar är orörda. 153 tester och bygge godkända.

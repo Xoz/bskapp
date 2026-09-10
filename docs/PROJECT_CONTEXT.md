@@ -459,3 +459,7 @@ Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning ht
 ## Korrigerat beslut: endast ja-svar i matchplanen
 
 2026-09-10: användaren klargjorde att tidigare uttagning inte får inkludera en spelare som tackat nej. Matchplanens gemensamma urval och sparvalidering använder därför enbart callup_status=accepted. Tidigare OR selected-regel är ersatt. Kallelser och laguppställning ändras inte. Regressionstest nekar uttryckligen selected + declined.
+
+## Endast ja-svar publicerat – 2026-09-10
+
+Commit 09449e2658de70dc9432bd0cd6b06309bce46441 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533040176. Matchplanens urval och sparvalidering använder endast accepted. Tidigare OR selected är borttaget. Inloggad AIK-match verifierad: 10 valbara ja-svarande spelare, spelare med nej-svar saknas i formationsvalet. Befintlig laguppställning och kallelsesvar är orörda. 153 tester och bygge godkända.
