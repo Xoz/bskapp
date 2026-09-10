@@ -221,3 +221,14 @@ Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsn
 - `lib/training/drawing.js`: SVG-renderaren extraherad från projektets `outputs/ovningsritare/index.html`; `model.ts` validerar originalets version 1-format. `bank.json` bevarar de 15 originalövningarna från `outputs/ovningsritare/bank.js`.
 - `lib/training/actions.ts`: ägarskap, revisionskontroll och identiska återförsök. `training_plans` skapas i `lib/db.ts`, migration `0021-training-plans`. Ingen import från Coach i detta steg.
 - Tester `lib/training/{model,actions}.test.ts`. Se `docs/TRAINING_BUILDER.md` för kompatibilitet och publiceringsgräns.
+
+## Hermes – privat BSK-läsning (2026-09-10)
+
+`integrations/hermes-bsk/` är den fristående lokala MCP-processen: `server.py`
+(definierade läsverktyg), `views.sql` (konto-/lagavgränsade PostgreSQL-vyer),
+`skills.json` (etiketter från `lib/skillTrappan.ts`), `launch.sh` (separat
+OS-användare utan ärvda hemligheter), `install.py` (första installation),
+`test_integration.py` (isolerade DB-/MCP-tester), `smoke.py` (verklig stdio).
+Se dess README för installation, återställning och närvarotäckning. Ändringar
+i `lib/auth.ts`, träningsägarskap eller berörda databasfält kräver samtidig
+adaptergranskning. Ingen Next-route eller apprelease ingår.

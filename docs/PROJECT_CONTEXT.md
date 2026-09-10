@@ -303,3 +303,20 @@ Produktionsbygge, datagranskning och hälsokontroller godkända.
 Aktiv huvudrelease `/opt/bsk/releases/6f0b6ace146f.KvECoy`; backup före import
 `/opt/bsk/backups/main-6f0b6ace146f.8eOL7p`.
 Inloggningsuppgifter finns endast i privat VPS-miljöfil, inga värden i dokumentation.
+
+## 2026-09-10 – BSK-frågor via privata Hermes
+
+En fristående lokal MCP-process är driftsatt på samma VPS och ansluten till
+privata Photon/iMessage-profilen. Sex läsverktyg hämtar lagets spelare, matcher,
+utvecklingsbild, avgränsad träningsnärvaro och kontots egna träningspass.
+Installationen är uttryckligen låst till konto 1 och Gul; särskild databasroll
+har bara SELECT på skyddade vyer. Inga skrivverktyg, publika portar, Next-routes
+eller appreleaser. Nio DB-/MCP-integrationstester och verkliga verktygsanrop
+passerade. En vanlig Hermes-fråga gav korrekt nästa match med BSK-länk.
+Närvaron gäller endast den nya lagkopplade Svenska Lag-webbsynken, med redovisad
+täckning och okänd närvaro. Äldre oskopade importer ingår inte.
+
+En SDK v2-kompatibilitetsrättning i Hermes behövdes för read-only-märkning;
+alla tolv trust-tester passerade utan ändrad policy. Privat gateway är aktiv,
+Photon ansluten, Discordprofilen oförändrad. Drift, begränsningar och
+återställning: `integrations/hermes-bsk/README.md`.
