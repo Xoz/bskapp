@@ -3,12 +3,12 @@
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
-## Pågående 2026-09-10: filfri Svenska Lag-synk
+## Publicerat 2026-09-10: filfri Svenska Lag-synk
 
-Arbetare och appstatus implementerade, separat VPS-tjänst installerad med
-avstängd timer. Väntar på egen Svenska Lag-inloggning, riktig provhämtning
-utan exportfiler och verifierad skarp import. Webbändringarna ligger på
-`feat/svenskalag-sync`. Se `SVENSKALAG_SYNC.md`. Ingen schemamigrering.
+Automatisk inloggning, skarp import och återkommande VPS-drift verifierade.
+23 av 45 kalenderposter uppdaterade; 18 matchkopplingar och fyra träningars
+spelarkopplingar återstår. Appstatus/kö/historik publicerade via PR #9.
+Se `SVENSKALAG_SYNC.md`. Ingen schemamigrering. Nya matcher skapas inte ännu.
 
 ## Aktuellt efter publiceringarna 2026-09-09
 

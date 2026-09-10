@@ -58,3 +58,24 @@ matchens nästa steg och uttagningen under matchen verifierade i produktion.
 67 spelare, 144 matcher och 0 träningspass före/efter. Inga testuttagningar
 eller andra verksamhetsuppgifter skrivna i produktion vid kontrollen.
 Träningspassens faktiska lagkoppling återstår; pass är fortfarande personliga.
+
+
+## 2026-09-10 – Svenska Lag-synk i drift (ersätter tidigare väntestatus)
+
+Automatisk inloggning och filfri hämtning är verifierade. Huvudappen publicerad
+via PR #9, commit `6f0b6ace146f4f35c2e563ac20dd7dfe099eb09d`, godkänd körning
+https://github.com/Xoz/bskapp/actions/runs/34517570292.
+Arbetare `/opt/bsk/sync-releases/0b48e23f`; timern är enabled/active.
+Första skarpa synken klar 2026-09-10 21:04 Stockholm: 45 kalenderposter lästa
+för 13 augusti–24 september, 23 uppdaterade (9 matcher, 14 träningar), 22 lämnade
+orörda. 18 matchposter saknar koppling: 16 den 15–16 augusti, Hammarby 6 september
+och Värtan 20 september. Fyra träningar (17, 18, 19 och 31 augusti) har olöst
+spelarkoppling. Preliminära final-/bronsmatcher ingår i kalenderantalet; 45 är
+inte ett antal säkert genomförda aktiviteter. Dessa kopplingar återstår.
+67 spelare, 144 matcher och 0 träningsplaner efter synk; uttagningarnas checksumma
+oförändrad. 14 träningsaktiviteter har källan svenskalag_browser.
+138 lokala tester inklusive DB-integration godkända; 137 + 1 överhoppat i CI.
+Produktionsbygge, datagranskning och hälsokontroller godkända.
+Aktiv huvudrelease `/opt/bsk/releases/6f0b6ace146f.KvECoy`; backup före import
+`/opt/bsk/backups/main-6f0b6ace146f.8eOL7p`.
+Inloggningsuppgifter finns endast i privat VPS-miljöfil, inga värden i dokumentation.
