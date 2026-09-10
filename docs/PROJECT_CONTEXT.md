@@ -398,3 +398,5 @@ Veckans matchkort bedömer spelarbrist enbart från Svenska Lags ja-svar, aldrig
 från antal markerade i laguppställningen. Befintlig gräns är nio ja; tio ja ger
 alltså ingen varning även med sex eller åtta markerade. Inga registrerade
 kallelsesvar ger ingen bristvarning. Uttagningen visas fortsatt separat.
+
+Verifierat och publicerat som ff65de3a: typkontroll, sex renderingsfall och godkänd VPS-deploy. Produktionskontroll av Idag visar AIK och Örby utan bristvarning med tio ja vardera.
