@@ -366,3 +366,8 @@ Kompletterande kalenderkontroll av 40 importerade Gulposter från 2025 gav inga
 borttagnings- eller datum-/tidsavvikelser. Historiska cupgrupper, cupaktiviteter och
 manuella poster återstår att normalisera. Grön är inte inventerat på samma sätt.
 Se `docs/MATCH_AUDIT_2026-09-10.md` för resultat och avgränsningar.
+
+
+## 2026-09-10 – AIK: ja-svar tydligt skilda från laguppställning
+
+Direktkontroll i Svenska Lag gav 10 spelare + 1 ledare som tackat ja till AIK 12 september. Appens källtotal och 10 spelarposter stämmer; 8 avser laguppställningen. Användaren uppfattade startsidans ”8 uttagna”/”8 klara” som fel antal ja. Publicerad rättning `47e44428` visar ”10 har tackat ja i Svenska Lag” främst på Idag och i uttagningsvyn; 8 markerade i laguppställningen visas separat. Varningar anger uttryckligen uppställning respektive ja-svar. Inga val, svar eller kallelser ändrades. Typkontroll, produktionsbygge och inloggad kontroll av båda vyerna godkända. Publicering: https://github.com/Xoz/bskapp/actions/runs/34525751849.
