@@ -230,3 +230,5 @@ Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsn
 - `matches.cancelled` (migration 0022) speglar inställd match. Settings-prefix svenskalag_lineup/outbox/draft/presence håller källäge, publicering, lokalt utkast och verifierad närvaro. `matchRoster.ts` och `getMatchPlayers` respekterar Svenska Lags närvaro utan att radera statistik.
 
 - `components/SvenskaLagPublicationStatus.tsx`: uppdaterar köstatus i uttagningsvyn medan överföringen pågår.
+
+Matchkontroll 2026-09-10: `scripts/svenskalag/audit-matches.ts` inventerar aktuellt kalenderår för Gul och verifierar saknade poster på källsidan. `lib/svenskalag/removed-matches.ts` avvecklar endast explicit borttagna poster transaktionellt, med separat orsak i settings. `scripts/svenskalag/check-match-audit.ts` provar läsfel och borttagningsbevis. Resultat och historiska avvikelser: `docs/MATCH_AUDIT_2026-09-10.md`.

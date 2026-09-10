@@ -162,3 +162,7 @@ utkast tills publicering. Kallelser skickas i Svenska Lag. Positions-/formations
 överföring, permanenta person-id:n och full avstämning av borttagna poster utanför
 kalenderfönstret ingår inte ännu. Ingen atomisk versionskontroll finns på källans
 spara-adress; en liten samtidighetsrisk mellan sista kontroll och sparande kvarstår.
+
+### Matchkontroll 2026-09-10
+
+Efter inkommande import körs nu kontroll av Guls befintliga importerade matcher mot hela aktuella årets kalender. Försvunna kalenderposter måste dessutom ha källrubriken ”Aktiviteten är borttagen” innan de döljs. `svenskalag_match_audit` innehåller senaste resultatet; `svenskalag_removed:{id}` anger verifierad borttagning. Historiken bevaras. Idag filtrerar nu samma inaktiva matcher som Matcher. Se `MATCH_AUDIT_2026-09-10.md` för omfattning och kvarvarande historiska kopplingsproblem.

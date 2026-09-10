@@ -165,3 +165,8 @@ historik från tidigare produktinriktning och ska inte återinföras som aktuell
   med parallella anrop.
 - ~~**Dependency-audit**~~ – **KLART.** Båda apparna kör Next 16.3.0 och har
   `npm audit` = 0. Osäkra `xlsx` är ersatt med `read-excel-file`.
+
+### Matchgranskning 2026-09-10
+
+- Åtgärdat: bekräftat borttagna Svenska Lag-matcher lämnas inte längre aktiva; automatisk årskontroll för Gul och filter även i Idag.
+- Kvar, historisk datakvalitet: skilj sex övergripande cupaktiviteter från individuella matcher, ge elva cupgruppsmatcher rätt Gulanknytning, verifiera fem närvaroimporterade junimatchers käll-id och hantera fyra manuella poster. Skapa inte nya matcher innan kopplingarna granskats. Se `MATCH_AUDIT_2026-09-10.md`.

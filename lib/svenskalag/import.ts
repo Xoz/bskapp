@@ -31,6 +31,7 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
           }
         }
         if(!dryRun&&rows.length===1) {
+          await tx`DELETE FROM settings WHERE key=${`svenskalag_removed:${rows[0].match_id}`}`;
           await tx`UPDATE matches SET date=${a.date},start_time=${a.time},opponent=${a.match.opponent},home_away=${a.match.homeAway},location=COALESCE(${a.match.location??null},location),cancelled=${a.cancelled?1:0} WHERE id=${rows[0].match_id} AND group_id=${groupId}`;
           await tx`UPDATE development_activities SET activity_date=${a.date},start_time=${a.time},title=${a.title} WHERE match_id=${rows[0].match_id}`;
         }

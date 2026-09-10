@@ -1,5 +1,6 @@
 import { describe,it,expect } from "vitest";
 import postgres from "postgres";
+import {applyRemovedMatches} from "./removed-matches";
 import {applySnapshot} from "./import";
 import type {ActivitySnapshot} from "./model";
 // Testet skuggar tabeller med TEMP-tabeller på en enda anslutning.
@@ -53,6 +54,20 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       await sql`UPDATE match_roster SET source='manual',selection_status=NULL WHERE match_id=${freshId}`;
       await applySnapshot(sql,[fresh],"2026-09-10");
       expect((await sql`SELECT source FROM match_roster WHERE match_id=${freshId} AND player_id=2`)[0].source).toBe("svenskalag_browser");
+      const removed={matchId:freshId,sourceId:"999",evidence:"source-deleted" as const};
+      await applyRemovedMatches(sql,[removed],"2026-09-10",true);
+      expect((await sql`SELECT cancelled FROM matches WHERE id=${freshId}`)[0].cancelled).toBe(0);
+      await expect(applyRemovedMatches(sql,[removed,{...removed,matchId:7,sourceId:"wrong"}],"2026-09-10")).rejects.toThrow();
+      await expect(applyRemovedMatches(sql,[removed,{...removed,matchId:7,sourceId:"888"}],"2026-09-10")).rejects.toThrow();
+      expect((await sql`SELECT cancelled FROM matches WHERE id=${freshId}`)[0].cancelled).toBe(0);
+      await applyRemovedMatches(sql,[removed],"2026-09-10");
+      await applyRemovedMatches(sql,[removed],"2026-09-10");
+      expect((await sql`SELECT cancelled FROM matches WHERE id=${freshId}`)[0].cancelled).toBe(1);
+      expect(await sql`SELECT * FROM match_roster WHERE match_id=${freshId}`).toHaveLength(2);
+      expect(await sql`SELECT * FROM settings WHERE key=${`svenskalag_removed:${freshId}`}`).toHaveLength(1);
+      await applySnapshot(sql,[fresh],"2026-09-10");
+      expect((await sql`SELECT cancelled FROM matches WHERE id=${freshId}`)[0].cancelled).toBe(0);
+      expect(await sql`SELECT * FROM settings WHERE key=${`svenskalag_removed:${freshId}`}`).toHaveLength(0);
       const emptyPresence={...training,attendance:[]};
       await applySnapshot(sql,[emptyPresence],"2026-09-10");
       expect((await sql`SELECT attendance_status FROM development_activity_participation WHERE player_id=1`)[0].attendance_status).toBe("absent");

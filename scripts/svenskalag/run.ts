@@ -1,3 +1,4 @@
+import {auditMatches} from "./audit-matches";
 import { chromium } from "playwright";
 import postgres from "postgres";
 import { authenticatedContext } from "./auth";
@@ -39,6 +40,9 @@ async function main() {
         const context = await authenticatedContext(browser,process.env.SVENSKALAG_STATE_FILE,{username:process.env.SVENSKALAG_USERNAME,password:process.env.SVENSKALAG_PASSWORD});
         const snapshot = await collect(context,today);
         const imported = await applySnapshot(sql,snapshot,today,process.argv.includes("--dry-run"));
+        const audit=await auditMatches(sql,context,today,process.argv.includes("--dry-run"));
+        await write("svenskalag_match_audit",{...audit,checkedAt:new Date().toISOString()});
+        imported.unmatched.push(...audit.warnings);
         if(!process.argv.includes("--dry-run")&&outbound) await processOutbox(sql,context,snapshot,today);
         status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;
         status.message=process.argv.includes("--dry-run") ? "Provkörning klar, inget importerat" : "Svenska Lag är uppdaterat";
