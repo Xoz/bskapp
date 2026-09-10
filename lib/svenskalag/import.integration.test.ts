@@ -1,0 +1,31 @@
+import { describe,it,expect } from "vitest";
+import postgres from "postgres";
+import {applySnapshot} from "./import";
+import type {ActivitySnapshot} from "./model";
+// Testet skuggar tabeller med TEMP-tabeller på en enda anslutning.
+describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",()=>{
+  it("bevarar uttagning, skriver inte närvaro från ja och tål återförsök",async()=>{
+    const sql=postgres(process.env.BSK_SYNC_TEST_DATABASE_URL!,{max:1});
+    try {
+      await sql.unsafe(`CREATE TEMP TABLE groups(id int,name text,group_type text,active int);
+        CREATE TEMP TABLE players(id int,name text,active int);
+        CREATE TEMP TABLE development_activities(id text,match_id int,external_key text,group_id int);
+        CREATE TEMP TABLE matches(id int,group_id int,callup_accepted_count int,callup_declined_count int,callup_pending_count int,callup_source text);
+        CREATE TEMP TABLE match_roster(match_id int,player_id int,callup_status text,selection_status text,selected_position text,source text,updated_at timestamptz, PRIMARY KEY(match_id,player_id));
+        CREATE TEMP TABLE development_activity_participation(activity_id text,player_id int,attendance_status text,source text,PRIMARY KEY(activity_id,player_id));
+        INSERT INTO groups VALUES(1,'Gul','subgroup',1); INSERT INTO players VALUES(1,'Exempel A',1),(2,'Exempel B',1);
+        INSERT INTO development_activities VALUES('a',7,'sanktan:123',1);INSERT INTO matches(id,group_id)VALUES(7,1);
+        INSERT INTO match_roster VALUES(7,1,'accepted','selected','back','manual',now());`);
+      const a:ActivitySnapshot={sourceId:"123",url:"https://www.svenskalag.se/bollstanassk-fotboll-f2014-gul/match/123/test",date:"2026-09-12",time:"09:00",title:"Test",kind:"match",callups:[{name:"Exempel A",status:"declined"},{name:"Exempel B",status:"accepted"}],totals:{accepted:1,declined:1,pending:0},attendance:null};
+      await applySnapshot(sql,[a],"2026-09-10",true);
+      expect((await sql`SELECT callup_status FROM match_roster WHERE player_id=1`)[0].callup_status).toBe("accepted");
+      await applySnapshot(sql,[a],"2026-09-10");await applySnapshot(sql,[a],"2026-09-10");
+      const rows=await sql`SELECT * FROM match_roster ORDER BY player_id`;
+      expect(rows.length).toBe(2);expect(rows[0]).toMatchObject({callup_status:"declined",selection_status:"selected",selected_position:"back",source:"manual"});
+      expect(rows[1].selection_status).toBeNull();expect(await sql`SELECT * FROM development_activity_participation`).toHaveLength(0);
+      const bad={...a, totals:{accepted:2,declined:1,pending:0}};
+      await expect(applySnapshot(sql,[bad],"2026-09-10")).rejects.toThrow();
+      expect((await sql`SELECT callup_accepted_count FROM matches`)[0].callup_accepted_count).toBe(1);
+    } finally {await sql.end();}
+  });
+});

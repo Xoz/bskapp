@@ -46,3 +46,6 @@ data/
 
 # codegraph
 .codegraph/
+
+# Sessionsuppgifter för filfri Svenska Lag-synk
+.svenskalag-auth/
