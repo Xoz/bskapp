@@ -72,3 +72,9 @@ underordnade matchgrupper och behåller deras trupper och cupindelning.
 Historikens rubrik ändras till ”Tidigare”: passerat datum bevisar inte att en
 match spelades. Sex cupaktiviteter, fem olösta junikopplingar och fyra manuella
 matchposter återstår att hantera; ingen av dem är raderad i denna ändring.
+
+Publicerat som `c530d691`, godkänd VPS-körning
+https://github.com/Xoz/bskapp/actions/runs/34528115352. Typkontroll godkänd.
+Inloggad webbläsarkontroll: Gul visar sju kommande och 111 tidigare poster
+(tidigare 100), med Stockholm Football Cups tre grupper (3 + 3 + 5 matcher).
+Detta verifierar filtret, inte att alla historiska poster är individuella spelade matcher.
