@@ -6,6 +6,10 @@
 
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
+Aktuell produkt är enbart webbappen; native/iOS-referenser nedan beskriver äldre
+kod och är inte en aktiv leveransplan. Matchlistans lagfilter tar med lagets
+underordnade cupgrupper utan att ändra matchernas grupptillhörighet.
+
 Primära webbytor: `/idag`, `/spelare`, `/matcher`, `/traning`. Gul är förvalt
 för spelare och matcher. Uttagning ligger i `/matcher/[id]/laguttagning` och
 uppföljning i `/matcher/[id]/utvardera`; gamla `/uttagning`/`observera`-länkar

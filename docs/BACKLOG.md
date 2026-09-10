@@ -1,5 +1,14 @@
 # Backlog
 
+## Gällande beslut 2026-09-10: enbart webbapp
+
+Native/iOS ingår inte längre i produkten eller den aktiva planen. All fortsatt
+utveckling och verifiering gäller bsk2014.se i webbläsaren på mobil, iPad och dator.
+Äldre nativebeslut nedan är historik. Befintlig nativekod lämnas tills vidare;
+installation, simulatorbyggen och nativeparitet är inga leveranskrav.
+Svenska Lag är fortsatt master för matcher, kallelser, svar och närvaro.
+
+
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
@@ -50,7 +59,7 @@ samt en skillnad mellan målhändelser och matchresultat. Kräver separat kontro
 inte automatiska korrigeringar. Vercel Preview saknar ännu en egen databas;
 aktuell backupdrift ska kontrolleras mot faktiska tjänster, inte äldre påståenden.
 
-iOS är pausad enligt senaste PROJECT_CONTEXT. Utskrift behövs inte.
+Native/iOS är avslutad som produktinriktning enligt beslutet ovan. Utskrift behövs inte.
 Generativ AI/Graphiti är inte prioriterade. Äldre observationskvoter nedan är
 historik från tidigare produktinriktning och ska inte återinföras som aktuella krav.
 
@@ -169,8 +178,14 @@ historik från tidigare produktinriktning och ska inte återinföras som aktuell
 ### Matchgranskning 2026-09-10
 
 - Åtgärdat: bekräftat borttagna Svenska Lag-matcher lämnas inte längre aktiva; automatisk årskontroll för Gul och filter även i Idag.
-- Kvar, historisk datakvalitet: skilj sex övergripande cupaktiviteter från individuella matcher, ge elva cupgruppsmatcher rätt Gulanknytning, verifiera fem närvaroimporterade junimatchers käll-id och hantera fyra manuella poster. Skapa inte nya matcher innan kopplingarna granskats. Se `MATCH_AUDIT_2026-09-10.md`.
+- Kvar, historisk datakvalitet: skilj sex övergripande cupaktiviteter från individuella matcher, verifiera fem närvaroimporterade junimatchers käll-id och hantera fyra manuella poster. Skapa inte nya matcher innan kopplingarna granskats. Se `MATCH_AUDIT_2026-09-10.md`.
 
 ### Permanent åtskillnad svar/uttagning 2026-09-10
 
 Gemensamma läsregler för matchtotaler samt gemensamt sparande för webb och mobil genomförda. Äldre trupp-/cupformulär har samma utkastmarkör och lås. Synken låser matcher före utkastkontroll och skriver aldrig ja-svar som uttagning eller närvaro. Regressioner omfattar flera matcher, källtotal noll kontra saknad total, ändrade svar och tomt utkast över synk. iOS-källkod korrigerad och simulatorbyggd; installation av den nya klientversionen är separat från webbdeploy.
+
+### Webb och teststädning 2026-09-10
+
+- Kerstin (testspelare 58) permanent raderad i produktion och frånvaro verifierad.
+- Gulfiltrets cupgrupper inkluderas i matchlistan utan flytt eller duplicering.
+- Rubriken ”Tidigare” ersätter ”Spelade” för poster som bara har passerat datum.

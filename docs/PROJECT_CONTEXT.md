@@ -1,5 +1,14 @@
 # BSK App - Project Context
 
+## Gällande beslut 2026-09-10: enbart webbapp
+
+Native/iOS ingår inte längre i produkten eller den aktiva planen. All fortsatt
+utveckling och verifiering gäller bsk2014.se i webbläsaren på mobil, iPad och dator.
+Äldre nativebeslut nedan är historik. Befintlig nativekod lämnas tills vidare;
+installation, simulatorbyggen och nativeparitet är inga leveranskrav.
+Svenska Lag är fortsatt master för matcher, kallelser, svar och närvaro.
+
+
 ## Beslut och implementation 2026-09-09: webbapp och lugn klubbidentitet
 
 Användaren pausar iOS-utvecklingen och prioriterar en gemensam webbapp. Den godkända lugna designriktningen är nu implementerad lokalt i huvudappen: varmvit bas, dämpat mörkt läge, originalmärke, neutral spelarnummeravatar, mobilnavigation och behörighetsstyrd verktygsmeny. Idag prioriterar nästa match inom veckans befintliga datakälla samt spelarutveckling; veckosiffror och matchutrymme finns som fördjupning. Träd, fokus, samtal, behörigheter och datamodell bevaras. Ingen nativekod ändrad.

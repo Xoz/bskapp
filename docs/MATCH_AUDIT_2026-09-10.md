@@ -59,3 +59,16 @@ Slutpublicering: `3ffc3b8c`, godkänd körning https://github.com/Xoz/bskapp/act
 ## Förtydligande efter användarens AIK-fråga
 
 Ny direktkontroll: Svenska Lag visar `Kommer10+1` (10 spelare och 1 ledare). Appens källtotal och tio spelarposter med ja-svar stämmer. Åtta är markerade i laguppställningen; startsidans dominerande ”8 uttagna” och ”8 klara” skapade en missvisande bild. Ja-svaren lyfts nu främst på Idag och i uttagningsvyn, med separat uttrycklig markering av laguppställningen. Varningar anger om de gäller uppställningen eller ja-svaren. Inga svar eller spelarval ändrades. Typkontroll och produktionsbygge godkända.
+
+## Fortsatt städning 2026-09-10
+
+Testspelaren Kerstin (lokalt id 58) är permanent raderad på användarens begäran
+via befintliga `erasePlayerData` i produktion. Efterkontroll: noll spelarposter
+med detta id. Ingen ändring i Svenska Lag.
+
+Cupgrupperna Comp/Friendly 1/Friendly 2 har redan Gul som förälder. Felet är
+matchlistans strikta direktfilter. Webbens lagfilter omfattar nu även dessa
+underordnade matchgrupper och behåller deras trupper och cupindelning.
+Historikens rubrik ändras till ”Tidigare”: passerat datum bevisar inte att en
+match spelades. Sex cupaktiviteter, fem olösta junikopplingar och fyra manuella
+matchposter återstår att hantera; ingen av dem är raderad i denna ändring.

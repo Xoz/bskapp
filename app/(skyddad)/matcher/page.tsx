@@ -30,6 +30,9 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   const teams = groups.filter((group) => group.group_type === "subgroup" && group.active);
   const selectedTeam = requestedTeam === "alla" ? null : teams.find((group) => group.name === requestedTeam)?.name ?? "Gul";
   const selectedGroupIds = new Set(groups.filter((group) => group.name === selectedTeam && group.group_type === "subgroup").map((group) => group.id));
+  for (const group of groups) {
+    if (group.group_type === "matchgroup" && group.parent_id != null && selectedGroupIds.has(group.parent_id)) selectedGroupIds.add(group.id);
+  }
   const matches = selectedTeam ? allMatches.filter((match) => match.group_id != null && selectedGroupIds.has(match.group_id)) : allMatches;
 
   return (
@@ -419,7 +422,7 @@ function MatchSections({
       {past.length > 0 && (
         <section id="spelade">
           <div className="flex items-baseline gap-2.5 mb-3">
-            <h2 className="font-semibold text-[18px]">Spelade</h2>
+            <h2 className="font-semibold text-[18px]">Tidigare</h2>
             <span className="caption" style={{ color: "var(--ink-muted)" }}>
               {countMatches(past)} matcher
             </span>
