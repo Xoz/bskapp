@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCoreSummaries } from "@/lib/developmentCore";
 import { getPendingMatchEvaluations } from "@/lib/matchEvaluation";
+import { all } from "@/lib/db";
+import { swedishToday } from "@/lib/dates";
+import { playerDirectoryStatsQuery } from "@/lib/playerDirectoryStats";
 import PlayerDirectory from "@/components/PlayerDirectory";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +39,11 @@ export default async function PlayersPage({ searchParams }: {
       : players;
   const pendingEvaluations = user.permissions.includes("manage_evaluations") && (selectedTeam === "Gul" || selectedTeam === null)
     ? await getPendingMatchEvaluations() : [];
+  const today = swedishToday();
+  const statsTeam = selectedTeam === UNASSIGNED_TEAM ? null : selectedTeam;
+  const statsQuery = playerDirectoryStatsQuery(visiblePlayers.map(({ player }) => player.id), today, statsTeam);
+  const stats = new Map((await all<{ player_id: number; match_count: number; callup_count: number }>(statsQuery.sql, statsQuery.args))
+    .map((row) => [row.player_id, row]));
   const teamCount = (teamName: string) => players.filter(({ teams }) => teams.some((team) => team.name === teamName)).length;
 
   return (
@@ -80,14 +88,19 @@ export default async function PlayersPage({ searchParams }: {
         <summary className="p-5 cursor-pointer font-semibold">Spelarbedömningar efter match · {pendingEvaluations.length} matcher att följa upp</summary>
         <div className="bsk-link-list">{pendingEvaluations.map((evaluation) => <Link key={evaluation.id} href={`/matcher/${evaluation.id}/utvardera`} className="bsk-link-row"><span className="min-w-0 flex-1"><strong>{evaluation.opponent}</strong><small>{evaluation.date} · {evaluation.evaluated} av {evaluation.total} spelare bedömda</small></span><span aria-hidden>›</span></Link>)}</div>
       </details>}
-      <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals, matchCount, callupCount }) => ({
+      <p className="core-section-note">
+        Statistik {today.slice(0, 4)} · {statsTeam ? `${statsTeam}, inklusive cupgrupper` : "Alla lag, inklusive matcher utan lagkoppling"}.
+        {" "}Registrerade spelade matcher till och med idag. Matchkallelser omfattar även kommande matcher och alla svar (ja, nej och obesvarat).
+        {" "}Inställda och borttagna matcher ingår inte. Siffrorna bygger på importerade uppgifter; historiken kan vara ofullständig.
+      </p>
+      <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals }) => ({
         id: player.id,
         name: player.name,
         jersey: player.jersey_number,
         teams: teams.map(({ id, name }) => ({ id, name })),
         goals: goals.map((goal) => goal.title),
-        matchCount,
-        callupCount,
+        matchCount: Number(stats.get(player.id)?.match_count ?? 0),
+        callupCount: Number(stats.get(player.id)?.callup_count ?? 0),
         positionPrimary: player.preferred_position_primary,
         positionSecondary: player.preferred_position_secondary,
         levelPrimary: player.preferred_level_primary,

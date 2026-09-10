@@ -81,8 +81,8 @@ export default function PlayerDirectory({ players }: { players: PlayerDirectoryI
                 <p className="player-directory-goal">Utvecklingsträd och samtal</p>
               </div>
               <div className="player-directory-stats">
-                <span><strong>{player.matchCount}</strong> {player.matchCount === 1 ? "match" : "matcher"}</span>
-                <span><strong>{player.callupCount}</strong> {player.callupCount === 1 ? "kallelse" : "kallelser"}</span>
+                <span><strong>{player.matchCount}</strong> {player.matchCount === 1 ? "spelad match" : "spelade matcher"}</span>
+                <span><strong>{player.callupCount}</strong> {player.callupCount === 1 ? "matchkallelse" : "matchkallelser"}</span>
               </div>
               <span className="core-chevron" aria-hidden>›</span>
             </Link>
