@@ -35,7 +35,7 @@ async function main() {
     for (let attempt=0; attempt<3 && !finished; attempt++) {
       let browser;
       try {
-        browser = await chromium.launch({headless:true});
+        browser = await chromium.launch({headless:true,args:["--disable-features=BackForwardCache","--renderer-process-limit=2"]});
         const context = await authenticatedContext(browser,process.env.SVENSKALAG_STATE_FILE,{username:process.env.SVENSKALAG_USERNAME,password:process.env.SVENSKALAG_PASSWORD});
         const snapshot = await collect(context,today);
         const imported = await applySnapshot(sql,snapshot,today,process.argv.includes("--dry-run"));

@@ -13,7 +13,7 @@ async function open(page: Page, url: string) {
   await page.locator("#logged-in-menu").waitFor({state:"attached", timeout:10_000}).catch(() => {throw new LoginRequired();});
 }
 export async function collect(context: BrowserContext, today: string): Promise<ActivitySnapshot[]> {
-  const page = await context.newPage();
+  let page = await context.newPage();
   page.setDefaultTimeout(15_000);
   const from = dayOffset(today, -28), to = dayOffset(today, 14);
   const monthKeys = new Set<string>();
@@ -61,7 +61,11 @@ export async function collect(context: BrowserContext, today: string): Promise<A
     for (const s of saved) savedAttendance.set(s.id, {url:sourceUrl(s.url),count:s.count});
   }
   const results: ActivitySnapshot[] = [];
+  await page.close();
   for (const entry of entries.values()) {
+    page=await context.newPage();
+    page.setDefaultTimeout(15_000);
+    try {
     await open(page, entry.url);
     let match:ActivitySnapshot["match"];
     if(entry.kind==='match') {
@@ -105,6 +109,7 @@ export async function collect(context: BrowserContext, today: string): Promise<A
     let lineup:string[]|undefined;
     if(entry.kind==='match'&&entry.date>=today) lineup=await readLineup(page,entry.sourceId);
     results.push({...entry, match, lineup, callups, totals, attendance});
+    } finally {await page.close();}
   }
   validateSnapshot(results, today);
   await page.close();

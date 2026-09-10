@@ -20,6 +20,7 @@ export async function authenticatedContext(browser: Browser, stateFile: string, 
     const context=await browser.newContext({storageState:state,locale:"sv-SE",timezoneId:"Europe/Stockholm",acceptDownloads:false});
     await context.route('**/*',route=>{
       const request=route.request();
+      if(["image","media","font"].includes(request.resourceType())) return route.abort();
       const allowed=["GET","HEAD"].includes(request.method()) || (login && request.method()==="POST" && new URL(request.url()).origin===ORIGIN);
       return allowed ? route.continue() : route.abort();
     });

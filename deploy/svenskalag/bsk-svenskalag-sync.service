@@ -20,5 +20,5 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/bsk-sync
-MemoryMax=1G
+MemoryMax=1536M
 TasksMax=128
