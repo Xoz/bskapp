@@ -174,3 +174,7 @@ Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning ht
 ## Endast ja-svar publicerat – 2026-09-10
 
 Commit 09449e2658de70dc9432bd0cd6b06309bce46441 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533040176. Matchplanens urval och sparvalidering använder endast accepted. Tidigare OR selected är borttaget. Inloggad AIK-match verifierad: 10 valbara ja-svarande spelare, spelare med nej-svar saknas i formationsvalet. Befintlig laguppställning och kallelsesvar är orörda. 153 tester och bygge godkända.
+
+## Gemensam terminologi publicerad – 2026-09-10
+
+Commit 1e65ca1fb35224b989ec751fce5c0dfd71bd4d0f publicerad i webbappen, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533538172. Trupp=ja-svarande; laguppställning/uttagen=planerad; deltog=faktisk närvaro; spelarregister=hela spelarbasen. Matchvyer, uttagning, cup, register, inställningar, guide och API-etiketter är anpassade. AIK verifierad inloggat med separat trupp (10) och laguppställning (8). 153 tester, webbbygge och syntaxkontroll av fyra ändrade Swift-filer godkända. Äldre nativekällans texter uppdaterade; ingen ny nativeapp har distribuerats. Inga kallelser, uttagningar eller närvaroposter ändrade av terminologiarbetet. Definitioner fastställda i AGENTS.md.
