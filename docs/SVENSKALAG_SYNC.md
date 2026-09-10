@@ -189,3 +189,11 @@ senaste sju dagarna; två saknar registrerat deltagande i detta fönster.
 Sju aktiviteter har några namn utan entydig profilkoppling, inklusive Hammarby;
 dessa hoppas över. Inga kallelser skickades och ingen närvaro ändrades i källan.
 Automatisk worker använder d6d5c35d via match-presence-20260910, timer aktiv.
+
+## Bekräftade personroller 2026-09-10
+
+Användaren bekräftar att Patrick Bretschneider är ledare och att Liv Sehlberg
+samt Aliyana Kundi har slutat. De två spelarna är redan active=0. Importen
+ignorerar kända inaktiva namn (om ingen aktiv namne finns) samt uttryckligen
+bekräftade ledarnamn i settings.svenskalag_non_player_names. Okända namn ger
+fortsatt varning. Ingen återaktivering eller borttagning av historik görs.

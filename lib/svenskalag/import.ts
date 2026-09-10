@@ -17,6 +17,11 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
     const players = await tx`SELECT id, name FROM players WHERE active = 1`;
     const names = new Map<string, number[]>();
     for (const p of players) names.set(nameKey(p.name), [...(names.get(nameKey(p.name)) ?? []), p.id]);
+    const formerPlayers = await tx`SELECT name FROM players WHERE active = 0`;
+    const ignoredNames = new Set(formerPlayers.filter(p => !names.has(nameKey(p.name))).map(p => nameKey(p.name)));
+    const leaderNames: unknown = JSON.parse((await tx`SELECT value FROM settings WHERE key='svenskalag_non_player_names'`)[0]?.value ?? '[]');
+    if (!Array.isArray(leaderNames) || leaderNames.some(n => typeof n !== 'string' || !n.trim())) throw new Error('Ogiltig ledarkoppling');
+    for (const name of leaderNames) ignoredNames.add(nameKey(name));
     const unmatched: string[] = [];
     const write=async(key:string,value:unknown)=>{await tx`INSERT INTO settings(key,value) VALUES(${key},${JSON.stringify(value)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value`;};
     let activities = 0;
@@ -50,11 +55,13 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
       const attendance: number[] = [];
       let ambiguous = false;
       for (const p of a.callups) {
+        if (ignoredNames.has(nameKey(p.name))) continue;
         const ids = names.get(nameKey(p.name)) ?? [];
         if (ids.length !== 1) { ambiguous = true; continue; }
         callups.push({id: ids[0], status: p.status});
       }
       for (const name of a.attendance ?? []) {
+        if (ignoredNames.has(nameKey(name))) continue;
         const ids = names.get(nameKey(name)) ?? [];
         if (ids.length !== 1) { ambiguous = true; continue; }
         attendance.push(ids[0]);
@@ -85,6 +92,7 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
           if(!draft&&!manual) {
             await tx`UPDATE match_roster SET selection_status=NULL WHERE match_id=${matchId}`;
             for(const name of a.lineup) {
+              if (ignoredNames.has(nameKey(name))) continue;
               const ids=names.get(nameKey(name))??[];
               if(ids.length!==1) {unmatched.push(`Match ${a.sourceId}: laguppställningens spelarkoppling behöver granskas`);continue;}
               await tx`INSERT INTO match_roster(match_id,player_id,selection_status,source) VALUES(${matchId},${ids[0]},'selected','svenskalag_browser') ON CONFLICT(match_id,player_id) DO UPDATE SET selection_status='selected',source='svenskalag_browser'`;

@@ -81,6 +81,12 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       const emptyPresence={...training,attendance:[]};
       await applySnapshot(sql,[emptyPresence],"2026-09-10");
       expect((await sql`SELECT attendance_status FROM development_activity_participation WHERE player_id=1`)[0].attendance_status).toBe("absent");
+      await sql`INSERT INTO players VALUES(3,'Tidigare spelare',0)`;
+      await sql`INSERT INTO settings VALUES('svenskalag_non_player_names','["Ledare"]')`;
+      const knownFormer={...training,attendance:['Exempel A','Tidigare spelare','Ledare']};
+      expect((await applySnapshot(sql,[knownFormer],"2026-09-10")).unmatched).toEqual([]);
+      expect(await sql`SELECT * FROM development_activity_participation WHERE player_id=3`).toHaveLength(0);
+      expect((await applySnapshot(sql,[{...training,attendance:['Okänd spelare']}],"2026-09-10")).unmatched).toHaveLength(1);
     } finally {await sql.end();}
   });
 });
