@@ -22,10 +22,9 @@ export default function CoreActivityCard({
   const calledCount = Number(activity.accepted_callup_count)
     + Number(activity.declined_callup_count)
     + Number(activity.pending_callup_count);
-  const readyCount = activity.has_confirmed_squad ? Number(activity.squad_count) : Number(activity.accepted_callup_count);
-  const hasStaffingData = activity.has_confirmed_squad || calledCount > 0;
-  const needsMoreAccepted = activity.is_upcoming && hasStaffingData && readyCount < 9;
-  const playersMissing = Math.max(0, 9 - readyCount);
+  const acceptedCount = Number(activity.accepted_callup_count);
+  const needsMoreAccepted = activity.is_upcoming && calledCount > 0 && acceptedCount < 9;
+  const playersMissing = Math.max(0, 9 - acceptedCount);
   return (
     <Link href={href} className="core-activity">
       <time className="core-date" dateTime={activity.activity_date}>
@@ -39,7 +38,7 @@ export default function CoreActivityCard({
               <span className="core-team-tag" data-team-tone={teamTone}>{activity.source_team}</span>
             )}
             {activity.competition_level && <span>{sanktanLevelLabel(activity.competition_level)}</span>}
-            {needsMoreAccepted && <span className="core-understaffed-badge">{activity.has_confirmed_squad ? "Uppställning: saknar" : "Ja-svar: saknar"} {playersMissing}</span>}
+            {needsMoreAccepted && <span className="core-understaffed-badge">Ja-svar: saknar {playersMissing}</span>}
             {activity.start_time && <span className="core-match-time">{activity.start_time}</span>}
           </div>
         ) : (

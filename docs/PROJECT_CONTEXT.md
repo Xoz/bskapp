@@ -391,3 +391,10 @@ På användarens begäran är reglerna nu samlade för befintliga och nya matche
 Webb/server publicerat från `3e1279e655fa6384bff9cfce4a31f5744b666955`, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34527033441. Synkarbetare `a7ca6f69` körde klart 22.32 svensk tid: 45 aktiviteter, 66 Gulposter granskade, samma tre bekräftade borttagningar och fyra sedan tidigare delvis okopplade träningsaktiviteter. Efter synk: AIK 10 ja/8 i uppställningen, Örby 10 ja/6 i uppställningen. Bekräftat i databasen, publicerad webb och produktionsserverns mobila läsmodeller.
 
 146 tester passerade: flera matcher, noll/saknad källtotal, svar som ändras utan ändrade spelarval, tomt utkast över synk, separata närvarorader samt kompletta mobila SQL-frågor. Typkontroll och webbbygge godkända. iOS-klientens låsta spelarval och otydliga etiketter är rättade och simulatorbygget lyckades; en ny iOS-installation är inte utförd och krävs för klientändringarna. Serverrättningen gäller redan.
+
+## Bemanningsvarning 2026-09-10
+
+Veckans matchkort bedömer spelarbrist enbart från Svenska Lags ja-svar, aldrig
+från antal markerade i laguppställningen. Befintlig gräns är nio ja; tio ja ger
+alltså ingen varning även med sex eller åtta markerade. Inga registrerade
+kallelsesvar ger ingen bristvarning. Uttagningen visas fortsatt separat.

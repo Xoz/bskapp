@@ -189,3 +189,10 @@ Gemensamma läsregler för matchtotaler samt gemensamt sparande för webb och mo
 - Kerstin (testspelare 58) permanent raderad i produktion och frånvaro verifierad.
 - Gulfiltrets cupgrupper inkluderas i matchlistan utan flytt eller duplicering.
 - Rubriken ”Tidigare” ersätter ”Spelade” för poster som bara har passerat datum.
+
+## Bemanningsvarning 2026-09-10
+
+Veckans matchkort bedömer spelarbrist enbart från Svenska Lags ja-svar, aldrig
+från antal markerade i laguppställningen. Befintlig gräns är nio ja; tio ja ger
+alltså ingen varning även med sex eller åtta markerade. Inga registrerade
+kallelsesvar ger ingen bristvarning. Uttagningen visas fortsatt separat.
