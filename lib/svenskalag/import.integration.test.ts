@@ -9,12 +9,14 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
     try {
       await sql.unsafe(`CREATE TEMP TABLE groups(id int,name text,group_type text,active int);
         CREATE TEMP TABLE players(id int,name text,active int);
-        CREATE TEMP TABLE development_activities(id text,match_id int,external_key text,group_id int);
+        CREATE TEMP TABLE development_activities(id text PRIMARY KEY,match_id int,external_key text UNIQUE,group_id int,activity_type text,activity_date text,start_time text,title text,external_source text);
+        CREATE TEMP TABLE development_activity_callups(activity_id text,player_id int,attendance_status text);
+        CREATE TEMP TABLE development_activity_callup_summaries(activity_id text PRIMARY KEY,accepted_count int,declined_count int,pending_count int,source text,updated_at text);
         CREATE TEMP TABLE matches(id int,group_id int,callup_accepted_count int,callup_declined_count int,callup_pending_count int,callup_source text);
         CREATE TEMP TABLE match_roster(match_id int,player_id int,callup_status text,selection_status text,selected_position text,source text,updated_at timestamptz, PRIMARY KEY(match_id,player_id));
         CREATE TEMP TABLE development_activity_participation(activity_id text,player_id int,attendance_status text,source text,PRIMARY KEY(activity_id,player_id));
         INSERT INTO groups VALUES(1,'Gul','subgroup',1); INSERT INTO players VALUES(1,'Exempel A',1),(2,'Exempel B',1);
-        INSERT INTO development_activities VALUES('a',7,'sanktan:123',1);INSERT INTO matches(id,group_id)VALUES(7,1);
+        INSERT INTO development_activities(id,match_id,external_key,group_id) VALUES('a',7,'sanktan:123',1);INSERT INTO matches(id,group_id)VALUES(7,1);
         INSERT INTO match_roster VALUES(7,1,'accepted','selected','back','manual',now());`);
       const a:ActivitySnapshot={sourceId:"123",url:"https://www.svenskalag.se/bollstanassk-fotboll-f2014-gul/match/123/test",date:"2026-09-12",time:"09:00",title:"Test",kind:"match",callups:[{name:"Exempel A",status:"declined"},{name:"Exempel B",status:"accepted"}],totals:{accepted:1,declined:1,pending:0},attendance:null};
       await applySnapshot(sql,[a],"2026-09-10",true);
@@ -26,6 +28,14 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       const bad={...a, totals:{accepted:2,declined:1,pending:0}};
       await expect(applySnapshot(sql,[bad],"2026-09-10")).rejects.toThrow();
       expect((await sql`SELECT callup_accepted_count FROM matches`)[0].callup_accepted_count).toBe(1);
+      const training:ActivitySnapshot={...a,sourceId:"456",url:"https://www.svenskalag.se/bollstanassk-fotboll-f2014-gul/aktivitet/456/traning",date:"2026-09-09",kind:"training",title:"Träning",attendance:["Exempel A"]};
+      await applySnapshot(sql,[training],"2026-09-10");
+      await applySnapshot(sql,[training],"2026-09-10");
+      expect(await sql`SELECT * FROM development_activities WHERE external_key='svenskalag:activity:456'`).toHaveLength(1);
+      expect(await sql`SELECT * FROM development_activity_callups`).toHaveLength(2);
+      await sql`UPDATE development_activity_participation SET source='manual', attendance_status='absent' WHERE player_id=1`;
+      await applySnapshot(sql,[training],"2026-09-10");
+      expect((await sql`SELECT * FROM development_activity_participation WHERE player_id=1`)[0]).toMatchObject({source:"manual",attendance_status:"absent"});
     } finally {await sql.end();}
   });
 });
