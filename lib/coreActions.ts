@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "crypto";
+import {lineupKey,outboxKey,draftKey,lineupRevision,type SourceLineup,type LineupJob} from "./svenskalag/outbox";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { all, batch, get, logActivity, run } from "./db";
@@ -294,16 +295,6 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const accessiblePlayers = await getPlayers();
   const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
-  const callups = activity.match_id == null ? [] : await all<{ player_id: number; attendance_status: "present" | "absent" | "unknown" }>(
-    `SELECT player_id, CASE callup_status WHEN 'accepted' THEN 'present' WHEN 'declined' THEN 'absent' ELSE 'unknown' END AS attendance_status
-     FROM match_roster WHERE match_id = ? AND callup_status IS NOT NULL`,
-    [activity.match_id]
-  );
-  const callupByPlayer = new Map(callups.map((callup) => [Number(callup.player_id), callup.attendance_status]));
-  for (const [playerId, status] of callupByPlayer) {
-    if (status === "present") selected.add(playerId);
-    else selected.delete(playerId);
-  }
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
 
   if (activity.match_id != null) {
@@ -322,6 +313,18 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
     });
   }
 
+  if (activity.match_id == null) return;
+  const matchId=activity.match_id;
+  // Samma lås som publiceraren: ett nytt utkast kan inte ändras mitt i överföringen.
+  statements.unshift({sql:"SELECT pg_advisory_xact_lock(2014, ?)",args:[matchId]});
+  statements.push({sql:"INSERT INTO settings(key,value) VALUES (?, 'true') ON CONFLICT(key) DO UPDATE SET value='true'",args:[draftKey(matchId)]});
+  if(formData.get("intent")==="publish") {
+    const sourceRow=await get<{value:string}>("SELECT value FROM settings WHERE key=?",[lineupKey(matchId)]);
+    const source:SourceLineup|null=sourceRow?JSON.parse(sourceRow.value):null;
+    if(!source || String(formData.get("source_revision"))!==lineupRevision(source.names) || source.date!==activity.activity_date || Date.now()-Date.parse(source.fetchedAt)>24*3600_000 || selected.size===0) throw new Error("Hämta matchen från Svenska Lag och välj spelare innan du skickar uttagningen.");
+    const job:LineupJob={id:crypto.randomUUID(),matchId,sourceId:source.sourceId,date:source.date,names:accessiblePlayers.filter(p=>selected.has(p.id)).map(p=>p.name),baseline:source.names,state:"queued",message:"Väntar på överföring till Svenska Lag",createdAt:new Date().toISOString()};
+    statements.push({sql:"INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",args:[outboxKey(matchId),JSON.stringify(job)]});
+  }
   await batch(statements);
   await pilotEvent("selection_saved", actor, activityId, measuredSeconds(formData), selected.size);
   await logActivity(actor, "sparade utvecklingsuttagning", `${selected.size} uttagna`);

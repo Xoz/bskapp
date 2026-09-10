@@ -31,6 +31,7 @@ export default async function MatchPage({ params, searchParams }: {
   const { id } = await params;
   const match = await getMatch(Number(id));
   if (!match) notFound();
+  if(match.cancelled) return <div className="card p-6"><h1>Matchen är inställd</h1><p>{match.opponent} · {match.date}</p><p>Statusen kommer från Svenska Lag.</p><Link href="/matcher">Till matcher</Link></div>;
 
   const canManageSquads = user.permissions.includes("manage_squads");
   const canReportMatches = user.permissions.includes("report_matches");

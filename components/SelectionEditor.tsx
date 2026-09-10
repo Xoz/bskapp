@@ -43,13 +43,18 @@ export default function SelectionEditor({
   matchLevel,
   callupSummary,
   action,
+  canPublish = false,
+  sourceRevision = "",
 }: {
   candidates: Candidate[];
   sourceTeam: string | null;
   matchLevel: number | null;
   callupSummary: { accepted: number; declined: number; pending: number };
   action: (formData: FormData) => Promise<void>;
+  canPublish?: boolean;
+  sourceRevision?: string;
 }) {
+  const [openedSourceRevision]=useState(sourceRevision);
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.selected).map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
   const [teamFilter, setTeamFilter] = useState<string>("Alla");
@@ -159,7 +164,7 @@ export default function SelectionEditor({
           <div className="selection-summary-count"><strong>{selected.length}</strong><span>markerade</span></div>
           <p className="selection-summary-copy">
             {calledCount > 0
-              ? `Ja-svarade kallelser är låsta i truppen; nej och inväntar påverkas inte av förslag.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
+              ? `Svaren kommer från Svenska Lag. Du bestämmer uttagningen.${unlinkedCalledCount > 0 ? ` ${unlinkedCalledCount} kallad saknar aktiv spelarprofil.` : ""}`
               : "Ingen synkad kallelse finns ännu. Markera spelare manuellt i listan."}
           </p>
         </div>
@@ -182,6 +187,8 @@ export default function SelectionEditor({
 
       <form action={action} className="selection-workspace">
         <PilotStartField />
+        <input type="hidden" name="source_revision" value={openedSourceRevision}/>
+        {selected.map(c=><span key={c.player.id}><input type="hidden" name="selected_player" value={c.player.id}/><input type="hidden" name={`position_${c.player.id}`} value={positions[c.player.id]??""}/></span>)}
         <div className="selection-toolbar">
           <div>
             <p className="selection-toolbar-title">Matchtrupp</p>
@@ -252,10 +259,8 @@ export default function SelectionEditor({
                   <input
                     id={`selected-${candidate.player.id}`}
                     type="checkbox"
-                    name="selected_player"
                     value={candidate.player.id}
                     checked={selectedForMatch}
-                    disabled={Boolean(candidate.currentCallupStatus)}
                     onChange={(event) => toggleSelected(candidate.player.id, event.target.checked)}
                     className="selection-checkbox"
                   />
@@ -290,7 +295,6 @@ export default function SelectionEditor({
                     <label className="selection-position-select">
                       <span className="sr-only">Position</span>
                       <select
-                        name={`position_${candidate.player.id}`}
                         className="selection-position-input"
                         value={positions[candidate.player.id] ?? ""}
                         onChange={(event) => setPositions((current) => ({ ...current, [candidate.player.id]: event.target.value }))}
@@ -308,7 +312,8 @@ export default function SelectionEditor({
         </div>
         <div className="selection-footer">
           <span>{selected.length} spelare valda</span>
-          <button type="submit" className="btn-primary selection-save-button">Spara uttagning <span aria-hidden="true">→</span></button>
+          <button type="submit" name="intent" value="save" className="btn-secondary selection-save-button">Spara utkast</button>
+          {canPublish && <button type="submit" name="intent" value="publish" disabled={selected.length===0} className="btn-primary selection-save-button">Skicka till Svenska Lag →</button>}
         </div>
       </form>
     </>

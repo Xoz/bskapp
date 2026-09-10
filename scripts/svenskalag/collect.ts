@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "playwright";
+import {readLineup} from "./lineup";
 import { ORIGIN, TEAM_PATH, dayOffset, sourceUrl, validateSnapshot, type ActivitySnapshot, type Reply } from "../../lib/svenskalag/model";
 
 const months = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
@@ -35,8 +36,8 @@ export async function collect(context: BrowserContext, today: string): Promise<A
       const date = `${month}-${currentDay.padStart(2,"0")}`;
       if (date < from || date > to) continue;
       const kind: "match" | "training" | null = match[1] === "match" ? "match" : /träning/i.test(row.title) ? "training" : null;
-      if (!kind || /inställd/i.test(row.title)) continue;
-      const value = {sourceId:match[2], url:sourceUrl(row.url), date, time:row.time.padStart(5,"0"), title:row.title, kind};
+      if (!kind) continue;
+      const value = {sourceId:match[2], url:sourceUrl(row.url), date, time:row.time.padStart(5,"0"), title:row.title, kind, cancelled:/inställd/i.test(row.title)};
       const old = entries.get(value.sourceId);
       if (old && JSON.stringify(old) !== JSON.stringify(value)) throw new Error("Motstridiga kalenderuppgifter");
       entries.set(value.sourceId, value);
@@ -62,6 +63,17 @@ export async function collect(context: BrowserContext, today: string): Promise<A
   const results: ActivitySnapshot[] = [];
   for (const entry of entries.values()) {
     await open(page, entry.url);
+    let match:ActivitySnapshot["match"];
+    if(entry.kind==='match') {
+      const header=(await page.locator('.game-header').textContent())?.trim()??'';
+      const teams=header.split(' - ');
+      if(teams.length!==2||teams.filter(t=>/^Bollstanäs SK(?: |$)/.test(t)).length!==1) throw new Error('Matchens lag kunde inte verifieras');
+      const homeAway=/^Bollstanäs SK(?: |$)/.test(teams[0])?'home':'away';
+      const location=page.locator('.game-info p.text-muted');
+      if(await location.count()>1) throw new Error('Spelplatsen kunde inte verifieras');
+      match={homeAway,opponent:teams[homeAway==='home'?1:0].trim(),location:await location.count()?(await location.innerText()).trim():''};
+    }
+    if(entry.cancelled) {results.push({...entry,match,callups:[],totals:{accepted:0,declined:0,pending:0},attendance:null});continue;}
     const totals = {accepted:0, declined:0, pending:0};
     const callups: ActivitySnapshot["callups"] = [];
     for (const [panel, status] of [["tabYes","accepted"],["tabNo","declined"],["tabNoAnswer","pending"]] as const) {
@@ -90,7 +102,9 @@ export async function collect(context: BrowserContext, today: string): Promise<A
       attendance = await page.locator(".memberlist li.player.presence-row div.left").allTextContents();
       attendance = attendance.map(n=>n.replace(/^\s*\d+\.\s*/, "").split(",")[0].trim());
     }
-    results.push({...entry, callups, totals, attendance});
+    let lineup:string[]|undefined;
+    if(entry.kind==='match'&&entry.date>=today) lineup=await readLineup(page,entry.sourceId);
+    results.push({...entry, match, lineup, callups, totals, attendance});
   }
   validateSnapshot(results, today);
   await page.close();

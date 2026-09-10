@@ -18,6 +18,7 @@ export default function MatchForm({
   matchPlayers?: MatchPlayerRow[];
   groups?: OrganizationGroup[];
 }) {
+  if(match?.source==='svenskalag_sanktan') return <div className="card p-6"><h2>Matchen hämtas från Svenska Lag</h2><p>Ändra matchens uppgifter där så uppdateras de här vid nästa synk.</p><Link className="underline" href={`/matcher/${match.id}/laguttagning`}>Förbered laguppställningen här →</Link></div>;
   const today = swedishToday();
 
   return (

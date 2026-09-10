@@ -10,7 +10,6 @@ import {
   type RecommendationCallupStatus,
   type SelectionSupport,
 } from "./selectionSupport";
-import { selectionDecisionFromCallups } from "./callupSync";
 
 export type CoreActivityType = "training" | "match" | "other";
 export type Evidence = "shown" | "practicing" | "revisit";
@@ -584,7 +583,7 @@ export async function getSelectionMatches(): Promise<CoreActivity[]> {
        WHERE linked.match_id = m.id AND linked.external_source = 'svenskalag_sanktan'
        ORDER BY linked.id LIMIT 1
      ) da ON true
-     WHERE m.date >= ? AND COALESCE(m.finished, 0) = 0
+     WHERE m.date >= ? AND m.cancelled=0 AND COALESCE(m.finished, 0) = 0
        AND (
          m.date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
          OR m.start_time IS NULL
@@ -690,7 +689,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               SELECT COUNT(DISTINCT upcoming_match.id)
               FROM matches upcoming_match
               WHERE upcoming_match.date::date BETWEEN (SELECT activity_date FROM target) AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
-                AND COALESCE(upcoming_match.finished, 0) = 0
+                AND upcoming_match.cancelled=0 AND COALESCE(upcoming_match.finished, 0) = 0
                 AND (
                   EXISTS (
                     SELECT 1 FROM match_roster upcoming_roster
@@ -774,11 +773,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     };
     return {
       ...summary,
-      selected: selectionDecisionFromCallups(
-        hasSyncedCallups,
-        row?.current_callup_status ?? null,
-        row?.decision ?? null
-      ) === "selected",
+      selected: row?.decision === "selected",
       selectedLastEight: Number(row?.selected_last_eight ?? 0),
       selectedLastThree: Number(row?.selected_last_three ?? 0),
       lastSelectedDate: signals.lastSelectedDate,

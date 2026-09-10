@@ -18,6 +18,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const match = await getMatch(Number(id));
   if (!match) notFound();
+  if(match.cancelled) redirect(`/matcher/${match.id}`);
 
   // Gul Sanktan använder samma kryssruteflöde, direkt i matchens arbetsyta.
   // Den äldre formationsytan finns kvar för cup/övriga matcher, men får inte
