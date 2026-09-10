@@ -404,3 +404,5 @@ Verifierat och publicerat som ff65de3a: typkontroll, sex renderingsfall och godk
 ## Matchtruppens status och sortering 2026-09-10
 
 Uttagen och Kallad visas som oberoende markeringar i SelectionEditor, med ja/nej/inväntar i svarskolumnen. Spelare som varken är markerade i aktuellt utkast eller har kallelsestatus sorteras efter alla spelare med status, även över laggränser. Position och namn behåller ordningen inom grupperna. Sorteringen följer ändringar i uttagningen och gäller även lagfilter.
+
+Verifierat i produktion e70e64b5: AIK-listan visar alla elva spelare med uttagning/kallelse före Ava. Uttagen + Kallad visas tillsammans där båda gäller. Typkontroll, renderingskontroll med ja/nej/inväntar och VPS-publicering godkända.
