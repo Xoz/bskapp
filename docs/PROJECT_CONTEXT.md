@@ -431,3 +431,7 @@ Spelarlistan använder nu match_roster med accepted/declined/pending i stället 
 Slutkontroll: produktionsbygge godkänt med lokal bskdev-databas. Ingen produktionspublicering gjord.
 
 Publicerat och verifierat 2026-09-10 som 6569704f: Idag visar AIK och Örby en gång vardera samt utfällbart matchutrymme. Spelare visar tre väntande matchbedömningar i utfällbar sektion. Typkontroll, uppdaterade kontrakttester och releasekontroller godkända.
+
+## Publicerad spelarstatistik – 2026-09-10
+
+Rättningen är publicerad på https://bsk2014.se/spelare, commit bc1f88a0b3a685892d317da6ba968fe1d980df5f. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34530853762 godkänd; aktiv release /opt/bsk/releases/bc1f88a0b3a6.MjP2TU. Alla 147 lokala tester godkända. Publiceringen genomförde backup, tester, bygge och hälsokontroller. Inloggad spelarlista verifierad med år 2026, Gul inklusive cupgrupper, och nya räknare för spelade matcher/matchkallelser. Detta ersätter tidigare anteckning om att rättningen inte publicerats.

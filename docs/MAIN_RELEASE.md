@@ -158,3 +158,7 @@ På användarens begäran är reglerna nu samlade för befintliga och nya matche
 Webb/server publicerat från `3e1279e655fa6384bff9cfce4a31f5744b666955`, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34527033441. Synkarbetare `a7ca6f69` körde klart 22.32 svensk tid: 45 aktiviteter, 66 Gulposter granskade, samma tre bekräftade borttagningar och fyra sedan tidigare delvis okopplade träningsaktiviteter. Efter synk: AIK 10 ja/8 i uppställningen, Örby 10 ja/6 i uppställningen. Bekräftat i databasen, publicerad webb och produktionsserverns mobila läsmodeller.
 
 146 tester passerade: flera matcher, noll/saknad källtotal, svar som ändras utan ändrade spelarval, tomt utkast över synk, separata närvarorader samt kompletta mobila SQL-frågor. Typkontroll och webbbygge godkända. iOS-klientens låsta spelarval och otydliga etiketter är rättade och simulatorbygget lyckades; en ny iOS-installation är inte utförd och krävs för klientändringarna. Serverrättningen gäller redan.
+
+## Publicerad spelarstatistik – 2026-09-10
+
+Rättningen är publicerad på https://bsk2014.se/spelare, commit bc1f88a0b3a685892d317da6ba968fe1d980df5f. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34530853762 godkänd; aktiv release /opt/bsk/releases/bc1f88a0b3a6.MjP2TU. Alla 147 lokala tester godkända. Publiceringen genomförde backup, tester, bygge och hälsokontroller. Inloggad spelarlista verifierad med år 2026, Gul inklusive cupgrupper, och nya räknare för spelade matcher/matchkallelser. Detta ersätter tidigare anteckning om att rättningen inte publicerats.
