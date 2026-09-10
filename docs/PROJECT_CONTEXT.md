@@ -371,3 +371,14 @@ Se `docs/MATCH_AUDIT_2026-09-10.md` för resultat och avgränsningar.
 ## 2026-09-10 – AIK: ja-svar tydligt skilda från laguppställning
 
 Direktkontroll i Svenska Lag gav 10 spelare + 1 ledare som tackat ja till AIK 12 september. Appens källtotal och 10 spelarposter stämmer; 8 avser laguppställningen. Användaren uppfattade startsidans ”8 uttagna”/”8 klara” som fel antal ja. Publicerad rättning `47e44428` visar ”10 har tackat ja i Svenska Lag” främst på Idag och i uttagningsvyn; 8 markerade i laguppställningen visas separat. Varningar anger uttryckligen uppställning respektive ja-svar. Inga val, svar eller kallelser ändrades. Typkontroll, produktionsbygge och inloggad kontroll av båda vyerna godkända. Publicering: https://github.com/Xoz/bskapp/actions/runs/34525751849.
+
+
+## 2026-09-10 – permanent gemensam matchlogik
+
+På användarens begäran är reglerna nu samlade för befintliga och nya matcher, utan AIK-specifik logik. `activityCallups.ts` delar källräkningen mellan aktivitetssidor, webbens uttagningslista och mobilens match-/uttagningslistor. NULL-total får fallback till match_roster, medan noll behålls som källvärde. Den redundanta överskrivningen i getSelectionWorkspace är borttagen.
+
+`selectionDraftStatements` används av webb och mobil. Äldre trupp-/cupformulär använder samma skydd genom `selectionDraftGuardStatements`. Ja-svar auto-väljer aldrig spelare. Alla utkast, även tomma, skyddas mot synk. Inkommande synk tar matchlåsen i id-ordning före verksamhetsskrivning; browserläsningen sker före transaktionen. Kallelser och faktisk närvaro ändras inte av spelarval. Mobilens listor döljer inaktiva matcher.
+
+Webb/server publicerat från `3e1279e655fa6384bff9cfce4a31f5744b666955`, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34527033441. Synkarbetare `a7ca6f69` körde klart 22.32 svensk tid: 45 aktiviteter, 66 Gulposter granskade, samma tre bekräftade borttagningar och fyra sedan tidigare delvis okopplade träningsaktiviteter. Efter synk: AIK 10 ja/8 i uppställningen, Örby 10 ja/6 i uppställningen. Bekräftat i databasen, publicerad webb och produktionsserverns mobila läsmodeller.
+
+146 tester passerade: flera matcher, noll/saknad källtotal, svar som ändras utan ändrade spelarval, tomt utkast över synk, separata närvarorader samt kompletta mobila SQL-frågor. Typkontroll och webbbygge godkända. iOS-klientens låsta spelarval och otydliga etiketter är rättade och simulatorbygget lyckades; en ny iOS-installation är inte utförd och krävs för klientändringarna. Serverrättningen gäller redan.
