@@ -24,3 +24,12 @@ For detta repo galler:
 4. GBrain endast som fallback
 
 Projektstatus och handover ska i forsta hand lasas fran repo och Obsidian, inte fran GBrain.
+
+## Gemensamt språk i hela appen (beslut 2026-09-10)
+
+- **Trupp** = alla som tackat ja och kommer att spela matchen (`callup_status=accepted`).
+- **Laguppställning / Uttagen** = planerad att spela, kallelse skickad eller kommer att skickas (`selection_status=selected`). Uttagning är inte ett ja-svar.
+- **Deltog / Deltagare** = faktisk registrerad närvaro efter matchen.
+- **Spelare / Spelarregister / Huvudlag** = hela spelarbasen eller organisationen; använd inte trupp för dessa.
+
+Definitionerna gäller alla vyer, räknare, hjälptexter, guide och API-etiketter. Ändra aldrig kallelsesvar eller uttagning bara för att anpassa terminologin. Interna befintliga databasfält och URL:er kan behålla sina namn.

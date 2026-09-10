@@ -463,3 +463,12 @@ Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning ht
 ## Endast ja-svar publicerat – 2026-09-10
 
 Commit 09449e2658de70dc9432bd0cd6b06309bce46441 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533040176. Matchplanens urval och sparvalidering använder endast accepted. Tidigare OR selected är borttaget. Inloggad AIK-match verifierad: 10 valbara ja-svarande spelare, spelare med nej-svar saknas i formationsvalet. Befintlig laguppställning och kallelsesvar är orörda. 153 tester och bygge godkända.
+
+## Gemensamt språk i hela appen (beslut 2026-09-10)
+
+- **Trupp** = alla som tackat ja och kommer att spela matchen (`callup_status=accepted`).
+- **Laguppställning / Uttagen** = planerad att spela, kallelse skickad eller kommer att skickas (`selection_status=selected`). Uttagning är inte ett ja-svar.
+- **Deltog / Deltagare** = faktisk registrerad närvaro efter matchen.
+- **Spelare / Spelarregister / Huvudlag** = hela spelarbasen eller organisationen; använd inte trupp för dessa.
+
+Definitionerna gäller alla vyer, räknare, hjälptexter, guide och API-etiketter. Ändra aldrig kallelsesvar eller uttagning bara för att anpassa terminologin. Interna befintliga databasfält och URL:er kan behålla sina namn.

@@ -28,6 +28,6 @@ export default async function PublicMatchEvaluationPage({ params, searchParams }
       reasonTag: player.reason_tag,
       skipped: Boolean(player.skipped),
     }))} saveAction={save} /> :
-      <div className="core-panel p-6"><p>Det finns ingen registrerad matchtrupp att utvärdera.</p></div>}
+      <div className="core-panel p-6"><p>Det finns inga registrerade deltagare att utvärdera.</p></div>}
   </main>;
 }

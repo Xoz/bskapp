@@ -219,7 +219,7 @@ struct MainSplitView: View {
                     initialSection: shouldStartEvaluation(activity) ? .evaluation : .overview
                 )
             } else {
-                EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för trupp, matchcenter och observationer.", icon: "calendar")
+                EmptyWorkspaceDetail(title: "Välj en match", message: "Öppna en Gul- eller Grönmatch för laguppställning, matchcenter och observationer.", icon: "calendar")
             }
         case .trainings:
             if let selectedTraining,
@@ -238,7 +238,7 @@ struct MainSplitView: View {
             if let id = selectedActivity, let activity = model.activities.first(where: { $0.id == id }) {
                 MatchWorkspaceView(activity: activity, initialSection: .roster)
             } else {
-                EmptyWorkspaceDetail(title: "Välj en match", message: "Bygg och spara matchens trupp här.", icon: "sportscourt")
+                EmptyWorkspaceDetail(title: "Välj en match", message: "Planera och spara matchens laguppställning här.", icon: "sportscourt")
             }
         case .settings:
             AccountDetail()
@@ -811,7 +811,7 @@ private struct ActivityWorkspaceList: View {
                         .foregroundStyle(BSKTheme.secondary)
                         .lineLimit(2)
                 } else {
-                    Text("Ingen trupp registrerad")
+                    Text("Ingen laguppställning registrerad")
                         .font(.caption)
                         .foregroundStyle(BSKTheme.muted)
                 }
@@ -967,7 +967,7 @@ private struct ActivityWorkspaceList: View {
     }
 
     private func rosterLabel(_ activity: ActivitySummary) -> String {
-        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")
+        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Trupp" : "Laguppställning")
     }
 
     private func levelColor(_ level: String?) -> Color {
@@ -1341,7 +1341,7 @@ private struct PremiumSelectionList: View {
                             .padding(.vertical, 4)
                             .background(BSKTheme.warning.opacity(0.12), in: Capsule())
                     } else if match.hasConfirmedSquad {
-                        Text("Trupp klar")
+                        Text("Laguppställning sparad")
                             .font(.caption2.bold())
                             .foregroundStyle(BSKTheme.accent)
                     }
@@ -1516,9 +1516,9 @@ struct PremiumSelectionDetail: View {
                 VStack(alignment: .leading, spacing: 22) {
                     summaryCard
                     BSKPageHeader(
-                        eyebrow: "Truppbeslut",
+                        eyebrow: "Laguttagning",
                         title: "\(selectedCount) valda",
-                        message: "Välj spelare och bekräfta sedan matchtruppen.",
+                        message: "Välj spelare och spara sedan laguppställningen.",
                         trailing: "\(workspace.candidates.count) tillgängliga"
                     )
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 13)], spacing: 13) {
@@ -1553,7 +1553,7 @@ struct PremiumSelectionDetail: View {
             if selectedCount > 0 {
                 Divider().overlay(BSKTheme.border)
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("TRUPP ATT BEKRÄFTA")
+                    Text("LAGUPPSTÄLLNING ATT SPARA")
                         .font(.system(size: 9, weight: .black))
                         .tracking(1.2)
                         .foregroundStyle(BSKTheme.secondary)
@@ -1589,7 +1589,7 @@ struct PremiumSelectionDetail: View {
         Button { Task { await save() } } label: {
             HStack {
                 if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
-                Text(isSaving ? "Bekräftar…" : "Bekräfta trupp")
+                Text(isSaving ? "Bekräftar…" : "Spara laguppställning")
                 Spacer()
                 Text("\(selectedCount) spelare").opacity(0.7)
             }
@@ -1737,7 +1737,7 @@ struct PremiumSelectionDetail: View {
             selections[candidate.playerId] = !active
             savedMessage = nil
         } label: {
-            Label(active ? "Uttagen" : "Ta ut i truppen", systemImage: active ? "checkmark.square.fill" : "square")
+            Label(active ? "Uttagen" : "Ta ut till matchen", systemImage: active ? "checkmark.square.fill" : "square")
                 .font(.caption.bold()).frame(maxWidth: .infinity).padding(.vertical, 10)
                 .foregroundStyle(active ? BSKTheme.backgroundDeep : BSKTheme.secondary)
                 .background(active ? BSKTheme.accent : BSKTheme.backgroundDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -1749,7 +1749,7 @@ struct PremiumSelectionDetail: View {
         Button { Task { await save() } } label: {
             HStack {
                 if isSaving { ProgressView().tint(BSKTheme.backgroundDeep) }
-                Text(isSaving ? "Bekräftar…" : "Bekräfta trupp")
+                Text(isSaving ? "Bekräftar…" : "Spara laguppställning")
                 Spacer()
                 Text("\(selectedCount) valda").opacity(0.7)
             }
@@ -1804,7 +1804,7 @@ struct PremiumSelectionDetail: View {
         let payload = workspace.candidates.map { SelectionDecision(playerId: $0.playerId, selected: isSelected($0), position: primaryPosition($0)) }
         do {
             self.workspace = try await model.saveSelection(id: match.id, decisions: payload)
-            savedMessage = "Trupp bekräftad"
+            savedMessage = "Laguppställning sparad"
             await model.reload()
         } catch { model.errorMessage = error.localizedDescription }
     }

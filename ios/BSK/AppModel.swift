@@ -161,7 +161,7 @@ final class AppModel: ObservableObject {
                 squadPlayerNames: [],
                 acceptedPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"],
                 rosterSource: "accepted",
-                rosterLabel: "Preliminär trupp",
+                rosterLabel: "Planerad laguppställning",
                 rosterPlayerNames: ["Alma", "Adele", "Kerstin", "Mira", "Nora", "Saga", "Vera"]
             )
         ]

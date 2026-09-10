@@ -234,10 +234,10 @@ export default function GuidePage() {
               <Topic title="Rekommenderad första konfiguration">
                 <Steps>
                   <Step title="Kontrollera klubb, lag och säsong">Görs under Inställningar → Laget.</Step>
-                  <Step title="Lägg in truppen">Lägg till namn, tröjnummer och undergrupp. Position och spelnivå kan kompletteras senare.</Step>
+                  <Step title="Lägg in spelarna">Lägg till namn, tröjnummer och undergrupp. Position och spelnivå kan kompletteras senare.</Step>
                   <Step title="Koppla matchkalendern">Importera kalendern under Inställningar → Matcher eller skapa matcher manuellt.</Step>
                   <Step title="Bjud in tränarstaben">Registrera Google-adresser under Administration och kontrollera rollerna.</Step>
-                  <Step title="Öppna en kommande match">Sätt matchnivå och ta ut truppen när underlaget är klart.</Step>
+                  <Step title="Öppna en kommande match">Sätt matchnivå och planera laguppställningen när underlaget är klart.</Step>
                 </Steps>
               </Topic>
             </Chapter>
@@ -253,13 +253,13 @@ export default function GuidePage() {
                   <Item><strong style={{ color: "var(--ink)" }}>Spelade</strong> är antalet avslutade eller resultatförda matcher.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>V–O–F</strong> betyder vinster, oavgjorda och förluster.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Mål</strong> visar gjorda och insläppta mål.</Item>
-                  <Item><strong style={{ color: "var(--ink)" }}>Trupp</strong> visar antalet aktiva spelare.</Item>
+                  <Item><strong style={{ color: "var(--ink)" }}>Spelare</strong> visar antalet aktiva spelare.</Item>
                 </List>
                 <p>Den stora åtgärdsknappen anpassas efter läget. Den kan till exempel föreslå laguttagning, rapportering av dagens match eller registrering av nästa steg.</p>
               </Topic>
 
               <Topic title="Kommande matcher">
-                <p>De närmaste matcherna visas med datum, tid, hemma/borta och motståndare. Om en match saknar uttagen trupp markeras den med <strong style={{ color: "var(--ink)" }}>Trupp saknas</strong>.</p>
+                <p>De närmaste matcherna visas med datum, tid, hemma/borta och motståndare. Om en match saknar laguppställning markeras den med <strong style={{ color: "var(--ink)" }}>Laguppställning saknas</strong>.</p>
                 <p>När du öppnar en match från Översikten kommer du direkt till laguttagningen, eftersom det oftast är nästa praktiska steg inför match.</p>
               </Topic>
 
@@ -269,7 +269,7 @@ export default function GuidePage() {
               </Topic>
 
               <Topic title="Att göra och Senaste aktivitet">
-                <p>Att göra-listan samlar konkreta luckor, exempelvis en kommande match utan trupp, ett resultat som saknas eller en spelare som behöver följas upp.</p>
+                <p>Att göra-listan samlar konkreta luckor, exempelvis en kommande match utan laguppställning, ett resultat som saknas eller en spelare som behöver följas upp.</p>
                 <p>Aktivitetsloggen visar vad tränarstaben nyligen har gjort. Den är användbar när flera ledare delar ansvaret och minskar risken för dubbelarbete.</p>
               </Topic>
             </Chapter>
@@ -278,11 +278,11 @@ export default function GuidePage() {
               id="spelare"
               number="03"
               title="Spelare"
-              intro="Spelarsidan är både truppregister och ingång till varje spelares utveckling, matcher, statistik och samtal."
+              intro="Spelarsidan är både spelarregister och ingång till varje spelares utveckling, matcher, statistik och samtal."
             >
               <Topic title="Lägga till en spelare">
                 <Steps>
-                  <Step title="Gå till Spelare eller Inställningar → Trupp" />
+                  <Step title="Gå till Spelare eller Inställningar → Spelare" />
                   <Step title="Fyll i namn och tröjnummer">Tröjnumret kan ändras senare.</Step>
                   <Step title="Välj undergrupp">Det styr vilket lag spelaren normalt tillhör. En spelare kan senare vara medlem i flera grupper.</Step>
                   <Step title="Spara och öppna spelarprofilen">Komplettera position, spelnivå och interna anteckningar där.</Step>
@@ -290,7 +290,7 @@ export default function GuidePage() {
               </Topic>
 
               <Topic title="Spelarlistan">
-                <p>Överst visas ledare inom mål, assist och passningar när statistik finns. Tabellen visar sedan truppen och säsongssiffror. På små skärmar döljs vissa detaljkolumner, men informationen finns kvar på spelarprofilen.</p>
+                <p>Överst visas ledare inom mål, assist och passningar när statistik finns. Tabellen visar sedan spelarna och säsongssiffror. På små skärmar döljs vissa detaljkolumner, men informationen finns kvar på spelarprofilen.</p>
                 <p>Klicka på en spelare för att se profil, utvärderingar, form, samtal och matchstatistik. Användare utan rätt att se privat spelarunderlag får en mer begränsad vy.</p>
               </Topic>
 
@@ -299,7 +299,7 @@ export default function GuidePage() {
                   <Term name="Position">Spelarens vanligaste utgångsposition. Den används som stöd i laguttagningen.</Term>
                   <Term name="Spelnivå">Tränarens aktuella planeringsnivå. Den jämförs med matchens nivå för att sortera och färgmarkera spelare.</Term>
                   <Term name="Anteckningar">Intern information som bara ska vara tillgänglig för behörig personal.</Term>
-                  <Term name="Aktiv status">Avaktivera en spelare som lämnat truppen utan att radera historiken.</Term>
+                  <Term name="Aktiv status">Avaktivera en spelare som lämnat laget utan att radera historiken.</Term>
                 </dl>
                 <Callout title="Spelnivå är ett planeringsstöd">
                   Nivån ska inte presenteras för barnen som ett värde på spelaren. Den kan ändras över tid och ska kombineras med
@@ -364,7 +364,7 @@ export default function GuidePage() {
               id="matcher"
               number="05"
               title="Matcher"
-              intro="Matchområdet samlar vanliga matcher och cuper. Här förbereder ni truppen, rapporterar händelser och följer upp resultat, statistik och form."
+              intro="Matchområdet samlar vanliga matcher och cuper. Här planerar ni laguppställningen, rapporterar händelser och följer upp resultat, statistik och form."
             >
               <Topic title="Tre sätt att få in matcher">
                 <dl>
@@ -387,7 +387,7 @@ export default function GuidePage() {
 
               <Topic title="Matchsidans funktioner">
                 <List>
-                  <Item><strong style={{ color: "var(--ink)" }}>Laguttagning</strong> väljer matchtrupp, startuppställning och formation.</Item>
+                  <Item><strong style={{ color: "var(--ink)" }}>Laguttagning</strong> väljer spelare som planeras spela. Matchplanen hanterar formation och spelidé med spelarna som tackat ja.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Liverapportering</strong> öppnar tränarens matchverktyg.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Föräldrarapportering</strong> kan öppnas eller stängas och har en separat delningslänk.</Item>
                   <Item><strong style={{ color: "var(--ink)" }}>Livescore</strong> är den publika följvyn.</Item>
@@ -410,14 +410,21 @@ export default function GuidePage() {
               title="Laguttagning"
               intro="Laguttagningen hjälper tränaren att kombinera matchnivå, positioner och gruppens behov. Systemets färger och sortering är stöd för beslutet – inte beslutet självt."
             >
-              <Topic title="Ta ut en matchtrupp">
+              <Topic title="Trupp, laguppställning och deltagare">
+                <div className="space-y-3">
+                  <Term name="Trupp">Alla spelare som tackat ja och kommer att spela matchen.</Term>
+                  <Term name="Laguppställning / Uttagen">Planerade spelare. Kallelse är skickad eller kommer att skickas. Ett nej-svar innebär att spelaren inte ingår i truppen, även om uttagningen finns kvar.</Term>
+                  <Term name="Deltog">Spelare med registrerad faktisk närvaro efter matchen.</Term>
+                </div>
+              </Topic>
+              <Topic title="Planera en laguppställning">
                 <Steps>
                   <Step title="Kontrollera matchens nivå">Om nivån saknas, gå tillbaka till matchen eller cupinställningarna och sätt den.</Step>
-                  <Step title="Välj spelare i trupplistan">Spelarna sorteras efter hur deras satta nivå passar matchnivån.</Step>
-                  <Step title="Välj formation" />
+                  <Step title="Välj planerade spelare i listan">Spelarna sorteras efter hur deras satta nivå passar matchnivån.</Step>
+                  <Step title="Öppna Matchplan när spelare tackat ja">Truppen består av ja-svarande spelare. Välj formation och skriv spelidén här.</Step>
                   <Step title="Dra spelare till planen">Placera startspelarna på avsedda positioner.</Step>
                   <Step title="Kontrollera bänk och fördelning">Ta hänsyn till speltid, frånvaro, belastning och tidigare uttagningar.</Step>
-                  <Step title="Spara trupp och uppställning" />
+                  <Step title="Spara laguppställningen" />
                 </Steps>
               </Topic>
 
@@ -429,8 +436,8 @@ export default function GuidePage() {
                 </Callout>
               </Topic>
 
-              <Topic title="Cuptrupp och matchtrupp">
-                <p>En cup kan ha en gemensam uttagen trupp. Den används som förval när du öppnar laguttagningen för en enskild cupmatch. Du kan därefter anpassa varje matchtrupp utan att ändra cupens grundtrupp.</p>
+              <Topic title="Cupens och matchens laguppställning">
+                <p>En cup kan ha en gemensam laguppställning. Den används som förval när du öppnar laguttagningen för en enskild cupmatch. Du kan därefter anpassa varje laguppställning utan att ändra cupens planerade spelare.</p>
               </Topic>
             </Chapter>
 
@@ -443,7 +450,7 @@ export default function GuidePage() {
             >
               <Topic title="Före avspark">
                 <Steps>
-                  <Step title="Kontrollera matchtruppen">Rätt spelare måste finnas med för att statistiken ska hamna rätt.</Step>
+                  <Step title="Kontrollera matchens spelare">Rätt spelare måste finnas med för att statistiken ska hamna rätt.</Step>
                   <Step title="Öppna liverapporteringen från matchsidan" />
                   <Step title="Kontrollera periodlängd och matchklocka" />
                   <Step title="Dela rätt länk">Livescore är för följare. Rapportera-länken är bara för personer som ska registrera händelser.</Step>
@@ -478,7 +485,7 @@ export default function GuidePage() {
               id="cuper"
               number="08"
               title="Cuper"
-              intro="Cupfunktionen håller ihop flera matcher, gemensam trupp, gruppspel och slutspel. En cup kan skapas manuellt eller importeras från en iCal-länk."
+              intro="Cupfunktionen håller ihop flera matcher, gemensam laguppställning, gruppspel och slutspel. En cup kan skapas manuellt eller importeras från en iCal-länk."
             >
               <Topic title="Importera en cup">
                 <Steps>
@@ -499,7 +506,7 @@ export default function GuidePage() {
                   <Term name="Cupinställningar">Namn, nivå och eventuell gruppinformation som gäller cupen.</Term>
                   <Term name="Gruppspel">De inledande matcherna. Resultat kan sammanställas som poäng och målskillnad.</Term>
                   <Term name="Slutspel">Kvartsfinal, semifinal, final eller placeringsmatch läggs till när motstånd och tider blir kända.</Term>
-                  <Term name="Cuptrupp">Den gemensamma spelargrupp som är uttagen till turneringen.</Term>
+                  <Term name="Cupens laguppställning">Den gemensamma spelargrupp som är uttagen till turneringen.</Term>
                   <Term name="Matchgrupp">En intern grupp som håller isär rätt spelare och matcher när organisationen har flera lag.</Term>
                 </dl>
               </Topic>
@@ -611,11 +618,11 @@ export default function GuidePage() {
 
               <Topic title="Organisationens grupper">
                 <dl>
-                  <Term name="Huvudtrupp">Organisationens övergripande lag eller spelarbas.</Term>
-                  <Term name="Undergrupp">Ett mer permanent lag inom huvudtruppen, exempelvis Gul eller Grön.</Term>
+                  <Term name="Huvudlag">Organisationens övergripande lag eller spelarbas.</Term>
+                  <Term name="Undergrupp">Ett mer permanent lag inom huvudlaget, exempelvis Gul eller Grön.</Term>
                   <Term name="Matchgrupp">En teknisk grupp som kan skapas för en cup eller ett särskilt matchsammanhang.</Term>
                 </dl>
-                <p>En spelare kan ingå i flera grupper. Det är användbart när laget delar spelarbas eller när en särskild cuptrupp tas ut.</p>
+                <p>En spelare kan ingå i flera grupper. Det är användbart när laget delar spelarbas eller när spelare planeras för en särskild cup.</p>
               </Topic>
             </Chapter>
 
@@ -623,7 +630,7 @@ export default function GuidePage() {
               id="installningar"
               number="12"
               title="Inställningar"
-              intro="Inställningarna är indelade i Profil, Matcher, Laget, Trupp och Tränare. Ändringar här påverkar ofta hela appen."
+              intro="Inställningarna är indelade i Profil, Matcher, Laget, Spelare och Tränare. Ändringar här påverkar ofta hela appen."
             >
               <Topic title="Profil">
                 <p>Här anger tränaren sitt visningsnamn. Namnet används bland annat i aktivitetsloggen och för att visa vem som gjort en åtgärd.</p>
@@ -643,7 +650,7 @@ export default function GuidePage() {
                 <p>Klubbnamn, lagnamn, säsong, klubbfärger och matchtröjor används på flera sidor. Kontrollera kontrasten i både ljust och mörkt läge när färger ändras. Standardfärgerna kan återställas.</p>
               </Topic>
 
-              <Topic title="Trupp och spelarprofiler">
+              <Topic title="Spelarregister och profiler">
                 <p>Här kan flera spelare läggas till och PIN-koder hanteras. Använd spelarprofilen när du behöver ändra mer detaljerad information om en enskild spelare.</p>
               </Topic>
 
@@ -662,7 +669,7 @@ export default function GuidePage() {
                 <Steps>
                   <Step title="Kontrollera datum, tid, plats och motståndare" />
                   <Step title="Sätt matchens svårighetsnivå" />
-                  <Step title="Ta ut truppen med hänsyn till tidigare speltid" />
+                  <Step title="Planera laguppställningen med hänsyn till tidigare speltid" />
                   <Step title="Välj formation och preliminär startuppställning" />
                   <Step title="Bestäm vem som rapporterar matchen" />
                   <Step title="Dela Livescore-länken med dem som vill följa" />
@@ -683,8 +690,8 @@ export default function GuidePage() {
                 <Steps>
                   <Step title="Importera eller skapa cupen" />
                   <Step title="Kontrollera gruppspel, nivå och eventuella egna laggrupper" />
-                  <Step title="Ta ut en gemensam cuptrupp" />
-                  <Step title="Förbered matchtrupper och formationer" />
+                  <Step title="Planera en gemensam laguppställning för cupen" />
+                  <Step title="Förbered laguppställningar och formationer" />
                   <Step title="Bestäm rapportörer och dela rätt länkar" />
                   <Step title="Lägg till slutspel först när lottningen är känd" />
                 </Steps>

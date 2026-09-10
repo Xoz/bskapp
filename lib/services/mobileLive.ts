@@ -97,7 +97,7 @@ async function getMobileLiveState(matchId: number) {
     players,
     onField: state.onField.filter((playerId) => allowed.has(playerId)),
     rosterSource: roster?.source ?? "none",
-    rosterLabel: roster?.label ?? "Ingen trupp",
+    rosterLabel: roster?.label ?? "Ingen laguppställning",
   };
 }
 
@@ -114,7 +114,7 @@ export async function updateMobileLiveMatch(actor: CurrentUser, matchId: number,
   } else if (action.type === "goal") {
     const state = await getMobileLiveState(matchId);
     if (!Number.isInteger(action.playerId) || !state.players.some((player) => player.id === action.playerId)) {
-      throw new DevelopmentServiceError("invalid", "Målskytten ingår inte i matchtruppen.", 400);
+      throw new DevelopmentServiceError("invalid", "Målskytten saknas i matchens spelarunderlag.", 400);
     }
     await recordEvent(matchId, action.playerId, "goals", actor.name, `mobile-${actor.id}`, action.idempotencyKey);
   } else if (action.type === "opponent_goal") {

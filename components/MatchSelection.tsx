@@ -34,7 +34,7 @@ export default async function MatchSelection({ workspace }: { workspace: Workspa
             </p>
             <h1 className="core-title">{workspace.activity.title}</h1>
             <p className="core-lead">
-              Kallade spelare är markerade och deras svar visas direkt i listan.
+              Laguppställning: planerade spelare. Kallelser och svar visas för varje spelare; de som tackat ja utgör truppen.
             </p>
             <p className="caption mt-2" style={{ color: "var(--ink-secondary)" }}>Gul prioriteras först, följt av F15 och därefter Grön som möjliga lån.</p>
           </div>

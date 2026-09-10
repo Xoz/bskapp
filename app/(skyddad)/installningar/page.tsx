@@ -129,7 +129,7 @@ export default async function SettingsPage({
         <p className="eyebrow">Konfiguration</p>
         <h1 className="text-[32px] font-bold mt-0.5">Inställningar</h1>
         <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-          Anpassa appen till ditt lag – namn, färger, trupp och åtkomst.
+          Anpassa appen till ditt lag – namn, färger, spelare och åtkomst.
         </p>
       </div>
 
@@ -505,7 +505,7 @@ export default async function SettingsPage({
           <section id="trupp" className="space-y-5 scroll-mt-20">
             <SvenskaLagSyncStatus />
             <div>
-              <p className="eyebrow">Trupp</p>
+              <p className="eyebrow">Spelare</p>
             </div>
 
             {hasDemo && (
@@ -519,7 +519,7 @@ export default async function SettingsPage({
               >
                 <IconAlert width={17} height={17} />
                 <span className="flex-1 min-w-48">
-                  Truppen innehåller exempelspelare – klistra in din riktiga trupp nedan och rensa sedan exemplen.
+                  Spelarregistret innehåller exempelspelare – klistra in dina riktiga spelare nedan och rensa sedan exemplen.
                 </span>
                 <form action={removeDemoPlayers}>
                   <button type="submit" className="font-semibold underline cursor-pointer">
@@ -540,7 +540,7 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="font-semibold">Lägg till spelare</h2>
                   <p className="body-small mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                    Lägg till spelare en och en, eller klistra in hela truppen från svenskalag.se.
+                    Lägg till spelare en och en, eller klistra in alla spelare från svenskalag.se.
                   </p>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export default async function SettingsPage({
                   className="cursor-pointer font-semibold text-sm select-none"
                   style={{ fontFamily: "var(--font-display)", color: "var(--primary)" }}
                 >
-                  Klistra in hela truppen från svenskalag.se
+                  Klistra in alla spelare från svenskalag.se
                 </summary>
                 <form action={addPlayersBulk} className="mt-4 space-y-3">
                   <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
@@ -691,7 +691,7 @@ export default async function SettingsPage({
                   />
                 </div>
                 <p className="caption" style={{ color: "var(--ink-muted)" }}>
-                  Välj Gul-filen och vid behov även Grön-filen för matcher. Träningar importeras endast från Gul och endast från idag till 14 dagar framåt, tillsammans med kallelser och svar. Bekräftade trupper och uttagningsbeslut ändras aldrig.
+                  Välj Gul-filen och vid behov även Grön-filen för matcher. Träningar importeras endast från Gul och endast från idag till 14 dagar framåt, tillsammans med kallelser och svar. Befintliga laguppställningar och uttagningsbeslut ändras aldrig.
                 </p>
                 <button type="submit" className="btn-primary">Importera Svenska Lag-data</button>
               </form>
@@ -831,7 +831,7 @@ export default async function SettingsPage({
                     </form>
                     <ConfirmForm
                       action={removePlayer}
-                      message={`Inaktivera ${p.name}? Spelaren försvinner från den aktiva truppen, men historiken behålls.`}
+                      message={`Inaktivera ${p.name}? Spelaren försvinner från listan över aktiva spelare, men historiken behålls.`}
                     >
                       <input type="hidden" name="id" value={p.id} />
                       <button

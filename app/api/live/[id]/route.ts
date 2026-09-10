@@ -144,7 +144,7 @@ export async function POST(
         if (!isCoach) {
           const state = await getLiveState(match.id, true);
           if (!state.players.some((player) => player.id === action.playerId)) {
-            return NextResponse.json({ error: "Spelaren ingår inte i matchtruppen" }, { status: 400 });
+            return NextResponse.json({ error: "Spelaren saknas i matchens spelarunderlag" }, { status: 400 });
           }
         }
         await recordEvent(

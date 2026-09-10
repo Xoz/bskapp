@@ -62,7 +62,7 @@ export default function CoreActivityCard({
         ) : activity.activity_type === "match" ? (
           activity.participant_names.length > 0 ? (
             <p className="core-activity-players">
-              <strong>{activity.participant_names.length} spelade</strong><span> · Trupp i matchdetaljen</span>
+              <strong>{activity.participant_names.length} spelade</strong><span> · Deltagare i matchdetaljen</span>
             </p>
           ) : (
             <p className="core-activity-sub">Ingen spelarhistorik registrerad</p>

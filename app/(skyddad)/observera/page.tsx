@@ -73,7 +73,7 @@ export default async function ObservePage({
         <div>
           <strong>{isPostMatch ? "Utvärdera spelarna" : "Det här gör du här"}</strong>
           <p>{isPostMatch
-            ? "Gör den enkla utvärderingen för spelarna som ingick i matchtruppen. Två val per spelare och sedan är du klar."
+            ? "Gör den enkla utvärderingen för spelarna som deltog i matchen. Två val per spelare och sedan är du klar."
             : "Kontrollera vilka som är kallade i Uttagning. Efter matchen öppnas den enkla spelarutvärderingen här."}</p>
         </div>
         {evaluationOpen && detail.activity.match_id != null ? (
@@ -86,7 +86,7 @@ export default async function ObservePage({
       {detail.activity.activity_type === "match" && !detail.activity.is_upcoming && (
         <section className="core-panel core-form-panel">
           <div className="core-section-head">
-            <div><p className="core-kicker">Matchtrupp</p><h2 className="core-section-title mt-2">Spelare som spelade</h2></div>
+            <div><p className="core-kicker">Deltagare</p><h2 className="core-section-title mt-2">Spelare som spelade</h2></div>
             <span className="core-section-note">{detail.activity.participant_names.length} spelare</span>
           </div>
           {detail.activity.participant_names.length > 0 ? (

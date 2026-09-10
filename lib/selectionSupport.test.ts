@@ -62,7 +62,7 @@ describe("transparent uttagningsstöd", () => {
       ])
     ).toEqual([
       "1 spelare har för hög belastning",
-      "Minst halva truppen är vid maxgränsen eller över",
+      "Minst hälften av de uttagna är vid maxgränsen eller över",
     ]);
   });
 

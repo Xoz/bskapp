@@ -1314,7 +1314,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
       squadPlayerNames: row.squad_player_names ? row.squad_player_names.split("\u001f") : [],
       acceptedPlayerNames: row.accepted_player_names ? row.accepted_player_names.split("\u001f") : [],
       rosterSource: roster?.source ?? "none",
-      rosterLabel: roster?.label ?? "Ingen trupp",
+      rosterLabel: roster?.label ?? "Ingen laguppställning",
       rosterPlayerNames: roster?.players.map((player) => player.name) ?? [],
     };
   });

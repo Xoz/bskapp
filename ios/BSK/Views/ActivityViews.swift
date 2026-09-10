@@ -68,7 +68,7 @@ struct ActivityList: View {
                     .foregroundStyle(.secondary)
                     let roster = activity.rosterPlayerNames ?? (activity.squadPlayerNames.isEmpty ? activity.acceptedPlayerNames : activity.squadPlayerNames)
                     if !roster.isEmpty {
-                        Text("\(activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")): \(roster.joined(separator: ", "))")
+                        Text("\(activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Trupp" : "Laguppställning")): \(roster.joined(separator: ", "))")
                             .font(.caption)
                             .foregroundStyle(BSKTheme.secondary)
                             .lineLimit(2)
@@ -99,7 +99,7 @@ enum MatchWorkspaceSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .overview: return "Översikt"
-        case .roster: return "Trupp"
+        case .roster: return "Laguppställning"
         case .matchCenter: return "Matchcenter"
         case .evaluation: return "Utvärdera"
         }
@@ -294,7 +294,7 @@ private struct MatchOverviewContent: View {
             Label("Endast information", systemImage: "info.circle.fill")
                 .font(.headline)
                 .foregroundStyle(BSKTheme.accent)
-            Text("Lag Grön ansvarar själva för matchen. Översikt och spelartrupp visas här, men Matchcenter, uttagning och utvärdering är skrivskyddade.")
+            Text("Lag Grön ansvarar själva för matchen. Översikt och laguppställning visas här, men Matchcenter, uttagning och utvärdering är skrivskyddade.")
                 .font(.subheadline)
                 .foregroundStyle(BSKTheme.secondary)
         }
@@ -323,7 +323,7 @@ private struct MatchOverviewContent: View {
                 Text(activity.title)
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
-                Text(activity.sourceTeam == "Grön" ? "Information från Lag Grön" : "Översikt, trupp, Matchcenter och utvärdering")
+                Text(activity.sourceTeam == "Grön" ? "Information från Lag Grön" : "Översikt, laguppställning, Matchcenter och utvärdering")
                     .font(.subheadline)
                     .foregroundStyle(BSKTheme.secondary)
             }
@@ -367,14 +367,14 @@ private struct ActivityRosterSummary: View {
     }
 
     private var label: String {
-        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp")
+        activity.rosterLabel ?? (activity.squadPlayerNames.isEmpty ? "Trupp" : "Laguppställning")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("SPELARTRUPP")
+                    Text("LAGUPPSTÄLLNING")
                         .font(.system(size: 10, weight: .black))
                         .tracking(1.4)
                         .foregroundStyle(BSKTheme.accent)
@@ -389,7 +389,7 @@ private struct ActivityRosterSummary: View {
                     .foregroundStyle(BSKTheme.secondary)
             }
             if roster.isEmpty {
-                Text("Ingen matchspecifik trupp är registrerad ännu.")
+                Text("Ingen laguppställning är registrerad för matchen ännu.")
                     .font(.subheadline)
                     .foregroundStyle(BSKTheme.muted)
             } else {
@@ -420,7 +420,7 @@ private struct MatchLineupBoard: View {
                         .font(.system(size: 10, weight: .black))
                         .tracking(1.4)
                         .foregroundStyle(BSKTheme.accent)
-                    Text(state?.hasLineup == true ? "Startelva" : "Matchtrupp")
+                    Text(state?.hasLineup == true ? "Startuppställning" : "Spelarunderlag")
                         .font(.title3.bold())
                         .foregroundStyle(.white)
                 }
@@ -555,12 +555,12 @@ private struct MatchObservationBoard: View {
             if isLoading {
                 HStack(spacing: 10) {
                     ProgressView().tint(BSKTheme.accent)
-                    Text("Hämtar matchtruppen...").foregroundStyle(BSKTheme.secondary)
+                    Text("Hämtar matchens spelare...").foregroundStyle(BSKTheme.secondary)
                 }
                 .padding(.vertical, 20)
             } else if let loadError {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Kunde inte hämta matchtruppen", systemImage: "exclamationmark.triangle")
+                    Label("Kunde inte hämta matchens spelare", systemImage: "exclamationmark.triangle")
                         .font(.headline)
                         .foregroundStyle(BSKTheme.warning)
                     Text(loadError).font(.subheadline).foregroundStyle(BSKTheme.secondary)
@@ -826,7 +826,7 @@ private struct ObservationComposer: View {
                 if isLoadingPlayers {
                     HStack(spacing: 10) {
                         ProgressView().tint(BSKTheme.accent)
-                        Text("Hämtar matchtruppen...")
+                        Text("Hämtar matchens spelare...")
                             .font(.subheadline)
                             .foregroundStyle(BSKTheme.secondary)
                     }
@@ -1635,7 +1635,7 @@ struct TodayDetail: View {
                         )
                         .font(.subheadline)
                         .foregroundStyle(BSKTheme.secondary)
-                        Text("Öppna matchen i vänsterkolumnen för trupp, matchcenter och utvärdering i den här ytan.")
+                        Text("Öppna matchen i vänsterkolumnen för laguppställning, matchcenter och utvärdering i den här ytan.")
                             .font(.subheadline)
                             .foregroundStyle(BSKTheme.muted)
                     }
@@ -1723,7 +1723,7 @@ struct SelectionList: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 8) {
-                        if match.hasConfirmedSquad { Text("\(match.squadCount) i truppen") }
+                        if match.hasConfirmedSquad { Text("\(match.squadCount) uttagna") }
                         let called = match.acceptedCallupCount + match.declinedCallupCount + match.pendingCallupCount
                         if called > 0 { Text("\(called) kallade") }
                     }
@@ -1812,7 +1812,7 @@ struct SelectionDetail: View {
                 }
             }
 
-            Toggle("Uttagen i truppen", isOn: selectionBinding(candidate))
+            Toggle("Uttagen", isOn: selectionBinding(candidate))
                 .tint(BSKTheme.accent)
 
 
@@ -2381,7 +2381,7 @@ struct MatchEvaluationView: View {
                 .background(BSKTheme.background)
             } else if workspace != nil {
                 ContentUnavailableView {
-                    Label("Ingen matchtrupp", systemImage: "person.3")
+                    Label("Inget spelarunderlag", systemImage: "person.3")
                 } description: {
                     Text("Spara resultat och kommentar och avsluta sedan uppföljningen utan spelarbedömningar.")
                 } actions: {

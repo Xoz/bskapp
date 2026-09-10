@@ -124,7 +124,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeAppModel).toContain("restoreError = error.localizedDescription");
     expect(nativeMainSplitView).toContain('Label("Kunde inte läsa uttagningen"');
     expect(nativeMainSplitView).toContain('Button("Försök igen") { Task { await load() } }');
-    expect(nativeActivityViews).toContain('Label("Kunde inte hämta matchtruppen"');
+    expect(nativeActivityViews).toContain('Label("Kunde inte hämta matchens spelare"');
     expect(nativeActivityViews).toContain('Label("Kunde inte hämta laguppställningen"');
     expect(nativeActivityViews).toContain('Label("Kunde inte öppna Matchcenter"');
     expect(nativeActivityViews).toContain('Label("Kunde inte läsa utvärderingen"');
@@ -160,7 +160,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(nativeActivityViews).toContain("enum MatchWorkspaceSection");
     expect(nativeActivityViews).toContain("struct MatchWorkspaceView");
     expect(nativeActivityViews).toContain('case .overview: return "Översikt"');
-    expect(nativeActivityViews).toContain('case .roster: return "Trupp"');
+    expect(nativeActivityViews).toContain('case .roster: return "Laguppställning"');
     expect(nativeActivityViews).toContain('case .matchCenter: return "Matchcenter"');
     expect(nativeActivityViews).toContain('case .evaluation: return "Utvärdera"');
     expect(nativeActivityViews).toContain("if activity.evaluationReady,");
@@ -337,7 +337,7 @@ describe("utvecklingskärnans kontrakt", () => {
     expect(activities).toContain("squad_player_names");
     expect(activities).toContain("accepted_player_names");
     expect(mobileDevelopment.slice(selectionStart, workspaceStart)).toContain("g.name = 'Gul'");
-    expect(nativeMainSplitView).toContain('activity.squadPlayerNames.isEmpty ? "Tackat ja" : "Trupp"');
+    expect(nativeMainSplitView).toContain('activity.squadPlayerNames.isEmpty ? "Trupp" : "Laguppställning"');
     expect(nativeMainSplitView).toContain("activity.acceptedPlayerNames");
     expect(todayPage).toContain('activity.source_team === "Gul"');
     expect(nativeActivityViews).toContain('guard activity.sourceTeam == "Gul" else { return false }');

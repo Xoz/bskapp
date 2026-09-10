@@ -135,7 +135,7 @@ export default async function MatchPage({ params, searchParams }: {
       {role === "coach" && (
         <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Matchområden">
           <Link href={`/matcher/${match.id}`} className="badge badge-primary whitespace-nowrap">Matchplan</Link>
-          <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Trupputtagning</Link>
+          <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Laguppställning</Link>
           {FEATURES.liveScore && isYellowMatch && canReportMatches && (
             <Link href={`/matcher/${match.id}/live`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Matchcenter</Link>
           )}
@@ -222,9 +222,18 @@ export default async function MatchPage({ params, searchParams }: {
       {role === "coach" && (
         <>
           <section id="trupp" className="card p-5">
-            <h2 className="font-semibold body">{roster?.label || "Trupp"}</h2>
+            <h2 className="font-semibold body">Trupp · {planPlayers.length}</h2>
+            <p className="caption mt-1">Spelare som tackat ja och kommer att spela matchen.</p>
             <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
-              {roster?.players.length ? roster.players.map(player => player.name).join(", ") : "Ingen trupp registrerad"}
+              {planPlayers.length ? planPlayers.map(player => player.name).join(", ") : "Ingen spelare har tackat ja ännu."}
+            </p>
+          </section>
+
+          <section id="laguppstallning" className="card p-5">
+            <h2 className="font-semibold body">{roster?.label || "Laguppställning"}</h2>
+            {roster?.source !== "played" && <p className="caption mt-1">Uttagna spelare som planeras spela. Kallelse är skickad eller kommer att skickas.</p>}
+            <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
+              {roster?.players.length ? roster.players.map(player => player.name).join(", ") : "Ingen laguppställning registrerad"}
             </p>
           </section>
 

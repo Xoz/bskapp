@@ -28,7 +28,7 @@ struct PlayerList: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("TRUPPEN").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
+                        Text("SPELARE").font(.caption2.bold()).tracking(1.6).foregroundStyle(BSKTheme.accent)
                         Text("\(filteredPlayers.count) spelare").font(.title.bold())
                     }
                     Spacer()
@@ -70,7 +70,7 @@ struct PlayerList: View {
         .onAppear { selectTeam("Gul") }
         .overlay {
             if model.players.isEmpty {
-                ContentUnavailableView("Ingen trupp", systemImage: "person.3", description: Text("Kontrollera gruppbehörigheten i BSK."))
+                ContentUnavailableView("Inga spelare", systemImage: "person.3", description: Text("Kontrollera gruppbehörigheten i BSK."))
             }
         }
     }

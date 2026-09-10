@@ -1089,7 +1089,7 @@ export async function saveSquad(formData: FormData) {
 
   const squadMatch = await get<{ opponent: string; date: string }>("SELECT opponent, date FROM matches WHERE id = ?", [matchId]);
   const squadLogName = (await getCoachName()) ?? "Tränare";
-  if (squadMatch) await logActivity(squadLogName, "Tog ut trupp", `${squadMatch.opponent} · ${squadMatch.date}`);
+  if (squadMatch) await logActivity(squadLogName, "Planerade laguppställning", `${squadMatch.opponent} · ${squadMatch.date}`);
 
   redirect(`/matcher/${matchId}`);
 }

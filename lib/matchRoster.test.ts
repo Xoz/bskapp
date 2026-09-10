@@ -16,6 +16,7 @@ describe("gemensam matchtrupp", () => {
     ]);
     expect(roster.source).toBe("confirmed");
     expect(roster.confirmed).toBe(true);
+    expect(roster.label).toBe("Laguppställning");
     expect(roster.players.map((player) => player.id)).toEqual([3]);
   });
 

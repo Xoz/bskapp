@@ -280,7 +280,7 @@ export default function SquadBoard({
       {/* Trupp – kalla in spelare (färg efter hur de passar matchens nivå) */}
       <div>
         <span className="body-small font-semibold block mb-2" style={{ color: "var(--ink-secondary)" }}>
-          Kalla trupp <span className="font-normal text-xs" style={{ color: "var(--ink-muted)" }}>· {squad.size} uttagna</span>
+          Planera laguppställning <span className="font-normal text-xs" style={{ color: "var(--ink-muted)" }}>· {squad.size} uttagna</span>
         </span>
         <div className="flex flex-wrap gap-2">
           {players.map((p) => {
@@ -325,7 +325,7 @@ export default function SquadBoard({
         {cupSize > 1 && (
           <label className="flex items-center gap-2.5 text-sm cursor-pointer">
             <input type="checkbox" checked={applyCup} onChange={(e) => setApplyCup(e.target.checked)} name="apply_cup" className="h-4 w-4 rounded accent-[var(--primary)]" />
-            Använd samma trupp för hela {cupName} ({cupSize} matcher)
+            Använd samma laguppställning för hela {cupName} ({cupSize} matcher)
           </label>
         )}
         <button type="submit" className="btn-primary px-6">Spara laguttagning</button>

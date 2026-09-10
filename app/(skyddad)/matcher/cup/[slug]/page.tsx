@@ -306,15 +306,15 @@ export default async function CupEditorPage({
       {/* Laguttagning – uttagna till cupen (cupgemensam trupp) */}
       <div className="card p-5 md:p-6 space-y-4">
         <div>
-          <h2 className="font-semibold">Laguttagning</h2>
+          <h2 className="font-semibold">Laguppställning</h2>
           <p className="caption mt-0.5" style={{ color: "var(--ink-muted)" }}>
-            Spelarna du tar ut här är cupens trupp och blir förvald i varje match. Du kan
+            Spelarna du tar ut här är planerade för cupen och blir förvalda i varje match. Du kan
             sedan justera startelva och avbytare per match.
           </p>
         </div>
         {playersInfo.length === 0 ? (
           <p className="body-small" style={{ color: "var(--ink-secondary)" }}>
-            Inga aktiva spelare i truppen ännu.
+            Inga aktiva spelare i spelarregistret ännu.
           </p>
         ) : (
           <CupSquadPicker

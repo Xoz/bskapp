@@ -196,18 +196,18 @@ function GroupsSection({
     <section className="space-y-5">
       <div>
         <p className="eyebrow">Organisation</p>
-        <h2 className="text-xl font-semibold mt-1">Huvudtrupp, undergrupper och matchgrupper</h2>
+        <h2 className="text-xl font-semibold mt-1">Huvudlag, undergrupper och matchgrupper</h2>
       </div>
 
       <div className="card p-5 space-y-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
-        <p><strong style={{ color: "var(--ink)" }}>Huvudtrupp</strong> – hela laget, t.ex. BSK F2014. Alla spelare hör hit.</p>
-        <p><strong style={{ color: "var(--ink)" }}>Undergrupp</strong> – ett permanent lag inom truppen, t.ex. Gul eller Grön. Skapa en här och bocka i vilka spelare som hör dit.</p>
+        <p><strong style={{ color: "var(--ink)" }}>Huvudlag</strong> – hela laget, t.ex. BSK F2014. Alla spelare hör hit.</p>
+        <p><strong style={{ color: "var(--ink)" }}>Undergrupp</strong> – ett permanent lag inom huvudlaget, t.ex. Gul eller Grön. Skapa en här och bocka i vilka spelare som hör dit.</p>
         <p><strong style={{ color: "var(--ink)" }}>Matchgrupp</strong> – skapas automatiskt när en cup importeras, för att hålla isär flera egna lag i samma turnering. Du behöver sällan röra dessa själv.</p>
       </div>
 
       <form action={createGroup} className="card p-5 grid md:grid-cols-[1fr_11rem_1fr_1fr_auto] gap-3 items-end">
         <Field label="Namn"><input name="name" className="input" required placeholder="t.ex. Grön" /></Field>
-        <Field label="Typ"><select name="group_type" className="input" defaultValue="subgroup"><option value="squad">Huvudtrupp</option><option value="subgroup">Undergrupp</option><option value="matchgroup">Matchgrupp</option></select></Field>
+        <Field label="Typ"><select name="group_type" className="input" defaultValue="subgroup"><option value="squad">Huvudlag</option><option value="subgroup">Undergrupp</option><option value="matchgroup">Matchgrupp</option></select></Field>
         <Field label="Tillhör"><select name="parent_id" className="input"><option value="">Ingen</option>{groups.filter((group) => group.group_type !== "matchgroup").map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
         <Field label="Cup (valfritt)"><input name="cup_name" className="input" /></Field>
         <button className="btn-primary" type="submit">Skapa</button>
@@ -296,7 +296,7 @@ function GroupCard({
 }
 
 function groupTypeLabel(type: "squad" | "subgroup" | "matchgroup") {
-  return type === "squad" ? "Huvudtrupp" : type === "subgroup" ? "Undergrupp" : "Matchgrupp";
+  return type === "squad" ? "Huvudlag" : type === "subgroup" ? "Undergrupp" : "Matchgrupp";
 }
 
 function Notice({ text, warning = false }: { text: string; warning?: boolean }) {

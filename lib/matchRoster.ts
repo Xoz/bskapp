@@ -34,8 +34,8 @@ const PLAYED_PRIORITY: MatchRosterCandidate["source"][] = [
 export function matchRosterLabel(source: MatchRosterSource): string {
   switch (source) {
     case "played": return "Deltog";
-    case "confirmed": return "Trupp";
-    default: return "Ingen trupp";
+    case "confirmed": return "Laguppställning";
+    default: return "Ingen laguppställning";
   }
 }
 

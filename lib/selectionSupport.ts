@@ -84,7 +84,7 @@ export function squadBalanceWarnings(
     warnings.push(`${highCount} spelare har för hög belastning`);
   }
   if (levels.filter((level) => level !== "normal").length >= Math.ceil(selected.length / 2)) {
-    warnings.push("Minst halva truppen är vid maxgränsen eller över");
+    warnings.push("Minst hälften av de uttagna är vid maxgränsen eller över");
   }
   return warnings;
 }

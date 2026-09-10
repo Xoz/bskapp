@@ -104,7 +104,7 @@ export default function MatchEvaluationForm({
       <label className="block"><span className="label">Tränarkommentar</span>
         <textarea className="input mt-2" name="coach_comment" rows={3} maxLength={4000} defaultValue={matchContext.coachComment} placeholder="Kort sammanfattning för matchanalysen…" />
       </label>
-      {players.length === 0 && <p className="body-small" style={{ color: "var(--ink-secondary)" }}>Det finns ingen registrerad matchtrupp. Resultat och kommentar kan ändå sparas och uppföljningen avslutas.</p>}
+      {players.length === 0 && <p className="body-small" style={{ color: "var(--ink-secondary)" }}>Det finns inga registrerade deltagare att utvärdera. Resultat och kommentar kan ändå sparas och uppföljningen avslutas.</p>}
       <div className="flex flex-wrap gap-2">
         <button className="btn-secondary" type="submit" name="save_context" value="1">Spara matchinfo</button>
         <button className="btn-secondary" type="submit" name="complete_without_players" value="1" style={{ color: "var(--warning)" }}>Avsluta utan spelarbedömningar</button>

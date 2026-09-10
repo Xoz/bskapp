@@ -21,7 +21,7 @@ export default async function TeamSkillTreePage() {
         <p className="core-kicker">Laget</p>
         <h1 className="core-title">Utvecklingsträd</h1>
         <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-          Snitt per kategori över hela truppen. Öppna en spelare under{" "}
+          Snitt per kategori för alla spelare. Öppna en spelare under{" "}
           <Link href="/spelare" className="underline" style={{ color: "var(--primary)" }}>
             Spelare
           </Link>{" "}

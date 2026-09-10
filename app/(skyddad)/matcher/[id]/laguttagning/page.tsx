@@ -29,7 +29,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
     if (workspace) return <MatchSelection workspace={workspace} />;
   }
   const matchGroup = (await getOrganizationGroups()).find((group) => group.id === match.group_id);
-  if (matchGroup?.group_type === "subgroup") redirect(`/matcher/${match.id}#trupp`);
+  if (matchGroup?.group_type === "subgroup") redirect(`/matcher/${match.id}#laguppstallning`);
 
   const [playersInfo, squadIds, lineup, cupMatches, cupMembers] = await Promise.all([
     getPlayersLevelInfo(),
@@ -63,7 +63,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
         >
           <IconArrowLeft width={15} height={15} /> Tillbaka till matchen
         </Link>
-        <h1 className="text-[28px] font-bold mt-2">Laguttagning</h1>
+        <h1 className="text-[28px] font-bold mt-2">Laguppställning</h1>
         <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
           {match.home_away === "home" ? "Hemma mot" : "Borta mot"} {match.opponent} · {match.date}
           {match.start_time ? ` · ${match.start_time}` : ""}
@@ -89,7 +89,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
 
       {playersInfo.length === 0 ? (
         <div className="card p-6 text-sm" style={{ color: "var(--ink-secondary)" }}>
-          Inga aktiva spelare i truppen ännu.
+          Inga aktiva spelare i spelarregistret ännu.
         </div>
       ) : (
         <SquadBoard
@@ -111,7 +111,7 @@ export default async function SquadPage({ params }: { params: Promise<{ id: stri
       )}
 
       <p className="caption" style={{ color: "var(--ink-muted)" }}>
-        Kalla in spelare i trupplistan (färgen visar hur de passar matchnivån), dra upp dem på planen
+        Välj planerade spelare i listan (färgen visar hur de passar matchnivån), dra upp dem på planen
         till startelvan och spara. Spelnivån sätts per spelare under deras profil.
       </p>
     </div>

@@ -162,7 +162,7 @@ export default function SelectionEditor({
     <>
       <section className="selection-summary">
         <div className="selection-summary-main">
-          <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Svar i Svenska Lag</div>
+          <div className="selection-summary-kicker"><span className="selection-summary-dot" /> Trupp · ja-svar i Svenska Lag</div>
           <div className="selection-summary-count"><strong>{calledCount > 0 ? callupSummary.accepted : "—"}</strong><span>har tackat ja</span></div>
           <p className="selection-summary-copy">
             {calledCount > 0
@@ -173,7 +173,7 @@ export default function SelectionEditor({
         <div className="selection-summary-stat">
           <span>Laguppställning</span>
           <strong>{selected.length}</strong>
-          <small>markerade · separat från ja-svaren</small>
+          <small>uttagna · planerade att spela</small>
         </div>
         <div className="selection-summary-stat selection-summary-stat-accent">
           <span>Balans</span>
@@ -193,8 +193,8 @@ export default function SelectionEditor({
         {selected.map(c=><span key={c.player.id}><input type="hidden" name="selected_player" value={c.player.id}/><input type="hidden" name={`position_${c.player.id}`} value={positions[c.player.id]??""}/></span>)}
         <div className="selection-toolbar">
           <div>
-            <p className="selection-toolbar-title">Matchtrupp</p>
-            <p className="selection-toolbar-subtitle">Uttagen är ditt aktuella val. Kallad och svar hämtas från Svenska Lag.</p>
+            <p className="selection-toolbar-title">Laguppställning</p>
+            <p className="selection-toolbar-subtitle">Uttagen betyder planerad att spela. Kallelse är skickad eller kommer att skickas. Truppen består av dem som tackat ja.</p>
           </div>
           <div className="selection-toolbar-tools">
             {(sourceTeam === "Gul" || sourceTeam === "Grön") && (
