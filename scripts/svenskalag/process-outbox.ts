@@ -18,7 +18,7 @@ export async function processOutbox(sql:ReturnType<typeof postgres>,context:Brow
       const write=async()=>{await sql`UPDATE settings SET value=${JSON.stringify(job)} WHERE key=${outboxKey(job.matchId)} AND value::jsonb->>'id'=${job.id}`;};
       try {
         const source=snapshot.find(a=>a.kind==='match'&&a.sourceId===job.sourceId);
-        const match=(await sql`SELECT m.id,m.date FROM matches m JOIN groups g ON g.id=m.group_id WHERE m.id=${job.matchId} AND m.external_uid=${`sanktan:${job.sourceId}`} AND g.name='Gul' AND g.active=1`)[0];
+        const match=(await sql`SELECT m.id,m.date FROM matches m JOIN groups g ON g.id=m.group_id JOIN development_activities da ON da.match_id=m.id AND da.group_id=m.group_id WHERE m.id=${job.matchId} AND da.external_key=${`sanktan:${job.sourceId}`} AND g.name='Gul' AND g.active=1`)[0];
         const selected=(await sql`SELECT p.name FROM match_roster r JOIN players p ON p.id=r.player_id WHERE r.match_id=${job.matchId} AND r.selection_status='selected' AND p.active=1`).map(p=>p.name as string);
         if(!source||source.cancelled||!source.lineup||swedishWallClockToEpoch(source.date,source.time)<=Date.now()||source.date!==job.date||job.date<today||!match||match.date!==job.date||!sameLineup(selected,job.names)||publicationDecision(source.lineup,job)==='conflict') {
           job.state='conflict';job.message='Uttagningen eller matchen har ändrats. Kontrollera och skicka på nytt.';
