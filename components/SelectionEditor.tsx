@@ -90,11 +90,13 @@ export default function SelectionEditor({
       ? candidates
       : candidates.filter((candidate) => candidate.teams.some((team) => team.name === teamFilter));
     return [...filtered].sort((left, right) =>
-      selectionPositionRank(left.player.preferred_position_primary, left.player.position)
+      Number(selectedIds.has(right.player.id) || right.currentCallupStatus !== null)
+      - Number(selectedIds.has(left.player.id) || left.currentCallupStatus !== null)
+      || selectionPositionRank(left.player.preferred_position_primary, left.player.position)
       - selectionPositionRank(right.player.preferred_position_primary, right.player.position)
       || left.player.name.localeCompare(right.player.name, "sv")
     );
-  }, [candidates, teamFilter]);
+  }, [candidates, teamFilter, selectedIds]);
   const calledCount = callupSummary.accepted + callupSummary.declined + callupSummary.pending;
   const linkedCalledCount = candidates.filter((candidate) => candidate.currentCallupStatus !== null).length;
   const unlinkedCalledCount = Math.max(0, calledCount - linkedCalledCount);
@@ -192,7 +194,7 @@ export default function SelectionEditor({
         <div className="selection-toolbar">
           <div>
             <p className="selection-toolbar-title">Matchtrupp</p>
-            <p className="selection-toolbar-subtitle">Välj spelare och ange position vid behov</p>
+            <p className="selection-toolbar-subtitle">Uttagen är ditt aktuella val. Kallad och svar hämtas från Svenska Lag.</p>
           </div>
           <div className="selection-toolbar-tools">
             {(sourceTeam === "Gul" || sourceTeam === "Grön") && (
@@ -269,11 +271,11 @@ export default function SelectionEditor({
                       <span className="selection-player-name">{candidate.player.name}</span>
                       {recommendationReason && <small className="selection-player-reason">{recommendationReason}</small>}
                     </span>
-                    {recommendationReason
-                      ? <span className="selection-player-status">Förslag</span>
-                      : candidate.currentCallupStatus
-                        ? <span className="selection-player-status selection-player-status-manual">Kallad</span>
-                        : selectedForMatch && <span className="selection-player-status selection-player-status-manual">Vald</span>}
+                    <span className="flex flex-wrap gap-1">
+                      {selectedForMatch && <span className="selection-player-status selection-player-status-manual">Uttagen</span>}
+                      {candidate.currentCallupStatus && <span className="selection-player-status selection-player-status-manual">Kallad</span>}
+                      {recommendationReason && <span className="selection-player-status">Förslag</span>}
+                    </span>
                   </label>
                   <span className="selection-teams" title={teamNames}>
                     {candidate.teams.length > 0 ? candidate.teams.map((team) => <span key={team.id} className="selection-team-tag" data-team-tone={teamTone(team.name)}>{team.name}</span>) : <span className="selection-empty">—</span>}

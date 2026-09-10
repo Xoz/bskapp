@@ -400,3 +400,7 @@ alltså ingen varning även med sex eller åtta markerade. Inga registrerade
 kallelsesvar ger ingen bristvarning. Uttagningen visas fortsatt separat.
 
 Verifierat och publicerat som ff65de3a: typkontroll, sex renderingsfall och godkänd VPS-deploy. Produktionskontroll av Idag visar AIK och Örby utan bristvarning med tio ja vardera.
+
+## Matchtruppens status och sortering 2026-09-10
+
+Uttagen och Kallad visas som oberoende markeringar i SelectionEditor, med ja/nej/inväntar i svarskolumnen. Spelare som varken är markerade i aktuellt utkast eller har kallelsestatus sorteras efter alla spelare med status, även över laggränser. Position och namn behåller ordningen inom grupperna. Sorteringen följer ändringar i uttagningen och gäller även lagfilter.
