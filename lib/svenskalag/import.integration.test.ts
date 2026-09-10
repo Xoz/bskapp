@@ -49,6 +49,10 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       expect((await sql`SELECT cancelled FROM matches WHERE external_uid='sanktan:999'`)[0].cancelled).toBe(1);
       await applySnapshot(sql,[fresh],"2026-09-10");
       expect((await sql`SELECT cancelled FROM matches WHERE external_uid='sanktan:999'`)[0].cancelled).toBe(0);
+      const freshId=(await sql`SELECT id FROM matches WHERE external_uid='sanktan:999'`)[0].id;
+      await sql`UPDATE match_roster SET source='manual',selection_status=NULL WHERE match_id=${freshId}`;
+      await applySnapshot(sql,[fresh],"2026-09-10");
+      expect((await sql`SELECT source FROM match_roster WHERE match_id=${freshId} AND player_id=2`)[0].source).toBe("svenskalag_browser");
       const emptyPresence={...training,attendance:[]};
       await applySnapshot(sql,[emptyPresence],"2026-09-10");
       expect((await sql`SELECT attendance_status FROM development_activity_participation WHERE player_id=1`)[0].attendance_status).toBe("absent");

@@ -79,7 +79,7 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
             for(const name of a.lineup) {
               const ids=names.get(nameKey(name))??[];
               if(ids.length!==1) {unmatched.push(`Match ${a.sourceId}: laguppställningens spelarkoppling behöver granskas`);continue;}
-              await tx`INSERT INTO match_roster(match_id,player_id,selection_status,source) VALUES(${matchId},${ids[0]},'selected','svenskalag_browser') ON CONFLICT(match_id,player_id) DO UPDATE SET selection_status='selected'`;
+              await tx`INSERT INTO match_roster(match_id,player_id,selection_status,source) VALUES(${matchId},${ids[0]},'selected','svenskalag_browser') ON CONFLICT(match_id,player_id) DO UPDATE SET selection_status='selected',source='svenskalag_browser'`;
             }
           }
         }
