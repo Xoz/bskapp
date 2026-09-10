@@ -255,3 +255,37 @@ ger två skyddade läsvyer och filtrerar inställda matcher. `test_schedule.py`
 provar även Hermes jobb-API isolerat. 13 DB/MCP- och 6 rapport/schematester
 passerade. Driftsatt separat från webbappen; sju rapporter planerade, första
 2026-09-11 kl. 09.00 svensk tid. Se integrationsguiden för drift och stopp.
+
+
+### 2026-09-10 – rättad träningsautomatik och gemensam mobilmottagare
+
+Hermes befintliga träningsjobb `aaea810f152f` behölls och rättades på användarens
+uppdrag. Det kontrollerar nu alla dagar varje minut och skickar cirka 15 minuter
+före den faktiska träningstiden. `training_report.py` använder svensk tidszon,
+läser behöriga aktiviteter och kallelsesvar och visar ofullständig namntäckning.
+`training_alert.py` hindrar upprepning per aktivitet/starttid med låst, atomiskt
+sparat tillstånd utan spelaruppgifter. Flera samtidiga träningar ingår i samma
+utskick. Flyttad tid kontrolleras igen före rapportbyggandet; ingen rapport efter
+start. Vid kort driftavbrott kan rapporten komma senare inom 15-minutersfönstret.
+Saknad/ogiltig starttid kan inte tidsättas och hoppas över.
+
+Tidigare skript hade felkodad emoji (reproducerat UnicodeEncodeError), fast UTC+2,
+begränsat vardagsschema och ingen egen historik över rapporterade aktiviteter.
+Fem syntetiska regressionstester passerade för UTF-8, helg/udda tider, vintertid,
+midnatt, flyttad tid, samtidiga aktiviteter, omstart/dubbletter och trunkering.
+Den nya VPS-wrappern verifierades tyst mot produktion utan testmeddelande.
+
+Både träning och match använder nu exakt samma explicita privata Photon-mottagare
+som matchrapporterna/morgonbriefingen. Detta är mobilens Meddelanden via iMessage,
+inte en separat operatörs-SMS-tjänst. Mottagarvärden finns endast i privat VPS-konfiguration.
+Nästa träningsrapport planerad omkring 2026-09-14 kl. 18.15 svensk tid, inför
+träning kl. 18.30. Matchrapporterna behåller 24 timmars framförhållning.
+Release: `/opt/bsk/hermes-mcp-releases/20260910T205637Z`.
+Backup av tidigare träningsskript och jobb:
+`/root/backups/bsk-training-before-fix-20260910T205719Z`.
+
+Träningshistorik finns i `/root/.hermes/bsk-training-reports/state.json` och
+rensar äldre än sju dagar. Den skrivs före överlämning till Hermes leveranskö:
+vid fel exakt däremellan kan rapporten utebli, men okänd leverans upprepas inte
+blint. Körfel går till samma privata mottagare. Pausa träningsjobbet för att
+stoppa träningsutskick; matchjobben hanteras separat enligt integrationsguiden.

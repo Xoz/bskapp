@@ -37,7 +37,7 @@ except KeyError:
 stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 release=Path('/opt/bsk/hermes-mcp-releases')/stamp
 release.mkdir(parents=True)
-for filename in ['server.py','views.sql','skills.json','requirements.in','requirements.lock','launch.sh','callups.sql','lineups.sql','match_report.py','schedule_matches.py']:
+for filename in ['server.py','views.sql','skills.json','requirements.in','requirements.lock','launch.sh','callups.sql','lineups.sql','match_report.py','schedule_matches.py','training_report.py','training_alert.py']:
     shutil.copy2(ROOT/filename,release/filename)
 subprocess.run(['/root/.local/bin/uv','venv',str(release/'.venv'),'--python','3.12'],check=True)
 subprocess.run(['/root/.local/bin/uv','pip','sync','--python',str(release/'.venv/bin/python'),str(release/'requirements.lock'),'--quiet'],check=True)
