@@ -1,0 +1,56 @@
+.match-plan{padding:clamp(18px,3vw,32px)}
+.match-plan-heading{display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:24px}
+.match-plan-heading h2{margin:6px 0 8px}
+.match-plan-heading p,.match-plan-help,.match-plan-reserves p{color:var(--ink-secondary)}
+.match-plan-fields{border:0;padding:0;margin:0;min-width:0}
+.match-plan-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px}
+.match-plan-help{font-size:13px;line-height:1.5;margin:10px 0}
+.match-plan-pitch{position:relative;aspect-ratio:100/130;background:repeating-linear-gradient(0deg,#214735 0%,#214735 10%,#254e3b 10%,#254e3b 20%);border-radius:16px;border:1px solid #60856f;isolation:isolate;margin:16px 0}
+.match-plan-lines{position:absolute;width:100%;height:100%;fill:none;stroke:#c7decc;stroke-opacity:.52;stroke-width:.55;pointer-events:none}
+.match-plan-direction{position:absolute;top:3%;left:50%;transform:translateX(-50%);color:#dbeadf;font-size:11px;white-space:nowrap}
+.match-plan-spot{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;flex-direction:column;gap:3px;width:25%;padding:4px 0;border:0;background:none;touch-action:none;cursor:grab;color:#fff;z-index:1}
+.match-plan-spot:active{cursor:grabbing;z-index:2}
+.match-plan-name{max-width:100%;padding:2px 5px;background:#102b20e6;border-radius:5px;font-size:11px;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.match-plan-assignment{display:grid;gap:10px}
+.match-plan-assignment button{justify-self:start}
+.match-plan-reserves{padding-top:18px;margin-top:14px;border-top:1px solid var(--border)}
+.match-plan-reserves h3{margin-bottom:6px}
+.match-plan-ideas{display:grid;align-content:start;gap:20px}
+.match-plan-ideas label{display:grid;gap:8px}
+.match-plan-ideas textarea{font-size:15px;line-height:1.6;font-weight:400;resize:vertical;min-height:100px;text-transform:none;letter-spacing:normal}
+.match-plan-footer{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.match-plan .input{width:100%}
+.match-plan :disabled{cursor:default}
+@media(max-width:700px){.match-plan-grid{grid-template-columns:minmax(0,1fr);gap:28px}.match-plan-pitch{max-width:440px;margin-left:auto;margin-right:auto}.match-plan-heading .badge{white-space:nowrap}.match-plan-footer .btn-primary{width:100%}}
+
+/* Matchtröjor i klubbfärger, med lugnare namnbrickor och tydligt valt läge. */
+.match-plan-pitch{background:radial-gradient(ellipse at 50% 25%,#ffffff09,transparent 65%),repeating-linear-gradient(0deg,#193e2f 0%,#193e2f 10%,#1d4434 10%,#1d4434 20%);box-shadow:inset 0 0 45px #061b1640,0 12px 32px #10251b12;border:6px solid #315642;border-radius:22px}
+.match-plan-lines{stroke:#c3dfce;stroke-opacity:.4}
+.match-plan-spot{width:23%;gap:1px;transition:filter .15s;outline:none}
+.match-plan-shirt{display:block;width:64px;height:68px;overflow:visible;background:none;border:0;border-radius:0;box-shadow:none;outline:none;filter:drop-shadow(0 4px 3px #061b1666)}
+.shirt-body{fill:#f5d564;stroke:#bba54e;stroke-width:1.2;stroke-linejoin:round}
+.shirt-sleeve{fill:#2c664b;stroke:#194e36;stroke-width:.6;stroke-linejoin:round}
+.shirt-collar{fill:#23543b}
+.shirt-seam{fill:none;stroke:#a89640;stroke-opacity:.45;stroke-width:1}
+.match-plan-shirt text{font-size:27px;font-weight:800;fill:#183e2b;font-family:var(--font-display),sans-serif}
+.match-plan-shirt[data-goalkeeper=true] .shirt-body{fill:#a8d8db;stroke:#6da6ad}
+.match-plan-shirt[data-goalkeeper=true] .shirt-sleeve,.match-plan-shirt[data-goalkeeper=true] .shirt-collar{fill:#32616c;stroke:#32616c}
+.match-plan-shirt[data-empty=true] .shirt-body{fill:#ffffff0c;stroke:#bad5c5;stroke-dasharray:3 3}
+.match-plan-shirt[data-empty=true] .shirt-sleeve,.match-plan-shirt[data-empty=true] .shirt-collar{fill:#ffffff08;stroke:none}
+.match-plan-shirt[data-empty=true] text{fill:#cee1d4;font-size:25px;font-weight:400}
+.match-plan-shirt[data-empty=true] .shirt-seam{stroke:none}
+.match-plan-spot[data-active=true] .match-plan-shirt,.match-plan-spot:focus-visible .match-plan-shirt{filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #f5df9a99)}
+.match-plan-name{background:#f1f5ea;color:#173e2c;border:1px solid #ffffff80;border-radius:7px;padding:4px 8px;font-size:12px;font-weight:650;box-shadow:0 3px 8px #0002;max-width:100%;line-height:1.25}
+.match-plan-spot[data-empty=true] .match-plan-name{background:#143527db;color:#c9dfd0;border:1px solid #8bac9840;font-weight:500}
+.match-plan-spot[data-active=true] .match-plan-name{background:#f5dc88;color:#213e2b;border-color:#ffe9a5}
+.match-plan-bench{display:flex;gap:8px;flex-wrap:wrap}
+.match-plan-bench-player{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 7px;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:12px;font-size:13px;font-weight:600;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+.match-plan-bench-player:hover:not(:disabled){border-color:var(--primary);background:var(--primary-soft)}
+.match-plan-bench-player .match-plan-shirt{width:29px;height:33px;filter:drop-shadow(0 2px 1px #0002);flex-shrink:0}
+.match-plan-assignment{background:var(--surface);border:1px solid var(--border);padding:16px;border-radius:16px}
+.match-plan-ideas{background:var(--surface);padding:22px;border-radius:18px;border:1px solid var(--border)}
+.match-plan-ideas h3{font-size:20px}
+.match-plan-ideas textarea{background:var(--card,var(--surface));border-color:var(--border)}
+.match-plan-heading .badge{background:var(--primary-soft);color:var(--ink);padding:8px 12px}
+@media(max-width:700px){.match-plan-shirt{width:51px;height:56px}.match-plan-name{font-size:11px;padding:3px 5px}.match-plan-pitch{border-width:4px}.match-plan-ideas{padding:16px}.match-plan-bench-player{font-size:12px}.match-plan-grid{gap:22px}}
+@media(prefers-reduced-motion:reduce){.match-plan-spot,.match-plan-bench-player{transition:none}}

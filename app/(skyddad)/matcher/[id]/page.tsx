@@ -16,7 +16,8 @@ import EventEditor from "@/components/EventEditor";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { IconArrowLeft, IconArrowRight, IconLive } from "@/components/Icons";
 import { swedishToday, reportingAutoOpen } from "@/lib/dates";
-import { getSelectionMatches } from "@/lib/developmentCore";
+import MatchPlanEditor from "@/components/MatchPlanEditor";
+import { emptyMatchPlan, readMatchPlan } from "@/lib/matchPlan/model";
 import { getOrganizationGroups } from "@/lib/organization";
 import { resolveMatchRoster } from "@/lib/matchRoster";
 
@@ -38,7 +39,7 @@ export default async function MatchPage({ params, searchParams }: {
   const canManageSquads = user.permissions.includes("manage_squads");
   const canReportMatches = user.permissions.includes("report_matches");
   const canManageEvaluations = user.permissions.includes("manage_evaluations");
-  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites, groups, selectionMatches, roster] = await Promise.all([
+  const [players, matchPlayers, events, reporters, squadIds, evaluationStatus, evaluationInvites, groups, roster] = await Promise.all([
     getPlayers(),
     getMatchPlayers(match.id),
     getMatchEvents(match.id),
@@ -47,27 +48,24 @@ export default async function MatchPage({ params, searchParams }: {
     getMatchEvaluationStatus(match.id),
     getMatchEvaluationInvites(match.id),
     getOrganizationGroups(),
-    canManageSquads ? getSelectionMatches() : Promise.resolve([]),
     resolveMatchRoster(match.id),
   ]);
   const { evalLink } = await searchParams;
   const mLevel = levelInfo(match.level);
   const today = swedishToday();
-  const isUpcoming = match.date >= today;
   const matchGroup = groups.find((group) => group.id === match.group_id);
   const isYellowMatch = matchGroup?.name === "Gul";
   const evaluationOpen = matchEvaluationIsOpen(match.date, match.start_time);
-  const selectionActivity = selectionMatches.find((activity) => activity.match_id === match.id);
-  const selectionHref = selectionActivity
-    ? `/matcher/${match.id}/laguttagning`
-    : `#trupp`;
+  const selectionHref = `/matcher/${match.id}/laguttagning`;
+  const savedPlan = role === "coach" ? readMatchPlan(await getSetting(`match_plan:${match.id}`)) : null;
+  const planPlayers = players.filter(player => squadIds.includes(player.id));
   // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
   // report_open är tränarens manuella override – effektivt öppen = endera.
   const reportAutoOpen = !match.finished && reportingAutoOpen(match.date, match.start_time);
   const reportOpen = !!match.report_open || reportAutoOpen;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-5xl">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <Link
@@ -126,17 +124,17 @@ export default async function MatchPage({ params, searchParams }: {
         )}
       </div>
 
-      {isYellowMatch && <section className="core-panel p-5" aria-label="Nästa steg i matchen">
-        <p className="core-kicker">{evaluationOpen ? "Efter matchen" : "Inför matchen"}</p>
-        <h2 className="mt-2">{evaluationOpen ? "Följ upp spelarnas insats" : "Förbered laget"}</h2>
-        <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>{evaluationOpen ? "Bedöm en spelare i taget. Du kan hoppa över den du inte hunnit se." : "Se kallelser och svar, välj spelare och spara truppen."}</p>
-        {evaluationOpen && canManageEvaluations ? <Link href={`/matcher/${match.id}/utvardera`} className="btn-primary mt-4">Utvärdera matchen</Link> : !evaluationOpen && canManageSquads && selectionActivity ? <Link href={selectionHref} className="btn-primary mt-4">Ta ut laget</Link> : null}
+      {isYellowMatch && evaluationOpen && canManageEvaluations && <section className="core-panel p-5" aria-label="Efter matchen">
+        <p className="core-kicker">Efter matchen</p>
+        <h2 className="mt-2">Följ upp spelarnas insats</h2>
+        <p className="body-small mt-2">Bedöm en spelare i taget. Du kan hoppa över den du inte hunnit se.</p>
+        <Link href={`/matcher/${match.id}/utvardera`} className="btn-primary mt-4">Utvärdera matchen</Link>
       </section>}
 
       {role === "coach" && (
         <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Matchområden">
-          <Link href={`/matcher/${match.id}`} className="badge badge-primary whitespace-nowrap">Översikt</Link>
-          <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Trupp</Link>
+          <Link href={`/matcher/${match.id}`} className="badge badge-primary whitespace-nowrap">Matchplan</Link>
+          <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Trupputtagning</Link>
           {FEATURES.liveScore && isYellowMatch && canReportMatches && (
             <Link href={`/matcher/${match.id}/live`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Matchcenter</Link>
           )}
@@ -145,6 +143,15 @@ export default async function MatchPage({ params, searchParams }: {
           )}
         </nav>
       )}
+
+      {role === "coach" && <MatchPlanEditor
+        key={match.id}
+        matchId={match.id}
+        initialPlan={savedPlan?.document ?? emptyMatchPlan(match.formation)}
+        initialRevision={savedPlan?.revision ?? 0}
+        players={planPlayers.map(({ id, name, jersey_number }) => ({ id, name, jersey_number }))}
+        editable={canManageSquads}
+      />}
 
       {/* Matchsammanställning – totaler, synlig för båda roller */}
       {matchPlayers.length > 0 && (() => {
@@ -213,31 +220,12 @@ export default async function MatchPage({ params, searchParams }: {
 
       {role === "coach" && (
         <>
-          {/* Samma kanoniska trupp som native: spelad match visar deltagare,
-              kommande match visar selected från match_roster. */}
-          {(() => {
-            const content = <>
-              <span className="text-2xl">📋</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold body">Trupp</p>
-                <p className="caption mt-0.5" style={{ color: "var(--ink-secondary)" }}>
-                  {roster && roster.players.length > 0
-                    ? `${roster.label}: ${roster.players.map((player) => player.name).join(", ")}`
-                    : "Ingen trupp registrerad"}
-                </p>
-              </div>
-              {canManageSquads && selectionActivity && (
-                <span className="badge badge-primary">{squadIds.length > 0 ? "Ändra" : "Öppna"}</span>
-              )}
-            </>;
-            return canManageSquads && selectionActivity ? (
-              <Link id="trupp" href={selectionHref} className="card card-hover p-5 flex items-center gap-4" style={isUpcoming ? { background: "var(--primary-ghost)", border: "1px solid var(--primary-soft)" } : undefined}>
-                {content}
-              </Link>
-            ) : (
-              <section id="trupp" className="card p-5 flex items-center gap-4 scroll-mt-20">{content}</section>
-            );
-          })()}
+          <section id="trupp" className="card p-5">
+            <h2 className="font-semibold body">{roster?.label || "Trupp"}</h2>
+            <p className="body-small mt-2" style={{ color: "var(--ink-secondary)" }}>
+              {roster?.players.length ? roster.players.map(player => player.name).join(", ") : "Ingen trupp registrerad"}
+            </p>
+          </section>
 
           {/* Liverapportering (dold när liveScore är av) */}
           {FEATURES.liveScore && isYellowMatch && canReportMatches && (

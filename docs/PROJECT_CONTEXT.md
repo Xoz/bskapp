@@ -435,3 +435,11 @@ Publicerat och verifierat 2026-09-10 som 6569704f: Idag visar AIK och Örby en g
 ## Publicerad spelarstatistik – 2026-09-10
 
 Rättningen är publicerad på https://bsk2014.se/spelare, commit bc1f88a0b3a685892d317da6ba968fe1d980df5f. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34530853762 godkänd; aktiv release /opt/bsk/releases/bc1f88a0b3a6.MjP2TU. Alla 147 lokala tester godkända. Publiceringen genomförde backup, tester, bygge och hälsokontroller. Inloggad spelarlista verifierad med år 2026, Gul inklusive cupgrupper, och nya räknare för spelade matcher/matchkallelser. Detta ersätter tidigare anteckning om att rättningen inte publicerats.
+
+## Matchplan: formation och spelidé – 2026-09-10
+
+Matchdetaljens dubbla uttagningsknappar ersätts av Matchplan och en separat länk till Trupputtagning. Matchplanen har fyra formationer för 7 mot 7, flyttbara positioner (pekare eller tangentbord), tilldelning från uttagen trupp, avbytare och fritext för fokus, anfall, försvar och omställningar. Sparas separat per match i settings med nyckeln match_plan:<id>. Ändrar inte match_roster, kallelsesvar, närvaro, gamla lineup-positioner eller Svenska Lag. Ingen migration. Sparandet kontrollerar behörighet, lagåtkomst, matchstatus och aktuella uttagna spelare samt skyddar mot överskrivning av nyare revisioner. Identiska återförsök är idempotenta.
+
+Verifierat lokalt: 152 tester, produktionsbygge och inloggat browserprov med exempelspelare; formation, spelare, text och flyttad position sparades och återlästes. Matchplanen är inte publicerad i denna session.
+
+Matchplanens design förfinad: skalbara matchtröjor i klubbfärger, separat målvaktströja, lediga positioner som konturer, korta namnbrickor med fullständiga tillgängliga namn, klickbara avbytare och bredare matchyta. Inloggat lokalt prov verifierade avbytarplacering och sparande. Publicering begärd.

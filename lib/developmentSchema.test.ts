@@ -355,7 +355,8 @@ describe("utvecklingskärnans kontrakt", () => {
   });
 
   it("håller webbens matchflöden på samma kanoniska tjänster som native", () => {
-    expect(matchPage).toContain("getSelectionMatches");
+    expect(matchPage).toContain("getMatchSquad");
+    expect(matchPage).toContain("<MatchPlanEditor");
     expect(matchPage).toContain("resolveMatchRoster");
     expect(matchPage).toContain("/matcher/${match.id}/laguttagning");
     expect(legacySelectionPage).toContain("getSelectionMatches");

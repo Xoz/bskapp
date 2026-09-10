@@ -246,3 +246,5 @@ Permanent åtskillnad mellan svar och uttagning: `lib/selectionDraft.ts` bygger 
 `lib/services/matchLists.integration.test.ts` kör mobilens kompletta läsfrågor mot testschemat, inklusive gruppering och gemensamma källräknare.
 
 Spelarlistans statistik: `lib/playerDirectoryStats.ts` bygger års- och lagavgränsade läsfrågor mot match_players/match_roster (inklusive underordnade cupgrupper, exklusive inställda/borttagna matcher). Används i `/spelare`; `lib/playerDirectoryStats.test.ts` verifierar frågan mot PostgreSQL med tillfälliga exempeltabeller.
+
+Matchplan på `/matcher/[id]`: `components/MatchPlanEditor.tsx` + `components/match-plan.css`, `lib/matchPlan/model.ts` (formationer/validering), `lib/matchPlan/actions.ts` (behörighet och separat revisionsskyddat sparande i settings), `lib/matchPlan/actions.test.ts` (PostgreSQL, åtkomst och oförändrad trupp). Ingen synk av matchplan till Svenska Lag.
