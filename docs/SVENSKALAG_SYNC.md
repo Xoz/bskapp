@@ -60,3 +60,11 @@ Playwright-version kräver motsvarande browserinstallation.
 testdatabas för transaktionstestet; det använder temporära tabeller på en enda
 anslutning och testar bevarad uttagning, provkörning, återförsök och ogiltig data.
 Komplettera med riktig filfri provhämtning och jämför källans totaler före drift.
+
+## Aktuell status 2026-09-10
+
+Installerad på VPS under `/opt/bsk/sync-releases/28f2fba6`. Timern är avstängd.
+Startkontroll gav förväntat `login_required`. Egen inloggning, riktig provhämtning
+och skarp import återstår. Webbstatus är byggd lokalt, ännu inte publicerad.
+138 tester inklusive DB-integration och Playwright-kontroll med testvyer samt
+produktionsbygge passerade.

@@ -257,3 +257,28 @@ matchens nästa steg och uttagningen under matchen verifierade i produktion.
 67 spelare, 144 matcher och 0 träningspass före/efter. Inga testuttagningar
 eller andra verksamhetsuppgifter skrivna i produktion vid kontrollen.
 Träningspassens faktiska lagkoppling återstår; pass är fortfarande personliga.
+
+## 2026-09-10 – filfri Svenska Lag-tjänst för Gul
+
+Användaren godkände automatisk VPS-synk och förtydligade att filnedladdningar
+inte är önskade. Befintlig direktsynk är manuell JSON-inmatning; Excelvägen
+är äldre. Den nya arbetaren läser kalender, svar och uttryckligen sparad
+närvaro direkt med Playwright. Inga exporter ingår.
+
+Implementerat på `feat/svenskalag-sync`, kodcommit `28f2fba6`: insamlare,
+validering, transaktionell import, bevarade uttagningsbeslut, status/kö/historik
+i appen och separat systemd-tjänst. 138 tester inklusive tillfälliga DB-tabeller
+passerade; Playwright-kontroll med testvyer och produktionsbygge godkända.
+Riktiga Svenska Lag-vyer inspekterade via befintlig Chrome-session.
+
+VPS: `/opt/bsk/sync-releases/28f2fba6`, symlink `/opt/bsk/svenskalag-sync`.
+Separat användare och databasroll `bsk-sync` respektive `bsk_sync`.
+Tjänsten installerad; timern **disabled**. Startkontroll utan session gav
+förväntat `login_required` och importerade inga aktiviteter. Webbändringarna
+är ännu inte publicerade. En riktig filfri provhämtning och skarp import
+återstår innan schemat aktiveras.
+
+Användaren har ombetts logga in i ett separat Chromium-fönster; autentisering
+för VPS-arbetaren saknas. Sessionsfilens innehåll får aldrig loggas eller
+skrivas i dokumentation. När den finns: överför skyddat till VPS, provkör,
+kontrollera kopplingar, kör skarpt och aktivera timern. Se SVENSKALAG_SYNC.md.
