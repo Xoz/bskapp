@@ -476,3 +476,5 @@ Definitionerna gäller alla vyer, räknare, hjälptexter, guide och API-etikette
 ## Gemensam terminologi publicerad – 2026-09-10
 
 Commit 1e65ca1fb35224b989ec751fce5c0dfd71bd4d0f publicerad i webbappen, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533538172. Trupp=ja-svarande; laguppställning/uttagen=planerad; deltog=faktisk närvaro; spelarregister=hela spelarbasen. Matchvyer, uttagning, cup, register, inställningar, guide och API-etiketter är anpassade. AIK verifierad inloggat med separat trupp (10) och laguppställning (8). 153 tester, webbbygge och syntaxkontroll av fyra ändrade Swift-filer godkända. Äldre nativekällans texter uppdaterade; ingen ny nativeapp har distribuerats. Inga kallelser, uttagningar eller närvaroposter ändrade av terminologiarbetet. Definitioner fastställda i AGENTS.md.
+
+Matchplan 2026-09-10: den separata rutan för position/spelarval/återställning är borttagen enligt användaren. Placering sker via plan + kompakta spelarknappar med kortnamn (fullständigt namn tillgängligt). Vald placerad spelare kan tas av planen via en liten textknapp.

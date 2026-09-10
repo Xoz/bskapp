@@ -119,21 +119,14 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
               </button>;
             })}
           </div>
-          {editable && <div className="match-plan-assignment">
-            <label className="label" htmlFor="position-player">Position {active + 1} · {ROLE_LABELS[fm.slots[active].role]}</label>
-            <select id="position-player" className="input" value={plan.spots[active].playerId ?? ''} onChange={e => assign(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">Ledig position</option>
-              {plan.spots[active].playerId && !byId.has(plan.spots[active].playerId) && <option value={plan.spots[active].playerId!}>Inte längre tillgänglig – välj en annan spelare</option>}
-              {players.map(p => <option value={p.id} key={p.id}>{p.name}{placed.has(p.id) && plan.spots[active].playerId !== p.id ? ' · flytta hit' : ''}</option>)}
-            </select>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => changeFormation(plan.formation)}>Återställ positionernas form</button>
-            <p className="match-plan-help">Du kan även flytta vald position med piltangenterna.</p>
-          </div>}
-          <div className="match-plan-reserves"><h3>Trupp · {players.length}</h3><p className="match-plan-help">Alla i truppen har tackat ja. {reserves.length} spelare återstår att placera.</p>
+          {editable && plan.spots[active].playerId !== null && <button type="button" className="match-plan-unplace" onClick={() => assign(null)}>
+            Ta {byId.get(plan.spots[active].playerId!)?.name ?? 'spelaren'} av planen
+          </button>}
+          <div className="match-plan-reserves"><h3>Trupp · {players.length}</h3><p className="match-plan-help">{reserves.length} kvar att placera · alla har tackat ja.</p>
             {reserves.length > 0 ? <>
               {editable && <p className="match-plan-help">Tryck på en spelare för att placera henne på vald position.</p>}
-              <div className="match-plan-bench">{reserves.map(p => <button type="button" key={p.id} className="match-plan-bench-player" onClick={() => assign(p.id)}>
-                <PlayerShirt number={p.jersey_number ?? '•'}/><span>{p.name}</span>
+              <div className="match-plan-bench">{reserves.map(p => <button type="button" key={p.id} className="match-plan-bench-player" title={p.name} aria-label={`Placera ${p.name}`} onClick={() => assign(p.id)}>
+                <PlayerShirt number={p.jersey_number ?? '•'}/><span>{shortName(p.name)}</span>
               </button>)}</div>
             </> : <p className="body-small">{players.length ? 'Alla tillgängliga spelare är placerade.' : 'Inga spelare har tackat ja ännu. Du kan börja med formationen och spelidén.'}</p>}
           </div>
