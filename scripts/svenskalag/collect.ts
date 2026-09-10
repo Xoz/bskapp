@@ -99,7 +99,9 @@ export async function collect(context: BrowserContext, today: string): Promise<A
       const response = await page.goto(presence.url, {waitUntil:"domcontentloaded"});
       if (!response?.ok() || await page.locator('input[type="password"]').first().isVisible()) throw new LoginRequired();
       await page.locator(".memberlist").last().waitFor();
-      if (await page.locator(".split-tab li:not(:last-child)").count() !== 1) throw new Error("Flera närvarogrupper behöver stöd innan import");
+      const groupCount = await page.locator(".split-tab li:not(:last-child)").count();
+      const isMatchList = entry.kind === "match" && groupCount === 0 && await page.locator(".memberlist.match").count() === 1;
+      if (groupCount !== 1 && !isMatchList) throw new Error("Flera eller okända närvarogrupper behöver stöd innan import");
       const presentRows = page.locator(".memberlist").last().locator("li.player, li.leader, li.volunteer");
       if (presence.count > 0) await presentRows.first().waitFor();
       if (await presentRows.count() !== presence.count) throw new Error(`Närvarolistan är inte komplett för ${entry.sourceId}: ${await presentRows.count()}/${presence.count}`);

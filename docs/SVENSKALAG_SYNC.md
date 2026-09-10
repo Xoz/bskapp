@@ -172,3 +172,12 @@ Efter inkommande import körs nu kontroll av Guls befintliga importerade matcher
 Ja/nej/inväntar hämtas från Svenska Lags källtotaler, med match_roster som fallback när totalen saknas (NULL; noll är ett riktigt källvärde). Samma läsregel används i aktivitetssidor, uttagningslistor och mobilens matchlistor. Ja-svar väljer aldrig automatiskt en spelare i laguppställningen. Laguppställning sparas genom selectionDraftStatements för både webb och mobil, alltid med utkastmarkör även när den är tom. Inkommande synk och sparande använder samma matchlås innan utkastkontroll/uppställningsändring, så att en synk inte skriver över ett samtidigt spelarval. Faktisk närvaro förblir separat. Ingen matchspecifik regel eller match-id är hårdkodat i denna logik.
 
 Den äldre mobilens serverkod valde automatiskt ja-svar och skyddade inte tomma utkast; detta är rättat. iOS-källkodens låsta spelarväljare och otydliga ”klara” är uppdaterade; de klientändringarna kräver en ny appinstallation och publiceras inte genom webbdeploy.
+
+## Matchnärvaro 2026-09-10
+
+Orsak till noll spelade matcher: collect letade bara efter ”Fyll i närvaro”.
+Matcher använder ”Fyll i laguppställning” och en `.memberlist.match` utan
+träningens gruppflikar. Båda varianterna stöds nu, fortsatt endast med uttrycklig
+markör för sparad närvaro och kontroll av komplett antal inklusive ledare.
+Spelarlistan utesluter ledare; ja-svar används inte som spelad match.
+Playwright-fixturer verifierar båda sidvarianterna och avvisar ofullständiga svar.
