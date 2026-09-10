@@ -54,9 +54,9 @@ describe("utvecklingskärnans kontrakt", () => {
     const list = developmentCore.slice(listStart, workspaceStart);
     expect(list).toContain("FROM matches m");
     expect(list).toContain("FROM match_roster mr");
-    expect(coreActions).toContain("INSERT INTO match_roster");
+    expect(coreActions).toContain("selectionDraftStatements");
     expect(actions).toContain("INSERT INTO match_roster");
-    expect(mobileDevelopment).toContain("INSERT INTO match_roster");
+    expect(mobileDevelopment).toContain("selectionDraftStatements");
   });
 
   it("begränsar spelaren till två aktiva mål genom slots och unikt index", () => {
@@ -184,8 +184,8 @@ describe("utvecklingskärnans kontrakt", () => {
 
   it("sparar tränarens explicita beslut i stället för automatval", () => {
     expect(coreActions).toContain('formData.getAll("selected_player")');
-    expect(coreActions).toContain("INSERT INTO match_roster");
-    expect(coreActions).toContain("selection_status = excluded.selection_status");
+    expect(coreActions).toContain("selectionDraftStatements");
+    expect(mobileDevelopment).toContain("selectionDraftStatements(activity.match_id,selected)");
     expect(coreActions).not.toMatch(/auto.?select|automatic.?selection/i);
   });
 
@@ -300,7 +300,8 @@ describe("utvecklingskärnans kontrakt", () => {
   it("använder match_roster som facit efter bekräftad uttagning", () => {
     expect(mobileDevelopment).toContain("FROM match_roster roster WHERE roster.match_id = m.id");
     expect(mobileDevelopment).toContain("hasConfirmedSquad: row.has_confirmed_squad");
-    expect(mobileDevelopment).toContain('selected: currentCallupStatus === "accepted"');
+    expect(mobileDevelopment).toContain("selected: Boolean(row.in_match_squad)");
+    expect(mobileDevelopment).not.toContain('selected: currentCallupStatus === "accepted"');
     expect(mobileDevelopment).toContain("COALESCE(roster.selection_status = 'selected', false) AS in_match_squad");
     expect(mobileDevelopment).toContain("Boolean(row.in_match_squad)");
     expect(mobileDevelopment).toContain("typeof decision.selected !== \"boolean\"");

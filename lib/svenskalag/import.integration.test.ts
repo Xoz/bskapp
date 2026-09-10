@@ -1,5 +1,6 @@
 import { describe,it,expect } from "vitest";
 import postgres from "postgres";
+import {selectionDraftStatements} from "../selectionDraft";
 import {applyRemovedMatches} from "./removed-matches";
 import {applySnapshot} from "./import";
 import type {ActivitySnapshot} from "./model";
@@ -68,6 +69,15 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       await applySnapshot(sql,[fresh],"2026-09-10");
       expect((await sql`SELECT cancelled FROM matches WHERE id=${freshId}`)[0].cancelled).toBe(0);
       expect(await sql`SELECT * FROM settings WHERE key=${`svenskalag_removed:${freshId}`}`).toHaveLength(0);
+      // Ett uttryckligen tomt utkast är också ett utkast: ny synk får inte återvälja spelare.
+      await sql.begin(async tx=>{
+        for(const statement of selectionDraftStatements(freshId,[])) {
+          let index=0;await tx.unsafe(statement.sql.replace(/\?/g,()=>`$${++index}`),statement.args);
+        }
+      });
+      await applySnapshot(sql,[{...fresh,callups:[{name:"Exempel A",status:"accepted"},{name:"Exempel B",status:"accepted"}],totals:{accepted:2,declined:0,pending:0}}],"2026-09-10");
+      expect(await sql`SELECT * FROM match_roster WHERE match_id=${freshId} AND selection_status='selected'`).toHaveLength(0);
+      expect(await sql`SELECT * FROM match_roster WHERE match_id=${freshId} AND callup_status='accepted'`).toHaveLength(2);
       const emptyPresence={...training,attendance:[]};
       await applySnapshot(sql,[emptyPresence],"2026-09-10");
       expect((await sql`SELECT attendance_status FROM development_activity_participation WHERE player_id=1`)[0].attendance_status).toBe("absent");

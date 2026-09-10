@@ -170,3 +170,7 @@ historik från tidigare produktinriktning och ska inte återinföras som aktuell
 
 - Åtgärdat: bekräftat borttagna Svenska Lag-matcher lämnas inte längre aktiva; automatisk årskontroll för Gul och filter även i Idag.
 - Kvar, historisk datakvalitet: skilj sex övergripande cupaktiviteter från individuella matcher, ge elva cupgruppsmatcher rätt Gulanknytning, verifiera fem närvaroimporterade junimatchers käll-id och hantera fyra manuella poster. Skapa inte nya matcher innan kopplingarna granskats. Se `MATCH_AUDIT_2026-09-10.md`.
+
+### Permanent åtskillnad svar/uttagning 2026-09-10
+
+Gemensamma läsregler för matchtotaler samt gemensamt sparande för webb och mobil genomförda. Äldre trupp-/cupformulär har samma utkastmarkör och lås. Synken låser matcher före utkastkontroll och skriver aldrig ja-svar som uttagning eller närvaro. Regressioner omfattar flera matcher, källtotal noll kontra saknad total, ändrade svar och tomt utkast över synk. iOS-källkod korrigerad och simulatorbyggd; installation av den nya klientversionen är separat från webbdeploy.

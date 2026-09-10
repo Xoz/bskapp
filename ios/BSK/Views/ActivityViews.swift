@@ -1122,7 +1122,7 @@ struct TodayList: View {
                                 taskRow(
                                     icon: "person.3.fill",
                                     title: "\(activity.sourceTeam) · \(activity.title)",
-                                    note: "\(readyCount(activity)) klara · saknar \(missingCount(activity)) till 9",
+                                    note: "\(activity.acceptedCallupCount) har tackat ja · \(activity.squadCount) i laguppställningen",
                                     tone: BSKTheme.warning
                                 )
                             }
@@ -1381,9 +1381,9 @@ struct TodayList: View {
                 HStack(spacing: 8) {
                     Text(activity.sourceTeam).font(.caption2.bold()).foregroundStyle(activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent)
                     if hasStaffingData(activity) {
-                        Text("\(readyCount(activity)) klara").font(.caption2).foregroundStyle(BSKTheme.secondary)
+                        Text("\(activity.acceptedCallupCount) har tackat ja").font(.caption2).foregroundStyle(BSKTheme.secondary)
                         if missingCount(activity) > 0 {
-                            Text("Saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning)
+                            Text(activity.hasConfirmedSquad ? "Uppställning: saknar \(missingCount(activity))" : "Ja-svar: saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning)
                         }
                     }
                 }
@@ -1416,8 +1416,8 @@ struct TodayList: View {
                 HStack(spacing: 6) {
                     Text(activity.sourceTeam).font(.caption2.bold()).foregroundStyle(activity.sourceTeam == "Gul" ? BSKTheme.teamYellow : BSKTheme.accent)
                     if hasStaffingData(activity) {
-                        Text("\(readyCount(activity)) klara").font(.caption2).foregroundStyle(BSKTheme.muted)
-                        if missingCount(activity) > 0 { Text("Saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning) }
+                        Text("\(activity.acceptedCallupCount) har tackat ja").font(.caption2).foregroundStyle(BSKTheme.muted)
+                        if missingCount(activity) > 0 { Text(activity.hasConfirmedSquad ? "Uppställning: saknar \(missingCount(activity))" : "Ja-svar: saknar \(missingCount(activity))").font(.caption2.bold()).foregroundStyle(BSKTheme.warning) }
                     }
                 }
             }
@@ -1814,7 +1814,7 @@ struct SelectionDetail: View {
 
             Toggle("Uttagen i truppen", isOn: selectionBinding(candidate))
                 .tint(BSKTheme.accent)
-            .disabled(candidate.currentCallupStatus != nil)
+            
 
             if selections[candidate.playerId] == true {
                 Picker("Position", selection: positionBinding(candidate)) {
@@ -1825,7 +1825,7 @@ struct SelectionDetail: View {
             }
 
             if candidate.currentCallupStatus != nil {
-                Text("Kallelse och svar är låsta")
+                Text("Svaren kommer från Svenska Lag. Spelarvalet ändrar inte svaret.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

@@ -166,3 +166,9 @@ spara-adress; en liten samtidighetsrisk mellan sista kontroll och sparande kvars
 ### Matchkontroll 2026-09-10
 
 Efter inkommande import körs nu kontroll av Guls befintliga importerade matcher mot hela aktuella årets kalender. Försvunna kalenderposter måste dessutom ha källrubriken ”Aktiviteten är borttagen” innan de döljs. `svenskalag_match_audit` innehåller senaste resultatet; `svenskalag_removed:{id}` anger verifierad borttagning. Historiken bevaras. Idag filtrerar nu samma inaktiva matcher som Matcher. Se `MATCH_AUDIT_2026-09-10.md` för omfattning och kvarvarande historiska kopplingsproblem.
+
+### Gemensam regel för alla matcher, 2026-09-10
+
+Ja/nej/inväntar hämtas från Svenska Lags källtotaler, med match_roster som fallback när totalen saknas (NULL; noll är ett riktigt källvärde). Samma läsregel används i aktivitetssidor, uttagningslistor och mobilens matchlistor. Ja-svar väljer aldrig automatiskt en spelare i laguppställningen. Laguppställning sparas genom selectionDraftStatements för både webb och mobil, alltid med utkastmarkör även när den är tom. Inkommande synk och sparande använder samma matchlås innan utkastkontroll/uppställningsändring, så att en synk inte skriver över ett samtidigt spelarval. Faktisk närvaro förblir separat. Ingen matchspecifik regel eller match-id är hårdkodat i denna logik.
+
+Den äldre mobilens serverkod valde automatiskt ja-svar och skyddade inte tomma utkast; detta är rättat. iOS-källkodens låsta spelarväljare och otydliga ”klara” är uppdaterade; de klientändringarna kräver en ny appinstallation och publiceras inte genom webbdeploy.

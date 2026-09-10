@@ -1,4 +1,5 @@
 "use server";
+import {selectionDraftGuardStatements} from "./selectionDraft";
 
 import crypto from "crypto";
 import { cookies, headers } from "next/headers";
@@ -1070,7 +1071,8 @@ export async function saveSquad(formData: FormData) {
   }
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
-  for (const mid of targetIds) {
+  for (const mid of targetIds.sort((a,b)=>a-b)) {
+    stmts.push(...selectionDraftGuardStatements(mid));
     stmts.push({ sql: "UPDATE match_roster SET selection_status = NULL, lineup_x = NULL, lineup_y = NULL, updated_at = now() WHERE match_id = ?", args: [mid] });
     for (const pid of ids) {
       stmts.push({
@@ -1134,7 +1136,8 @@ export async function saveLineup(formData: FormData) {
   }
 
   const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
-  for (const mid of squadTargets) {
+  for (const mid of squadTargets.sort((a,b)=>a-b)) {
+    stmts.push(...selectionDraftGuardStatements(mid));
     stmts.push({ sql: "UPDATE match_roster SET selection_status = NULL, lineup_x = NULL, lineup_y = NULL, updated_at = now() WHERE match_id = ?", args: [mid] });
     for (const pid of squadIds) {
       stmts.push({ sql: `INSERT INTO match_roster (match_id, player_id, selection_status, source)

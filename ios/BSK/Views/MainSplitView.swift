@@ -1327,7 +1327,7 @@ private struct PremiumSelectionList: View {
                     Spacer(minLength: 2)
 
                     if missing > 0 {
-                        Text("Saknar \(missing)")
+                        Text(match.hasConfirmedSquad ? "Uppställning: saknar \(missing)" : "Ja-svar: saknar \(missing)")
                             .font(.caption2.bold())
                             .foregroundStyle(BSKTheme.warning)
                             .padding(.horizontal, 7)
@@ -1359,7 +1359,7 @@ private struct PremiumSelectionList: View {
 
                 if match.hasConfirmedSquad {
                     HStack(spacing: 8) {
-                        Text("\(match.squadCount) i truppen").foregroundStyle(.white)
+                        Text("\(match.squadCount) i laguppställningen").foregroundStyle(.white)
                         if called > 0 {
                             Text("\(match.acceptedCallupCount) ja").foregroundStyle(BSKTheme.accent)
                             Text("\(match.declinedCallupCount) nej").foregroundStyle(BSKTheme.danger)

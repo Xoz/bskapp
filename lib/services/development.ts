@@ -1,6 +1,8 @@
 import "server-only";
+import {matchCallupCountsSql} from "../activityCallups";
 
 import crypto from "crypto";
+import {selectionDraftStatements} from "../selectionDraft";
 import type { CurrentUser, Permission } from "../auth";
 import { all, batch, get, logActivity, run, type SqlArgs } from "../db";
 import { swedishDateOffset, swedishToday, swedishWallClockToEpoch } from "../dates";
@@ -536,7 +538,7 @@ export async function listMobilePlayerMatchLoads(actor: CurrentUser): Promise<Mo
                 ELSE 'pending'
               END AS status
        FROM development_activities da
-       LEFT JOIN matches linked_match ON linked_match.id = da.match_id
+       LEFT JOIN matches linked_match ON linked_match.id = da.match_id AND linked_match.cancelled=0
        LEFT JOIN groups g ON g.id = da.group_id
        JOIN LATERAL (
          SELECT p.id AS player_id,
@@ -1258,9 +1260,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
               )
             ) AS evaluation_ready,
             linked_match.evaluation_closed_at IS NOT NULL AS evaluation_completed,
-            linked_match.callup_accepted_count AS accepted_callup_count,
-            linked_match.callup_declined_count AS declined_callup_count,
-            linked_match.callup_pending_count AS pending_callup_count,
+            ${matchCallupCountsSql('linked_match')},
             COALESCE((SELECT COUNT(*) FROM match_roster roster WHERE roster.match_id = da.match_id AND roster.selection_status = 'selected'), 0) AS squad_count,
             EXISTS (SELECT 1 FROM match_roster roster WHERE roster.match_id = da.match_id AND roster.selection_status = 'selected') AS has_confirmed_squad,
             COALESCE((
@@ -1274,7 +1274,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
               WHERE roster.match_id = da.match_id AND roster.callup_status = 'accepted'
             ), '') AS accepted_player_names
      FROM development_activities da
-     JOIN matches linked_match ON linked_match.id = da.match_id
+     JOIN matches linked_match ON linked_match.id = da.match_id AND linked_match.cancelled=0
      JOIN groups match_group ON match_group.id = da.group_id AND match_group.name IN ('Gul', 'Grön')
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
@@ -1396,9 +1396,7 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
     `SELECT da.id, da.activity_date, da.start_time, da.title,
             COALESCE(g.name, '') AS source_team,
             CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
-            m.callup_accepted_count AS accepted_callup_count,
-            m.callup_declined_count AS declined_callup_count,
-            m.callup_pending_count AS pending_callup_count,
+            ${matchCallupCountsSql('m')},
             COALESCE((SELECT COUNT(*) FROM match_roster roster WHERE roster.match_id = m.id AND roster.selection_status = 'selected'), 0) AS squad_count,
             EXISTS (SELECT 1 FROM match_roster roster WHERE roster.match_id = m.id AND roster.selection_status = 'selected') AS has_confirmed_squad
      FROM development_activities da
@@ -1406,7 +1404,7 @@ export async function listMobileSelectionMatches(actor: CurrentUser): Promise<Mo
      LEFT JOIN groups g ON g.id = da.group_id
      WHERE da.activity_type = 'match'
        AND da.activity_date >= to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
-       AND COALESCE(m.finished, 0) = 0
+       AND m.cancelled=0 AND COALESCE(m.finished, 0) = 0
        AND (
          da.activity_date > to_char(now() AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD')
          OR da.start_time IS NULL
@@ -1558,8 +1556,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
         primaryLevel: row.preferred_level_primary,
         secondaryLevel: row.preferred_level_secondary,
         teamNames: row.team_names ?? [],
-        selected: currentCallupStatus === "accepted"
-          || (currentCallupStatus === null && Boolean(row.in_match_squad)),
+        selected: Boolean(row.in_match_squad),
         currentCallupStatus,
         selectedLastEight: Number(row.selected_last_eight),
         selectedLastThree: Number(row.selected_last_three),
@@ -1597,36 +1594,11 @@ export async function saveMobileSelection(
     if (position.length > 40) throw new DevelopmentServiceError("invalid", "Positionen är för lång.", 400);
     byPlayer.set(decision.playerId, { ...decision, position });
   }
-  const callups = new Map(workspace.candidates
-    .filter((candidate) => candidate.currentCallupStatus)
-    .map((candidate) => [candidate.playerId, candidate.currentCallupStatus!]));
   const activity = await get<{ match_id: number | null }>("SELECT match_id FROM development_activities WHERE id = ?", [activityId]);
-  const statements: { sql: string; args: SqlArgs }[] = [];
-  if (activity?.match_id != null) {
-    statements.push({ sql: "UPDATE match_roster SET selection_status = NULL, selected_position = '', updated_at = now() WHERE match_id = ?", args: [activity.match_id] });
-  }
-  for (const candidate of workspace.candidates) {
-    const submitted = byPlayer.get(candidate.playerId) ?? {
-      playerId: candidate.playerId,
-      selected: false,
-      position: candidate.primaryPosition || candidate.position,
-    };
-    const callupStatus = callups.get(candidate.playerId);
-    const selected = callupStatus === "accepted" || (callupStatus == null && submitted.selected);
-    if (!selected) continue;
-    if (activity?.match_id != null) statements.push({
-      sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
-            VALUES (?, ?, 'selected', ?, 'native')
-            ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
-              selected_position = excluded.selected_position, source = excluded.source, updated_at = now()`,
-      args: [activity.match_id, submitted.playerId, submitted.position],
-    });
-  }
-  await batch(statements);
-  const selectedCount = workspace.candidates.filter((candidate) => {
-    const callupStatus = callups.get(candidate.playerId);
-    return callupStatus === "accepted" || (callupStatus == null && Boolean(byPlayer.get(candidate.playerId)?.selected));
-  }).length;
+  if(activity?.match_id == null) throw new DevelopmentServiceError("invalid", "Matchkoppling saknas.", 400);
+  const selected=Array.from(byPlayer.values()).filter(decision=>decision.selected);
+  await batch(selectionDraftStatements(activity.match_id,selected));
+  const selectedCount=selected.length;
   await logActivity(actor.name, "sparade native-uttagning", `${selectedCount} uttagna`);
   return getMobileSelectionWorkspace(actor, activityId);
 }

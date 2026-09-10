@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import postgres from 'postgres';
-import {activityCallupCountsSql,activityCallupNamesSql} from './activityCallups';
+import {activityCallupCountsSql,activityCallupNamesSql,matchCallupCountsSql} from './activityCallups';
 describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('aktivitetens kallelsesvar',()=>{
   it('visar matchens källtotaler och namn, och behåller träningskällan',async()=>{
     const sql=postgres(process.env.BSK_SYNC_TEST_DATABASE_URL!,{max:1});
@@ -23,6 +23,14 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('aktivitetens kallelses
       expect(training).toMatchObject({accepted_callup_count:1,accepted_player_names:['Exempel A']});
       await sql`UPDATE matches SET callup_accepted_count=NULL`;
       expect((await read())[0].accepted_callup_count).toBe(1);
+      await sql`INSERT INTO matches VALUES(408,0,2,1)`;
+      await sql`INSERT INTO match_roster VALUES(408,1,'accepted'),(408,2,'accepted')`;
+      for(const alias of ['m','linked_match'] as const) {
+        const counts=await sql.unsafe(`SELECT ${alias}.id,${matchCallupCountsSql(alias)} FROM matches ${alias} ORDER BY ${alias}.id`);
+        expect(counts.map(row=>row.accepted_callup_count)).toEqual([1,0]);
+        expect(counts[1]).toMatchObject({declined_callup_count:2,pending_callup_count:1});
+      }
+
     }finally{await sql.end();}
   });
 });

@@ -1,5 +1,5 @@
 import "server-only";
-import {activityCallupCountsSql,activityCallupNamesSql} from "./activityCallups";
+import {activityCallupCountsSql,activityCallupNamesSql,matchCallupCountsSql} from "./activityCallups";
 
 import { all, get } from "./db";
 import { canAccessGroup, canAccessPlayer, getCurrentUser, isStaffRole } from "./auth";
@@ -495,9 +495,7 @@ export async function getSelectionMatches(): Promise<CoreActivity[]> {
             ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'accepted' ORDER BY p.name) AS accepted_player_names,
             ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'declined' ORDER BY p.name) AS declined_player_names,
             ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'pending' ORDER BY p.name) AS pending_player_names,
-            m.callup_accepted_count AS accepted_callup_count,
-            m.callup_declined_count AS declined_callup_count,
-            m.callup_pending_count AS pending_callup_count,
+            ${matchCallupCountsSql('m')},
             (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS squad_count,
             EXISTS(SELECT 1 FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS has_confirmed_squad,
             true AS is_upcoming
@@ -532,35 +530,6 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     || !detail.activity.is_upcoming
   ) return null;
   if (detail.activity.match_id == null) return null;
-  const canonical = await get<{
-    accepted_count: number; declined_count: number; pending_count: number;
-    accepted_names: string[]; declined_names: string[]; pending_names: string[];
-    squad_count: number;
-  }>(
-    `SELECT m.callup_accepted_count AS accepted_count,
-            m.callup_declined_count AS declined_count,
-            m.callup_pending_count AS pending_count,
-            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
-                  WHERE mr.match_id = m.id AND mr.callup_status = 'accepted' ORDER BY p.name) AS accepted_names,
-            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
-                  WHERE mr.match_id = m.id AND mr.callup_status = 'declined' ORDER BY p.name) AS declined_names,
-            ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id
-                  WHERE mr.match_id = m.id AND mr.callup_status = 'pending' ORDER BY p.name) AS pending_names,
-            (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS squad_count
-     FROM matches m WHERE m.id = ?`,
-    [detail.activity.match_id]
-  );
-  if (canonical) Object.assign(detail.activity, {
-    accepted_callup_count: Number(canonical.accepted_count),
-    declined_callup_count: Number(canonical.declined_count),
-    pending_callup_count: Number(canonical.pending_count),
-    accepted_player_names: canonical.accepted_names,
-    declined_player_names: canonical.declined_names,
-    pending_player_names: canonical.pending_names,
-    called_player_names: [...canonical.accepted_names, ...canonical.declined_names, ...canonical.pending_names].sort((a, b) => a.localeCompare(b, "sv")),
-    squad_count: Number(canonical.squad_count),
-    has_confirmed_squad: Number(canonical.squad_count) > 0,
-  });
   const candidateSummaries = await getPlayerCoreSummaries();
   const ids = candidateSummaries.map((row) => row.player.id);
   if (ids.length === 0) return { activity: detail.activity, candidates: [], warnings: [] };

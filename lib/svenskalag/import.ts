@@ -9,6 +9,11 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
     const groups = await tx`SELECT id FROM groups WHERE name = 'Gul' AND group_type = 'subgroup' AND active = 1`;
     if (groups.length !== 1) throw new Error("Gul måste vara entydigt kopplat");
     const groupId = groups[0].id;
+    // Samma låsordning som cupens utkast. Hela transaktionen är lokal, utan browseranrop.
+    if(!dryRun) for(const match of await tx`SELECT id FROM matches WHERE group_id=${groupId} ORDER BY id`) {
+      await tx`SELECT pg_advisory_xact_lock(2014, ${match.id})`;
+    }
+
     const players = await tx`SELECT id, name FROM players WHERE active = 1`;
     const names = new Map<string, number[]>();
     for (const p of players) names.set(nameKey(p.name), [...(names.get(nameKey(p.name)) ?? []), p.id]);
@@ -70,6 +75,8 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
       const activity = rows[0];
       if (a.kind === "match") {
         const matchId = activity.match_id;
+        // Samma lås som webb/mobil: en pågående synk får inte skriva över ett nytt utkast.
+        await tx`SELECT pg_advisory_xact_lock(2014, ${matchId})`;
         if(a.lineup) {
           await write(lineupKey(matchId),{sourceId:a.sourceId,date:a.date,names:a.lineup,fetchedAt:new Date().toISOString()});
           // Svenska Lags uppställning är utgångspunkt tills tränaren sparar ett eget utkast.

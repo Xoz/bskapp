@@ -1,7 +1,8 @@
 "use server";
 
 import crypto from "crypto";
-import {lineupKey,outboxKey,draftKey,lineupRevision,type SourceLineup,type LineupJob} from "./svenskalag/outbox";
+import {selectionDraftStatements} from "./selectionDraft";
+import {lineupKey,outboxKey,lineupRevision,type SourceLineup,type LineupJob} from "./svenskalag/outbox";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { all, batch, get, logActivity, run } from "./db";
@@ -295,29 +296,11 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const accessiblePlayers = await getPlayers();
   const accessibleIds = new Set(accessiblePlayers.map((player) => player.id));
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
-  const statements: { sql: string; args: (string | number | null)[] }[] = [];
-
-  if (activity.match_id != null) {
-    statements.push({ sql: "UPDATE match_roster SET selection_status = NULL, selected_position = '', updated_at = now() WHERE match_id = ?", args: [activity.match_id] });
-  }
-
-  for (const player of accessiblePlayers) {
-    if (!selected.has(player.id)) continue;
-    const position = String(formData.get(`position_${player.id}`) ?? player.position ?? "").trim().slice(0, 40);
-    if (activity.match_id != null) statements.push({
-      sql: `INSERT INTO match_roster (match_id, player_id, selection_status, selected_position, source)
-            VALUES (?, ?, 'selected', ?, 'manual')
-            ON CONFLICT (match_id, player_id) DO UPDATE SET selection_status = excluded.selection_status,
-              selected_position = excluded.selected_position, source = 'manual', updated_at = now()`,
-      args: [activity.match_id, player.id, position],
-    });
-  }
-
   if (activity.match_id == null) return;
   const matchId=activity.match_id;
-  // Samma lås som publiceraren: ett nytt utkast kan inte ändras mitt i överföringen.
-  statements.unshift({sql:"SELECT pg_advisory_xact_lock(2014, ?)",args:[matchId]});
-  statements.push({sql:"INSERT INTO settings(key,value) VALUES (?, 'true') ON CONFLICT(key) DO UPDATE SET value='true'",args:[draftKey(matchId)]});
+  const statements=selectionDraftStatements(matchId,accessiblePlayers.filter(player=>selected.has(player.id)).map(player=>({
+    playerId:player.id,position:String(formData.get(`position_${player.id}`)??player.position??"").trim().slice(0,40),
+  })));
   if(formData.get("intent")==="publish") {
     const sourceRow=await get<{value:string}>("SELECT value FROM settings WHERE key=?",[lineupKey(matchId)]);
     const source:SourceLineup|null=sourceRow?JSON.parse(sourceRow.value):null;

@@ -236,3 +236,6 @@ Matchkontroll 2026-09-10: `scripts/svenskalag/audit-matches.ts` inventerar aktue
 `scripts/match-identity-audit.mjs` innehåller publiceringskontrollens dubblettfråga: stabila käll-id:n först, datum/tid/namn som fallback. Testas av `scripts/match-identity-audit.test.mjs`.
 
 `lib/activityCallups.ts` delar korrekta kallelser för aktivitetslista/detalj: matcher läser matches/match_roster; träningar läser development_activity_callups/summaries. `lib/activityCallups.test.ts` verifierar motstridiga äldre uppgifter och trupp utan kallelse.
+
+Permanent åtskillnad mellan svar och uttagning: `lib/selectionDraft.ts` bygger den gemensamma transaktionen för webbens och mobilens spelarval (matchlås, explicit urval, utkastmarkör, inga svar/närvaroskrivningar). `lib/selectionDraft.test.ts` och synkens integrationstest verifierar flera matcher och tomma utkast. `lib/activityCallups.ts` delar också matchtotaler med webbens och mobilens uttagningslistor.
+`selectionDraftGuardStatements` används också av äldre saveSquad/saveLineup för cup och formation. Synken låser befintliga Gulmatcher i id-ordning före sina verksamhetsskrivningar, utan nätverksläsning under låset. Native väljer nu efter selection_status, aldrig automatiskt efter accepted.
