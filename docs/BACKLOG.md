@@ -3,19 +3,14 @@
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
-## Pågående 2026-09-10: tvåvägssynk med Svenska Lag som master
+## Publicerat 2026-09-10: tvåvägssynk med Svenska Lag som master
 
-Uttagningsutkast → kö → laguppställning i Svenska Lag; kallelser skickas där.
-Nya matcher, svar, faktisk närvaro och inställd status speglas tillbaka.
-Implementering och tester på `feat/svenskalag-bidirectional`. Verifiering och
-publicering pågår. Se kontraktet i `SVENSKALAG_SYNC.md`.
-
-## Publicerat 2026-09-10: filfri Svenska Lag-synk
-
-Automatisk inloggning, skarp import och återkommande VPS-drift verifierade.
-23 av 45 kalenderposter uppdaterade; 18 matchkopplingar och fyra träningars
-spelarkopplingar återstår. Appstatus/kö/historik publicerade via PR #9.
-Se `SVENSKALAG_SYNC.md`. Ingen schemamigrering. Nya matcher skapas inte ännu.
+Spara utkast → Skicka till Svenska Lag → laguppställning; kallelser skickas där.
+Nya matcher, svar, registrerad närvaro och inställd status speglas tillbaka.
+45 aktiviteter uppdaterade, 18 matchkopplingar lösta genom källstyrt skapande.
+Fyra äldre träningar har några olösta spelarnamn. Återstår: permanenta person-id:n,
+positioner/formation och full avstämning av borttagna kalenderposter. Se
+`SVENSKALAG_SYNC.md` för drift och verifieringsgränser. PR #10 är publicerad.
 
 ## Aktuellt efter publiceringarna 2026-09-09
 

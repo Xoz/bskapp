@@ -303,3 +303,48 @@ Produktionsbygge, datagranskning och hälsokontroller godkända.
 Aktiv huvudrelease `/opt/bsk/releases/6f0b6ace146f.KvECoy`; backup före import
 `/opt/bsk/backups/main-6f0b6ace146f.8eOL7p`.
 Inloggningsuppgifter finns endast i privat VPS-miljöfil, inga värden i dokumentation.
+
+
+## 2026-09-10 – tvåvägssynk publicerad
+
+Huvudapp: PR #10, commit `13eef7232d06585d92bd4449d216d1b60ac6d0ce`.
+GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34520670229 godkänd.
+Release `/opt/bsk/releases/13eef7232d06.aE56jI`; backup före import
+`/opt/bsk/backups/main-13eef7232d06.e3IFii/bsk.dump`.
+Migration 0022 (matches.cancelled) och begränsade DB-rättigheter verifierade.
+
+Aktiv arbetare `/opt/bsk/sync-releases/e9b054d5`, via `/opt/bsk/svenskalag-sync`.
+Den använder oförändrade beroenden via node_modules i release 860d763c, som ska
+behållas tills beroendena installeras fristående vid nästa uppgradering.
+Workerfixar 76a05da4/f02ad5f9/3ac48260/e9b054d5 är separat publicerade efter lokal verifiering;
+webbpaketet är fortfarande 13eef723. Timern är enabled/active, körkö avläses varje
+minut och ordinarie inläsning cirka varje timme 06–22 samt 03, svensk tid.
+
+Skarp masterinläsning 21:34–21:35 Stockholm: 45 aktiviteter (27 matcher, 18 träningar),
+18 nya matcher; matchantal 144 → 162, spelare oförändrat 67. Fem framtida
+laguppställningar hämtade. AIK-matchens åtta spelare visas i appen, separat från
+tio ja-svar. Fyra historiska träningar har kvar några olösta spelarnamn (17,18,19,31
+augusti), men aktivitet, totaler och kända spelare uppdateras.
+
+Första försöket nådde 1 GB-gränsen och avbröts före transaktionscommit. Åtgärdat:
+en ny sida per aktivitet, inga bilder/media/typsnitt, ingen bakåtcachning och
+begränsat antal renderprocesser. Lyckad körning nådde ca 402 MiB; tak 1536 MiB.
+Vid första spegling av tomma tidigare manuella rader ändrades sex ägarmarkeringar
+för AIK-matchen till Svenska Lag. Backupkontrollen visade noll manuellt uttagna
+före synk och bevarade positioner; ingen tidigare uttagning togs bort.
+
+141 tester inklusive Postgres-integration, typkontroll, produktionsbygge och två
+Playwright-prov godkända. Riktiga Svenska Lag-redigeraren verifierad fram till
+sparsteget med tillägg/borttagning, utan externa ändringar. Produktionsvyn visar
+Spara utkast, Skicka till Svenska Lag och länk till kallelser. Hela köflödet provat i produktion 21:45: appknapp → beständig kö → arbetare →
+Svenska Lag-kontroll → synligt lyckat kvitto. Uppställningen var identisk med
+källan och krävde därför ingen skrivning till Svenska Lag. Inga kallelser skickades.
+Testet fångade och löste äldre iCal-id:n: utgående mål kopplas nu via den kanoniska
+utvecklingsaktivitetens Svenska Lag-id. Skarp skrivning av en ändrad uppställning
+är ännu inte utförd; den ändrande skrivvägen är verifierad i Playwright-testmiljö.
+
+Svenska Lag är master för matchuppgifter, svar och registrerad närvaro; appen äger
+utkast tills publicering. Kallelser skickas i Svenska Lag. Positions-/formations-
+överföring, permanenta person-id:n och full avstämning av borttagna poster utanför
+kalenderfönstret ingår inte ännu. Ingen atomisk versionskontroll finns på källans
+spara-adress; en liten samtidighetsrisk mellan sista kontroll och sparande kvarstår.
