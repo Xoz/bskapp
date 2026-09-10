@@ -129,13 +129,13 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
             <button type="button" className="btn-secondary btn-sm" onClick={() => changeFormation(plan.formation)}>Återställ positionernas form</button>
             <p className="match-plan-help">Du kan även flytta vald position med piltangenterna.</p>
           </div>}
-          <div className="match-plan-reserves"><h3>Spelare att placera · {reserves.length}</h3><p className="match-plan-help">Spelare som tackat ja och spelare i laguppställningen kan placeras här.</p>
+          <div className="match-plan-reserves"><h3>Spelare att placera · {reserves.length}</h3><p className="match-plan-help">Här visas bara spelare som tackat ja till matchen.</p>
             {reserves.length > 0 ? <>
               {editable && <p className="match-plan-help">Tryck på en spelare för att placera henne på vald position.</p>}
               <div className="match-plan-bench">{reserves.map(p => <button type="button" key={p.id} className="match-plan-bench-player" onClick={() => assign(p.id)}>
                 <PlayerShirt number={p.jersey_number ?? '•'}/><span>{p.name}</span>
               </button>)}</div>
-            </> : <p className="body-small">{players.length ? 'Alla tillgängliga spelare är placerade.' : 'Inga ja-svar eller uttagna spelare finns ännu. Du kan börja med formationen och spelidén.'}</p>}
+            </> : <p className="body-small">{players.length ? 'Alla tillgängliga spelare är placerade.' : 'Inga spelare har tackat ja ännu. Du kan börja med formationen och spelidén.'}</p>}
           </div>
           {missing && <p role="alert">Kallelsesvaren eller laguppställningen har ändrats. Byt ut spelare som är markerade ”Ej tillgänglig” innan du sparar.</p>}
         </div>

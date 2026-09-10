@@ -455,3 +455,7 @@ Både visning och sparande tillåter nu ja-svar (accepted) samt redan uttagna sp
 ## Ja-svar i matchplan publicerat – 2026-09-10
 
 Commit 7451bdef88adb0f666c03e0e646112c213eb5606 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34532750201. Formationsverktygets visning och sparande använder samma urval: accepted ELLER selected i match_roster. Inloggad AIK-match verifierad: 11 tillgängliga i matchplanen, befintlig uttagning fortsatt 8. Rubriken är Spelare att placera. 153 tester och bygge godkända. Matchplanstest verifierar ja utan uttagning, nekade övriga spelare och oförändrade kallelser/uttagning. Inga verksamhetsuppgifter ändrades under produktionskontrollen.
+
+## Korrigerat beslut: endast ja-svar i matchplanen
+
+2026-09-10: användaren klargjorde att tidigare uttagning inte får inkludera en spelare som tackat nej. Matchplanens gemensamma urval och sparvalidering använder därför enbart callup_status=accepted. Tidigare OR selected-regel är ersatt. Kallelser och laguppställning ändras inte. Regressionstest nekar uttryckligen selected + declined.

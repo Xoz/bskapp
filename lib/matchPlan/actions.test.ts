@@ -48,7 +48,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('matchplanens sparande'
   });
   it('sparar och återläser utan att ändra trupp, svar eller tidigare positioner', async () => {
     const before = await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`;
-    const p = emptyMatchPlan('1-3-2-1'); p.spots[0].playerId = 10; p.ideas.attack = 'Spela oss ur press.';
+    const p = emptyMatchPlan('1-3-2-1'); p.spots[0].playerId = 11; p.ideas.attack = 'Spela oss ur press.';
     expect(await saveMatchPlan(1, 0, p)).toEqual({ revision: 1 });
     expect(readMatchPlan((await sql`SELECT value FROM settings WHERE key='match_plan:1'`)[0].value)?.document).toEqual(p);
     expect(await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`).toEqual(before);
@@ -56,14 +56,16 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('matchplanens sparande'
   });
   it('visar och sparar ja-svar utan uttagning med oförändrade kallelsesvar', async () => {
     const rows = await execute(matchPlanPlayersSql, [1]);
-    expect(rows.map(r => r.player_id).sort()).toEqual([10, 11]);
+    expect(rows.map(r => r.player_id).sort()).toEqual([11]);
     const before = await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`;
     const p = emptyMatchPlan(); p.spots[0].playerId = 11;
     expect(await saveMatchPlan(1, 0, p)).toEqual({ revision: 1 });
     expect(await sql`SELECT * FROM match_roster ORDER BY match_id, player_id`).toEqual(before);
   });
-  it('nekar annan match, obesvarad eller nej utan uttagning och inställd match', async () => {
+  it('nekar annan match, obesvarad eller nej även med tidigare uttagning och inställd match', async () => {
     const p = emptyMatchPlan();
+    p.spots[0].playerId = 10;
+    expect((await saveMatchPlan(1, 0, p)).error).toBeTruthy();
     p.spots[0].playerId = 20;
     expect((await saveMatchPlan(1, 0, p)).error).toBeTruthy();
     p.spots[0].playerId = 12;

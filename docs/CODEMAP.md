@@ -250,3 +250,5 @@ Spelarlistans statistik: `lib/playerDirectoryStats.ts` bygger års- och lagavgr�
 Matchplan på `/matcher/[id]`: `components/MatchPlanEditor.tsx` + `components/match-plan.css`, `lib/matchPlan/model.ts` (formationer/validering), `lib/matchPlan/actions.ts` (behörighet och separat revisionsskyddat sparande i settings), `lib/matchPlan/actions.test.ts` (PostgreSQL, åtkomst och oförändrad trupp). Ingen synk av matchplan till Svenska Lag.
 
 `lib/matchPlan/players.ts` delar spelarurvalet mellan matchvyn och sparandet: ja-svar eller redan uttagen. Formationsplanering kräver inte föregående laguttagning.
+
+Rättat 2026-09-10: `matchPlan/players.ts` använder nu ENBART accepted; tidigare uttagning övertrumfar aldrig nej eller obesvarat. Samma regel vid visning och sparande.
