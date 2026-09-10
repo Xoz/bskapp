@@ -90,3 +90,19 @@ registrerat Ella-deltagande och en kallelse hos Grön hittades. En aktivitet
 och bekräftade en borttagen match (176), utan övriga kalenderavvikelser.
 Återgång: återställ symlänken `/opt/bsk/svenskalag-sync` till föregående release.
 Importerad historik bevaras vid återgång.
+
+## Matchutrymme publicerat och verifierat – 2026-09-11
+
+Webbcommit f9178c93a9539e332fc61f8350fe088f3633de72 är publicerad på bsk2014.se.
+Godkänd körning: https://github.com/Xoz/bskapp/actions/runs/34536413292.
+168 tester med PostgreSQL-integration och produktionsbygge godkända i isolerad
+arbetskopia. Inloggad produktionskontroll av Idag, AIK:s matchutrymme och
+kapacitetsfältet på spelarprofilen godkänd. Inga verkliga kapaciteter, kallelser
+eller uttagningar ändrades vid UI-kontrollen; sparande provades med lokala
+exempelspelare och dessa testposter är borttagna.
+
+Gröns bakgrundssynk är aktiv och senaste skarpa körning lyckades. 16 matcher
+importerade, nio med sparad närvaro; ett registrerat Ella-deltagande hos Grön
+hittat. Inga dubbla stabila käll-id:n i Grön. Aktivitet 20028813 har en olöst
+spelarkoppling och ger därför underlagsvarning. Den ersätter inte bekräftade
+deltaganden med antaganden. Guls startsida visar fortsatt endast Gulmatcher.
