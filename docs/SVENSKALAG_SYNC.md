@@ -181,3 +181,11 @@ träningens gruppflikar. Båda varianterna stöds nu, fortsatt endast med uttryc
 markör för sparad närvaro och kontroll av komplett antal inklusive ledare.
 Spelarlistan utesluter ledare; ja-svar används inte som spelad match.
 Playwright-fixturer verifierar båda sidvarianterna och avvisar ofullständiga svar.
+
+Återhämtning genomförd: 45 aktiviteter importerade. Källan har 10 registrerade
+spelare mot Årsta 4/9, 7 mot Rotebro 4/9 och 15 mot Hammarby 6/9.
+Efter import har tio av tolv aktiva Gulspelare 1–3 registrerade spelade matcher
+senaste sju dagarna; två saknar registrerat deltagande i detta fönster.
+Sju aktiviteter har några namn utan entydig profilkoppling, inklusive Hammarby;
+dessa hoppas över. Inga kallelser skickades och ingen närvaro ändrades i källan.
+Automatisk worker använder d6d5c35d via match-presence-20260910, timer aktiv.
