@@ -178,3 +178,7 @@ Commit 09449e2658de70dc9432bd0cd6b06309bce46441 publicerad, godkänd körning ht
 ## Gemensam terminologi publicerad – 2026-09-10
 
 Commit 1e65ca1fb35224b989ec751fce5c0dfd71bd4d0f publicerad i webbappen, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533538172. Trupp=ja-svarande; laguppställning/uttagen=planerad; deltog=faktisk närvaro; spelarregister=hela spelarbasen. Matchvyer, uttagning, cup, register, inställningar, guide och API-etiketter är anpassade. AIK verifierad inloggat med separat trupp (10) och laguppställning (8). 153 tester, webbbygge och syntaxkontroll av fyra ändrade Swift-filer godkända. Äldre nativekällans texter uppdaterade; ingen ny nativeapp har distribuerats. Inga kallelser, uttagningar eller närvaroposter ändrade av terminologiarbetet. Definitioner fastställda i AGENTS.md.
+
+## Kompakt placering publicerad – 2026-09-10
+
+Commit e393ef2696bee5b37c06707f059e4c0659e82505 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533764459. Positionens stora ruta med dropdown/återställning borttagen. Spelare att placera visas som mindre knappar med små tröjor och kortnamn; fullständiga namn finns kvar för tillgänglighet. Liten textknapp kan ta vald spelare av planen. Typkontroll och publiceringskontroller godkända, inloggad visuell kontroll av AIK-matchen godkänd. Inga matchplaner eller verksamhetsuppgifter ändrade vid produktionskontrollen.
