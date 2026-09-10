@@ -8,7 +8,7 @@ async function open(page: Page, url: string) {
   if (!response?.ok()) throw new Error("Källan svarar inte");
   if (/login|logga-in/i.test(page.url())) throw new LoginRequired();
   sourceUrl(page.url());
-  if (await page.locator('input[type="password"]').count()) throw new LoginRequired();
+  if (await page.locator('input[type="password"]').first().isVisible()) throw new LoginRequired();
   await page.locator("#logged-in-menu").waitFor({state:"attached", timeout:10_000}).catch(() => {throw new LoginRequired();});
 }
 export async function collect(context: BrowserContext, today: string): Promise<ActivitySnapshot[]> {
@@ -81,12 +81,13 @@ export async function collect(context: BrowserContext, today: string): Promise<A
     if (presence && entry.date < today) {
       // Närvarofönstret har ett annat skal och saknar vanliga toppmenyn.
       const response = await page.goto(presence.url, {waitUntil:"domcontentloaded"});
-      if (!response?.ok() || await page.locator('input[type="password"]').count()) throw new LoginRequired();
-      await page.locator(".memberlist").waitFor();
+      if (!response?.ok() || await page.locator('input[type="password"]').first().isVisible()) throw new LoginRequired();
+      await page.locator(".memberlist").last().waitFor();
       if (await page.locator(".split-tab li:not(:last-child)").count() !== 1) throw new Error("Flera närvarogrupper behöver stöd innan import");
-      if (presence.count > 0) await page.locator(".memberlist li.presence-row").first().waitFor();
-      if (await page.locator(".memberlist li.presence-row").count() !== presence.count) throw new Error("Närvarolistan är inte komplett");
-      attendance = await page.locator(".memberlist li.player .left").allTextContents();
+      const presentRows = page.locator(".memberlist").last().locator("li.player, li.leader, li.volunteer");
+      if (presence.count > 0) await presentRows.first().waitFor();
+      if (await presentRows.count() !== presence.count) throw new Error(`Närvarolistan är inte komplett för ${entry.sourceId}: ${await presentRows.count()}/${presence.count}`);
+      attendance = await page.locator(".memberlist li.player.presence-row div.left").allTextContents();
       attendance = attendance.map(n=>n.replace(/^\s*\d+\.\s*/, "").split(",")[0].trim());
     }
     results.push({...entry, callups, totals, attendance});

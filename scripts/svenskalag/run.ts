@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import postgres from "postgres";
-import { access } from "node:fs/promises";
+import { authenticatedContext } from "./auth";
 import { collect, LoginRequired } from "./collect";
 import { applySnapshot } from "../../lib/svenskalag/import";
 import { STATUS_KEY, REQUEST_KEY, HISTORY_KEY, type SyncStatus } from "../../lib/svenskalag/model";
@@ -33,11 +33,8 @@ async function main() {
     for (let attempt=0; attempt<3 && !finished; attempt++) {
       let browser;
       try {
-        await access(process.env.SVENSKALAG_STATE_FILE).catch(()=>{throw new LoginRequired();});
         browser = await chromium.launch({headless:true});
-        const context = await browser.newContext({storageState:process.env.SVENSKALAG_STATE_FILE, locale:"sv-SE", timezoneId:"Europe/Stockholm", acceptDownloads:false});
-        // Arbetaren får inte skicka formulär, kallelser eller andra skrivande anrop.
-        await context.route("**/*", route => ["GET","HEAD"].includes(route.request().method()) ? route.continue() : route.abort());
+        const context = await authenticatedContext(browser,process.env.SVENSKALAG_STATE_FILE,{username:process.env.SVENSKALAG_USERNAME,password:process.env.SVENSKALAG_PASSWORD});
         const snapshot = await collect(context,today);
         const imported = await applySnapshot(sql,snapshot,today,process.argv.includes("--dry-run"));
         status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;

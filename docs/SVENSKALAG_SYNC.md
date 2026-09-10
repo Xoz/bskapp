@@ -39,10 +39,13 @@ Miljöfil `/etc/bsk-sync/sync.env`, root:bsk-sync 640:
 `DATABASE_URL` för en separat begränsad DB-roll och `SVENSKALAG_STATE_FILE`
 (`/var/lib/bsk-sync/state.json`, 600). Inga värden i Git eller anteckningar.
 
-Inloggning sker interaktivt med `scripts/svenskalag/login.ts` i en separat
-Chromium-session. Öppna Guls närvarolista; sessionsfilen skrivs då automatiskt.
-För över den via SSH utan att skriva innehållet till terminalen. Förnyad
-inloggning krävs när Svenska Lag avslutar sessionen. Ingen CAPTCHA/MFA kringgås.
+Tjänsten använder användarnamn/lösenord i `/etc/bsk-sync/credentials.env`
+(root:bsk-sync, 640). `auth.ts` återanvänder sessionen och loggar annars in en
+gång med de angivna uppgifterna. Inloggningsformuläret är verifierat mot Svenska
+Lag. Endast under detta steg tillåts POST till Svenska Lag. Därefter används en
+ny kontext som blockerar skrivande anrop. Sessionen sparas atomiskt med 600.
+Felaktig inloggning eller extra verifiering ger `login_required`; inga ändlösa
+inloggningsförsök eller lösenord i loggen. Interaktiv inloggning finns som fallback.
 
 Använd en egen releasekatalog i `/opt/bsk/sync-releases/`, kör `install.sh`,
 provkör `run.ts --now --dry-run` med rätt miljö och användare. Kontrollera

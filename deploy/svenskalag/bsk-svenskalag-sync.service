@@ -9,6 +9,7 @@ User=bsk-sync
 Group=bsk-sync
 WorkingDirectory=/opt/bsk/svenskalag-sync
 EnvironmentFile=/etc/bsk-sync/sync.env
+EnvironmentFile=-/etc/bsk-sync/credentials.env
 Environment=PLAYWRIGHT_BROWSERS_PATH=/var/lib/bsk-sync/browsers
 ExecStart=/usr/bin/node --import tsx scripts/svenskalag/run.ts
 TimeoutStartSec=15min
