@@ -232,3 +232,5 @@ Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsn
 - `components/SvenskaLagPublicationStatus.tsx`: uppdaterar köstatus i uttagningsvyn medan överföringen pågår.
 
 Matchkontroll 2026-09-10: `scripts/svenskalag/audit-matches.ts` inventerar aktuellt kalenderår för Gul och verifierar saknade poster på källsidan. `lib/svenskalag/removed-matches.ts` avvecklar endast explicit borttagna poster transaktionellt, med separat orsak i settings. `scripts/svenskalag/check-match-audit.ts` provar läsfel och borttagningsbevis. Resultat och historiska avvikelser: `docs/MATCH_AUDIT_2026-09-10.md`.
+
+`scripts/match-identity-audit.mjs` innehåller publiceringskontrollens dubblettfråga: stabila käll-id:n först, datum/tid/namn som fallback. Testas av `scripts/match-identity-audit.test.mjs`.

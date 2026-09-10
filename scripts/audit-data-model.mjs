@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import {duplicateMatchQuery} from "./match-identity-audit.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL saknas");
@@ -25,11 +26,7 @@ const checks = [
   {
     severity: "error",
     name: "duplicerade kanoniska matcher",
-    query: `SELECT COUNT(*)::int AS count FROM (
-      SELECT date, COALESCE(start_time, ''),
-             lower(regexp_replace(opponent, '^mot[[:space:]]+', '', 'i')), group_id
-      FROM matches GROUP BY 1, 2, 3, 4 HAVING COUNT(*) > 1
-    ) duplicate_matches`,
+    query: duplicateMatchQuery,
   },
   {
     severity: "error",
