@@ -2,7 +2,7 @@ import {swedishWallClockToEpoch} from '../../lib/dates';
 import type postgres from 'postgres';
 import type {BrowserContext} from 'playwright';
 import type {ActivitySnapshot} from '../../lib/svenskalag/model';
-import {outboxKey,draftKey,publicationDecision,sameLineup,type LineupJob} from '../../lib/svenskalag/outbox';
+import {outboxKey,draftKey,lineupKey,publicationDecision,sameLineup,type LineupJob} from '../../lib/svenskalag/outbox';
 import {publishLineup} from './lineup';
 export async function processOutbox(sql:ReturnType<typeof postgres>,context:BrowserContext,snapshot:ActivitySnapshot[],today:string) {
   const pending=await sql`SELECT value FROM settings WHERE key LIKE 'svenskalag_outbox:%' AND value::jsonb->>'state' IN ('queued','running') ORDER BY key LIMIT 10`;
@@ -27,6 +27,7 @@ export async function processOutbox(sql:ReturnType<typeof postgres>,context:Brow
           job.state=outcome;
           job.message=outcome==='ok'?'Laguppställningen är verifierad i Svenska Lag. Öppna matchen där för att kalla spelarna.':'Laguppställningen ändrades i Svenska Lag. Kontrollera och skicka på nytt.';
           if(outcome==='ok') await sql.begin(async tx=>{
+            await tx`INSERT INTO settings(key,value) VALUES(${lineupKey(job.matchId)},${JSON.stringify({sourceId:job.sourceId,date:job.date,names:job.names,fetchedAt:new Date().toISOString()})}) ON CONFLICT(key) DO UPDATE SET value=excluded.value`;
             await tx`DELETE FROM settings WHERE key=${draftKey(job.matchId)}`;
             await tx`UPDATE match_roster SET source='svenskalag_browser' WHERE match_id=${job.matchId} AND selection_status='selected'`;
           });
