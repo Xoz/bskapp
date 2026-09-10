@@ -40,7 +40,7 @@ CREATE VIEW bsk_hermes.matches WITH (security_barrier=true) AS
 SELECT m.id,m.date,m.start_time,m.opponent,m.home_away,m.match_type,m.location,
  m.finished,m.our_score,m.opponent_score,m.source
 FROM public.matches m JOIN public.groups g ON g.id=m.group_id
-WHERE EXISTS (SELECT 1 FROM bsk_hermes.access a WHERE a.key='view_matches' AND a.allowed AND a.group_id IN (g.id,g.parent_id));
+WHERE COALESCE(m.cancelled,0)=0 AND EXISTS (SELECT 1 FROM bsk_hermes.access a WHERE a.key='view_matches' AND a.allowed AND a.group_id IN (g.id,g.parent_id));
 
 CREATE VIEW bsk_hermes.checkpoints WITH (security_barrier=true) AS
 SELECT dc.id,dc.player_id,dc.date,dc.strengths,dc.focus_note,dc.created_at

@@ -243,3 +243,15 @@ behöriga aktiviteten ingår utan åtkomst till deras privata profil. Källtotal
 namntäckning och radändringstid redovisas. Tolv isolerade tester passerade;
 stdio och Hermes-dispatch verifierade mot produktion. Ingen verksamhetsdata
 ändrad av integrationen. Se integrationsguiden för drift och återställning.
+
+
+### 2026-09-10 – privata matchrapporter 24 timmar före
+
+`integrations/hermes-bsk/match_report.py` skapar en faktabaserad rapport med
+sparad startuppställning, uttagen trupp, ja/nej/obesvarat och reservbehov att
+kontrollera. `schedule_matches.py` underhåller privata Hermes-engångsjobb var
+femte minut; flyttade/inställda matcher och dubbelsändning hanteras. `lineups.sql`
+ger två skyddade läsvyer och filtrerar inställda matcher. `test_schedule.py`
+provar även Hermes jobb-API isolerat. 13 DB/MCP- och 6 rapport/schematester
+passerade. Driftsatt separat från webbappen; sju rapporter planerade, första
+2026-09-11 kl. 09.00 svensk tid. Se integrationsguiden för drift och stopp.

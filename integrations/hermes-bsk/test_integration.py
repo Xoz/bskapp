@@ -69,6 +69,8 @@ INSERT INTO training_plans VALUES
 '''
 
 FIXTURE += """
+ALTER TABLE matches ADD COLUMN cancelled int DEFAULT 0;
+ALTER TABLE matches ADD COLUMN formation text DEFAULT '';
 ALTER TABLE matches ADD COLUMN callup_accepted_count int;
 ALTER TABLE matches ADD COLUMN callup_declined_count int;
 ALTER TABLE matches ADD COLUMN callup_pending_count int;
@@ -77,7 +79,10 @@ ALTER TABLE development_activities ADD COLUMN title text DEFAULT 'Testträning';
 CREATE TABLE match_roster(match_id int,player_id int,callup_status text,selection_status text,updated_at timestamptz);
 CREATE TABLE development_activity_callups(activity_id text,player_id int,attendance_status text);
 CREATE TABLE development_activity_callup_summaries(activity_id text,accepted_count int,declined_count int,pending_count int,source text,updated_at text);
-INSERT INTO match_roster VALUES (1,1,'accepted','selected',now()),(1,2,'declined','selected',now()),(1,3,'pending',NULL,now()),(3,1,NULL,'selected',now()),(2,2,'accepted','selected',now());
+ALTER TABLE match_roster ADD COLUMN selected_position text;
+ALTER TABLE match_roster ADD COLUMN lineup_x real;
+ALTER TABLE match_roster ADD COLUMN lineup_y real;
+INSERT INTO match_roster(match_id,player_id,callup_status,selection_status,updated_at) VALUES (1,1,'accepted','selected',now()),(1,2,'declined','selected',now()),(1,3,'pending',NULL,now()),(3,1,NULL,'selected',now()),(2,2,'accepted','selected',now());
 UPDATE matches SET callup_accepted_count=2,callup_declined_count=1,callup_pending_count=1,callup_source='svenskalag_browser' WHERE id=1;
 INSERT INTO development_activity_callups VALUES ('a1',1,'present'),('a1',2,'absent'),('a1',3,'unknown'),('other',2,'present');
 INSERT INTO development_activity_callup_summaries VALUES ('a1',1,1,1,'svenskalag_browser','2026-01-01');
@@ -183,6 +188,23 @@ class Integration(unittest.TestCase):
         finally:
             admin("DELETE FROM user_permissions; DELETE FROM user_roles WHERE user_id=1; INSERT INTO user_roles VALUES(1,'admin')")
 
+    def test_match_report_scope_and_guard(self):
+        import match_report
+        from datetime import datetime,timezone
+        now=datetime(2026,1,9,11,tzinfo=timezone.utc)
+        content=match_report.report(1,'2026-01-10T11:00:00+00:00',now)
+        self.assertIn('Testspelare A',content)
+        self.assertIn('Testspelare B – Nej',content)
+        self.assertIn('1 uttagna saknar ja-svar',content)
+        self.assertIn('Namnlistan kan vara ofullständig',content)
+        self.assertEqual(match_report.report(1,'2026-01-11T11:00:00+00:00',now),'')
+        self.assertEqual(match_report.report(2,None,now),'')
+        admin('UPDATE matches SET cancelled=1 WHERE id=1')
+        try:
+            self.assertEqual(match_report.report(1,None,now),'')
+            self.assertNotIn(1,[m['match_id'] for m in match_report.schedule_data(now)['matches']])
+        finally: admin('UPDATE matches SET cancelled=0 WHERE id=1')
+
     def test_09_mcp_protocol(self):
         async def check():
             async with Client(server.mcp) as c:
@@ -205,6 +227,7 @@ if __name__=='__main__':
         view_sql=Path(__file__).with_name('views.sql').read_text().replace('bsk_hermes_read',ROLE).replace(':user_id','1').replace(':group_id','1')
         admin(view_sql)
         admin(Path(__file__).with_name('callups.sql').read_text().replace('bsk_hermes_read',ROLE))
+        admin(Path(__file__).with_name('lineups.sql').read_text().replace('bsk_hermes_read',ROLE))
         CONFIG.touch(mode=0o600)
         CONFIG.write_text(json.dumps({'dsn':f'postgresql://{ROLE}:{PW}@127.0.0.1:5433/{DB}'}))
         os.environ['BSK_HERMES_CONFIG']=str(CONFIG)

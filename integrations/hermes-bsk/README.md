@@ -188,3 +188,62 @@ sedan `bsk_hermes.events`. Ingen verksamhetsdata berörs. Konfigurationsbackup:
 
 Vanlig Hermes-fråga om antalet ja-svar till nästa träning verifierades i
 kontrollsession `20260910_195043_dce43b`: korrekt antal, datum och tid.
+
+
+## Automatiska matchrapporter – 2026-09-10
+
+Privata Hermes schemalägger en rapport 24 timmar före varje kommande Gulmatch
+(inklusive undergrupper). `schedule_matches.py` läser 60 dagar framåt var femte
+minut och skapar Hermes egna engångsjobb. Tiden beräknas i UTC från svensk
+avsparkstid; otydlig/saknad tid ger en privat varning när listan ändras.
+`match_report.py` hämtar färska BSK-uppgifter vid utskicket och skriver färdig
+svensk text. `no_agent=True` levererar texten utan språkmodell; tom stdout är tyst.
+
+Rapporten innehåller sparad formation/startuppställning, övriga uttagna,
+ja/nej/obesvarat per uttagen samt alla namngivna kallelsesvar. Placering på planen
+kräver sparade x/y-koordinater. Utan sådan data står det att startuppställning
+saknas. Uttagna utan ja-svar markeras för kontroll av reservbehov; ingen reserv
+kallas automatiskt. Bristande namntäckning/källtotaler redovisas.
+
+`lineups.sql` körs efter `callups.sql` och lägger till två skyddade läsvyer;
+matchvyn utesluter nu inställda matcher. Kräver aktuell BSK-databas med
+`matches.cancelled`, `formation` och match_roster-fälten för sparad placering.
+Ingen verksamhetsdata skrivs av integrationen.
+
+### Privat drift
+
+- Release: `/opt/bsk/hermes-mcp-releases/20260910T204301Z`.
+- Hermes-skript: `/root/.hermes/scripts/bsk_match_reconcile.py`, importerar
+  `schedule_matches.main` från den aktiva releasen och Hermes installation.
+- Skyddad konfiguration: `/root/.hermes/bsk-match-reports/config.json`, mode 0600,
+  med `enabled` och privat `deliver`. Mottagaren hämtades från befintlig privat
+  morgonbriefing; den finns inte i källkod eller dokumentation.
+- Tillstånd: samma katalog, `state.json`, endast match-ID/avspark/jobb-ID.
+  Lås och atomisk skrivning skyddar samtidiga uppdateringar.
+- Huvudjobb: `f9134f3be3d2`, “BSK – schemalägg matchrapporter”, var femte minut,
+  `no_agent=True`, privata `deliver`/`failure_deliver`. Engångsjobben har prefix
+  `BSK 24h – ` och egna genererade skript under Hermes scripts-katalog.
+- Sju rapporter planerade vid aktivering. Första: 2026-09-11 09:00 Europe/Stockholm.
+  Befintlig morgonbriefing och träningskallelse bevarades. Ingen gatewayomstart.
+
+Flyttade/inställda matcher pausas vid nästa kontroll. Rapportskriptet verifierar
+avspark och matchstatus igen vid körning; en gammal tid ger ingen text. Matcher
+som upptäcks med mindre än 24 timmar kvar får en sen rapport före avspark.
+Hermes engångsjobb som aldrig hann köras får motsvarande återhämtning. Jobb med
+registrerad körning/okänd leverans upprepas inte blint: Hermes beständiga
+leveranskö undviker dubbelsändning men garanterar inte leverans vid alla fel.
+Körfel rapporteras privat. Ordinarie tick kan fördröja utskick omkring en minut.
+
+För att stoppa funktionen: sätt `enabled=false` i privat konfiguration, pausa
+huvudjobbet och samtliga ännu aktiva jobb med prefix `BSK 24h – ` genom Hermes
+jobb-API. Att enbart pausa huvudjobbet stoppar inte redan skapade rapporter.
+För kodåtergång, växla även integrationslänken till föregående release
+`20260910T194836Z`; läsvyerna kan ligga kvar. Cron-backup före aktivering:
+`/root/backups/hermes-cron-pre-bsk-matches-20260910T204345Z.json`.
+Återställ inte hela cron-filen över senare ändringar från andra uppgifter.
+
+Verifiering: 13 isolerade DB/MCP-tester och 6 schemaläggnings-/rapporttester
+passerade. De senare provar även Hermes riktiga jobb-API i en separat temporär
+profil, omplanering, dubblettskydd, sena matcher, sommartid och ofullständig
+uppställning. Produktionsförhandsvisning validerad utan testutskick; körning
+före rapporttiden gav tom text. Två kontroller skapade inga extra jobb.
