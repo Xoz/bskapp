@@ -196,3 +196,11 @@ Veckans matchkort bedömer spelarbrist enbart från Svenska Lags ja-svar, aldrig
 från antal markerade i laguppställningen. Befintlig gräns är nio ja; tio ja ger
 alltså ingen varning även med sex eller åtta markerade. Inga registrerade
 kallelsesvar ger ingen bristvarning. Uttagningen visas fortsatt separat.
+
+## Förenklad Idag 2026-09-10
+
+Idag visar veckans Gulmatcher en gång i en sammanhållen kolumn och behåller
+matchutrymme som utfällbar fördjupning. Dubblerad nästa-match-yta, truppuppgifter
+och veckosiffror är borttagna. Spelarutveckling och samtal nås under Spelare.
+Väntande spelarbedömningar efter match flyttas till en utfällbar sektion på
+Spelare (Gul/alla), med befintlig behörighetskontroll och länkar till utvärdering.

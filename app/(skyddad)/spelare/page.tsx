@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { getPlayerCoreSummaries } from "@/lib/developmentCore";
+import { getPendingMatchEvaluations } from "@/lib/matchEvaluation";
 import PlayerDirectory from "@/components/PlayerDirectory";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export default async function PlayersPage({ searchParams }: {
     : selectedTeam
       ? players.filter(({ teams }) => teams.some((team) => team.name === selectedTeam))
       : players;
+  const pendingEvaluations = user.permissions.includes("manage_evaluations") && (selectedTeam === "Gul" || selectedTeam === null)
+    ? await getPendingMatchEvaluations() : [];
   const teamCount = (teamName: string) => players.filter(({ teams }) => teams.some((team) => team.name === teamName)).length;
 
   return (
@@ -73,6 +76,10 @@ export default async function PlayersPage({ searchParams }: {
           </Link>
         )}
       </nav>
+      {pendingEvaluations.length > 0 && <details className="core-panel">
+        <summary className="p-5 cursor-pointer font-semibold">Spelarbedömningar efter match · {pendingEvaluations.length} matcher att följa upp</summary>
+        <div className="bsk-link-list">{pendingEvaluations.map((evaluation) => <Link key={evaluation.id} href={`/matcher/${evaluation.id}/utvardera`} className="bsk-link-row"><span className="min-w-0 flex-1"><strong>{evaluation.opponent}</strong><small>{evaluation.date} · {evaluation.evaluated} av {evaluation.total} spelare bedömda</small></span><span aria-hidden>›</span></Link>)}</div>
+      </details>}
       <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals, matchCount, callupCount }) => ({
         id: player.id,
         name: player.name,

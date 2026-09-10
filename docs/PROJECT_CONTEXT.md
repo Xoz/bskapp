@@ -415,3 +415,11 @@ träningens gruppflikar. Båda varianterna stöds nu, fortsatt endast med uttryc
 markör för sparad närvaro och kontroll av komplett antal inklusive ledare.
 Spelarlistan utesluter ledare; ja-svar används inte som spelad match.
 Playwright-fixturer verifierar båda sidvarianterna och avvisar ofullständiga svar.
+
+## Förenklad Idag 2026-09-10
+
+Idag visar veckans Gulmatcher en gång i en sammanhållen kolumn och behåller
+matchutrymme som utfällbar fördjupning. Dubblerad nästa-match-yta, truppuppgifter
+och veckosiffror är borttagna. Spelarutveckling och samtal nås under Spelare.
+Väntande spelarbedömningar efter match flyttas till en utfällbar sektion på
+Spelare (Gul/alla), med befintlig behörighetskontroll och länkar till utvärdering.
