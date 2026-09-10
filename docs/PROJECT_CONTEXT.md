@@ -423,3 +423,11 @@ matchutrymme som utfällbar fördjupning. Dubblerad nästa-match-yta, truppuppgi
 och veckosiffror är borttagna. Spelarutveckling och samtal nås under Spelare.
 Väntande spelarbedömningar efter match flyttas till en utfällbar sektion på
 Spelare (Gul/alla), med befintlig behörighetskontroll och länkar till utvärdering.
+
+## Spelarlistans kallelser – rättning 2026-09-10
+
+Spelarlistan använder nu match_roster med accepted/declined/pending i stället för den äldre aktivitetsimportens kallelser. Både registrerade spelade matcher och matchkallelser avgränsas till aktuellt kalenderår och valt lag inklusive underordnade cupgrupper. Inställda/borttagna matcher exkluderas. Alla/Ej tilldelat visar spelarens samtliga lag och även matcher utan lagkoppling, uttryckligen märkt i vyn. Kallelser inkluderar framtida matcher under året; spelade matcher gäller fram till idag. Importhistoriken kan vara ofullständig. Befintliga andra spelarprofilsräknare ändras inte i denna avgränsade rättning. PostgreSQL-regressionstest och källelsetest godkända, typkontroll godkänd. Lokalt ändrat; inte publicerat i denna session.
+
+Slutkontroll: produktionsbygge godkänt med lokal bskdev-databas. Ingen produktionspublicering gjord.
+
+Publicerat och verifierat 2026-09-10 som 6569704f: Idag visar AIK och Örby en gång vardera samt utfällbart matchutrymme. Spelare visar tre väntande matchbedömningar i utfällbar sektion. Typkontroll, uppdaterade kontrakttester och releasekontroller godkända.
