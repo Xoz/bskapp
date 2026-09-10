@@ -52,7 +52,7 @@ export async function collect(context: BrowserContext, today: string): Promise<A
     await page.locator('tr[id^="ScheduleRow"]').first().waitFor({state:"attached"});
     const saved = await page.locator('tr[id^="ScheduleRow"]').evaluateAll(rows => rows.flatMap(row => {
       if (!row.querySelector('[title^="Närvaro sparad av"]')) return [];
-      const link = row.querySelector('a[title="Fyll i närvaro"]');
+      const link = row.querySelector('a[title="Fyll i närvaro"], a[title="Fyll i laguppställning"]');
       const url = link?.getAttribute("onclick")?.match(/popit\('([^']+)'/)?.[1];
       const id = row.id.match(/^ScheduleRow(\d+)_/)?.[1];
       const count = Number(link?.textContent?.trim());
