@@ -1814,7 +1814,7 @@ struct SelectionDetail: View {
 
             Toggle("Uttagen i truppen", isOn: selectionBinding(candidate))
                 .tint(BSKTheme.accent)
-            
+
 
             if selections[candidate.playerId] == true {
                 Picker("Position", selection: positionBinding(candidate)) {

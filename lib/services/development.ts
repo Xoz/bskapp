@@ -1279,7 +1279,7 @@ export async function listMobileActivities(actor: CurrentUser): Promise<MobileAc
      LEFT JOIN development_observations o ON o.activity_id = da.id
      WHERE ${scope.sql}
        AND da.activity_type = 'match'
-     GROUP BY da.id, match_group.name, linked_match.finished, linked_match.level, linked_match.evaluation_closed_at,
+     GROUP BY da.id, linked_match.id, match_group.name, linked_match.finished, linked_match.level, linked_match.evaluation_closed_at,
               linked_match.callup_accepted_count, linked_match.callup_declined_count, linked_match.callup_pending_count
      ORDER BY da.activity_date DESC, da.start_time DESC NULLS LAST
      LIMIT 80`,
