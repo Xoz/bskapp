@@ -162,3 +162,7 @@ Webb/server publicerat från `3e1279e655fa6384bff9cfce4a31f5744b666955`, godkän
 ## Publicerad spelarstatistik – 2026-09-10
 
 Rättningen är publicerad på https://bsk2014.se/spelare, commit bc1f88a0b3a685892d317da6ba968fe1d980df5f. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34530853762 godkänd; aktiv release /opt/bsk/releases/bc1f88a0b3a6.MjP2TU. Alla 147 lokala tester godkända. Publiceringen genomförde backup, tester, bygge och hälsokontroller. Inloggad spelarlista verifierad med år 2026, Gul inklusive cupgrupper, och nya räknare för spelade matcher/matchkallelser. Detta ersätter tidigare anteckning om att rättningen inte publicerats.
+
+## Matchplan och design publicerad – 2026-09-10
+
+Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34532385619 godkänd. 152 lokala tester och produktionsbygge godkända. Inloggad AIK-match på https://bsk2014.se/matcher/7 verifierad med ny matchplan, fyra formationer, klubbtröjor, separat målvaktsfärg, lediga positioner, klickbara avbytare och spelidépanel. Ljust läge kontrollerat lokalt och mörkt läge i produktion. Placering från avbytarlistan och sparande provat endast med lokala exempelspelare. Inga riktiga matchplaner eller uttagningar ändrades vid kontrollen. Tidigare anteckning om ej publicerad matchplan är ersatt.

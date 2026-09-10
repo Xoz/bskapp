@@ -443,3 +443,7 @@ Matchdetaljens dubbla uttagningsknappar ersätts av Matchplan och en separat lä
 Verifierat lokalt: 152 tester, produktionsbygge och inloggat browserprov med exempelspelare; formation, spelare, text och flyttad position sparades och återlästes. Matchplanen är inte publicerad i denna session.
 
 Matchplanens design förfinad: skalbara matchtröjor i klubbfärger, separat målvaktströja, lediga positioner som konturer, korta namnbrickor med fullständiga tillgängliga namn, klickbara avbytare och bredare matchyta. Inloggat lokalt prov verifierade avbytarplacering och sparande. Publicering begärd.
+
+## Matchplan och design publicerad – 2026-09-10
+
+Publicerad commit 16ebe45b2ab8f3926dfca76b5d765e9890d8fcbb. GitHub Actions https://github.com/Xoz/bskapp/actions/runs/34532385619 godkänd. 152 lokala tester och produktionsbygge godkända. Inloggad AIK-match på https://bsk2014.se/matcher/7 verifierad med ny matchplan, fyra formationer, klubbtröjor, separat målvaktsfärg, lediga positioner, klickbara avbytare och spelidépanel. Ljust läge kontrollerat lokalt och mörkt läge i produktion. Placering från avbytarlistan och sparande provat endast med lokala exempelspelare. Inga riktiga matchplaner eller uttagningar ändrades vid kontrollen. Tidigare anteckning om ej publicerad matchplan är ersatt.
