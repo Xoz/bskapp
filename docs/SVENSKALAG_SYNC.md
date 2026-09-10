@@ -197,3 +197,5 @@ samt Aliyana Kundi har slutat. De två spelarna är redan active=0. Importen
 ignorerar kända inaktiva namn (om ingen aktiv namne finns) samt uttryckligen
 bekräftade ledarnamn i settings.svenskalag_non_player_names. Okända namn ger
 fortsatt varning. Ingen återaktivering eller borttagning av historik görs.
+
+Produktionsverifiering 2026-09-10 23:06 svensk tid: worker 39b228aa körde färdigt, 45 aktiviteter och unmatched=[] (inga olösta namn). Ledarkonfigurationen är skriven i produktionsdatabasen. Typkontroll, integrationstest och VPS-publicering godkända.
