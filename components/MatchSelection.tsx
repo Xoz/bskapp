@@ -47,6 +47,9 @@ export default async function MatchSelection({ workspace }: { workspace: Workspa
         {job && ["conflict","error"].includes(job.state) && <a className="underline" href={`/matcher/${matchId}/laguttagning`}>Läs in senaste läget innan du skickar igen</a>}
         {source ? <a className="underline" target="_blank" rel="noreferrer" href={`${ORIGIN}${TEAM_PATH}/match/${source.sourceId}`}>Öppna matchen i Svenska Lag och skicka kallelser →</a> : <p>Laguppställningen behöver hämtas från Svenska Lag innan du kan skicka den.</p>}
       </section>
+      {workspace.candidates[0]?.matchSpace.sourceWarning && <p className="text-sm" style={{color:"var(--warning)"}}>{workspace.candidates[0].matchSpace.sourceWarning}</p>}
+      <Link className="btn-secondary" href={`/matcher/${matchId}/matchutrymme`}>Jämför matchutrymme för kallelse och lån</Link>
+      <p className="text-sm" style={{color: "var(--ink-secondary)"}}>Matchutrymme visar prognosen om spelaren deltar i denna match, även om hon ännu inte är kallad. Öppna poängen för att prova speltid. Reserven är 40 % av individuell kapacitet; under 60 % visas begränsat utrymme. Uppskattning: saknad speltid räknas som hela matchen, träning som 60 minuter. Andra idrotter och saknad närvaro ingår inte.</p>
       <SelectionEditor
         key={job?.finishedAt??"draft"}
         sourceRevision={source?lineupRevision(source.names):""}

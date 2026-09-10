@@ -1,4 +1,6 @@
 import "server-only";
+import { getMatchSpaceInputs } from "./matchSpaceData";
+import { forecastMatchSpace, type SpaceInput } from "./matchSpace";
 import {activityCallupCountsSql,activityCallupNamesSql,matchCallupCountsSql} from "./activityCallups";
 
 import { all, get } from "./db";
@@ -466,6 +468,7 @@ export async function getActivityDetail(activityId: string): Promise<{
 }
 
 export type SelectionCandidate = PlayerCoreSummary & {
+  matchSpace: SpaceInput;
   selected: boolean;
   selectedLastEight: number;
   selectedLastThree: number;
@@ -642,6 +645,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       ...ids,
     ]
   );
+  const matchSpaces = await getMatchSpaceInputs(ids, detail.activity.match_id);
   const history = new Map(rows.map((row) => [row.player_id, row]));
   const hasSyncedCallups = Number(detail.activity.accepted_callup_count)
     + Number(detail.activity.declined_callup_count)
@@ -661,12 +665,14 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       windowMatchCount: recentMatchCount + upcomingMatchCount,
       recentMatchCount,
       upcomingMatchCount,
+      spaceLevel: forecastMatchSpace(matchSpaces.get(summary.player.id)!).level,
       teamMinimumWindow: Number.isFinite(minimum) ? minimum : 0,
       activeGoalCount: summary.goals.length,
       lastSelectedDate: row?.last_selected_date ?? null,
     };
     return {
       ...summary,
+      matchSpace: matchSpaces.get(summary.player.id)!,
       selected: row?.decision === "selected",
       selectedLastEight: Number(row?.selected_last_eight ?? 0),
       selectedLastThree: Number(row?.selected_last_three ?? 0),
@@ -696,6 +702,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     candidates: orderedCandidates,
     warnings: squadBalanceWarnings(
       selected.map((candidate) => ({
+        spaceLevel: forecastMatchSpace(candidate.matchSpace).level,
         windowMatchCount: candidate.windowMatchCount,
         recentMatchCount: candidate.recentMatchCount,
         upcomingMatchCount: candidate.upcomingMatchCount,

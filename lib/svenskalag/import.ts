@@ -1,13 +1,15 @@
 import type postgres from "postgres";
 import {lineupKey,draftKey} from "./outbox";
-import { nameKey, validateSnapshot, type ActivitySnapshot } from "./model";
+import { nameKey, validateSnapshot, type ActivitySnapshot, type SyncTeam } from "./model";
 
 /** Hela hämtningen valideras före transaktionen. Inga schemaändringar i arbetaren. */
-export async function applySnapshot(sql: ReturnType<typeof postgres>, items: ActivitySnapshot[], today: string, dryRun = false) {
-  validateSnapshot(items, today);
+export async function applySnapshot(sql: ReturnType<typeof postgres>, items: ActivitySnapshot[], today: string, dryRun = false, team: SyncTeam = "Gul") {
+  if (team === "Grön" && items.length === 0) return {activities:0, unmatched:[] as string[]};
+  validateSnapshot(items, today, team);
+  if (team === "Grön" && items.some(a => a.kind !== "match" || a.lineup)) throw new Error("Grön importerar endast matchuppgifter, svar och närvaro");
   return sql.begin(async tx => {
-    const groups = await tx`SELECT id FROM groups WHERE name = 'Gul' AND group_type = 'subgroup' AND active = 1`;
-    if (groups.length !== 1) throw new Error("Gul måste vara entydigt kopplat");
+    const groups = await tx`SELECT id FROM groups WHERE name = ${team} AND group_type = 'subgroup' AND active = 1`;
+    if (groups.length !== 1) throw new Error(`${team} måste vara entydigt kopplat`);
     const groupId = groups[0].id;
     // Samma låsordning som cupens utkast. Hela transaktionen är lokal, utan browseranrop.
     if(!dryRun) for(const match of await tx`SELECT id FROM matches WHERE group_id=${groupId} ORDER BY id`) {
@@ -31,7 +33,7 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
       // Svenska Lag skapar och uppdaterar matchens grunddata med stabilt käll-id.
       if(a.kind==='match'&&a.match) {
         if(rows.length===0) {
-          const matches=await tx`SELECT id,group_id FROM matches WHERE external_uid=${key}`;
+          const matches=await tx`SELECT id,group_id FROM matches WHERE external_uid=${key} OR external_uid LIKE ${'cal'+a.sourceId+'-%@svenskalag.se'}`;
           if(matches.length>1||(matches.length===1&&matches[0].group_id!==groupId)) {unmatched.push(`Match ${a.sourceId}: lagkoppling behöver granskas`);continue;}
           if(!dryRun) {
             const matchId=matches[0]?.id??(await tx`INSERT INTO matches(date,start_time,opponent,home_away,group_id,source,external_uid) VALUES(${a.date},${a.time},${a.match.opponent},${a.match.homeAway},${groupId},'svenskalag_sanktan',${key}) RETURNING id`)[0].id;

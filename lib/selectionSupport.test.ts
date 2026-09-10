@@ -181,3 +181,19 @@ describe("transparent uttagningsstöd", () => {
     expect(result.yellowCount).toBe(1);
   });
 });
+
+
+it("använder matchprognosen före den äldre antalgränsen", () => {
+  const result = recommendYellowSelection({matchLevel:3,targetSize:1,candidates:[
+    candidate({id:201,name:"Exempel: vila",teamNames:["Gul"],windowMatchCount:0,spaceLevel:"high"}),
+    candidate({id:202,name:"Exempel: utrymme",teamNames:["Gul"],windowMatchCount:6,spaceLevel:"normal"}),
+  ]});
+  expect(result.selectedIds).toEqual([202]);
+});
+it("bevarar ja-svar men varnar när prognosen behöver ses över", () => {
+  const result = recommendYellowSelection({matchLevel:3,targetSize:1,candidates:[
+    candidate({id:203,name:"Exempel: redan ja",teamNames:["Gul"],currentCallupStatus:"accepted",spaceLevel:"high"}),
+  ]});
+  expect(result.selectedIds).toEqual([203]);
+  expect(squadBalanceWarnings([{recentMatchCount:0,upcomingMatchCount:0,spaceLevel:"high"}])[0]).toContain("behöver vila");
+});

@@ -87,6 +87,23 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       expect((await applySnapshot(sql,[knownFormer],"2026-09-10")).unmatched).toEqual([]);
       expect(await sql`SELECT * FROM development_activity_participation WHERE player_id=3`).toHaveLength(0);
       expect((await applySnapshot(sql,[{...training,attendance:['Okänd spelare']}],"2026-09-10")).unmatched).toHaveLength(1);
+      // En Gulspelare får delta hos Grön utan att flyttas eller påverka Guls svar.
+      await sql`INSERT INTO groups VALUES(2,'Grön','subgroup',1)`;
+      await sql`INSERT INTO matches(id,date,group_id,source,external_uid) VALUES(88,'2026-09-09',2,'calendar','cal777-55555@svenskalag.se')`;
+      const green:ActivitySnapshot={...a,sourceId:"777",url:"https://www.svenskalag.se/bollstanassk-fotboll-f2014-gron/match/777/test",date:"2026-09-09",match:{opponent:"Exempelmotstånd",homeAway:"home"},attendance:["Exempel A"]};
+      await expect(applySnapshot(sql,[green],"2026-09-10")).rejects.toThrow();
+      const yellowBefore=await sql`SELECT * FROM match_roster WHERE match_id=7 ORDER BY player_id`;
+      await applySnapshot(sql,[green],"2026-09-10",false,"Grön");
+      await applySnapshot(sql,[green],"2026-09-10",false,"Grön");
+      const greenId=(await sql`SELECT match_id FROM development_activities WHERE external_key='sanktan:777' AND group_id=2`)[0].match_id;
+      expect(greenId).toBe(88);
+      expect(await sql`SELECT * FROM match_players WHERE match_id=${greenId} AND player_id=1`).toHaveLength(1);
+      expect(await sql`SELECT * FROM match_roster WHERE match_id=7 ORDER BY player_id`).toEqual(yellowBefore);
+      await applySnapshot(sql,[{...green,attendance:[]}],"2026-09-10",false,"Grön");
+      expect((await sql`SELECT attendance_status FROM development_activity_participation ap JOIN development_activities da ON da.id=ap.activity_id WHERE da.match_id=${greenId} AND player_id=1`)[0].attendance_status).toBe("absent");
+      await expect(applyRemovedMatches(sql,[{matchId:greenId,sourceId:"777",evidence:"source-deleted"}],"2026-09-10")).rejects.toThrow();
+      await applyRemovedMatches(sql,[{matchId:greenId,sourceId:"777",evidence:"source-deleted"}],"2026-09-10",false,"Grön");
+      expect((await sql`SELECT cancelled FROM matches WHERE id=${greenId}`)[0].cancelled).toBe(1);
     } finally {await sql.end();}
   });
 });

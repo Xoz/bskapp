@@ -23,6 +23,7 @@ export async function exportPlayerData(playerId: number, actor: string) {
     schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     player,
+    matchSpaceCapacity: (await get<{value: string}>("SELECT value FROM settings WHERE key = ?", [`match_space_capacity:${playerId}`]))?.value ?? "100",
     evaluations,
     evaluationScores,
     selfEvaluations,
@@ -45,6 +46,7 @@ export async function erasePlayerData(playerId: number, actor: string): Promise<
   await batch([
     { sql: "DELETE FROM attendance_events WHERE player_id = ?", args: [playerId] },
     { sql: "DELETE FROM activity_log WHERE subject = ?", args: [player.name] },
+    { sql: "DELETE FROM settings WHERE key = ?", args: [`match_space_capacity:${playerId}`] },
     { sql: "DELETE FROM players WHERE id = ?", args: [playerId] },
     { sql: "INSERT INTO activity_log (coach_name,action,subject) VALUES (?, 'Raderade spelaruppgifter', ?)", args: [actor, `player:${playerId}`] },
   ]);

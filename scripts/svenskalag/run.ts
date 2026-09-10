@@ -5,7 +5,7 @@ import { authenticatedContext } from "./auth";
 import {processOutbox} from "./process-outbox";
 import { collect, LoginRequired } from "./collect";
 import { applySnapshot } from "../../lib/svenskalag/import";
-import { STATUS_KEY, REQUEST_KEY, HISTORY_KEY, type SyncStatus } from "../../lib/svenskalag/model";
+import { STATUS_KEY, GREEN_STATUS_KEY, REQUEST_KEY, HISTORY_KEY, type SyncStatus } from "../../lib/svenskalag/model";
 
 process.umask(0o077);
 async function main() {
@@ -43,6 +43,26 @@ async function main() {
         const audit=await auditMatches(sql,context,today,process.argv.includes("--dry-run"));
         await write("svenskalag_match_audit",{...audit,checkedAt:new Date().toISOString()});
         imported.unmatched.push(...audit.warnings);
+        // Grön läses enbart som underlag för spelarnas gemensamma belastning.
+        // Fel där stoppar inte Guls ordinarie synk eller skriver över gamla Grön-data.
+        const greenPrevious: SyncStatus | null = JSON.parse(await read(GREEN_STATUS_KEY) || "null");
+        const greenStatus: SyncStatus = {state:"running",startedAt:new Date().toISOString(),lastSuccess:greenPrevious?.lastSuccess,message:"Hämtar Gröns matcher"};
+        if (!process.argv.includes("--dry-run")) await write(GREEN_STATUS_KEY,greenStatus);
+        try {
+          const green = await collect(context,today,"Grön");
+          const greenImported = await applySnapshot(sql,green,today,process.argv.includes("--dry-run"),"Grön");
+          const greenAudit = await auditMatches(sql,context,today,process.argv.includes("--dry-run"),"Grön");
+          greenStatus.state="ok"; greenStatus.activities=greenImported.activities;
+          greenStatus.unmatched=[...greenImported.unmatched,...greenAudit.warnings];
+          greenStatus.message="Gröns matcher, svar och registrerade deltagande är kontrollerade";
+          if (!process.argv.includes("--dry-run")) greenStatus.lastSuccess=new Date().toISOString();
+        } catch(error) {
+          greenStatus.state=error instanceof LoginRequired ? "login_required" : "error";
+          greenStatus.message="Gröns matchunderlag kunde inte verifieras. Tidigare uppgifter behålls.";
+          imported.unmatched.push("Grön: matchunderlaget kunde inte uppdateras");
+        }
+        greenStatus.finishedAt=new Date().toISOString();
+        if (!process.argv.includes("--dry-run")) await write(GREEN_STATUS_KEY,greenStatus);
         if(!process.argv.includes("--dry-run")&&outbound) await processOutbox(sql,context,snapshot,today);
         status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;
         status.message=process.argv.includes("--dry-run") ? "Provkörning klar, inget importerat" : "Svenska Lag är uppdaterat";

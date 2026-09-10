@@ -135,6 +135,7 @@ export default async function MatchPage({ params, searchParams }: {
       {role === "coach" && (
         <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Matchområden">
           <Link href={`/matcher/${match.id}`} className="badge badge-primary whitespace-nowrap">Matchplan</Link>
+          {canManageSquads && !match.finished && match.date >= today && <Link href={`/matcher/${match.id}/matchutrymme`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Matchutrymme · kallelse/lån</Link>}
           <Link href={selectionHref} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Laguppställning</Link>
           {FEATURES.liveScore && isYellowMatch && canReportMatches && (
             <Link href={`/matcher/${match.id}/live`} className="badge whitespace-nowrap" style={{ background: "var(--surface)" }}>Matchcenter</Link>

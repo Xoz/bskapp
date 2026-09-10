@@ -1,32 +1,33 @@
 import type {BrowserContext} from 'playwright';
 import type postgres from 'postgres';
-import {ORIGIN,TEAM_PATH,sourceUrl} from '../../lib/svenskalag/model';
+import {ORIGIN,TEAM_PATHS,type SyncTeam,sourceUrl} from '../../lib/svenskalag/model';
 import {LoginRequired} from './collect';
 import {applyRemovedMatches, type RemovedMatch} from '../../lib/svenskalag/removed-matches';
 
 /** Kalendern är en inventering, aldrig ensam bevis för att radera en match. */
-export async function auditMatches(sql:ReturnType<typeof postgres>,context:BrowserContext,today:string,dryRun=false) {
+export async function auditMatches(sql:ReturnType<typeof postgres>,context:BrowserContext,today:string,dryRun=false,team:SyncTeam="Gul") {
+  const teamPath=TEAM_PATHS[team];
   const year=today.slice(0,4);
   const rows=await sql`SELECT m.id,m.date,m.start_time,m.external_uid,m.cancelled,
     (SELECT da.external_key FROM development_activities da WHERE da.match_id=m.id LIMIT 1) AS external_key
     FROM matches m JOIN groups g ON g.id=m.group_id
-    WHERE g.name='Gul' AND g.group_type='subgroup' AND g.active=1 AND m.date LIKE ${year+'%'}
+    WHERE g.name=${team} AND g.group_type='subgroup' AND g.active=1 AND m.date LIKE ${year+'%'}
     AND m.source IN ('calendar','svenskalag_sanktan')`;
   const calendar=new Map<string,{date:string;time:string}>();
   const months=['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
   const page=await context.newPage();
   page.setDefaultTimeout(15000);
   const open=async(url:string)=>{
-    const response=await page.goto(sourceUrl(url),{waitUntil:'domcontentloaded',timeout:30000});
+    const response=await page.goto(sourceUrl(url,teamPath),{waitUntil:'domcontentloaded',timeout:30000});
     if(!response?.ok()) throw new Error('Matchkontrollens källa svarar inte');
-    sourceUrl(page.url());
+    sourceUrl(page.url(),teamPath);
     if(await page.locator('input[type="password"]').first().isVisible()||!(await page.locator('#logged-in-menu').count())) throw new LoginRequired();
   };
   const removed:RemovedMatch[]=[];
   const warnings:string[]=[];
   try {
     for(const [index,month] of months.entries()) {
-      await open(`${ORIGIN}${TEAM_PATH}/kalender/${year}/${month}`);
+      await open(`${ORIGIN}${teamPath}/kalender/${year}/${month}`);
       await page.locator('#table-schedule').waitFor({state:'attached'});
       const entries=await page.locator('#table-schedule tr').evaluateAll(rows=>{
         let day='';
@@ -39,8 +40,8 @@ export async function auditMatches(sql:ReturnType<typeof postgres>,context:Brows
       for(const entry of entries) {
         // Föreningsgemensamma aktiviteter kan visas i lagkalendern.
         const linked=new URL(entry.url);
-        if(linked.origin!==ORIGIN||!linked.pathname.startsWith(TEAM_PATH+'/')) continue;
-        const id=sourceUrl(entry.url).match(/\/(?:match|aktivitet)\/(\d+)(?:\/|$)/)?.[1];
+        if(linked.origin!==ORIGIN||!linked.pathname.startsWith(teamPath+'/')) continue;
+        const id=sourceUrl(entry.url,teamPath).match(/\/(?:match|aktivitet)\/(\d+)(?:\/|$)/)?.[1];
         const date=`${year}-${String(index+1).padStart(2,'0')}-${entry.day.padStart(2,'0')}`;
         if(!id||!/^\d{1,2}$/.test(entry.day)||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date) throw new Error('Ofullständig kalender');
         const value={date,time:entry.time.padStart(5,'0')};
@@ -56,12 +57,12 @@ export async function auditMatches(sql:ReturnType<typeof postgres>,context:Brows
         if(entry.date!==row.date||entry.time!==row.start_time) warnings.push(`Match ${row.id}: datum eller tid skiljer sig från Svenska Lag`);
         continue;
       }
-      await open(`${ORIGIN}${TEAM_PATH}/match/${sourceId}`);
+      await open(`${ORIGIN}${teamPath}/match/${sourceId}`);
       // Svenska Lag returnerar HTTP 200 även för borttagna aktiviteter.
       if(await page.getByRole('heading',{name:'Aktiviteten är borttagen',exact:true}).count()===1) removed.push({matchId:row.id,sourceId,evidence:'source-deleted'});
       else warnings.push(`Match ${row.id}: saknas i kalendern men är inte bekräftat borttagen`);
     }
   } finally {await page.close();}
-  await applyRemovedMatches(sql,removed,today,dryRun);
+  await applyRemovedMatches(sql,removed,today,dryRun,team);
   return {checked:rows.length,removed:removed.map(r=>r.matchId),warnings};
 }

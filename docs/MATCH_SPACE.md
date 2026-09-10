@@ -1,0 +1,92 @@
+# Individuellt matchutrymme
+
+Beslut 2026-09-10: planeringsstöd för kallelser och lån till andra lag.
+Kapacitet och aktuell laddning är skilda. Alla börjar på kapacitet 100;
+tränare med `manage_squads` och spelaråtkomst kan ställa 50–150 heltalspoäng
+på spelarprofilen (exempelvis 80 eller 125). Inga individer har tilldelats
+avvikande kapacitet i produktion. Samma återhämtningstakt gäller alla.
+
+## Startvärden v1
+
+- Återhämtning: 20 poäng per faktiskt dygn utanför aktivitetsintervall, högst
+  individuell kapacitet. Större batteri ger inte snabbare återhämtning.
+- Match: 0,5 poäng per spelminut. Träning: 0,25 poäng per minut.
+- Reserv: 40 % av individuell kapacitet. Under reserv eller tidskrock ger
+  ”Prioritera vila”. Under 60 % ger ”Begränsat utrymme”; annars ”Gott utrymme”.
+- Detta är justerbara kodkonstanter för en första planeringsmodell, inte
+  medicinska/fysiologiska mätvärden eller ett prestationsbetyg.
+
+## Underlag och begränsningar
+
+`match_players` ger faktiskt deltagande. Positiva `minutes` används; noll
+är idag också standard för okänd speltid och behandlas därför som okänd,
+med hela matchlängden som uppskattning. Detta kan överskatta belastningen.
+Planerade matcher hämtas från `match_roster`: accepted/pending eller selected,
+men ett explicit declined utesluts även om selected ligger kvar. Inställda
+matcher utesluts. Alla spelarens lag räknas, inklusive cupmatcher.
+
+Träning hämtas från development-aktiviteter med registrerad närvaro respektive
+kommande kallelse, med 60 minuter som synligt antagande eftersom normaliserade
+aktiviteter saknar längd. Dubbletter på spelare/datum/start/grupp reduceras till
+en träning; närvaro prioriteras. Saknad matchtid antas vara 12.00 och träningstid
+18.00. Svensk tid omvandlas till absoluta ögonblick med befintlig DST-hjälpare.
+
+Historiken börjar 28 dagar före nu (eller före målmatchen om tidigare), med
+antaget fullt batteri. Ingen registrerad aktivitet bevisar inte vila; annan
+idrott, ofullständig närvaro och äldre kvarstående belastning kan saknas.
+Alla vyer beskriver prognosen som uppskattad. Tom historik markeras särskilt
+i jämförelsevyn. Ingen automatisk medicinsk individuell kalibrering görs.
+
+## Simulering och gränssnitt
+
+`forecastMatchSpace` går kronologiskt igenom aktiviteterna. Återhämtning sker
+inte under aktivitet; intern negativ balans bevaras medan visningen stannar
+vid noll. Framtida planer påverkar inte dagens batteri. En tänkt målmatch
+ersätter samma match-id och räknas exakt en gång även vid befintlig kallelse.
+Minsta marginal från målmatchen genom de följande sju dagarna styr bedömningen.
+Tidskrock ger varning även med stort batteri.
+
+- Idag: aktuellt batteri samt lägsta prognos med redan planerade aktiviteter.
+- Varje kommande match: `/matcher/[id]/matchutrymme`, även Grön och cuper,
+  med lagfilter, kallelsestatus och före/efter-prognos per spelare.
+- Speltid kan provas per spelare i jämförelsevyn och SelectionEditor.
+  Det är ett osparat scenario och ändrar varken matchplan, trupp eller svar.
+- SelectionEditor:s varningar och automatförslag använder den nya prognosen.
+  Nya röda kandidater föreslås inte automatiskt; befintliga val/ja-svar bevaras.
+  Äldre antalbaserad hjälpare finns kvar för legacy native/API-fallback.
+- Kapacitet lagras i befintlig `settings`, `match_space_capacity:<playerId>`.
+  Ingen migration krävs. Export och radering av spelaruppgifter omfattar värdet.
+
+## Verifiering
+
+Enhetstest: kapaciteter, dygnsvila, täta/utspridda matcher, framtid kontra nu,
+deduplicering, efterföljande egen match, kortare speltid, tidskrock, negativ
+balans, träning och svensk sommartid. PostgreSQL-test använder temporära tabeller
+för faktisk/okänd tid, nej/inställt/pending, sparande/återläsning, oförändrade
+kallelser samt nekad läs-/skrivåtkomst. Lokalt browserprov med exempelspelare
+verifierar sparande, omladdning, scenario och mobilvy.
+
+## Gröns matcher i bakgrunden – 2026-09-11
+
+Synken läser nu även F2014-Grön, enbart matcher. Samma schemalagda arbetare
+hämtar kalender, kallelsesvar och uttryckligen registrerad närvaro −28/+14 dagar.
+Gröns uppställning läses eller publiceras inte av denna utökning. Käll- och
+lagvalidering är explicit per lag; Guls utgående uppställningsflöde är oförändrat.
+Stabila kalender-id:n återanvänds så en redan importerad match inte dubbleras.
+
+Spelarens gemensamma batteri läser deltagande i alla lag. Vid verifierad
+Svenska Lag-närvaro har den företräde framför bevarade matchstatistikrader,
+även om deltagandet senare rättats till frånvaro. Guls matchlista ändras inte.
+
+Grön har egen status i `settings.svenskalag_green_sync_status`. Fel där
+stoppar inte Guls synk. Saknad/felaktig status, olösta kopplingar eller en
+senaste lyckad hämtning äldre än 26 timmar ger en synlig underlagsvarning.
+
+Aktiverad arbetare: `/opt/bsk/sync-releases/match-space-20260911`, tidigare
+`/opt/bsk/sync-releases/person-roles-20260910`. Befintlig timer fortsatt aktiv.
+Verifierad första import: 16 matcher, nio med registrerad närvaro; ett
+registrerat Ella-deltagande och en kallelse hos Grön hittades. En aktivitet
+(20028813) har olöst spelarkoppling. Årskontrollen granskade 36 Grönmatcher
+och bekräftade en borttagen match (176), utan övriga kalenderavvikelser.
+Återgång: återställ symlänken `/opt/bsk/svenskalag-sync` till föregående release.
+Importerad historik bevaras vid återgång.

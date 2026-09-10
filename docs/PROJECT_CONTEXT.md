@@ -482,3 +482,13 @@ Matchplan 2026-09-10: den separata rutan för position/spelarval/återställning
 ## Kompakt placering publicerad – 2026-09-10
 
 Commit e393ef2696bee5b37c06707f059e4c0659e82505 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533764459. Positionens stora ruta med dropdown/återställning borttagen. Spelare att placera visas som mindre knappar med små tröjor och kortnamn; fullständiga namn finns kvar för tillgänglighet. Liten textknapp kan ta vald spelare av planen. Typkontroll och publiceringskontroller godkända, inloggad visuell kontroll av AIK-matchen godkänd. Inga matchplaner eller verksamhetsuppgifter ändrade vid produktionskontrollen.
+
+## Individuellt matchutrymme – 2026-09-11
+
+Användaren har godkänt batterimodell för kallelse/lån, med individuell kapacitet
+(standard 100, justerbar 50–150) och gemensam återhämtning. Webbens Idag,
+spelarprofil och matchuttagning använder tidsbaserad prognos. Alla kommande
+matcher har en separat jämförelsevy med före/efter och osparad speltidssimulering.
+Gröns matcher ingår även när de inte visas i Guls lista. Grön-synken är aktiverad
+och första importen verifierad. Se docs/MATCH_SPACE.md för antaganden och drift.
+Webbpublicering återstår i detta steg.

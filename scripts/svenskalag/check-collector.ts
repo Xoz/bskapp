@@ -1,11 +1,12 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import {collect} from "./collect";
-import {ORIGIN,TEAM_PATH} from "../../lib/svenskalag/model";
+import {ORIGIN,TEAM_PATHS} from "../../lib/svenskalag/model";
 async function main() {
   const browser=await chromium.launch();
   try {
-    for (const attendanceTitle of ["Fyll i närvaro", "Fyll i laguppställning"]) for (const broken of [false,true]) {
+    for (const team of ["Gul", "Grön"] as const) for (const attendanceTitle of ["Fyll i närvaro", "Fyll i laguppställning"]) for (const broken of [false,true]) {
+      const TEAM_PATH=TEAM_PATHS[team];
       const context=await browser.newContext();
       await context.route('**/*', async route=>{
         const path=new URL(route.request().url()).pathname;
@@ -20,9 +21,9 @@ async function main() {
         }
         await route.fulfill({contentType:'text/html; charset=utf-8',body});
       });
-      if(broken) await assert.rejects(collect(context,'2026-09-10'),/svarslistan/);
+      if(broken) await assert.rejects(collect(context,'2026-09-10',team),/svarslistan/);
       else {
-        const rows=await collect(context,'2026-09-10');
+        const rows=await collect(context,'2026-09-10',team);
         assert.equal(rows.length,2);assert.equal(rows[1].date,'2026-09-09');
         assert.equal(rows[0].callups.length,3);assert.deepEqual(rows[0].attendance,['Exempel A']);assert.equal(rows[1].attendance,null);
       }

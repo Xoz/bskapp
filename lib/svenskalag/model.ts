@@ -1,5 +1,8 @@
 /** Filfri transport. Endast data som behövs i lagappen följer med. */
 export const TEAM_PATH = "/bollstanassk-fotboll-f2014-gul";
+export const TEAM_PATHS = { Gul: TEAM_PATH, Grön: "/bollstanassk-fotboll-f2014-gron" } as const;
+export type SyncTeam = keyof typeof TEAM_PATHS;
+export const GREEN_STATUS_KEY = "svenskalag_green_sync_status";
 export const ORIGIN = "https://www.svenskalag.se";
 export type Reply = "accepted" | "declined" | "pending";
 export type ActivitySnapshot = {
@@ -19,18 +22,19 @@ export function dayOffset(today: string, days: number): string {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
-export function sourceUrl(url: string): string {
+export function sourceUrl(url: string, teamPath: string = TEAM_PATH): string {
+  if (!Object.values(TEAM_PATHS).includes(teamPath as typeof TEAM_PATH)) throw new Error("Okänt lag");
   const parsed = new URL(url, ORIGIN);
-  if (parsed.origin !== ORIGIN || !parsed.pathname.startsWith(`${TEAM_PATH}/`) || parsed.username || parsed.password) throw new Error("Fel källa eller lag");
+  if (parsed.origin !== ORIGIN || !parsed.pathname.startsWith(`${teamPath}/`) || parsed.username || parsed.password) throw new Error("Fel källa eller lag");
   return parsed.href;
 }
-export function validateSnapshot(items: ActivitySnapshot[], today: string): void {
+export function validateSnapshot(items: ActivitySnapshot[], today: string, team: SyncTeam = "Gul"): void {
   if (!Array.isArray(items) || items.length === 0 || items.length > 150) throw new Error("Tom eller orimlig hämtning");
   const ids = new Set<string>();
   for (const a of items) {
     if (!/^\d+$/.test(a.sourceId) || ids.has(a.sourceId)) throw new Error("Ogiltigt eller dubbelt aktivitets-id");
     ids.add(a.sourceId);
-    if (!sourceUrl(a.url).match(new RegExp(`/(?:match|aktivitet)/${a.sourceId}(?:/|$)`))) throw new Error("Fel aktivitetslänk");
+    if (!sourceUrl(a.url, TEAM_PATHS[team]).match(new RegExp(`/(?:match|aktivitet)/${a.sourceId}(?:/|$)`))) throw new Error("Fel aktivitetslänk");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date) || !Number.isFinite(Date.parse(`${a.date}T12:00:00Z`)) || new Date(`${a.date}T12:00:00Z`).toISOString().slice(0,10) !== a.date || a.date < dayOffset(today, -28) || a.date > dayOffset(today, 14) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.time)) throw new Error("Datum utanför synkfönstret");
     if(a.cancelled!==undefined&&typeof a.cancelled!=="boolean") throw new Error("Ogiltig matchstatus");
     if(a.match && (a.kind!=="match"||!a.match.opponent?.trim()||a.match.opponent.length>250||!["home","away"].includes(a.match.homeAway))) throw new Error("Ogiltig matchdata");

@@ -1,6 +1,8 @@
 import { assessMatchLoad } from "./matchCapacity";
+import { spaceLabels, type SpaceLevel } from "./matchSpace";
 
 export type SelectionSignals = {
+  spaceLevel?: SpaceLevel;
   windowMatchCount: number;
   recentMatchCount: number;
   upcomingMatchCount: number;
@@ -17,6 +19,7 @@ export type SelectionSupport = {
 export type RecommendationCallupStatus = "accepted" | "declined" | "pending" | null;
 
 export type RecommendationCandidate = {
+  spaceLevel?: SpaceLevel;
   id: number;
   name: string;
   teamNames: string[];
@@ -63,7 +66,9 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
   }
 
   const load = assessMatchLoad(signals.recentMatchCount, signals.upcomingMatchCount);
-  if (load.level === "maximum") {
+  if (signals.spaceLevel) {
+    if (signals.spaceLevel !== "normal") cautions.push(spaceLabels[signals.spaceLevel]);
+  } else if (load.level === "maximum") {
     cautions.push(`Vid maxgränsen: ${load.recentMatchCount} spelade · ${load.upcomingMatchCount} kommande`);
   } else if (load.level === "high") {
     cautions.push(`För hög belastning: ${load.recentMatchCount} spelade · ${load.upcomingMatchCount} kommande`);
@@ -73,18 +78,18 @@ export function selectionSupport(signals: SelectionSignals): SelectionSupport {
 }
 
 export function squadBalanceWarnings(
-  selected: Array<{ recentMatchCount: number; upcomingMatchCount: number }>
+  selected: Array<{ recentMatchCount: number; upcomingMatchCount: number; spaceLevel?: SpaceLevel }>
 ): string[] {
   if (selected.length === 0) return ["Ingen spelare är uttagen ännu"];
 
   const warnings: string[] = [];
-  const levels = selected.map((row) => assessMatchLoad(row.recentMatchCount, row.upcomingMatchCount).level);
+  const levels = selected.map((row) => row.spaceLevel ?? assessMatchLoad(row.recentMatchCount, row.upcomingMatchCount).level);
   const highCount = levels.filter((level) => level === "high").length;
   if (highCount > 0) {
-    warnings.push(`${highCount} spelare har för hög belastning`);
+    warnings.push(selected.some(row => row.spaceLevel) ? `${highCount} spelare behöver vila eller ändrad planering` : `${highCount} spelare har för hög belastning`);
   }
   if (levels.filter((level) => level !== "normal").length >= Math.ceil(selected.length / 2)) {
-    warnings.push("Minst hälften av de uttagna är vid maxgränsen eller över");
+    warnings.push(selected.some(row => row.spaceLevel) ? "Minst hälften har begränsat matchutrymme eller behöver vila" : "Minst hälften av de uttagna är vid maxgränsen eller över");
   }
   return warnings;
 }
@@ -114,7 +119,7 @@ function levelFit(candidate: RecommendationCandidate, matchLevel: number | null)
 function fairnessOrder(matchLevel: number | null) {
   return (left: RecommendationCandidate, right: RecommendationCandidate) => {
     const loadRank = (candidate: RecommendationCandidate) => {
-      const level = assessMatchLoad(candidate.recentMatchCount, candidate.upcomingMatchCount).level;
+      const level = candidate.spaceLevel ?? assessMatchLoad(candidate.recentMatchCount, candidate.upcomingMatchCount).level;
       return level === "normal" ? 0 : level === "maximum" ? 1 : 2;
     };
     const levelDiff = loadRank(left) - loadRank(right);
@@ -161,6 +166,7 @@ export function recommendYellowSelection(input: {
     .forEach((candidate) => add(candidate, candidate.currentCallupStatus === "accepted" ? "Kallad och svarat ja" : "Redan vald"));
 
   const selectable = input.candidates
+    .filter((candidate) => candidate.spaceLevel !== "high")
     .filter((candidate) => candidate.currentCallupStatus === null)
     .filter((candidate) => candidate.selectionEligible)
     .filter((candidate) => !(input.matchLevel === 4 && candidate.primaryTeamName === "F15"));

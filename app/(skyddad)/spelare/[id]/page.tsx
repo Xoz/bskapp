@@ -1,3 +1,5 @@
+import { getMatchSpaceInputs } from "@/lib/matchSpaceData";
+import MatchSpaceProfile from "@/components/MatchSpaceProfile";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
@@ -42,6 +44,7 @@ export default async function PlayerPage({ params, searchParams }: {
     canViewPrivate ? getPlayerConversations(playerId) : Promise.resolve([]),
   ]);
   if (!core) notFound();
+  const matchSpace = (await getMatchSpaceInputs([playerId])).get(playerId)!;
   const { mal, samtal } = await searchParams;
   const { summary, goalHistory, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
@@ -85,6 +88,8 @@ export default async function PlayerPage({ params, searchParams }: {
         </div>
         <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Utvecklingsträd</Link>
       </header>
+
+      <MatchSpaceProfile key={matchSpace.capacity} playerId={playerId} input={matchSpace} canEdit={canSetSelectionPreferences} />
 
       <section className="core-panel core-form-panel">
         <div className="core-section-head">

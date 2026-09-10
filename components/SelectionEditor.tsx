@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
-import { assessMatchLoad } from "@/lib/matchCapacity";
+import { forecastMatchSpace, spaceLabels, type SpaceInput } from "@/lib/matchSpace";
 import { selectionPositionRank } from "@/lib/positions";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
@@ -10,6 +10,7 @@ const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerk
 const SELECTION_GRID = "2rem minmax(12rem, 1fr) 6.5rem 7.5rem 6rem 6.5rem 8.25rem";
 
 type Candidate = {
+  matchSpace?: SpaceInput;
   player: {
     id: number;
     name: string;
@@ -54,6 +55,8 @@ export default function SelectionEditor({
   canPublish?: boolean;
   sourceRevision?: string;
 }) {
+  const [scenarioMinutes, setScenarioMinutes] = useState<Record<number, number>>({});
+  const forecasts = useMemo(() => new Map(candidates.map(candidate => [candidate.player.id, candidate.matchSpace ? forecastMatchSpace(candidate.matchSpace, scenarioMinutes[candidate.player.id]) : null])), [candidates, scenarioMinutes]);
   const [openedSourceRevision]=useState(sourceRevision);
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.selected).map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
@@ -68,10 +71,11 @@ export default function SelectionEditor({
   );
   const warnings = useMemo(
     () => squadBalanceWarnings(selected.map((candidate) => ({
+      spaceLevel: forecasts.get(candidate.player.id)?.level,
       recentMatchCount: candidate.recentMatchCount,
       upcomingMatchCount: candidate.upcomingMatchCount,
     }))),
-    [selected]
+    [selected, forecasts]
   );
   const teamOptions = useMemo(() => {
     const unique = new Set<string>();
@@ -135,7 +139,8 @@ export default function SelectionEditor({
         teamNames: candidate.teams.map((team) => team.name),
         primaryTeamName: candidate.primaryTeam?.name ?? null,
         windowMatchCount: candidate.windowMatchCount,
-        recentMatchCount: candidate.recentMatchCount,
+        spaceLevel: forecasts.get(candidate.player.id)?.level,
+      recentMatchCount: candidate.recentMatchCount,
         upcomingMatchCount: candidate.upcomingMatchCount,
         lastSelectedDate: candidate.lastSelectedDate,
         primaryLevel: candidate.player.preferred_level_primary,
@@ -240,7 +245,7 @@ export default function SelectionEditor({
               <span>Spelare</span>
               <span>Lag</span>
               <span>Pos 1</span>
-              <span className="selection-number">Matcher ±7 dagar</span>
+              <span className="selection-number">Matchutrymme</span>
               <span>Svar</span>
               <span>Vald position</span>
             </div>
@@ -249,8 +254,7 @@ export default function SelectionEditor({
                 const selectedForMatch = selectedIds.has(candidate.player.id);
                 const recommendationReason = recommendationReasons[candidate.player.id];
                 const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
-                const load = assessMatchLoad(candidate.recentMatchCount, candidate.upcomingMatchCount);
-                const loadLabel = load.level === "high" ? "För hög belastning" : load.level === "maximum" ? "Vid maxgränsen" : "Normal belastning";
+                const forecast = forecasts.get(candidate.player.id);
                 return (
               <li
                 key={candidate.player.id}
@@ -283,9 +287,18 @@ export default function SelectionEditor({
                   <span className="selection-preference" title={`Val 1: ${candidate.player.preferred_position_primary || "Ej satt"}`}>
                     {candidate.player.preferred_position_primary || "—"}
                   </span>
-                  <span className="selection-number tabular-nums" title={`${loadLabel}: ${candidate.recentMatchCount} spelade och ${candidate.upcomingMatchCount} kommande`}>
-                    {candidate.recentMatchCount}+{candidate.upcomingMatchCount}
-                  </span>
+                  <div className="text-sm" style={{ color: forecast?.level === "high" ? "var(--danger)" : forecast?.level === "maximum" ? "var(--warning)" : "var(--ink-secondary)" }}>
+                    {forecast ? <details>
+                      <summary className="cursor-pointer"><strong>{forecast.after}/{forecast.capacity}</strong><br />{spaceLabels[forecast.level]}</summary>
+                      <p className="mt-2">Inför: {forecast.before} · Efter: {forecast.after} · Lägst därefter: {forecast.lowest}</p>
+                      {forecast.conflict && <p>Krockar med annan aktivitet.</p>}
+                      {forecast.nextAffected && <p>Låg marginal vid {forecast.nextAffected}.</p>}
+                      <label className="block mt-2">Prova speltid (min)
+                        <input aria-label={`Prova speltid för ${candidate.player.name}`} type="number" min={0} max={candidate.matchSpace?.target?.duration ?? 60} value={scenarioMinutes[candidate.player.id] ?? candidate.matchSpace?.target?.minutes ?? 60} className="input w-full" onChange={event => setScenarioMinutes(current => ({ ...current, [candidate.player.id]: Math.max(0, Math.min(candidate.matchSpace?.target?.duration ?? 60, Number(event.target.value))) }))} />
+                      </label>
+                      <p>Uppskattning. Speltiden är endast en simulering.</p>
+                    </details> : "Underlag saknas"}
+                  </div>
                   {candidate.currentCallupStatus ? (
                     <span className="selection-callup-status" data-callup-status={candidate.currentCallupStatus}>
                       {candidate.currentCallupStatus === "accepted"

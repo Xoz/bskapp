@@ -199,3 +199,28 @@ bekräftade ledarnamn i settings.svenskalag_non_player_names. Okända namn ger
 fortsatt varning. Ingen återaktivering eller borttagning av historik görs.
 
 Produktionsverifiering 2026-09-10 23:06 svensk tid: worker 39b228aa körde färdigt, 45 aktiviteter och unmatched=[] (inga olösta namn). Ledarkonfigurationen är skriven i produktionsdatabasen. Typkontroll, integrationstest och VPS-publicering godkända.
+
+## Gröns matcher i bakgrunden – 2026-09-11
+
+Synken läser nu även F2014-Grön, enbart matcher. Samma schemalagda arbetare
+hämtar kalender, kallelsesvar och uttryckligen registrerad närvaro −28/+14 dagar.
+Gröns uppställning läses eller publiceras inte av denna utökning. Käll- och
+lagvalidering är explicit per lag; Guls utgående uppställningsflöde är oförändrat.
+Stabila kalender-id:n återanvänds så en redan importerad match inte dubbleras.
+
+Spelarens gemensamma batteri läser deltagande i alla lag. Vid verifierad
+Svenska Lag-närvaro har den företräde framför bevarade matchstatistikrader,
+även om deltagandet senare rättats till frånvaro. Guls matchlista ändras inte.
+
+Grön har egen status i `settings.svenskalag_green_sync_status`. Fel där
+stoppar inte Guls synk. Saknad/felaktig status, olösta kopplingar eller en
+senaste lyckad hämtning äldre än 26 timmar ger en synlig underlagsvarning.
+
+Aktiverad arbetare: `/opt/bsk/sync-releases/match-space-20260911`, tidigare
+`/opt/bsk/sync-releases/person-roles-20260910`. Befintlig timer fortsatt aktiv.
+Verifierad första import: 16 matcher, nio med registrerad närvaro; ett
+registrerat Ella-deltagande och en kallelse hos Grön hittades. En aktivitet
+(20028813) har olöst spelarkoppling. Årskontrollen granskade 36 Grönmatcher
+och bekräftade en borttagen match (176), utan övriga kalenderavvikelser.
+Återgång: återställ symlänken `/opt/bsk/svenskalag-sync` till föregående release.
+Importerad historik bevaras vid återgång.
