@@ -1,0 +1,64 @@
+import { chromium } from "playwright";
+import postgres from "postgres";
+import { authenticatedContext } from "./auth";
+import { collect, LoginRequired } from "./collect";
+import { applySnapshot } from "../../lib/svenskalag/import";
+import { STATUS_KEY, REQUEST_KEY, HISTORY_KEY, type SyncStatus } from "../../lib/svenskalag/model";
+
+process.umask(0o077);
+async function main() {
+  if (!process.env.DATABASE_URL || !process.env.SVENSKALAG_STATE_FILE) throw new Error("Synkens miljö är inte konfigurerad");
+  const sql = postgres(process.env.DATABASE_URL, {max:3, prepare:false, connection:{application_name:"bsk-svenskalag-sync"}});
+  const lock = await sql.reserve();
+  let locked = false;
+  try {
+    const result = await lock`SELECT pg_try_advisory_lock(2014, 910) AS locked`;
+    locked = result[0].locked;
+    if (!locked) return;
+    const read = async (key:string) => (await sql`SELECT value FROM settings WHERE key = ${key}`)[0]?.value;
+    const write = async (key:string, value:unknown) => {await sql`INSERT INTO settings (key,value) VALUES (${key},${JSON.stringify(value)}) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;};
+    const previous: SyncStatus | null = JSON.parse(await read(STATUS_KEY) || "null");
+    const request = await read(REQUEST_KEY);
+    const now = new Date();
+    const today = now.toLocaleDateString("sv-SE",{timeZone:"Europe/Stockholm"});
+    const hour = Number(now.toLocaleTimeString("sv-SE",{timeZone:"Europe/Stockholm", hour:"2-digit",hour12:false}));
+    if (!process.argv.includes("--now") && !request) {
+      if (hour < 6 || hour > 22) { if (hour !== 3) return; }
+      if (previous && now.getTime() - Date.parse(previous.startedAt) < 55*60_000) return;
+    }
+    if (request) await sql`DELETE FROM settings WHERE key = ${REQUEST_KEY} AND value = ${request}`;
+    const status: SyncStatus = {state:"running", startedAt:now.toISOString(), lastSuccess:previous?.lastSuccess, message:"Hämtar från Svenska Lag"};
+    await write(STATUS_KEY,status);
+    let finished = false;
+    for (let attempt=0; attempt<3 && !finished; attempt++) {
+      let browser;
+      try {
+        browser = await chromium.launch({headless:true});
+        const context = await authenticatedContext(browser,process.env.SVENSKALAG_STATE_FILE,{username:process.env.SVENSKALAG_USERNAME,password:process.env.SVENSKALAG_PASSWORD});
+        const snapshot = await collect(context,today);
+        const imported = await applySnapshot(sql,snapshot,today,process.argv.includes("--dry-run"));
+        status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;
+        status.message=process.argv.includes("--dry-run") ? "Provkörning klar, inget importerat" : "Svenska Lag är uppdaterat";
+        if (!process.argv.includes("--dry-run")) status.lastSuccess=new Date().toISOString();
+        finished=true;
+      } catch(error) {
+        status.state=error instanceof LoginRequired ? "login_required" : "error";
+        status.message=error instanceof LoginRequired ? "Logga in på nytt för att återuppta synken" : "Hämtningen kunde inte verifieras. Tidigare data ligger kvar.";
+        // Inga råa browserfel, sidinnehåll eller sessionsuppgifter i loggen.
+        if (error instanceof LoginRequired) finished=true;
+      } finally { await browser?.close(); }
+      if (!finished && attempt<2) await new Promise(resolve=>setTimeout(resolve, (attempt+1)*5000));
+    }
+    status.finishedAt=new Date().toISOString();
+    await write(STATUS_KEY,status);
+    const history=JSON.parse(await read(HISTORY_KEY) || "[]");
+    await write(HISTORY_KEY,[status,...history].slice(0,10));
+    console.log(JSON.stringify({state:status.state,activities:status.activities ?? 0,unmatched:status.unmatched?.length ?? 0}));
+    if (status.state!=="ok") process.exitCode=1;
+  } finally {
+    if (locked) await lock`SELECT pg_advisory_unlock(2014,910)`;
+    lock.release();
+    await sql.end({timeout:5});
+  }
+}
+main().catch(()=>{console.error("Synken kunde inte starta; kontrollera konfiguration och databas.");process.exitCode=1;});

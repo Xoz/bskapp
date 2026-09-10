@@ -1,0 +1,9 @@
+[Unit]
+Description=Kontrollera BSK:s synkkö varje minut
+[Timer]
+OnCalendar=*-*-* *:*:00
+RandomizedDelaySec=10
+Persistent=true
+Unit=bsk-svenskalag-sync.service
+[Install]
+WantedBy=timers.target

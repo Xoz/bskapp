@@ -3,6 +3,13 @@
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
+## Pågående 2026-09-10: filfri Svenska Lag-synk
+
+Arbetare och appstatus implementerade, separat VPS-tjänst installerad med
+avstängd timer. Väntar på egen Svenska Lag-inloggning, riktig provhämtning
+utan exportfiler och verifierad skarp import. Webbändringarna ligger på
+`feat/svenskalag-sync`. Se `SVENSKALAG_SYNC.md`. Ingen schemamigrering.
+
 ## Aktuellt efter publiceringarna 2026-09-09
 
 Denna sammanställning har företräde framför äldre pilotstatus nedan. Målet är en

@@ -1,0 +1,24 @@
+[Unit]
+Description=BSK Gul – filfri Svenska Lag-synk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=bsk-sync
+Group=bsk-sync
+WorkingDirectory=/opt/bsk/svenskalag-sync
+EnvironmentFile=/etc/bsk-sync/sync.env
+EnvironmentFile=-/etc/bsk-sync/credentials.env
+Environment=PLAYWRIGHT_BROWSERS_PATH=/var/lib/bsk-sync/browsers
+ExecStart=/usr/bin/node --import tsx scripts/svenskalag/run.ts
+TimeoutStartSec=15min
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bsk-sync
+MemoryMax=1G
+TasksMax=128

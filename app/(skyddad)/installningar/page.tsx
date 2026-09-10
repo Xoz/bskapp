@@ -1,3 +1,4 @@
+import SvenskaLagSyncStatus from "@/components/SvenskaLagSyncStatus";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
@@ -502,6 +503,7 @@ export default async function SettingsPage({
 
           {/* ── TRUPP ── */}
           <section id="trupp" className="space-y-5 scroll-mt-20">
+            <SvenskaLagSyncStatus />
             <div>
               <p className="eyebrow">Trupp</p>
             </div>
@@ -580,6 +582,7 @@ export default async function SettingsPage({
               </details>
             </div>
 
+            <details className="card p-5 space-y-4"><summary className="cursor-pointer font-semibold">Äldre manuella importverktyg</summary>
             <div className="card p-6 md:p-7 space-y-5">
               <div className="flex items-start gap-3">
                 <span
@@ -781,6 +784,8 @@ export default async function SettingsPage({
               </details>
               </details>
             </div>
+
+            </details>
 
             <div className="card p-6 md:p-7 space-y-5">
               <div className="flex items-start gap-3">
