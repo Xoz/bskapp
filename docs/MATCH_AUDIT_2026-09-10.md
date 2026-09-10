@@ -42,11 +42,14 @@ Före rättning fanns 70 lokala Gulposter för 2026: 66 importerade och fyra man
 - Fyra manuella Gulposter saknar käll-id: 98 Rönninge Salem Svart och 99 TBD den 15 juni samt testposterna 152 och 194 i augusti.
 - De sex övergripande cupaktiviteterna bör skiljas från individuella matcher innan historisk matchstatistik betraktas som ren.
 
-2025 och Grön har inte genomgått samma årskontroll i denna ändring. Kallelser/närvaro utanför det vanliga synkfönstret har inte nyimporterats. Kommande Gulmatcher är verifierade, men det är inte ett friskintyg för all historisk statistik.
+En kompletterande kontroll av 2025 omfattade dess 40 importerade Gulposter: inga bekräftade borttagningar och inga datum-/tidsavvikelser. Denna komplettering granskar källkoppling, datum och tid; den intygar inte historisk matchklassificering, inställd-status eller statistik. Grön har inte genomgått samma årskontroll i denna ändring. Kallelser/närvaro utanför det vanliga synkfönstret har inte nyimporterats. Kommande Gulmatcher är verifierade, men det är inte ett friskintyg för all historisk statistik.
 
 ## Verifiering
 
-142 tester passerade, inklusive transaktionell återställning vid fel källkoppling, provkörning utan skrivning, bevarad trupp, upprepad avveckling och återaktivering. Separat Playwright-kontroll testar explicit borttagning, kvarvarande sida, kalenderfel, utloggning och befintlig kalenderpost. TypeScript-kontroll och produktionsbygge passerade. Liveprov av årskontrollen: 66 kontrollerade importerade Gulposter, exakt tre bekräftade borttagningar, inga datum-/tidsvarningar. Backup före datarättning: `/opt/bsk/backups/match-audit-20260910/bsk.dump`.
+143 tester passerade, inklusive transaktionell återställning vid fel källkoppling, provkörning utan skrivning, bevarad trupp, upprepad avveckling och återaktivering. Separat Playwright-kontroll testar explicit borttagning, kvarvarande sida, kalenderfel, utloggning och befintlig kalenderpost. TypeScript-kontroll och produktionsbygge passerade. Liveprov av årskontrollen: 66 kontrollerade importerade Gulposter, exakt tre bekräftade borttagningar, inga datum-/tidsvarningar. Backup före datarättning: `/opt/bsk/backups/match-audit-20260910/bsk.dump`.
 
 
 Publiceringskontrollen avslöjade dessutom två falska dubblettgrupper: Mini Tiger Cups samtidiga slutspelsmatcher 20744498/20744294 och finalplatshållare 20744318/20744552. Källan skiljer dem åt som BSK 1 och BSK 2. Dubblettkontrollen använder nu stabila normaliserade käll-id:n (även över äldre kalenderformat); datum/tid/namn är fallback när käll-id saknas. Samma käll-id på olika datum fångas också. Inaktiva poster undantas. Separat DB-test verifierar dessa fall.
+
+
+Slutkontrollen av publicerad Idag-vy upptäckte att kallelsesvar för matcher lästes från träningarnas aktivitetstabeller. Det gav ”Ingen kallelse registrerad ännu” trots tio ja på AIK-matchen. Gemensamma läsfragment i `lib/activityCallups.ts` hämtar nu matchtotaler från matches och namn/svar från match_roster, medan träningskällan behålls. Tillämpat både i aktivitetslistan och aktivitetsdetaljen. Testet verifierar att äldre aktivitetssvar inte övertrumfar matchens källa och att enbart uttagen inte räknas som kallad.

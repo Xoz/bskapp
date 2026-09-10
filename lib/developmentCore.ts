@@ -1,4 +1,5 @@
 import "server-only";
+import {activityCallupCountsSql,activityCallupNamesSql} from "./activityCallups";
 
 import { all, get } from "./db";
 import { canAccessGroup, canAccessPlayer, getCurrentUser, isStaffRole } from "./auth";
@@ -150,18 +151,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             da.theme, da.challenge_context,
             CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
             CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
-            COALESCE(
-              (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
-            ) AS accepted_callup_count,
-            COALESCE(
-              (SELECT s.declined_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent')
-            ) AS declined_callup_count,
-            COALESCE(
-              (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
-            ) AS pending_callup_count,
+            ${activityCallupCountsSql},
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
             (
               EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
@@ -183,34 +173,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
               WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
               ORDER BY p2.name
             ) AS participant_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id
-              ORDER BY p2.name
-            ) AS called_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'
-              ORDER BY p2.name
-            ) AS accepted_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
-              ORDER BY p2.name
-            ) AS declined_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'
-              ORDER BY p2.name
-            ) AS pending_player_names,
+            ${activityCallupNamesSql},
             COUNT(DISTINCT o.id) AS observation_count,
             COUNT(DISTINCT CASE WHEN ap.attendance_status = 'present' THEN ap.player_id END) AS participant_count,
             COUNT(DISTINCT CASE WHEN sd.decision = 'selected' THEN sd.player_id END) AS selection_count
@@ -442,18 +405,7 @@ export async function getActivityDetail(activityId: string): Promise<{
     `SELECT da.*,
             CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
             CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
-            COALESCE(
-              (SELECT s.accepted_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'present')
-            ) AS accepted_callup_count,
-            COALESCE(
-              (SELECT s.declined_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent')
-            ) AS declined_callup_count,
-            COALESCE(
-              (SELECT s.pending_count FROM development_activity_callup_summaries s WHERE s.activity_id = da.id),
-              (SELECT COUNT(*) FROM development_activity_callups dac WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown')
-            ) AS pending_callup_count,
+            ${activityCallupCountsSql},
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
             (
               EXISTS (SELECT 1 FROM match_squad squad WHERE squad.match_id = m.id)
@@ -475,34 +427,7 @@ export async function getActivityDetail(activityId: string): Promise<{
               WHERE ap2.activity_id = da.id AND ap2.attendance_status = 'present'
               ORDER BY p2.name
             ) AS participant_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id
-              ORDER BY p2.name
-            ) AS called_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'present'
-              ORDER BY p2.name
-            ) AS accepted_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'absent'
-              ORDER BY p2.name
-            ) AS declined_player_names,
-            ARRAY(
-              SELECT p2.name
-              FROM development_activity_callups dac
-              JOIN players p2 ON p2.id = dac.player_id
-              WHERE dac.activity_id = da.id AND dac.attendance_status = 'unknown'
-              ORDER BY p2.name
-            ) AS pending_player_names,
+            ${activityCallupNamesSql},
             (SELECT COUNT(*) FROM development_observations o WHERE o.activity_id = da.id) AS observation_count,
             (SELECT COUNT(*) FROM development_activity_participation ap WHERE ap.activity_id = da.id AND ap.attendance_status = 'present') AS participant_count,
             (SELECT COUNT(*) FROM development_selection_decisions sd WHERE sd.activity_id = da.id AND sd.decision = 'selected') AS selection_count
