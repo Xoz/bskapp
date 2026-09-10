@@ -5,6 +5,9 @@ export type Reply = "accepted" | "declined" | "pending";
 export type ActivitySnapshot = {
   sourceId: string; url: string; date: string; time: string; title: string;
   kind: "match" | "training";
+  match?: {opponent:string;homeAway:"home"|"away";location?:string};
+  lineup?: string[];
+  cancelled?: boolean;
   callups: { name: string; status: Reply }[];
   totals: Record<Reply, number>;
   // null betyder att närvaro inte har kontrollerats. Ja-svar är aldrig närvaro.
@@ -29,6 +32,10 @@ export function validateSnapshot(items: ActivitySnapshot[], today: string): void
     ids.add(a.sourceId);
     if (!sourceUrl(a.url).match(new RegExp(`/(?:match|aktivitet)/${a.sourceId}(?:/|$)`))) throw new Error("Fel aktivitetslänk");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date) || !Number.isFinite(Date.parse(`${a.date}T12:00:00Z`)) || new Date(`${a.date}T12:00:00Z`).toISOString().slice(0,10) !== a.date || a.date < dayOffset(today, -28) || a.date > dayOffset(today, 14) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.time)) throw new Error("Datum utanför synkfönstret");
+    if(a.cancelled!==undefined&&typeof a.cancelled!=="boolean") throw new Error("Ogiltig matchstatus");
+    if(a.match && (a.kind!=="match"||!a.match.opponent?.trim()||a.match.opponent.length>250||!["home","away"].includes(a.match.homeAway))) throw new Error("Ogiltig matchdata");
+    if(a.match?.location!==undefined&&(typeof a.match.location!=="string"||a.match.location.length>300)) throw new Error("Ogiltig spelplats");
+    if(a.lineup && (a.kind!=="match"||a.date<today||!Array.isArray(a.lineup)||a.lineup.length>40||a.lineup.some(n=>typeof n!=="string"||!n.trim()||n.length>150)||new Set(a.lineup.map(nameKey)).size!==a.lineup.length)) throw new Error("Ogiltig laguppställning");
     if (!a.title?.trim() || a.title.length > 300 || !["match", "training"].includes(a.kind)) throw new Error("Okänd aktivitet");
     if (!Array.isArray(a.callups) || a.callups.length > 200) throw new Error("Ogiltiga kallelser");
     const names = new Set<string>();

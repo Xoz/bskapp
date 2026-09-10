@@ -660,7 +660,10 @@ export async function saveMatch(formData: FormData) {
   const cupName = String(formData.get("cup_name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim();
   if (!date || !opponent) return;
-  if (id) await requireMatchPermission("manage_matches", id);
+  if (id) {
+    await requireMatchPermission("manage_matches", id);
+    if(await get("SELECT id FROM matches WHERE id=? AND source='svenskalag_sanktan'",[id])) redirect(`/matcher/${id}?master=svenskalag`);
+  }
   groupId = await resolveWritableGroupId(groupId);
 
   const ourScore = ourScoreRaw !== null && ourScoreRaw !== "" ? Number(ourScoreRaw) : null;
@@ -1167,6 +1170,7 @@ export async function deleteMatch(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await requireMatchPermission("manage_matches", id);
+  if(await get("SELECT id FROM matches WHERE id=? AND source='svenskalag_sanktan'",[id])) redirect(`/matcher/${id}?master=svenskalag`);
   await batch([
     { sql: "DELETE FROM match_events WHERE match_id = ?", args: [id] },
     { sql: "DELETE FROM match_players WHERE match_id = ?", args: [id] },

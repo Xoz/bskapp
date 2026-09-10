@@ -83,3 +83,37 @@ Produktionsbygge, datagranskning och hälsokontroller godkända.
 Aktiv huvudrelease `/opt/bsk/releases/6f0b6ace146f.KvECoy`; backup före import
 `/opt/bsk/backups/main-6f0b6ace146f.8eOL7p`.
 Inloggningsuppgifter finns endast i privat VPS-miljöfil, inga värden i dokumentation.
+
+## Nytt kontrakt 2026-09-10 – två riktningar (ersätter tidigare ägarskap)
+
+Användaren har bestämt att Svenska Lag är master för matcher, kallelser och närvaro.
+Appen äger ett separat uttagningsutkast. Spara utkast skickar inget; Skicka till
+Svenska Lag köar exakt den valda uppställningen. Spelarna kallas därefter i Svenska
+Lag via länken i uttagningsvyn. Inga kallelser eller påminnelser skickas av arbetaren.
+
+Inkommande: nya matcher skapas via stabilt id, datum/tid/motståndare/hemma-borta/spelplats
+och inställd status uppdateras. Kallelsesvar styr aldrig uttagningskryssrutor.
+Kända spelare och källans totaler importeras även om andra spelarkopplingar saknas;
+olösta kopplingar rapporteras. Registrerad närvaro har företräde även framför lokal
+korrigering. Historiska matchstatistikrader bevaras, men truppvyn använder källnärvaron.
+Framtida laguppställning läses separat från närvaro och speglas så länge inget lokalt
+utkast pågår. Webbens matchformulär kan inte ändra/radera källstyrda matcher.
+
+Utgående: beständig kö i settings, behörighet och gruppscope på servern, kontroll
+av källversionen som visades när formuläret öppnades, matchspecifikt lås, aktuell
+uttagning och matchdatum kontrolleras före överföring. Endast före avspark.
+Redigeraren ändrar spelare och bevarar ledare/övriga fält; hela källgruppen läses om
+precis före sparande. Endast den verifierade adressen för att spara laguppställning
+tillåter ett POST-anrop. Resultatet läses tillbaka. Identiskt resultat ger ingen
+ny skrivning. Osäker skrivning upprepas inte automatiskt. Svenska Lag erbjuder
+ingen atomisk versionskontroll: en ändring mellan sista kontroll och sparande
+kan fortfarande ske. Köstatus visar konflikt/fel i stället för att gissa.
+
+Täckning: Guls kalender, fyra veckor bakåt/två framåt. Borttagna kalenderposter
+raderas inte automatiskt ur appen; inställd status som syns i kalendern speglas.
+Spelaridentitet kräver entydiga namn; flytt till permanenta Svenska Lag-person-id:n
+är kvarvarande förbättring. Positioner/formation överförs inte i denna version.
+
+Drift: uppgradera huvudappen (migration 0022), ge bsk_sync INSERT på matches samt
+sekvensrättighet och SELECT/INSERT på match_players, installera därefter samma
+versions arbetare. Tvåvägskoden testas på feat/svenskalag-bidirectional före drift.

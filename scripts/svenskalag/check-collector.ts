@@ -16,7 +16,8 @@ async function main() {
           body+='</table>';
         } else if(path.endsWith('/kontrollpanelen/aktiviteter')) body+=`<table><tr id="ScheduleRow123_"><td><span title="Närvaro sparad av Test"></span><a title="Fyll i närvaro" onclick="popit('${TEAM_PATH}/controlpanel/presence/chooseparticipants/123')">2</a></td></tr></table>`;
         else if(path.includes('/controlpanel/presence/')) body+='<ul class="split-tab"><li>Grupp A</li><li>+</li></ul><div class="memberlist"><li class="player"><div class="left">Ej närvarande</div></li></div><div class="memberlist"><li class="leader presence-row">Ledare</li><li class="player presence-row"><div class="left">9. Exempel A</div></li></div>';
-        else for (const [panel,label,name] of [['tabYes','Kommer','Exempel A'],['tabNo','Kan ej','Exempel B'],['tabNoAnswer','Kallade','Exempel C']]) body+=`<a data-target="#${panel}" href="#${panel}">${label}${broken?2:1}+0</a><div id="${panel}"><a class="delete-from-list" membertypeid="1" name="${name}">Spelare</a></div>`;
+        else {body+='<h3 class="game-header">Bollstanäs SK 3 - Testlag</h3>'; for (const [panel,label,name] of [['tabYes','Kommer','Exempel A'],['tabNo','Kan ej','Exempel B'],['tabNoAnswer','Kallade','Exempel C']]) body+=`<a data-target="#${panel}" href="#${panel}">${label}${broken?2:1}+0</a><div id="${panel}"><a class="delete-from-list" membertypeid="1" name="${name}">Spelare</a></div>`;
+        }
         await route.fulfill({contentType:'text/html; charset=utf-8',body});
       });
       if(broken) await assert.rejects(collect(context,'2026-09-10'),/svarslistan/);

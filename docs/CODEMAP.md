@@ -47,7 +47,7 @@ Fristående tränarplattform: `coach-platform/` är en separat Next.js/PostgreSQ
 | **Äldre SvFF-utvärderingar / självskattning** | `components/SkillRadar.tsx`, `components/DevelopmentChart.tsx`, `components/SelfEvalForm.tsx`, `lib/svff.ts`, `lib/actions.ts` (createEvaluation/submitSelfEval). Befintliga 1–4-utvärderingar visas som äldre historik på spelarprofilen och översätts inte automatiskt till trädet. |
 | **Matchutvärdering / utveckling över tid** (webb och native delar resultat, tränarkommentar, spelarbedömningar och avslut av uppföljning) | `lib/matchEvaluation.ts`, `lib/services/matchEvaluationMobile.ts`, `lib/actions.ts` (saveCoachMatchEvaluations/createMatchEvaluationInvite/savePublicMatchEvaluations), `components/{MatchEvaluationForm,MatchEvaluationTrend}.tsx`, `app/(skyddad)/matcher/[id]/utvardera/`, publik `app/matchutvardering/[token]/`, status på matchsidan och `/idag`, trend på spelarprofilen |
 | **Utveckling över tid / diagram** | `components/DevelopmentChart.tsx`, `components/ParticipationChart.tsx`, `lib/queries.ts` (getPlayerDevelopment) |
-| **Filfri Svenska Lag-synk** | `docs/SVENSKALAG_SYNC.md`, `lib/svenskalag/{model,import,actions}.ts`, `scripts/svenskalag/{collect,run,login,auth}.ts`, `components/SvenskaLagSyncStatus.tsx`, `deploy/svenskalag/`. Befintlig settings-tabell används för status/kö/historik; inga migrationer. |
+| **Filfri Svenska Lag-synk** | `docs/SVENSKALAG_SYNC.md`, `lib/svenskalag/{model,import,actions,outbox}.ts`, `scripts/svenskalag/{collect,run,login,auth,lineup,process-outbox}.ts`, `components/SvenskaLagSyncStatus.tsx`, `deploy/svenskalag/`. Befintlig settings-tabell används för status/kö/historik/laguppställning; migration 0022 ger matches.cancelled. Svenska Lag är master; uttagningsutkast publiceras via separat kö. |
 | **Närvaroimport / närvarotrend** | `lib/attendance.ts`, `lib/actions.ts` (importAttendanceWorkbook), `lib/queries.ts` (getLatestAttendanceImportSummary/getPlayerAttendance*), `components/AttendanceTrendChart.tsx`, `app/(skyddad)/installningar/page.tsx`, `app/(skyddad)/spelare/[id]/page.tsx` |
 | **Spelarutdrag och permanent radering** | `lib/playerPrivacy.ts`, `app/api/export/player/[id]/route.ts`, `lib/actions.ts` (erasePlayer), `app/(skyddad)/spelare/[id]/page.tsx`, `docs/GDPR-GRIND.md` |
 | **Statistik (säsong/spelare/lag)** | `lib/stats.ts`, `lib/queries.ts` (getSeasonStats/getPlayerMatchStats/getTeamMatchStats), `components/StatsFields.tsx`, `app/(skyddad)/statistik/` |
@@ -221,3 +221,12 @@ Ingen ny tabell eller migration. Se `docs/UNIFIED_PLAYER_FLOW.md` för avgränsn
 - `lib/training/drawing.js`: SVG-renderaren extraherad från projektets `outputs/ovningsritare/index.html`; `model.ts` validerar originalets version 1-format. `bank.json` bevarar de 15 originalövningarna från `outputs/ovningsritare/bank.js`.
 - `lib/training/actions.ts`: ägarskap, revisionskontroll och identiska återförsök. `training_plans` skapas i `lib/db.ts`, migration `0021-training-plans`. Ingen import från Coach i detta steg.
 - Tester `lib/training/{model,actions}.test.ts`. Se `docs/TRAINING_BUILDER.md` för kompatibilitet och publiceringsgräns.
+
+## Tvåvägssynk 2026-09-10
+
+- `lib/svenskalag/outbox.ts`: typer, revisionsjämförelse och beslut för köad laguppställning; rena tester i outbox.test.ts.
+- `scripts/svenskalag/lineup.ts`: läser och redigerar Svenska Lags riktiga laguppställning, en tillåten sparadress, full återläsning. `process-outbox.ts`: matchlås, oförändrat utkast och konflikter; inga kallelseutskick.
+- `scripts/svenskalag/check-lineup.ts`: Playwright-prov för tillägg/borttagning, ledare, konflikt och upprepat anrop.
+- `matches.cancelled` (migration 0022) speglar inställd match. Settings-prefix svenskalag_lineup/outbox/draft/presence håller källäge, publicering, lokalt utkast och verifierad närvaro. `matchRoster.ts` och `getMatchPlayers` respekterar Svenska Lags närvaro utan att radera statistik.
+
+- `components/SvenskaLagPublicationStatus.tsx`: uppdaterar köstatus i uttagningsvyn medan överföringen pågår.

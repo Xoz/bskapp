@@ -52,6 +52,7 @@ export interface Match {
   code: string;
   source: string;
   finished: number;
+  cancelled: number;
   clock_running: number; // 1 = matchklockan rullar just nu (live)
   level: string;
   cup_name: string;
@@ -330,8 +331,8 @@ export async function getPlayerDevelopment(playerId: number) {
 export async function getMatches(): Promise<Match[]> {
   const userId = await restrictedUserId();
   return all<Match>(
-    `SELECT m.* FROM matches m
-     ${userId ? "WHERE EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
+    `SELECT m.* FROM matches m WHERE m.cancelled=0
+     ${userId ? "AND EXISTS (SELECT 1 FROM groups scope_g JOIN user_group_access uga ON uga.user_id = ? AND (uga.group_id = scope_g.id OR uga.group_id = scope_g.parent_id) WHERE scope_g.id = m.group_id)" : ""}
      ORDER BY m.date DESC, m.id DESC`,
     userId ? [userId] : []
   );
@@ -348,7 +349,10 @@ export async function getMatch(id: number): Promise<Match | undefined> {
 
 
 export async function getMatchPlayers(matchId: number): Promise<MatchPlayerRow[]> {
-  return all<MatchPlayerRow>("SELECT * FROM match_players WHERE match_id = ?", [matchId]);
+  return all<MatchPlayerRow>(`SELECT mp.* FROM match_players mp WHERE mp.match_id = ? AND (
+    NOT EXISTS(SELECT 1 FROM settings s WHERE s.key='svenskalag_presence:'||mp.match_id::text)
+    OR EXISTS(SELECT 1 FROM development_activities da JOIN development_activity_participation ap ON ap.activity_id=da.id WHERE da.match_id=mp.match_id AND ap.player_id=mp.player_id AND ap.source='svenskalag_browser' AND ap.attendance_status='present')
+  )`, [matchId]);
 }
 
 
@@ -404,7 +408,7 @@ export interface PlayerMatchRow {
 // En match räknas som spelad när den avslutats eller när dess datum passerat.
 // Det filtrerar bort framtida matcher som råkat få en match_players-rad (t.ex.
 // om någon öppnat live-rapporteringen i förväg) så de inte syns i statistiken.
-const PLAYED_MATCH_SQL = "(m.finished = 1 OR m.date <= ?)";
+const PLAYED_MATCH_SQL = "(m.cancelled=0 AND (m.finished = 1 OR m.date <= ?))";
 function todayStr() {
   return swedishToday();
 }
@@ -453,6 +457,7 @@ export interface TeamMatchStatRow {
   our_score: number | null;
   opponent_score: number | null;
   finished: number;
+  cancelled: number;
   level: string;
   cup_name: string;
   players_logged: number;

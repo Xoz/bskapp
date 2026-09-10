@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import postgres from "postgres";
 import { authenticatedContext } from "./auth";
+import {processOutbox} from "./process-outbox";
 import { collect, LoginRequired } from "./collect";
 import { applySnapshot } from "../../lib/svenskalag/import";
 import { STATUS_KEY, REQUEST_KEY, HISTORY_KEY, type SyncStatus } from "../../lib/svenskalag/model";
@@ -19,10 +20,11 @@ async function main() {
     const write = async (key:string, value:unknown) => {await sql`INSERT INTO settings (key,value) VALUES (${key},${JSON.stringify(value)}) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;};
     const previous: SyncStatus | null = JSON.parse(await read(STATUS_KEY) || "null");
     const request = await read(REQUEST_KEY);
+    const outbound=(await sql`SELECT key FROM settings WHERE key LIKE 'svenskalag_outbox:%' AND value::jsonb->>'state' IN ('queued','running') LIMIT 1`).length>0;
     const now = new Date();
     const today = now.toLocaleDateString("sv-SE",{timeZone:"Europe/Stockholm"});
     const hour = Number(now.toLocaleTimeString("sv-SE",{timeZone:"Europe/Stockholm", hour:"2-digit",hour12:false}));
-    if (!process.argv.includes("--now") && !request) {
+    if (!process.argv.includes("--now") && !request && !outbound) {
       if (hour < 6 || hour > 22) { if (hour !== 3) return; }
       if (previous && now.getTime() - Date.parse(previous.startedAt) < 55*60_000) return;
     }
@@ -37,6 +39,7 @@ async function main() {
         const context = await authenticatedContext(browser,process.env.SVENSKALAG_STATE_FILE,{username:process.env.SVENSKALAG_USERNAME,password:process.env.SVENSKALAG_PASSWORD});
         const snapshot = await collect(context,today);
         const imported = await applySnapshot(sql,snapshot,today,process.argv.includes("--dry-run"));
+        if(!process.argv.includes("--dry-run")&&outbound) await processOutbox(sql,context,snapshot,today);
         status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;
         status.message=process.argv.includes("--dry-run") ? "Provkörning klar, inget importerat" : "Svenska Lag är uppdaterat";
         if (!process.argv.includes("--dry-run")) status.lastSuccess=new Date().toISOString();

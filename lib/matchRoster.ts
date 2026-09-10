@@ -96,11 +96,14 @@ export async function resolveMatchRosters(matchIds: number[]): Promise<Map<numbe
     `SELECT source.match_id, source.source, p.id, p.name, p.jersey_number
      FROM (
        SELECT mp.match_id, mp.player_id, 'played' AS source
-       FROM match_players mp WHERE mp.match_id IN (${marks})
+       FROM match_players mp WHERE mp.match_id IN (${marks}) AND (
+         NOT EXISTS(SELECT 1 FROM settings s WHERE s.key='svenskalag_presence:'||mp.match_id::text)
+         OR EXISTS(SELECT 1 FROM development_activities da JOIN development_activity_participation ap ON ap.activity_id=da.id WHERE da.match_id=mp.match_id AND ap.player_id=mp.player_id AND ap.source='svenskalag_browser' AND ap.attendance_status='present')
+       )
        UNION ALL
        SELECT roster.match_id, roster.player_id, 'confirmed' AS source
        FROM match_roster roster
-       WHERE roster.match_id IN (${marks}) AND roster.selection_status = 'selected'
+       WHERE roster.match_id IN (${marks}) AND roster.selection_status = 'selected' AND NOT EXISTS(SELECT 1 FROM settings s WHERE s.key='svenskalag_presence:'||roster.match_id::text)
      ) source
      JOIN players p ON p.id = source.player_id AND p.active = 1`,
     repeatedIds

@@ -13,6 +13,7 @@ export async function syncDevelopmentSourceRows(): Promise<void> {
       CASE WHEN m.home_away = 'away' THEN 'Borta mot ' ELSE 'Hemma mot ' END || m.opponent,
       COALESCE(NULLIF(m.source, ''), 'match'), 'match:' || m.id::text, m.id, m.group_id
     FROM matches m
+    WHERE NOT EXISTS(SELECT 1 FROM development_activities existing WHERE existing.match_id=m.id AND existing.external_key<>'match:'||m.id::text)
     ON CONFLICT (external_key) DO UPDATE SET
       activity_date = excluded.activity_date, start_time = excluded.start_time,
       title = excluded.title, group_id = excluded.group_id,
@@ -139,5 +140,6 @@ export async function syncDevelopmentSourceRows(): Promise<void> {
       source = CASE WHEN development_activity_participation.source = 'manual'
         THEN development_activity_participation.source ELSE excluded.source END,
       updated_at = to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
+    WHERE development_activity_participation.source <> 'svenskalag_browser'
   `);
 }

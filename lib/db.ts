@@ -1458,6 +1458,9 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     )`);
     await getClient().unsafe("CREATE INDEX IF NOT EXISTS training_plans_owner ON training_plans(created_by, updated_at DESC)");
   } },
+  { id: "0022-svenskalag-cancelled", run: async () => {
+    await getClient().unsafe("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0 CHECK (cancelled IN (0,1))");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

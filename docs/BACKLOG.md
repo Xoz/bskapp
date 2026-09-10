@@ -3,6 +3,13 @@
 Samlade öppna punkter. Detaljerade specar bor i egna filer – den här listan är en
 överblick över vad som väntar och var det är dokumenterat.
 
+## Pågående 2026-09-10: tvåvägssynk med Svenska Lag som master
+
+Uttagningsutkast → kö → laguppställning i Svenska Lag; kallelser skickas där.
+Nya matcher, svar, faktisk närvaro och inställd status speglas tillbaka.
+Implementering och tester på `feat/svenskalag-bidirectional`. Verifiering och
+publicering pågår. Se kontraktet i `SVENSKALAG_SYNC.md`.
+
 ## Publicerat 2026-09-10: filfri Svenska Lag-synk
 
 Automatisk inloggning, skarp import och återkommande VPS-drift verifierade.
