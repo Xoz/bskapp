@@ -186,3 +186,7 @@ Commit e393ef2696bee5b37c06707f059e4c0659e82505 publicerad, godkänd körning ht
 ## Matchplanens sparrättning publicerad – 2026-09-11
 
 Commit 179f056df52ff7e1f8b92169a32a0495eab70115 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34566757310. Aktiv release /opt/bsk/releases/179f056df52f.maN76h. 188 tester inklusive PostgreSQL samt lokalt produktionsbygge godkända; deployens tester, bygge och hälsokontroller godkända. Inloggad AIK-sida kontrollerad i separat flik; visar ingen sparad matchplan. Nya API-adressen svarar med behörighetsfel utan session som väntat. Ingen riktig matchplan sparad eller ändrad under kontrollen; användarens eventuella osparade sida har inte laddats om. Gamla öppna klienter behöver en omladdning efter att uppställning/texter tagits till vara.
+
+## Kompakt matchplan publicerad – 2026-09-11
+
+Commit 4dd76baf21411722979c8a4aacd9d1f71032731d publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34567345585. Typkontroll och deployens tester/bygge/hälsokontroller godkända. AIK:s sparade 1-1-4-1 och alla spelidétexter verifierade i inloggad översikt på dator och 390 px mobilbredd. Redigera → tillfällig textändring → Avbryt återställer originalet. Ingen matchdata skriven i verifieringen. Mobilöversikten har 270 px plan och kompakt löptext; formuläret öppnas separat via Redigera.
