@@ -101,7 +101,12 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("synkens transaktion",(
       const beforeExcluded=await sql`SELECT * FROM matches ORDER BY id`;
       const cup={...typed,match:{...typed.match,metadata:classifyMatch('393366','Stockholm Football Cup (Friendly 1)')}};
       const unknown={...typed,sourceId:'1001',url:typed.url.replace('/999/','/1001/'),match:{...typed.match,metadata:classifyMatch('1000','Okänd tävling')}};
+      await applySnapshot(sql,[cup],"2026-09-10",true);
+      expect(JSON.parse((await sql`SELECT value FROM settings WHERE key=${'svenskalag_match_metadata:'+freshId}`)[0].value).scope).toBe('supported');
       expect((await applySnapshot(sql,[cup],"2026-09-10")).skippedCups).toBe(1);
+      expect(JSON.parse((await sql`SELECT value FROM settings WHERE key=${'svenskalag_match_metadata:'+freshId}`)[0].value).scope).toBe('cup');
+      const newCup={...cup,sourceId:'1002',url:cup.url.replace('/999/','/1002/')};
+      expect((await applySnapshot(sql,[newCup],"2026-09-10")).skippedCups).toBe(1);
       expect((await applySnapshot(sql,[unknown],"2026-09-10")).unknownMatches).toBe(1);
       expect(await sql`SELECT * FROM matches ORDER BY id`).toEqual(beforeExcluded);
       expect(beforeTyped.length).toBe((await sql`SELECT * FROM match_roster`).length);

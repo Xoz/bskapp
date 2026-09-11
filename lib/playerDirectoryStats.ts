@@ -1,3 +1,4 @@
+import { regularMatchSql } from "./regularMatches";
 // Spelarlistans statistik gäller samma år och matchgrupp för båda räknarna.
 // Anroparen skickar endast spelar-id:n som användaren har läsbehörighet till.
 export function playerDirectoryStatsQuery(playerIds: number[], today: string, team: string | null) {
@@ -9,7 +10,7 @@ export function playerDirectoryStatsQuery(playerIds: number[], today: string, te
       SELECT g.id FROM groups g JOIN team_groups parent ON g.parent_id = parent.id
     ), scoped_matches AS (
       SELECT m.id, m.date, m.finished FROM matches m
-      WHERE COALESCE(m.cancelled, 0) = 0 AND m.date >= ? AND m.date < ?
+      WHERE ${regularMatchSql()} AND COALESCE(m.cancelled, 0) = 0 AND m.date >= ? AND m.date < ?
         AND (?::text IS NULL OR m.group_id IN (SELECT id FROM team_groups))
     )
     SELECT p.id AS player_id,

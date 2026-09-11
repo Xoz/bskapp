@@ -137,3 +137,5 @@ Ingen ändring av närvaro, statistikminuter, kapacitet eller kallelser gjordes
 vid verifieringen. Tillfällig lokal testdatabas borttagen.
 
 Synkförbättring 2026-09-11: verifierad spelform i `svenskalag_match_metadata:<id>` används före längdfallback. Sanktan/träningsmatcher uppdateras inom ordinarie synkfönster. Cupstöd och historisk cupimport är avgränsade enligt CUP_PLAN.md.
+
+2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.

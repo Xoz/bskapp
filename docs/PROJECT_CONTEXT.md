@@ -548,3 +548,5 @@ AIK-användarens sparfel spårat till serverloggen 07.33 Stockholm: action-id 70
 ## 2026-09-11 – kompakt sparad matchplan
 
 Sparad matchplan öppnas som kompakt läsvy: mindre statisk plan, formation, avbytare och spelidé som text utan formulär. Redigera öppnar befintlig editor; lyckat sparande återgår till översikten. Avbryt återställer senaste sparade plan. Osparade nya planer öppnas direkt för redigering. Inga ändringar av matchdata eller spartransport.
+
+2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.

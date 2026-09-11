@@ -29,7 +29,17 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
     const write=async(key:string,value:unknown)=>{await tx`INSERT INTO settings(key,value) VALUES(${key},${JSON.stringify(value)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value`;};
     let activities = 0, skippedCups = 0, unknownMatches = 0;
     for (const a of items) {
-      if (a.match?.metadata?.scope === "cup") { skippedCups++; continue; }
+      if (a.match?.metadata?.scope === "cup") {
+        // Märk endast redan kända matcher för beräkningsfiltret. Importera inte cupen.
+        if (!dryRun) {
+          const sourceKey = `sanktan:${a.sourceId}`;
+          const known = await tx`SELECT m.id FROM matches m WHERE m.group_id=${groupId} AND (
+            m.external_uid=${sourceKey} OR m.external_uid LIKE ${'cal'+a.sourceId+'-%@svenskalag.se'}
+            OR EXISTS (SELECT 1 FROM development_activities da WHERE da.match_id=m.id AND da.external_key=${sourceKey} AND da.group_id=${groupId}))`;
+          if (known.length === 1) await write(matchMetadataKey(known[0].id), a.match.metadata);
+        }
+        skippedCups++; continue;
+      }
       if (a.match?.metadata?.scope === "unknown") {
         unknownMatches++; unmatched.push(`Match ${a.sourceId}: tävling eller spelform behöver verifieras (${a.match.metadata.competitionName || "saknas"})`); continue;
       }

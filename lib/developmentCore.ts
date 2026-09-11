@@ -1,3 +1,4 @@
+import { regularMatchSql } from "./regularMatches";
 import "server-only";
 import { getMatchSpaceInputs } from "./matchSpaceData";
 import { forecastMatchSpace, type SpaceInput } from "./matchSpace";
@@ -265,30 +266,31 @@ export async function getPlayerCoreSummaries(): Promise<PlayerCoreSummary[]> {
               (SELECT COUNT(DISTINCT mp.match_id)
                FROM match_players mp
                JOIN matches played_match ON played_match.id = mp.match_id
-               WHERE mp.player_id = p.id AND (played_match.finished = 1 OR played_match.date <= ?)) AS match_count,
+               WHERE ${regularMatchSql("played_match")} AND mp.player_id = p.id AND (played_match.finished = 1 OR played_match.date <= ?)) AS match_count,
               EXISTS(
                 SELECT 1 FROM match_players synced_mp
                 JOIN matches synced_match ON synced_match.id = synced_mp.match_id
-                WHERE synced_mp.player_id = p.id AND synced_match.source = 'svenskalag_sanktan'
+                WHERE ${regularMatchSql("synced_match")} AND synced_mp.player_id = p.id AND synced_match.source = 'svenskalag_sanktan'
               ) AS has_sanktan_sync,
               COALESCE((
                 SELECT COUNT(DISTINCT gul_mp.match_id)
                 FROM match_players gul_mp
                 JOIN matches gul_match ON gul_match.id = gul_mp.match_id
                 JOIN groups gul_group ON gul_group.id = gul_match.group_id
-                WHERE gul_mp.player_id = p.id AND gul_match.source = 'svenskalag_sanktan' AND gul_group.name = 'Gul'
+                WHERE ${regularMatchSql("gul_match")} AND gul_mp.player_id = p.id AND gul_match.source = 'svenskalag_sanktan' AND gul_group.name = 'Gul'
               ), 0) AS sanktan_gul_count,
               COALESCE((
                 SELECT COUNT(DISTINCT gron_mp.match_id)
                 FROM match_players gron_mp
                 JOIN matches gron_match ON gron_match.id = gron_mp.match_id
                 JOIN groups gron_group ON gron_group.id = gron_match.group_id
-                WHERE gron_mp.player_id = p.id AND gron_match.source = 'svenskalag_sanktan' AND gron_group.name = 'Grön'
+                WHERE ${regularMatchSql("gron_match")} AND gron_mp.player_id = p.id AND gron_match.source = 'svenskalag_sanktan' AND gron_group.name = 'Grön'
               ), 0) AS sanktan_gron_count,
               (SELECT COUNT(DISTINCT dac.activity_id)
                FROM development_activity_callups dac
                JOIN development_activities callup_da ON callup_da.id = dac.activity_id
                WHERE dac.player_id = p.id
+                 AND EXISTS (SELECT 1 FROM matches cm WHERE cm.id=callup_da.match_id AND ${regularMatchSql('cm')})
                  AND callup_da.external_source = 'svenskalag_sanktan'
                  AND callup_da.activity_date LIKE ?
               ) AS callup_count,
@@ -390,7 +392,7 @@ export async function getPlayerCore(playerId: number): Promise<{
        FROM match_players mp
        JOIN matches m ON m.id = mp.match_id
        LEFT JOIN groups g ON g.id = m.group_id
-       WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
+       WHERE ${regularMatchSql()} AND mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
        ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id DESC`,
       [playerId, swedishToday()]
     ),
@@ -556,6 +558,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               row_number() OVER (ORDER BY activity_date DESC, start_time DESC NULLS LAST, id DESC) AS rn
        FROM development_activities
        WHERE activity_type = 'match'
+         AND EXISTS (SELECT 1 FROM matches rm WHERE rm.id=development_activities.match_id AND ${regularMatchSql('rm')})
          AND external_source = 'svenskalag_sanktan'
          AND activity_date LIKE ?
          AND activity_date <= ? AND id <> ?
@@ -575,7 +578,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
             (
               SELECT COUNT(DISTINCT played_match.id)
               FROM matches played_match
-              WHERE played_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND (SELECT activity_date FROM target)
+              WHERE ${regularMatchSql("played_match")} AND played_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND (SELECT activity_date FROM target)
                 AND (played_match.finished = 1 OR played_match.date::date < (SELECT activity_date FROM target))
                 AND EXISTS (
                   SELECT 1 FROM match_players played
@@ -585,7 +588,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
             (
               SELECT COUNT(DISTINCT upcoming_match.id)
               FROM matches upcoming_match
-              WHERE upcoming_match.date::date BETWEEN (SELECT activity_date FROM target) AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
+              WHERE ${regularMatchSql("upcoming_match")} AND upcoming_match.date::date BETWEEN (SELECT activity_date FROM target) AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
                 AND upcoming_match.cancelled=0 AND COALESCE(upcoming_match.finished, 0) = 0
                 AND (
                   EXISTS (
@@ -598,7 +601,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
             (
               SELECT COUNT(DISTINCT window_match.id)
               FROM matches window_match
-              WHERE window_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
+              WHERE ${regularMatchSql("window_match")} AND window_match.date::date BETWEEN ((SELECT activity_date FROM target) - INTERVAL '7 days') AND ((SELECT activity_date FROM target) + INTERVAL '7 days')
                 AND (
                   EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
                   OR EXISTS (
@@ -614,9 +617,9 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
               JOIN matches future_match ON future_match.id = future_roster.match_id
               WHERE future_roster.player_id = p.id
                 AND future_roster.selection_status = 'selected'
-                AND future_match.source = 'svenskalag_sanktan'
+                AND ${regularMatchSql("future_match")} AND future_match.source = 'svenskalag_sanktan'
                 AND future_match.date LIKE ?
-                AND future_match.date >= ?
+                AND ${regularMatchSql("future_match")} AND future_match.date >= ?
                 AND future_match.id IS DISTINCT FROM ?
                 AND future_roster.callup_status IS NULL
             ) AS planned_upcoming_count,

@@ -1,6 +1,6 @@
 # Plan för framtida cuphantering
 
-Beslut 2026-09-11: cupimplementation och import/rättning av historiska cuper ingår inte nu. Aktuell synkförbättring avgränsas till Sanktan och träningsmatcher, inklusive explicit 7v7/9v9 och matchlängd. Detta dokument är en plan, inte en implementerad funktion. Befintliga cupuppgifter raderas eller undantas inte automatiskt från batteriet genom detta beslut.
+Beslut 2026-09-11: cupimplementation och import/rättning av historiska cuper ingår inte nu. Aktuell synkförbättring avgränsas till Sanktan och träningsmatcher, inklusive explicit 7v7/9v9 och matchlängd. Detta dokument är en plan, inte en implementerad funktion. Uppdaterat beslut: cuper hanteras enskilt och undantas från ordinarie matchantal, matchkallelser och batteriberäkning. Befintliga cupuppgifter bevaras.
 
 ## Modell och flöde
 
@@ -10,7 +10,7 @@ Beslut 2026-09-11: cupimplementation och import/rättning av historiska cuper in
 4. **Jämn speltid.** Med en målvakt hela matchen får utespelare (antal utespelarplatser × matchlängd)/(antal deltagare − 1), högst full matchtid. Målvakten får matchlängden. Sex platser i 7v7, åtta i 9v9. Cupens egen längd används; spelform får inte härledas ur antalet minuter. Vid målvaktsbyte behövs fördelning per period eller manuellt scenario.
 5. **Cupdagar i batteriet.** Räkna matcherna kronologiskt och återhämtning mellan dem enligt den gemensamma modellen. När riktiga matcher blir kända ersätter de motsvarande preliminära matcher; kvarvarande osäkra matcher står kvar som scenario. Cuphändelsen får aldrig ett extra avdrag ovanpå matcherna.
 6. **Slutspel.** Möjliga finaler/bronsmatcher är alternativa scenarier, inte flera samtidiga säkra matcher. Tränaren ser vilka antaganden prognosen bygger på. Faktiskt slutspelsval ersätter alternativen.
-7. **Deltagande och lån.** Ett ja till cupen är planerad medverkan, inte bevis för varje match. Per match används planerad trupp före spel och registrerad närvaro efteråt. Samma spelare har ett gemensamt batteri över Gul, Grön och cupens lagvarianter. Identiska matcher räknas en gång även om de återfinns via flera lag.
+7. **Deltagande och lån.** Ett ja till cupen är planerad medverkan, inte bevis för varje match. Per match används planerad trupp före spel och registrerad närvaro efteråt. Cupens deltagande och planering hålls separat från det ordinarie batteriet för Gul och Grön. Identiska matcher räknas en gång även om de återfinns via flera lag.
 8. **Efterregistrering.** Senare inlagd närvaro och rättningar ersätter preliminära deltagaruppgifter och räknar om speltid/batteri. Okänd närvaro ska vara synlig. Ändringar av schema och inställda matcher uppdaterar samma poster.
 
 ## Genomförande när en kommande cup blir aktuell

@@ -1,3 +1,4 @@
+import { regularMatchSql } from "./regularMatches";
 import crypto from "crypto";
 import { all, get, run } from "./db";
 import { ALL_SKILLS, CATEGORIES } from "./svff";
@@ -408,7 +409,7 @@ export interface PlayerMatchRow {
 // En match räknas som spelad när den avslutats eller när dess datum passerat.
 // Det filtrerar bort framtida matcher som råkat få en match_players-rad (t.ex.
 // om någon öppnat live-rapporteringen i förväg) så de inte syns i statistiken.
-const PLAYED_MATCH_SQL = "(m.cancelled=0 AND (m.finished = 1 OR m.date <= ?))";
+const PLAYED_MATCH_SQL = `(m.cancelled=0 AND ${regularMatchSql()} AND (m.finished = 1 OR m.date <= ?))`;
 function todayStr() {
   return swedishToday();
 }

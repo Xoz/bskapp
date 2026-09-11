@@ -16,13 +16,15 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("matchutrymme med datab
     await sql.unsafe(`CREATE TEMP TABLE players(id int PRIMARY KEY, active int, preferred_position_primary text DEFAULT '', position text DEFAULT '');
       CREATE TEMP TABLE settings(key text PRIMARY KEY,value text);
       CREATE TEMP TABLE matches(id int PRIMARY KEY,date text,start_time text,periods int,period_minutes int,opponent text,group_id int,cancelled int,finished int);
+      CREATE TEMP TABLE groups(id int,parent_id int,group_type text);
+      ALTER TABLE matches ADD COLUMN match_type text DEFAULT 'seriespel', ADD COLUMN cup_name text DEFAULT '';
       CREATE TEMP TABLE match_players(match_id int,player_id int,minutes int);
       CREATE TEMP TABLE match_roster(match_id int,player_id int,selection_status text,callup_status text,selected_position text DEFAULT '');
       CREATE TEMP TABLE development_activities(id text PRIMARY KEY,match_id int,activity_date text,start_time text,activity_type text,title text,group_id int);
       CREATE TEMP TABLE development_activity_participation(activity_id text,player_id int,attendance_status text,position text DEFAULT '',updated_at text DEFAULT '');
       CREATE TEMP TABLE development_activity_callups(activity_id text,player_id int,attendance_status text);
       INSERT INTO players(id,active) VALUES(1,1),(2,1);
-      INSERT INTO matches SELECT id, to_char((now() AT TIME ZONE 'Europe/Stockholm')::date + delta,'YYYY-MM-DD'),'12:00',3,20,'Exempelmotstånd',1,cancelled,finished FROM (VALUES(1,-1,0,1),(2,1,0,0),(3,2,1,0),(4,2,0,0),(5,3,0,0)) v(id,delta,cancelled,finished);
+      INSERT INTO matches(id,date,start_time,periods,period_minutes,opponent,group_id,cancelled,finished) SELECT id, to_char((now() AT TIME ZONE 'Europe/Stockholm')::date + delta,'YYYY-MM-DD'),'12:00',3,20,'Exempelmotstånd',1,cancelled,finished FROM (VALUES(1,-1,0,1),(2,1,0,0),(3,2,1,0),(4,2,0,0),(5,3,0,0)) v(id,delta,cancelled,finished);
       INSERT INTO match_players VALUES(1,1,20),(1,2,0);
       INSERT INTO match_roster(match_id,player_id,selection_status,callup_status) VALUES(2,1,NULL,'accepted'),(3,1,'selected','accepted'),(4,1,'selected','declined'),(5,1,NULL,'pending');
       INSERT INTO development_activities SELECT 'a',NULL,date,'18:00','training','Exempelträning',1 FROM matches WHERE id=1;
@@ -80,6 +82,18 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("matchutrymme med datab
       await sql`DELETE FROM match_roster WHERE player_id>=2`;
       await sql`DELETE FROM players WHERE id>=3`;
       await sql`UPDATE matches SET period_minutes=20 WHERE id=2`;
+    }
+  });
+  it("utesluter spelade och framtida cuper samt nekar cup som batterimål",async()=>{
+    await sql`UPDATE matches SET match_type='cup' WHERE id=1`;
+    await sql`INSERT INTO settings VALUES('svenskalag_match_metadata:2','{"scope":"cup"}')`;
+    try {
+      const input=(await getMatchSpaceInputs([1])).get(1)!;
+      expect(input.events.map(e=>e.id)).toEqual(['match:5','training:a']);
+      await expect(getMatchSpaceInputs([1],2)).rejects.toThrow('tillgänglig');
+    } finally {
+      await sql`UPDATE matches SET match_type='seriespel' WHERE id=1`;
+      await sql`DELETE FROM settings WHERE key='svenskalag_match_metadata:2'`;
     }
   });
   it("sparar kapacitet och återläser utan att ändra deltagande eller kallelser",async()=>{

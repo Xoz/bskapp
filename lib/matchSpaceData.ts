@@ -1,3 +1,4 @@
+import { regularMatchSql } from "./regularMatches";
 import { matchMetadataKey, readMatchMetadata } from "./svenskalag/matchMetadata";
 import "server-only";
 import { sharedMatchMinutes, matchSpaceGoalkeeper, type MatchSpaceParticipant } from "./matchSpaceMinutes";
@@ -17,7 +18,7 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
   if (!ids.length) return new Map();
   if ((await Promise.all(ids.map(id => canAccessPlayer(id)))).some(ok => !ok)) throw new Error("Spelaråtkomst saknas.");
   const target = targetMatchId == null ? null : await get<{id: number; date: string; start_time: string | null; periods: number; period_minutes: number; opponent: string; group_id: number | null}>(
-    "SELECT id, date, start_time, periods, period_minutes, opponent, group_id FROM matches WHERE id=? AND cancelled=0 AND finished=0", [targetMatchId]);
+    `SELECT id, date, start_time, periods, period_minutes, opponent, group_id FROM matches m WHERE id=? AND cancelled=0 AND finished=0 AND ${regularMatchSql()}`, [targetMatchId]);
   if (targetMatchId != null && (!target || !(await canAccessGroup(target.group_id)))) throw new Error("Matchen är inte tillgänglig.");
   const now = Date.now();
   const targetStart = target ? swedishWallClockToEpoch(target.date, target.start_time || "12:00") : now;
@@ -49,7 +50,7 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
           WHERE pa.match_id=m.id AND pp.player_id=p.id AND pp.attendance_status='present'
             AND pp.position <> '' ORDER BY pp.updated_at DESC LIMIT 1) AS attendance_position,
         (${participated} AND (m.finished=1 OR m.date < ?)) AS played
-      FROM players p JOIN matches m ON m.date BETWEEN ? AND ? AND m.cancelled=0
+      FROM players p JOIN matches m ON m.date BETWEEN ? AND ? AND m.cancelled=0 AND ${regularMatchSql()}
       LEFT JOIN match_players mp ON mp.match_id=m.id AND mp.player_id=p.id
       LEFT JOIN match_roster mr ON mr.match_id=m.id AND mr.player_id=p.id
       WHERE (

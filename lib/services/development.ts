@@ -1,3 +1,4 @@
+import { regularMatchSql } from "../regularMatches";
 import "server-only";
 import {matchCallupCountsSql} from "../activityCallups";
 
@@ -703,8 +704,8 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
          (SELECT COUNT(DISTINCT ap.activity_id) FROM development_activity_participation ap JOIN development_activities da ON da.id = ap.activity_id WHERE ap.player_id = ? AND ap.attendance_status = 'present' AND da.activity_type = 'training') AS training_count,
          (SELECT COUNT(DISTINCT mp.match_id)
           FROM match_players mp JOIN matches m ON m.id = mp.match_id
-          WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)) AS match_count,
-         (SELECT COUNT(DISTINCT dac.activity_id) FROM development_activity_callups dac WHERE dac.player_id = ?) AS callup_count`,
+          WHERE ${regularMatchSql()} AND mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)) AS match_count,
+         (SELECT COUNT(DISTINCT dac.activity_id) FROM development_activity_callups dac JOIN development_activities ca ON ca.id=dac.activity_id WHERE dac.player_id = ? AND (ca.activity_type <> 'match' OR EXISTS (SELECT 1 FROM matches cm WHERE cm.id=ca.match_id AND ${regularMatchSql('cm')}))) AS callup_count`,
       [playerId, playerId, swedishToday(), playerId]
     ),
     all<{
@@ -722,7 +723,7 @@ export async function getMobilePlayer(actor: CurrentUser, playerId: number): Pro
        FROM match_players mp
        JOIN matches m ON m.id = mp.match_id
        LEFT JOIN groups g ON g.id = m.group_id
-       WHERE mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
+       WHERE ${regularMatchSql()} AND mp.player_id = ? AND (m.finished = 1 OR m.date <= ?)
        ORDER BY m.date DESC, m.start_time DESC NULLS LAST, m.id DESC
        LIMIT 30`,
       [playerId, swedishToday()]
@@ -1471,7 +1472,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
                  WHERE history_player.match_id = history.id AND history_player.player_id = p.id
                ) AS played
                FROM matches history
-               WHERE history.group_id = target.group_id
+               WHERE ${regularMatchSql("history")} AND history.group_id = target.group_id
                  AND history.date <= ? AND history.id IS DISTINCT FROM target.match_id
                  AND history.finished = 1
                ORDER BY history.date DESC, history.start_time DESC NULLS LAST, history.id DESC LIMIT 8
@@ -1482,21 +1483,21 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
                  WHERE history_player.match_id = history.id AND history_player.player_id = p.id
                ) AS played
                FROM matches history
-               WHERE history.group_id = target.group_id
+               WHERE ${regularMatchSql("history")} AND history.group_id = target.group_id
                  AND history.date <= ? AND history.id IS DISTINCT FROM target.match_id
                  AND history.finished = 1
                ORDER BY history.date DESC, history.start_time DESC NULLS LAST, history.id DESC LIMIT 3
              ) recent3 WHERE recent3.played) AS selected_last_three,
             (SELECT COUNT(DISTINCT played_mp.match_id)
-             FROM match_players played_mp
-             WHERE played_mp.player_id = p.id) AS match_count,
-            (SELECT COUNT(*) FROM match_roster history_roster WHERE history_roster.player_id = p.id AND history_roster.callup_status IS NOT NULL) AS callup_count,
+             FROM match_players played_mp JOIN matches pm ON pm.id=played_mp.match_id
+             WHERE ${regularMatchSql("pm")} AND played_mp.player_id = p.id) AS match_count,
+            (SELECT COUNT(*) FROM match_roster history_roster JOIN matches hm ON hm.id=history_roster.match_id WHERE ${regularMatchSql("hm")} AND history_roster.player_id = p.id AND history_roster.callup_status IS NOT NULL) AS callup_count,
             (SELECT COUNT(*) FROM match_roster future_roster JOIN matches future_match ON future_match.id = future_roster.match_id
              WHERE future_roster.player_id = p.id AND future_roster.selection_status = 'selected'
-               AND future_match.date >= ? AND future_match.id IS DISTINCT FROM target.match_id) AS planned_upcoming_count,
+               AND ${regularMatchSql("future_match")} AND future_match.date >= ? AND future_match.id IS DISTINCT FROM target.match_id) AS planned_upcoming_count,
             (SELECT COUNT(DISTINCT played_match.id)
              FROM matches played_match
-             WHERE played_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND target.activity_date::date
+             WHERE ${regularMatchSql("played_match")} AND played_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND target.activity_date::date
                AND (played_match.finished = 1 OR played_match.date::date < target.activity_date::date)
                AND EXISTS (
                  SELECT 1 FROM match_players played
@@ -1504,7 +1505,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
                )) AS recent_match_count,
             (SELECT COUNT(DISTINCT upcoming_match.id)
              FROM matches upcoming_match
-             WHERE upcoming_match.date::date BETWEEN target.activity_date::date AND (target.activity_date::date + INTERVAL '7 days')
+             WHERE ${regularMatchSql("upcoming_match")} AND upcoming_match.date::date BETWEEN target.activity_date::date AND (target.activity_date::date + INTERVAL '7 days')
                AND COALESCE(upcoming_match.finished, 0) = 0
                AND (
                  EXISTS (SELECT 1 FROM match_roster upcoming_roster
@@ -1513,7 +1514,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
                )) AS upcoming_match_count,
             (SELECT COUNT(DISTINCT window_match.id)
              FROM matches window_match
-             WHERE window_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND (target.activity_date::date + INTERVAL '7 days')
+             WHERE ${regularMatchSql("window_match")} AND window_match.date::date BETWEEN (target.activity_date::date - INTERVAL '7 days') AND (target.activity_date::date + INTERVAL '7 days')
                AND (
                  EXISTS (SELECT 1 FROM match_players played WHERE played.match_id = window_match.id AND played.player_id = p.id)
                  OR EXISTS (SELECT 1 FROM match_roster window_roster
@@ -1523,7 +1524,7 @@ export async function getMobileSelectionWorkspace(actor: CurrentUser, activityId
             (SELECT MAX(history.date)
              FROM match_players history_player
              JOIN matches history ON history.id = history_player.match_id
-             WHERE history_player.player_id = p.id AND history.date <= ? AND history.finished = 1) AS last_selected_date
+             WHERE ${regularMatchSql("history")} AND history_player.player_id = p.id AND history.date <= ? AND history.finished = 1) AS last_selected_date
      FROM players p
      LEFT JOIN development_activities target ON target.id = ?
      LEFT JOIN match_roster roster ON roster.match_id = target.match_id AND roster.player_id = p.id

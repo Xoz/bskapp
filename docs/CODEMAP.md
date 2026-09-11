@@ -261,3 +261,5 @@ Terminologi 2026-09-10: `matchRosterLabel` benämner selected-underlaget Lagupps
 `lib/svenskalag/matchMetadata.ts`: klassificering/validering/läsning av tävlings-id, matchtyp och spelform; settings `svenskalag_match_metadata:<matchId>`. `scripts/svenskalag/check-match-types.ts` provhämtar Gul/Grön utan verksamhetsskrivningar. Cupplan i `docs/CUP_PLAN.md`.
 
 Matchplanens spartransport: `lib/matchPlan/client.ts` → `app/api/matches/[id]/plan/route.ts` → befintlig `lib/matchPlan/actions.ts`. Fast POST-adress utan byggberoende action-id, samma origin krävs; behörighet, truppvalidering och revisionsskydd ligger kvar i serverfunktionen.
+
+2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.
