@@ -40,8 +40,8 @@ export default async function PlayersPage({ searchParams }: {
   const pendingEvaluations = user.permissions.includes("manage_evaluations") && (selectedTeam === "Gul" || selectedTeam === null)
     ? await getPendingMatchEvaluations() : [];
   const today = swedishToday();
-  const statsTeam = selectedTeam === UNASSIGNED_TEAM ? null : selectedTeam;
-  const statsQuery = playerDirectoryStatsQuery(visiblePlayers.map(({ player }) => player.id), today, statsTeam);
+  // Lagfiltret väljer spelare; deras matcher och lån räknas över alla lag.
+  const statsQuery = playerDirectoryStatsQuery(visiblePlayers.map(({ player }) => player.id), today, null);
   const stats = new Map((await all<{ player_id: number; match_count: number; callup_count: number }>(statsQuery.sql, statsQuery.args))
     .map((row) => [row.player_id, row]));
   const teamCount = (teamName: string) => players.filter(({ teams }) => teams.some((team) => team.name === teamName)).length;
@@ -89,7 +89,8 @@ export default async function PlayersPage({ searchParams }: {
         <div className="bsk-link-list">{pendingEvaluations.map((evaluation) => <Link key={evaluation.id} href={`/matcher/${evaluation.id}/utvardera`} className="bsk-link-row"><span className="min-w-0 flex-1"><strong>{evaluation.opponent}</strong><small>{evaluation.date} · {evaluation.evaluated} av {evaluation.total} spelare bedömda</small></span><span aria-hidden>›</span></Link>)}</div>
       </details>}
       <p className="core-section-note">
-        Statistik {today.slice(0, 4)} · {statsTeam ? statsTeam : "Alla lag, inklusive matcher utan lagkoppling"}.
+        Statistik {today.slice(0, 4)} · Spelarens matcher i alla lag, även lån och matcher utan lagkoppling.
+        {" "}Lagfiltret ovan väljer vilka spelare som visas.
         {" "}Registrerade spelade matcher till och med idag. Matchkallelser omfattar även kommande matcher och alla svar (ja, nej och obesvarat).
         {" "}Cuper räknas separat och ingår inte här. Inställda och borttagna matcher ingår inte. Siffrorna bygger på importerade uppgifter; historiken kan vara ofullständig.
       </p>

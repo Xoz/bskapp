@@ -560,3 +560,5 @@ Rättar att Idag bara kände igen numeriska nivåer medan Matcher bara kände ig
 ## Matchnivåer publicerade och verifierade – 2026-09-11
 
 Commit 78a2a121ced0be404092a8518e9a98f20215dec7 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34569895315. 203 lokala tester inklusive PostgreSQL samt typkontroll godkända. Deployens tester, produktionsbygge och hälsokontroller godkända. Inloggad kontroll av Idag och Matcher visar AIK FF 2 (id 7) som Medel och Örby IS Blå från Medel (id 149) som Svår i båda vyerna. Användaren benämnde den andra matchen Örebro; den aktuella matchen i Idag är Örby. Ingen matchdata ändrad. Tillfällig lokal testdatabas borttagen.
+
+2026-09-11: Spelarlistans lagfilter väljer endast vilka spelare som visas. Matchantal och matchkallelser räknas för spelaren i alla lag, inklusive lån/utan lagkoppling, innevarande år utan cuper. Karolina hade 2 Gulmatcher + 5 Grönmatcher; tidigare visade listan 2 och profilen 7. Nu visar listan totalen 7. Inga deltaganden eller kallelsesvar ändras.
