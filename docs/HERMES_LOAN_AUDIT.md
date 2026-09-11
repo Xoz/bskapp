@@ -1,5 +1,7 @@
 # Hermes låneunderlag – granskning 2026-09-11
 
+**Aktuell status:** Implementerat och aktiverat 2026-09-11 via MCP laneunderlag. Se MAIN_RELEASE.md och integrations/hermes-bsk/README.md. Nedan är den ursprungliga granskningen och ändringsplanen.
+
 ## Omfattning och slutsats
 
 Användaren bad om granskning av Hermes svar om lån Gul → Grön den 12 september.

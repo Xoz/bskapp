@@ -24,4 +24,35 @@ text=r.get('final_response',r.get('response',''))
 print(json.dumps({'model':model,'calls':calls,'answer':text,'completed':r.get('completed')},ensure_ascii=False))
 assert any('laneunderlag' in str(name) for name in calls),'Model did not call loan tool'
 
-# Svarets semantik granskas av tränaren/testaren; verktygsbryggan verifieras ovan.
+def answers(value):
+    if isinstance(value,dict):
+        if isinstance(value.get('answerText'),str): yield value['answerText']
+        for item in value.values(): yield from answers(item)
+    elif isinstance(value,list):
+        for item in value: yield from answers(item)
+    elif isinstance(value,str) and value[:1] in ('{','['):
+        try: yield from answers(json.loads(value))
+        except ValueError: pass
+# Hermes brygga kan kapsla tool-resultat som text; jämför också med en
+# oberoende aktuell läsning av samma målmatch. Hämtningstid skiljer sig.
+import re,urllib.request
+executed=[]
+for call in calls:
+    name=call.get('name','')
+    try: arguments=json.loads(call.get('arguments','{}'))
+    except ValueError: continue
+    if name=='tool_call' and arguments.get('name')=='mcp__bsk__laneunderlag':
+        executed.append(arguments.get('arguments',{}))
+    elif name=='mcp__bsk__laneunderlag': executed.append(arguments)
+ids=[a['mal_match_id'] for a in executed if type(a.get('mal_match_id')) is int]
+assert ids,'Ingen faktisk läsning av en vald målmatch'
+binding=json.loads(Path('/etc/bsk-hermes/loans.json').read_text())
+req=urllib.request.Request('http://127.0.0.1:3001/api/hermes/loans?matchId='+str(ids[-1]),headers={'Authorization':'Bearer '+binding['token']})
+with urllib.request.urlopen(req,timeout=25) as result: expected=json.load(result)['answerText']
+def normalize(value):
+    return re.sub(r'hämtat \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} svensk tid', 'hämtat [tid] svensk tid',value.strip())
+if normalize(text)!=normalize(expected):
+    import difflib
+    print('DIFF', '\n'.join(difflib.unified_diff(normalize(expected).splitlines(),normalize(text).splitlines())))
+assert normalize(text)==normalize(expected),'Modellen ändrade MCP:s svar eller underlaget ändrades mellan läsningarna'
+print('VERIFIED: actual loan tool called; final answer equals MCP answerText apart from fetch timestamp')

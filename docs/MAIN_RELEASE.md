@@ -206,3 +206,17 @@ Commit c4cfdf86 publicerad via godkänd körning https://github.com/Xoz/bskapp/a
 ## Batteri på en rad publicerat – 2026-09-11
 
 Commit 4c2ba43e publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34571235679 (föregående f76cea9b via 34571112391). Typkontroll och deployens tester, bygge och hälsokontroller godkända. Inloggad datorvy visuellt kontrollerad. Vid 390 px ryms alla tolv rader utan horisontellt överflöde; höjd 44–45 px mot tidigare 76 px. Namn, stapel och procent ligger på en rad. Grön lägstanivå och dämpade diagonala streck fram till nuläget ersätter guldprognosen. Ingen beräkning eller spelardata ändrad.
+
+## Hermes MCP: låneunderlag aktiverat – 2026-09-11
+
+Privata BSK-MCP har nu nio läsverktyg inklusive laneunderlag. Gul är källag och Grön enda mållag; kandidatens åtaganden över laggränser och samma batteriberäkning som appen läses via separat autentiserad GET-route. Kallelsesvar markerar gäster. Gemensam reader bibehåller webbens behörighetskontroll. Inga bastabellgrants eller privata utvecklingsbehörigheter har utökats. Konto, lag och rättigheter kontrolleras vid varje anrop. Hemligheten finns endast i skyddad VPS-fil /etc/bsk-hermes/loans.json.
+
+Webbrelease 43bdf862: https://github.com/Xoz/bskapp/actions/runs/34573456315 (godkänd). Föregående steg bddebe27 och c0b9b9c1 publicerade med godkända kontroller. 209 lokala tester inklusive PostgreSQL före sista textformatteringen, åtta riktade modellerings-/token-/svarstexttester efter, 13 isolerade DB/MCP-tester och tre Python-bryggtester godkända. Produktionsendpoint och faktisk stdio verifierade med nekad åtkomst utan token och rätt kandidatavgränsning. Separat lokal testdatabas borttagen.
+
+MCP-release /opt/bsk/hermes-mcp-releases/loans-20260911, aktiv via /opt/bsk/hermes-mcp. Den återanvänder den låsta Pythonmiljön i 20260910T205637Z som därför måste bevaras. Privata allowlist och agent.system_prompt/SOUL uppdaterade; privata gatewayen omladdad och Photon återansluten. Discordprocessen oförändrad. Backup: /root/backups/bsk-loans-20260911. Återgång: återställ bara ändrade BSK-fält/instruktioner och tidigare kodlänk; ta bort tokenfilen för att stänga läsroutern.
+
+Modellprov med den konfigurerade kimi-k2.6 och motstridig tidigare assistenthistorik visade att råa data inte räcker: modellen räknade fel antal och beskrev kallelsesvar som faktiskt spelande. Därför formar lib/hermes/loanAnswer.ts nu answerText och categoryCounts. Privata Hermes instrueras att återge answerText, utan omräkning eller omskrivning. Senaste observerade modellsvar använde verktyget och återgav rätt grupper och planerade ja-svar. Ingen testfråga skickades till externa mottagare och inget långtidsminne användes; gatewayens ordinarie startnotis förekommer vid omladdning.
+
+Tidsmarginalen är ett synligt antagande (30 min samling + 30 min resa + 10 min pauser), inte verifierad restid. Underlaget varnar fortsatt för Gröns olösta personkoppling och osäker målvaktsfördelning. Kallelser och matchplaner ändrades inte. Full plan och verifieringsverktyg finns i docs/HERMES_LOAN_AUDIT.md och integrations/hermes-bsk/README.md.
+
+Slutligt modellprov godkänt: faktisk mcp__bsk__laneunderlag-dispatch med målmatch-id verifierad, och modellsvar matchar MCP answerText exakt bortsett från hämtningstid. Provet använde motstridig tidigare assistenthistorik och den ordinarie konfigurerade modellen.
