@@ -589,3 +589,14 @@ Slutligt modellprov godkänt: faktisk mcp__bsk__laneunderlag-dispatch med målma
 ## Förbättrad spelarprofil – 2026-09-11
 
 Genomförd i separat arbetskopia enligt användarens mål: kompakt identitet, faktiskt trädfokus först, en trädlänk, matchutrymme utan underlagsvarning per spelare, observationer/samtalsuppföljning och rättvisande matchbedömningsetiketter. Årsstatistik delas med spelarlistan; faktisk matchtyp, tryckbar lagfördelning, äldre historik och tydlig 28-dagarsnärvaro. Retur till listan behåller lag/sökning och spelarankare. Behörigheter bevarade. Befintligt opublicerat observationsarbete i ursprungskatalogen lämnat orört. 213 tester inklusive PostgreSQL och lokalt produktionsbygge godkända; Playwright på fyra bredder, mörkt läge och behörighetsgränser. Publicering återstår. Se docs/PLAYER_PROFILE_2026-09-11.md.
+
+
+## Spelarprofil publicerad och verifierad – 2026-09-11
+
+Kodcommit a7d07bc7e1ad0e1cfbdc0fe94b6484d3740f4d50 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34592449692. Backup: /opt/bsk/backups/main-a7d07bc7e1ad.upNaLo. Ingen migration.
+
+213 lokala tester inklusive samtliga PostgreSQL-prov, typkontroll och produktionsbygge godkända. Playwright mot både utvecklingsserver och färdigt produktionspaket: 320/390/768/1280 px, mörkt läge, tomt/ifyllt träd, en trädlänk, statistik/lagfördelning, återgång med lag/sökning/spelarankare, trädlänkens retur, positionsöppning, nekad privat åtkomst och lagisolering. VPS-körningen: 190 tester godkända, 23 databasberoende tester överhoppade där; dessa kördes lokalt. Deployens bygge, datagranskning och hälsokontroller godkända.
+
+Inloggad produktion verifierad på dator och 390 px: kompakt identitet, fokus först, trädlänk och kompakt batteri utan spelarvarning. Profil och lista har nu samma match- och kallelseantal; matchernas lagfördelning öppnas med tryck. Sökning/lag/spelarankare bevaras vid återgång. Inga verkliga kapaciteter, kallelser, närvaroposter, bedömningar eller samtal ändrades vid kontrollen. Tillfälliga lokala testdatabaser och dev-server borttagna/stoppade.
+
+Leveransens rena arbetskopia finns i BSK/bsk-profile-improvements, branch codex/player-profile-improvements. Ursprungskatalogens pågående observations-/offlinearbete har bevarats; denna release använder den publicerade utvecklingskärnans observationer. Se docs/PLAYER_PROFILE_2026-09-11.md.

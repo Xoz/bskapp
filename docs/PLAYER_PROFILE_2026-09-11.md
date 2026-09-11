@@ -68,4 +68,6 @@ observationer. Ingen ny synkvarningsyta införs.
   använd aldrig riktig miljöfil. Schemat initieras av appen före testet.
 - Skärmbilder och testloggar är lokala kontrollartefakter under `/tmp`.
 
-Publiceringsstatus dokumenteras efter driftkontrollen i PROJECT_CONTEXT.md.
+Publicerad och inloggat verifierad i produktion: a7d07bc7, godkänd körning
+https://github.com/Xoz/bskapp/actions/runs/34592449692.
+Driftprotokoll finns i PROJECT_CONTEXT.md och MAIN_RELEASE.md.
