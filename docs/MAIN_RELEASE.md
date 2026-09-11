@@ -182,3 +182,7 @@ Commit 1e65ca1fb35224b989ec751fce5c0dfd71bd4d0f publicerad i webbappen, godkänd
 ## Kompakt placering publicerad – 2026-09-10
 
 Commit e393ef2696bee5b37c06707f059e4c0659e82505 publicerad, godkänd körning https://github.com/Xoz/bskapp/actions/runs/34533764459. Positionens stora ruta med dropdown/återställning borttagen. Spelare att placera visas som mindre knappar med små tröjor och kortnamn; fullständiga namn finns kvar för tillgänglighet. Liten textknapp kan ta vald spelare av planen. Typkontroll och publiceringskontroller godkända, inloggad visuell kontroll av AIK-matchen godkänd. Inga matchplaner eller verksamhetsuppgifter ändrade vid produktionskontrollen.
+
+## Matchplanens sparrättning publicerad – 2026-09-11
+
+Commit 179f056df52ff7e1f8b92169a32a0495eab70115 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34566757310. Aktiv release /opt/bsk/releases/179f056df52f.maN76h. 188 tester inklusive PostgreSQL samt lokalt produktionsbygge godkända; deployens tester, bygge och hälsokontroller godkända. Inloggad AIK-sida kontrollerad i separat flik; visar ingen sparad matchplan. Nya API-adressen svarar med behörighetsfel utan session som väntat. Ingen riktig matchplan sparad eller ändrad under kontrollen; användarens eventuella osparade sida har inte laddats om. Gamla öppna klienter behöver en omladdning efter att uppställning/texter tagits till vara.
