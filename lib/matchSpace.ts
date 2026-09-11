@@ -1,5 +1,5 @@
-/** Tränarens planeringsmodell v2. Poängen är antaganden, inte uppmätt ork. */
-export const MATCH_SPACE = { defaultCapacity: 100, recoveryPerDay: 20, matchPerMinute: 0.1, trainingPerMinute: 0.05, reserve: 0.4, caution: 0.6 } as const;
+/** Tränarens planeringsmodell v3. Poängen är antaganden, inte uppmätt ork. */
+export const MATCH_SPACE = { defaultCapacity: 100, recoveryPerDay: 20, matchPerMinute: 0.75, trainingPerMinute: 0.25, reserve: 0.4, caution: 0.5, lowBatteryMatchExtra: 0.5 } as const;
 export type SpaceLevel = "normal" | "maximum" | "high";
 export type SpaceEvent = {
   id: string; title: string; start: number; duration: number; minutes: number;
@@ -27,13 +27,29 @@ export function forecastMatchSpace(input: SpaceInput, targetMinutes?: number): S
   const events = [...new Map(input.events.filter(e => e.id !== target?.id).map(e => [e.id, e])).values()];
   if (target) events.push(target);
   events.sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
-  const cost = (e: SpaceEvent) => e.minutes * (e.kind === "match" ? MATCH_SPACE.matchPerMinute : MATCH_SPACE.trainingPerMinute);
+  const spend = (balance: number, e: SpaceEvent) => {
+    let load = e.minutes * (e.kind === "match" ? MATCH_SPACE.matchPerMinute : MATCH_SPACE.trainingPerMinute);
+    if (e.kind === "training") return balance - load;
+    const threshold = capacity * MATCH_SPACE.caution;
+    // Först den del som spelas över gränsen, utan extra kostnad.
+    const ordinary = Math.min(load, Math.max(0, balance - threshold));
+    balance -= ordinary; load -= ordinary;
+    if (load <= 0) return balance;
+    const extra = MATCH_SPACE.lowBatteryMatchExtra;
+    if (balance <= 0) return balance - load * (1 + extra);
+    // Exakt integration: kostnaden stiger kontinuerligt från 1× vid 50 %
+    // till 1,5× vid 0 %. Skuld under noll behålls med samma maximala faktor.
+    const equilibrium = threshold * (1 + 1 / extra);
+    const toZero = threshold / extra * Math.log(equilibrium / (equilibrium - balance));
+    if (load >= toZero) return -(load - toZero) * (1 + extra);
+    return equilibrium + (balance - equilibrium) * Math.exp(extra * load / threshold);
+  };
   const recover = (balance: number, elapsed: number) => Math.min(capacity, balance + Math.max(0, elapsed) / 86400000 * MATCH_SPACE.recoveryPerDay);
   const run = (until: number, actualOnly = false) => {
     let balance = capacity, busyUntil = -Infinity;
     for (const event of events) {
       if (event.start > until || (actualOnly && event.planned)) continue;
-      balance = recover(balance, event.start - busyUntil) - cost(event);
+      balance = spend(recover(balance, event.start - busyUntil), event);
       busyUntil = Math.max(busyUntil, event.start + (event.minutes > 0 ? event.duration : 0) * 60000);
     }
     return recover(balance, until - busyUntil);
@@ -44,7 +60,7 @@ export function forecastMatchSpace(input: SpaceInput, targetMinutes?: number): S
   for (const event of events) {
     balance = recover(balance, event.start - busyUntil);
     if (event.id === target?.id) before = balance;
-    balance -= cost(event);
+    balance = spend(balance, event);
     if (event.id === target?.id) after = balance;
     if (event.start >= (target?.start ?? input.now)) {
       lowest = Math.min(lowest, balance);

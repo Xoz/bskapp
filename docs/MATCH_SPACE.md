@@ -6,13 +6,13 @@ tränare med `manage_squads` och spelaråtkomst kan ställa 50–150 heltalspoä
 på spelarprofilen (exempelvis 80 eller 125). Inga individer har tilldelats
 avvikande kapacitet i produktion. Samma återhämtningstakt gäller alla.
 
-## Aktuella värden v2 – 2026-09-11
+## Aktuella värden v3 – 2026-09-11
 
 - Återhämtning: 20 poäng per faktiskt dygn utanför aktivitetsintervall, högst
   individuell kapacitet. Större batteri ger inte snabbare återhämtning.
-- Match: 0,1 poäng per spelminut. Träning: 0,05 poäng per minut.
+- Match: 0,75 poäng per spelminut före tillägg. Träning: 0,25 poäng per minut.
 - Reserv: 40 % av individuell kapacitet. Under reserv eller tidskrock ger
-  ”Prioritera vila”. Under 60 % ger ”Begränsat utrymme”; annars ”Gott utrymme”.
+  ”Prioritera vila”. Under 50 % ger ”Begränsat utrymme”; annars ”Gott utrymme”.
 - Detta är justerbara kodkonstanter för en första planeringsmodell, inte
   medicinska/fysiologiska mätvärden eller ett prestationsbetyg.
 
@@ -145,3 +145,11 @@ Synkförbättring 2026-09-11: verifierad spelform i `svenskalag_match_metadata:<
 ## Omkalibrering efter uttagningsprov – 2026-09-11
 
 Användaren kräver att ordinarie träningar och två matcher kan ingå utan batterivarning. Aktivitetskostnaderna har sänkts till en femtedel; individuell kapacitet, återhämtning och procentgränser kvarstår. Testad basvecka: tre träningar à 60 minuter och två fulla matcher à 75 minuter samma dag (även målvakt), med den sista träningen samma dag. Samtliga tillåtna kapaciteter 50–150 ger minst 60 procent och normal batterinivå. Detta är en vald planeringskalibrering, inte uppmätt fysiologi. Extra belastning räknas fortfarande och tidskrockar visas separat. Nivåpar och högst två matcher per dag är fortsatt separata uttagningsregler.
+
+## Ny referensvecka och olinjär matchkostnad – 2026-09-11
+
+Ersätter föregående omkalibrering: användaren valde ordinarie träningar och en match lördag + en söndag som cirka 50 procent vid standardkapacitet. Exakt kalibreringsfall: kapacitet 100, tre 60-minutersträningar mån/ons/fre kl. 18, två 60-minutersmatcher lör/sön kl. 12 med 45 spelminuter per match (nio spelare i 7v7). Utfallet efter söndagsmatchen är cirka 51 procent. Andra tider, full målvaktstid, spelform, kapacitet och extra aktiviteter ger andra värden.
+
+Matchkostnad 0,75 poäng per spelminut; träning 0,25. Återhämtning fortsatt 20 poäng per vilodygn. Under 50 procent ökar matchkostnaden kontinuerligt: faktor 1 vid 50 procent, 1,25 vid 25 procent och högst 1,5 vid noll eller negativ balans. Förloppet integreras exakt, även när gränsen passeras mitt i matchen; uppdelning av samma speltid ändrar inte resultatet. Träning räknas linjärt. Samma modell används för faktisk laddning och planerad prognos.
+
+Under 50 procent ger varning och kräver aktivt tränarval i uttagningen, även för enkelmatch. Exakt 50 procent är normalt. Under 40 procent visas starkare vilovarning, men lågt batteri kan godkännas genom aktivt tränarval; den tidigare absoluta batterispärren är borttagen. Tidskrockar varnas och högst två matcher per dag kvarstår som spärr. Historiska kalibreringsresultat ovan är ersatta, inga aktivitets- eller spelarinställningar skrivs om.

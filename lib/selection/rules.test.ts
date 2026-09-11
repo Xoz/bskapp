@@ -36,21 +36,22 @@ describe('erbjudna matcher',()=>{
 describe('dubbelmatch',()=>{
  const other=match(2,{date:'2026-09-18',time:'18:45',reply:'accepted',level:2});
  const second={id:'match:2',title:'Exempel andra',start:targetStart+75*60000,duration:60,minutes:45,kind:'match' as const,planned:true,estimated:true};
- it('kräver specifik nivåkombination och 60 procent för automatval',()=>{
+ it('kräver specifik nivåkombination och 50 procent för automatval',()=>{
   const e=evidence({matches:[other]});
   expect(assessSelection(e,space({events:[second]})).automatic).toBe(false);
   e.policy.pairs=['2+3'];
-  expect(assessSelection(e,space({events:[second]})).automatic).toBe(true);
+  expect(assessSelection(e,space({events:[second]})).automatic).toBe(false);
   // Gränskontroll med kvarvarande belastning från tidigare aktiviteter.
-  const previous={...second,id:'training:heavy',kind:'training' as const,start:targetStart-632*60000,duration:632,minutes:632};
-  expect(assessSelection(e,space({events:[previous,second]})).blocks).toContain('Dubbelmatch 40–59 % – kräver aktivt tränarval');
+  const previous={...second,id:'training:heavy',kind:'training' as const,start:targetStart-40*60000,duration:40,minutes:40};
+  const loaded=space({events:[previous,{...second,minutes:30}]});loaded.target!.minutes=30;
+  expect(assessSelection(e,loaded).blocks).toContain('Dubbelmatch 40–49 % – kräver aktivt tränarval');
   const s=space({events:[{...second,minutes:30}]});s.target!.minutes=30;
   expect(assessSelection(e,s).automatic).toBe(true);
  });
  it('bedömer hela dagen även när målmatchen är sist och normaliserar individuell kapacitet',()=>{
   const e=evidence({target:other,matches:[match(1,{date:'2026-09-18',reply:'accepted'})],policy:{...emptyPolicy(),pairs:['2+3']}});
   const s=space({capacity:80,events:[space().target!],target:second});
-  expect(assessSelection(e,s).automatic).toBe(true);
+  expect(assessSelection(e,s).automatic).toBe(false);
  });
  it('tredje match eller okända tider godtas inte automatiskt',()=>{
   expect(assessSelection(evidence({matches:[other,match(3,{date:other.date,reply:'pending'})]}),space()).blocks).toContain('Högst två matcher samma dag');

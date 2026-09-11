@@ -19,7 +19,7 @@ export default function MatchSpacePlanner({ players }: {players: {id:number; nam
     <details className="core-panel p-4 text-sm">
       <summary className="cursor-pointer">Så räknas matchutrymmet</summary>
       <p className="mt-3">Prognosen räknar med denna match en gång för varje spelare, även om hon ännu inte är kallad. Därefter kontrolleras planerade aktiviteter under sju dagar. Kallelsesvaret visas separat.</p>
-      <p className="mt-2">Kapaciteten ställs in på spelarprofilen. Fullt batteri visas alltid som 100 %, även med individuell justering. Batteriet förbrukas vid spel och fylls på mellan aktiviteter. Under 40 % av kapaciteten: prioritera vila. Under 60 %: begränsat utrymme.</p>
+      <p className="mt-2">Kapaciteten ställs in på spelarprofilen. Fullt batteri visas alltid som 100 %, även med individuell justering. Batteriet förbrukas vid spel och fylls på mellan aktiviteter. Under 40 % av kapaciteten: prioritera vila. Under 50 %: begränsat utrymme.</p>
       <p className="mt-2">Uppskattning: utespelarna delar på 6 × 60 minuter i 7 mot 7 eller 8 × 75 i 9 mot 9, delat på deltagarna utom målvakten. Målvakten får full matchtid. Träning räknas som 60 minuter. Historiken börjar för 28 dagar sedan med antaget fullt batteri. Andra idrotter och saknad närvaro ingår inte. Ändrad speltid här är bara ett scenario och sparas inte i matchplanen.</p>
     </details>
     {rows.map(({id,name,team:playerTeam,input,status,forecast:f}) => <article key={id} className="core-panel p-4 space-y-3">

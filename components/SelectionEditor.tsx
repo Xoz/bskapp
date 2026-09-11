@@ -209,7 +209,7 @@ export default function SelectionEditor({
         )}
       </section>
 
-      <details className="text-sm"><summary className="cursor-pointer">Regler för uttagningsförslag</summary><p className="mt-2">Förslaget gäller nio spelare. Högst två matcher samma dag med godkänd nivåkombination och minst 60 % batteri. 40–59 % kräver ditt aktiva val. Tidsmarginal: 15 min på samma plats, annars 60 min; restiden är ett antagande. Befintliga val och ja-svar bevaras.</p></details>
+      <details className="text-sm"><summary className="cursor-pointer">Regler för uttagningsförslag</summary><p className="mt-2">Förslaget gäller nio spelare. Högst två matcher samma dag med godkänd nivåkombination och minst 50 % batteri. Under 50 % kräver ditt aktiva val. Tidsmarginal: 15 min på samma plats, annars 60 min; restiden är ett antagande. Befintliga val och ja-svar bevaras.</p></details>
       <form action={async form=>{setSaving(true);setSaveError("");try{await action(form);}catch(error){setSaveError(error instanceof Error?error.message:"Kunde inte spara uttagningen.");}finally{setSaving(false);}}} className="selection-workspace">
         <PilotStartField />
         <input type="hidden" name="source_revision" value={openedSourceRevision}/>
@@ -353,7 +353,7 @@ export default function SelectionEditor({
           </div>
         </div>
         <p role="alert" className="text-sm">{saveError}</p>
-        {selected.some(c=>(assessments.get(c.player.id)?.blocks.length??0)>0) && <label className="flex gap-2 items-start text-sm p-3"><input name="selection_review_ack" value="1" type="checkbox" checked={reviewAck} onChange={e=>setReviewAck(e.target.checked)}/>Jag har granskat varningarna och väljer dessa spelare aktivt. Fler än två matcher eller dubbelmatch under 40 % kan inte läggas till.</label>}
+        {selected.some(c=>(assessments.get(c.player.id)?.blocks.length??0)>0) && <label className="flex gap-2 items-start text-sm p-3"><input name="selection_review_ack" value="1" type="checkbox" checked={reviewAck} onChange={e=>setReviewAck(e.target.checked)}/>Jag har granskat varningarna och väljer dessa spelare aktivt. Fler än två matcher samma dag kan inte läggas till.</label>}
         <div className="selection-footer">
           <span>{selected.length} spelare valda</span>
           <button type="submit" name="intent" value="save" disabled={saving} className="btn-secondary selection-save-button">Spara utkast</button>

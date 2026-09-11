@@ -12,7 +12,7 @@ export default function SelectionPolicyForm({playerId,evidence}:{playerId:number
   <form className="mt-4 space-y-4" action={form=>start(async()=>{try{const r=await saveSelectionPolicy(playerId,form);setMessage(r.message);if(r.ok&&r.revision)setRevision(r.revision);}catch{setMessage('Kunde inte spara. Kontrollera din behörighet och försök igen.');}})}>
    <input type="hidden" name="revision" value={revision}/>
    <fieldset><legend className="font-semibold">Tillåtna kombinationer samma dag</legend>
-    <p className="text-sm mt-1">Högst två matcher. Båda måste fungera tidsmässigt och batteriet måste vara minst 60 % för automatförslag. 40–59 % kräver ditt aktiva val. Ingen markering innebär tränarbedömning för alla dubbelmatcher.</p>
+    <p className="text-sm mt-1">Högst två matcher. Båda måste fungera tidsmässigt och batteriet måste vara minst 50 % för automatförslag. Under 50 % kräver ditt aktiva val. Ingen markering innebär tränarbedömning för alla dubbelmatcher.</p>
     <p className="text-sm mt-2">En godkänd kombination tillåter också lättare matcher. Svår + Svår tillåter alla kombinationer. Avmarkerar du en lättare kombination tas även svårare godkännanden som förutsätter den bort.</p>
     <div className="grid gap-2 sm:grid-cols-2 mt-3">{DOUBLE_PAIRS.map(pair=><label key={pair.key} className="flex items-center gap-2"><input type="checkbox" name="pair" value={pair.key} checked={pairs.includes(pair.key)} onChange={e=>{setPairs(current=>toggleDoublePair(current,pair.key,e.target.checked));setMessage('');}}/>{pair.label}</label>)}</div>
     <button type="button" className="text-sm underline mt-2" onClick={()=>{setPairs([]);setMessage('');}}>Rensa kombinationer</button>

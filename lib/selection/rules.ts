@@ -74,6 +74,7 @@ export function assessSelection(e:Evidence,space:SpaceInput,minutes?:number) {
   const sameDay=e.matches.filter(m=>m.id!==e.target?.id&&m.date===e.target?.date&&(m.played||m.reply!=='declined'&&(m.selected||m.reply==='accepted'||m.reply==='pending')));
   const forecast=forecastMatchSpace(space,minutes);
   if(forecast.level==='high')blocks.push('Prioritera vila eller lös aktivitetskrocken');
+  else if(forecast.lowestRatio<0.5)blocks.push('Batteri under 50 % – kräver aktivt tränarval');
   if(sameDay.length>=2)blocks.push('Högst två matcher samma dag');
   if(sameDay.length===1){
     const other=sameDay[0],pair=e.target?.level&&other.level?pairKey(e.target.level,other.level):null;
@@ -89,7 +90,7 @@ export function assessSelection(e:Evidence,space:SpaceInput,minutes?:number) {
     const combined=forecastMatchSpace({...space,now:firstStart,events,target:first});
     const rawPercent=combined.lowestRatio*100;
     reasons.push(`Lägsta batteriprognos med båda: ${batteryPercent(combined.lowest,combined.capacity)} %`);
-    if(rawPercent<60)blocks.push(rawPercent<40?'Dubbelmatch under 40 % – prioritera vila':'Dubbelmatch 40–59 % – kräver aktivt tränarval');
+    if(rawPercent<50)blocks.push(rawPercent<40?'Dubbelmatch under 40 % – prioritera vila':'Dubbelmatch 40–49 % – kräver aktivt tränarval');
     if(other.reply==='pending')cautions.push('Den andra matchens kallelse är obesvarad och räknas som möjlig belastning');
   }
   if(space.sourceWarning)cautions.push(space.sourceWarning);

@@ -632,3 +632,8 @@ Skrivskyddad kontroll mot aktuell Österåker-planering ger normal batterinivå 
 Användaren fastställde att Svår + Svår tillåter alla kombinationer. Godkännanden gäller nedåt per match efter sortering: Svår + Medel tillåter alla utom Svår + Svår; Svår + Lätt tillåter även Medel + Lätt och Lätt + Lätt, men inte Medel + Medel. Medel + Medel tillåter Medel + Lätt och Lätt + Lätt. Ingen markering kräver fortsatt tränarbedömning.
 
 Gemensam regel i läsning, validering och uttagningsmotor gäller även tidigare sparade godkännanden utan omsparande/migration. Profilen markerar lättare kombinationer direkt. Avmarkering tar bort de svårare godkännanden som annars skulle återaktivera rutan; Rensa kombinationer tömmer allt. Spelarens vanliga matchnivå och övriga uttagningskontroller ändras inte.
+
+
+## Referensvecka cirka 50 procent – 2026-09-11
+
+Användaren preciserade batterimålet till ordinarie träningar plus en match lördag och en söndag. Standardreferens kapacitet 100, tre 60-minutersträningar och 45 spelminuter i vardera helgmatchen ger cirka 51 procent. Matchkostnad 0,75, träningskostnad 0,25 poäng/minut; återhämtning 20/dygn. Under 50 procent ökar matchkostnaden kontinuerligt upp till 50 procent extra vid noll. Under 50 varnar nu även enkelmatchens uttagning och kräver aktivt tränarval. Det ersätter tidigare 60-procentsgräns och föregående alltför låga aktivitetskostnader. Även under 40 procent kan lågt batteri godkännas genom aktivt tränarval; tidigare absolut batterispärr är ersatt av varning. Högst två matcher per dag, tid och nivåpar kvarstår. Full målvaktstid och täta matcher kan ge lägre prognos än referensveckan. Se docs/MATCH_SPACE.md för exakt scenario och beräkning.

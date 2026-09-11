@@ -17,7 +17,7 @@ export async function checkSelectionDraft(matchId:number,selected:{id:number;pos
   if(fixed.has(p.id))continue;
   const e=evidence.get(p.id)!,s=spaces.get(p.id)!;
   const a=assessSelection(e,selectionSpace(s,p.id,p.position,playingIds.size));
-  if(a.blocks.some(b=>b==='Högst två matcher samma dag'||b.startsWith('Dubbelmatch under 40')))throw Error('Ett nytt val ger fler än två matcher samma dag eller en dubbelmatch under 40 % batteri. Ändra planeringen först.');
+  if(a.blocks.includes('Högst två matcher samma dag'))throw Error('Ett nytt val ger fler än två matcher samma dag. Ändra planeringen först.');
   if(a.blocks.length&&!acknowledged)throw Error('Det finns nya val som kräver tränarbedömning. Granska varningarna och markera ditt aktiva val innan du sparar.');
  }
 }
