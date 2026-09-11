@@ -512,3 +512,17 @@ deltaganden med antaganden. Guls startsida visar fortsatt endast Gulmatcher.
 ## Jämnt delad speltid i batteriet – 2026-09-11
 
 Beslut: utespelarna delar lika på 6 × 60 minuter i 7v7 och 8 × 75 minuter i 9v9, med en målvakt som får full matchtid. Batteriet räknar om historik och prognos från hela matchens deltagarantal. 75 minuters matchlängd identifierar 9v9 tills separat spelform finns; kortare cupmatcher behåller sin längd. Målvaktsposition prioriteras från matchunderlag, annars profil; saknad/tvetydig målvakt ger varning. Statistikminuter och Svenska Lag ändras inte. 178 tester med PostgreSQL och produktionsbygge godkända lokalt. Se docs/MATCH_SPACE.md.
+
+## Jämn speltid publicerad och verifierad – 2026-09-11
+
+Webbcommit 0b365318ef7074a2dfa10b3c40497c2cfd4655d9 publicerad.
+Godkänd körning: https://github.com/Xoz/bskapp/actions/runs/34564418443.
+178 tester med PostgreSQL och produktionsbygge godkända. Inloggad kontroll:
+Adele 100/100 nu; AIK-matchens tio ja-svarande ger Adele 40 minuter och
+80/100 efter matchen, Emma 60 minuter som målvakt. Uttagen utan ja räknas som
+eget hypotetiskt tillägg och minskar inte speltiden för de ja-svarande.
+Historik och prognos använder den nya fördelningen, inklusive Grön.
+Appen visar underlagsvarning vid saknad/tvetydig målvakt. 75 minuters
+registrerad matchlängd identifierar 9v9 tills ett separat spelformsfält finns.
+Ingen ändring av närvaro, statistikminuter, kapacitet eller kallelser gjordes
+vid verifieringen. Tillfällig lokal testdatabas borttagen.

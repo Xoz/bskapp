@@ -121,3 +121,17 @@ importerade, nio med sparad närvaro; ett registrerat Ella-deltagande hos Grön
 hittat. Inga dubbla stabila käll-id:n i Grön. Aktivitet 20028813 har en olöst
 spelarkoppling och ger därför underlagsvarning. Den ersätter inte bekräftade
 deltaganden med antaganden. Guls startsida visar fortsatt endast Gulmatcher.
+
+## Jämn speltid publicerad och verifierad – 2026-09-11
+
+Webbcommit 0b365318ef7074a2dfa10b3c40497c2cfd4655d9 publicerad.
+Godkänd körning: https://github.com/Xoz/bskapp/actions/runs/34564418443.
+178 tester med PostgreSQL och produktionsbygge godkända. Inloggad kontroll:
+Adele 100/100 nu; AIK-matchens tio ja-svarande ger Adele 40 minuter och
+80/100 efter matchen, Emma 60 minuter som målvakt. Uttagen utan ja räknas som
+eget hypotetiskt tillägg och minskar inte speltiden för de ja-svarande.
+Historik och prognos använder den nya fördelningen, inklusive Grön.
+Appen visar underlagsvarning vid saknad/tvetydig målvakt. 75 minuters
+registrerad matchlängd identifierar 9v9 tills ett separat spelformsfält finns.
+Ingen ändring av närvaro, statistikminuter, kapacitet eller kallelser gjordes
+vid verifieringen. Tillfällig lokal testdatabas borttagen.
