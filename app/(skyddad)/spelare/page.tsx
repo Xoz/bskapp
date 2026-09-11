@@ -89,9 +89,9 @@ export default async function PlayersPage({ searchParams }: {
         <div className="bsk-link-list">{pendingEvaluations.map((evaluation) => <Link key={evaluation.id} href={`/matcher/${evaluation.id}/utvardera`} className="bsk-link-row"><span className="min-w-0 flex-1"><strong>{evaluation.opponent}</strong><small>{evaluation.date} · {evaluation.evaluated} av {evaluation.total} spelare bedömda</small></span><span aria-hidden>›</span></Link>)}</div>
       </details>}
       <p className="core-section-note">
-        Statistik {today.slice(0, 4)} · {statsTeam ? `${statsTeam}, inklusive cupgrupper` : "Alla lag, inklusive matcher utan lagkoppling"}.
+        Statistik {today.slice(0, 4)} · {statsTeam ? statsTeam : "Alla lag, inklusive matcher utan lagkoppling"}.
         {" "}Registrerade spelade matcher till och med idag. Matchkallelser omfattar även kommande matcher och alla svar (ja, nej och obesvarat).
-        {" "}Inställda och borttagna matcher ingår inte. Siffrorna bygger på importerade uppgifter; historiken kan vara ofullständig.
+        {" "}Cuper räknas separat och ingår inte här. Inställda och borttagna matcher ingår inte. Siffrorna bygger på importerade uppgifter; historiken kan vara ofullständig.
       </p>
       <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals }) => ({
         id: player.id,

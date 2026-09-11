@@ -15,7 +15,7 @@ export default function MatchSpaceProfile({ playerId, input, canEdit }: {playerI
     <progress style={{accentColor: "var(--primary)", height: "0.5rem"}} aria-label="Matchutrymme nu" value={forecast.current} max={input.capacity} className="w-full" />
     <p>{spaceLabels[forecast.level]} · Uppskattad prognos</p>
     <p className="text-sm" style={{color: "var(--ink-secondary)"}}>Kapaciteten är tränarens bedömning för kallelser och utlåning. Alla börjar på 100 poäng. Återhämtning: 20 poäng per dygn utanför aktiviteter. Match: 0,5 poäng per spelminut. Träning: 15 poäng per uppskattad timme.</p>
-    <p className="text-sm" style={{color: "var(--ink-secondary)"}}>Utespelarna delar lika: 6 × 60 minuter i 7 mot 7, 8 × 75 i 9 mot 9, delat på deltagarna utom målvakten. Målvakten får full matchtid. Träningar uppskattas till 60 minuter. Historiken omfattar 28 dagar och börjar med antaget fullt batteri. Andra idrotter och saknad närvaro ingår inte.</p>
+    <p className="text-sm" style={{color: "var(--ink-secondary)"}}>Utespelarna delar lika: 6 × 60 minuter i 7 mot 7, 8 × 75 i 9 mot 9, delat på deltagarna utom målvakten. Målvakten får full matchtid. Träningar uppskattas till 60 minuter. Historiken omfattar 28 dagar och börjar med antaget fullt batteri. Cuper hanteras separat och ingår inte i batteriet. Andra idrotter och saknad närvaro ingår inte.</p>
     {canEdit && <form onSubmit={event => {
       event.preventDefault(); setMessage("");
       const form = new FormData(); form.set("capacity", String(capacity));
