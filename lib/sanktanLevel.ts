@@ -1,10 +1,13 @@
-const LEVEL_LABELS: Record<number, string> = {
-  2: "Svår",
-  3: "Medel",
-  4: "Lätt",
-};
+import { LEVELS, levelFromSvenskalag } from "./levels";
+
+// Samma nivåskala i aktivitetsvyer och matchlistan. Endast fasta värden
+// från LEVELS används i SQL; matchens lagrade nivå ändras inte.
+export const matchCompetitionLevelSql = `CASE m.level ${LEVELS.map((level) => {
+  const number = 6 - level.rank;
+  return `WHEN '${level.id}' THEN ${number} WHEN '${number}' THEN ${number}`;
+}).join(" ")} END`;
 
 export function sanktanLevelLabel(level: number | null | undefined): string {
   if (!level) return "";
-  return LEVEL_LABELS[level] ?? `Nivå ${level}`;
+  return levelFromSvenskalag(level)?.label ?? `Nivå ${level}`;
 }

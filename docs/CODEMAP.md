@@ -263,3 +263,6 @@ Terminologi 2026-09-10: `matchRosterLabel` benämner selected-underlaget Lagupps
 Matchplanens spartransport: `lib/matchPlan/client.ts` → `app/api/matches/[id]/plan/route.ts` → befintlig `lib/matchPlan/actions.ts`. Fast POST-adress utan byggberoende action-id, samma origin krävs; behörighet, truppvalidering och revisionsskydd ligger kvar i serverfunktionen.
 
 2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.
+
+
+Matchnivåer: `lib/levels.ts` tolkar text-id och Svenska Lag-siffror 1–5. `lib/sanktanLevel.ts` delar etiketter och `matchCompetitionLevelSql` för aktivitetsvyerna i `developmentCore.ts`. `lib/sanktanLevel.test.ts` verifierar båda lagringsformaten och samstämmighet mellan Idag och Matcher mot PostgreSQL.

@@ -550,3 +550,8 @@ AIK-användarens sparfel spårat till serverloggen 07.33 Stockholm: action-id 70
 Sparad matchplan öppnas som kompakt läsvy: mindre statisk plan, formation, avbytare och spelidé som text utan formulär. Redigera öppnar befintlig editor; lyckat sparande återgår till översikten. Avbryt återställer senaste sparade plan. Osparade nya planer öppnas direkt för redigering. Inga ändringar av matchdata eller spartransport.
 
 2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.
+
+
+## Gemensam matchnivå – 2026-09-11
+
+Rättar att Idag bara kände igen numeriska nivåer medan Matcher bara kände igen text-id. Båda tolkar nu samma fem nivåer via LEVELS. Aktivitetslista, aktivitetsdetalj, uttagningslista och matchhistorik använder gemensam SQL-översättning till Svenska Lag-skalan; matchlistans level() accepterar också numeriska strängar. Inga lagrade matchnivåer ändras. Regressionstest verifierar samtliga nivåer i båda format samt tomma/ogiltiga värden mot PostgreSQL.

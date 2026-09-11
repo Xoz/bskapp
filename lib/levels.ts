@@ -19,6 +19,7 @@ export const LEVELS: Level[] = [
 ];
 
 export function level(id: string | null | undefined): Level | null {
+  if (id && /^[1-5]$/.test(id)) return levelFromSvenskalag(Number(id));
   return LEVELS.find((l) => l.id === id) ?? null;
 }
 

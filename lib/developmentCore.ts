@@ -1,4 +1,5 @@
 import { regularMatchSql } from "./regularMatches";
+import { matchCompetitionLevelSql } from "./sanktanLevel";
 import "server-only";
 import { getMatchSpaceInputs } from "./matchSpaceData";
 import { forecastMatchSpace, type SpaceInput } from "./matchSpace";
@@ -153,7 +154,7 @@ export async function getCoreActivities(limit = 80, source: "all" | "sanktan" = 
             da.external_source, da.external_key, da.match_id, da.group_id,
             da.theme, da.challenge_context,
             CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
-            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
+            ${matchCompetitionLevelSql} AS competition_level,
             ${activityCallupCountsSql},
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
             (
@@ -386,7 +387,7 @@ export async function getPlayerCore(playerId: number): Promise<{
     all<CompetitionMatchHistory>(
       `SELECT m.id::text AS external_id, substring(m.date, 1, 4)::integer AS season,
               COALESCE(g.name, '') AS source_team,
-              CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS level,
+              ${matchCompetitionLevelSql} AS level,
               m.date AS match_date, m.start_time, m.opponent, m.home_away,
               NULLIF(m.location, '') AS location
        FROM match_players mp
@@ -408,7 +409,7 @@ export async function getActivityDetail(activityId: string): Promise<{
   const activity = await get<CoreActivity>(
     `SELECT da.*,
             CASE WHEN g.group_type = 'subgroup' THEN g.name END AS source_team,
-            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
+            ${matchCompetitionLevelSql} AS competition_level,
             ${activityCallupCountsSql},
             COALESCE((SELECT COUNT(*) FROM match_squad squad WHERE squad.match_id = m.id), 0) AS squad_count,
             (
@@ -494,7 +495,7 @@ export async function getSelectionMatches(): Promise<CoreActivity[]> {
             0 AS observation_count, 0 AS participant_count,
             (SELECT COUNT(*) FROM match_roster mr WHERE mr.match_id = m.id AND mr.selection_status = 'selected') AS selection_count,
             g.name AS source_team,
-            CASE WHEN m.level ~ '^[0-9]+$' THEN m.level::integer END AS competition_level,
+            ${matchCompetitionLevelSql} AS competition_level,
             ARRAY[]::text[] AS participant_names,
             ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status IS NOT NULL ORDER BY p.name) AS called_player_names,
             ARRAY(SELECT p.name FROM match_roster mr JOIN players p ON p.id = mr.player_id WHERE mr.match_id = m.id AND mr.callup_status = 'accepted' ORDER BY p.name) AS accepted_player_names,
