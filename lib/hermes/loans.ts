@@ -23,7 +23,7 @@ export async function readLoans(binding:LoanBinding,targetId?:number,now=Date.no
   const today=swedishDate(new Date(now)),until=swedishDate(new Date(now+7*86400000));
   const targetMatches=await all<LoanMatch>(`SELECT m.id,m.date,m.start_time,m.opponent,m.location,m.group_id,g.name AS group_name,m.periods*m.period_minutes AS duration,true AS regular,NULL::text AS callup_status,NULL::text AS selection_status
     FROM matches m JOIN groups g ON g.id=m.group_id WHERE m.group_id IN (${groups.map(()=>'?').join(',')}) AND m.cancelled=0 AND m.finished=0 AND m.date BETWEEN ? AND ? AND ${regularMatchSql()} ORDER BY m.date,m.start_time,m.id`,[...groups,today,until]);
-  const common={source:'BSK huvudapp',fetchedAt:new Date(now).toISOString(),sourceGroupId:binding.sourceGroupId,period:{from:today,to:until},readOnly:true};
+  const common={source:'BSK huvudapp',fetchedAt:new Date(now).toISOString(),fetchedAtSwedish:new Date(now).toLocaleString('sv-SE',{timeZone:'Europe/Stockholm'}),timeZone:'Europe/Stockholm',sourceGroupId:binding.sourceGroupId,period:{from:today,to:until},readOnly:true};
   if(targetId===undefined) return {...common,targetMatches};
   const target=targetMatches.find(m=>m.id===targetId);
   if(!target) throw new Error('Målmatchen är inte tillgänglig under kommande sju dagar');
@@ -35,6 +35,6 @@ export async function readLoans(binding:LoanBinding,targetId?:number,now=Date.no
   const incomplete=coverage.length<2||coverage.some(s=>s.state!=='ok'||s.unmatchedCount||!s.lastSuccess||!Number.isFinite(Date.parse(s.lastSuccess))||now-Date.parse(s.lastSuccess)>26*3600000);
   if(incomplete) for(const input of inputs.values()) input.sourceWarning=[input.sourceWarning,'Synkens täckning är inte fullständig eller aktuell; kontrollera innan lån.'].filter(Boolean).join(' ');
   return {...common,target,coverage,assumedMargin:LOAN_MARGIN,
-    instructions:'Endast dessa spelare tillhör källaget. Ja till en annan match gäller även utan uttagningsmarkering. Inget kallelsesvar bevisar ledighet till en ny match. Samling, pauser och restid är uttryckliga planeringsantaganden, inte verifierade tider. Cuper räknas separat men kan blockera kalendern. Batteri är planeringsstöd, inte prestationsbetyg.',
+    instructions:'Commitments är kallelser/uttagningar, ALDRIG bevis att en match är spelad. Beskriv accepted som har tackat ja, särskilt isFuture=true. Ingen registrerad match betyder bara att ingen finns i underlaget. Tider anges i Europe/Stockholm; använd fetchedAtSwedish. Endast dessa spelare tillhör källaget. Ja till en annan match gäller även utan uttagningsmarkering. Inget kallelsesvar bevisar ledighet till en ny match. Samling, pauser och restid är uttryckliga planeringsantaganden, inte verifierade tider. Cuper räknas separat men kan blockera kalendern. Batteri är planeringsstöd, inte prestationsbetyg.',
     candidates:players.map(p=>({...p,...loanCandidate(inputs.get(p.id)!,rows.filter(r=>r.player_id===p.id),target)}))};
 }

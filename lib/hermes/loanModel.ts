@@ -19,11 +19,11 @@ export function loanCandidate(input:SpaceInput, matches:LoanMatch[], target:Loan
   const confirmedBlock=blocking.some(t=>commitments.find(m=>m.id===t.matchId)?.callup_status==='accepted');
   const category=targetResponse==='declined'?'tackat_nej_till_malmatch':targetResponse==='accepted'?'redan_tackat_ja':
     confirmedBlock?'upptagen_enligt_tidsantagande':blocking.length?'kontrollera_annat_atagande':
-    forecast.level==='high'?'prioritera_vila':input.sourceWarning?'underlag_behover_kontrolleras':'mojlig_att_fraga';
+    forecast.level==='high'?'prioritera_vila':(input.sourceWarning||!target.start_time)?'underlag_behover_kontrolleras':'mojlig_att_fraga';
   return {category,availabilityConfirmed:false,targetResponse,
     battery:{nowPercent:batteryPercent(forecast.current,forecast.capacity),beforePercent:batteryPercent(forecast.before,forecast.capacity),afterPercent:batteryPercent(forecast.after,forecast.capacity),lowestPercent:batteryPercent(forecast.lowest,forecast.capacity),assessment:spaceLabels[forecast.level],estimated:true,targetMinutes:input.target!.minutes},
     warnings:[input.sourceWarning,...(!target.start_time?['Målmatchens tid saknas; batteriet använder 12:00.']:[])].filter(Boolean),
-    commitments,timing,regularMatchesOnTargetDay:new Set([...commitments.filter(m=>m.date===target.date&&m.regular).map(m=>m.id),target.id]).size,
+    commitments:commitments.map(m=>({...m,evidence:'Kallelse/uttagning; INTE registrerad närvaro',statusText:m.callup_status==='accepted'?'Har tackat ja – planerat deltagande':m.callup_status==='pending'?'Obesvarad kallelse':'Planerad uttagning utan bekräftat ja',isFuture:m.start_time?swedishWallClockToEpoch(m.date,m.start_time)>input.now:null})),timing,regularMatchesOnTargetDay:new Set([...commitments.filter(m=>m.date===target.date&&m.regular).map(m=>m.id),target.id]).size,
     cupCommitments:commitments.filter(m=>!m.regular),
     recentAndPlannedEvents:input.events.filter(e=>swedishDate(new Date(e.start))>=swedishDate(new Date(input.now-86400000))).map(e=>({id:e.id,title:e.title,start:new Date(e.start).toISOString(),minutes:e.minutes,planned:e.planned})),
   };
