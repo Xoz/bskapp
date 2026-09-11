@@ -13,7 +13,7 @@ export default function MatchSpaceProfile({ playerId, input, canEdit }: {playerI
     <h2 className="core-section-title">Matchutrymme</h2>
     {input.sourceWarning && <p className="text-sm" style={{color:"var(--warning)"}}>{input.sourceWarning}</p>}
     <MatchSpaceBar forecast={forecast}/>
-    <p className="space-battery-legend"><i aria-hidden="true"/>Nu <i aria-hidden="true"/>Lägst kommande 7 dagar · uppskattning</p>
+    <p className="space-battery-legend"><i aria-hidden="true"/>Lägst <i aria-hidden="true"/>Till nuvarande nivå · prognos 7 dagar</p>
     <details className="text-sm"><summary className="cursor-pointer">Beräkning och individuell justering</summary>
     <p className="mt-3 mb-3" style={{color: "var(--ink-secondary)"}}>Fullt batteri visas alltid som 100 %. Justeringen anger kapacitet jämfört med standard (100 %). Ett större batteri förbrukar en mindre andel vid samma speltid. Utespelarna delar lika på speltiden, målvakten får full matchtid. Träningar uppskattas till 60 minuter. Historiken omfattar 28 dagar med antaget fullt batteri från början. Cuper, andra idrotter och saknad närvaro ingår inte.</p>
     {canEdit && <form onSubmit={event => {

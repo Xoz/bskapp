@@ -7,15 +7,13 @@ export default function MatchSpaceBar({ forecast, label, forecastLabel = 'lägst
 }) {
   const current = batteryPercent(forecast.current, forecast.capacity);
   const projected = batteryPercent(forecast.lowest, forecast.capacity);
-  return <div className="space-battery">
-    <div className="space-battery-heading">
+  return <div className={`space-battery${label ? " space-battery-labelled" : ""}`}>
       {label && <strong className="space-battery-name">{label}</strong>}
-      <span className="space-battery-values"><span>{current}% <span>nu</span></span><span className="space-battery-projected">{projected}% <span>{forecastLabel}</span></span></span>
-    </div>
     <div className="space-battery-track" role="img" aria-label={`Batteri ${current} procent nu, prognos ${projected} procent som lägst under sju dagar. ${spaceLabels[forecast.level]}. Uppskattning.`}>
-      <span className="space-battery-current" style={{width:`${current}%`}} />
-      <span className="space-battery-future" style={{width:`${projected}%`}} />
+      <span className="space-battery-solid" style={{width:`${Math.min(current, projected)}%`}} />
+      <span className="space-battery-striped" style={{left:`${Math.min(current, projected)}%`, width:`${Math.abs(current - projected)}%`}} />
       <span className="space-battery-marker" style={{left:`${current}%`}} />
     </div>
+    <span className="space-battery-values"><span>{current}% <span>nu</span></span><span className="space-battery-projected">{projected}% <span>{forecastLabel}</span></span></span>
   </div>;
 }

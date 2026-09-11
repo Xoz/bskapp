@@ -39,7 +39,7 @@ export default async function TodayPage() {
         <summary className="p-5 cursor-pointer"><strong>Matchutrymme · Gulspelare</strong><span className="block text-sm mt-1" style={{ color: "var(--ink-secondary)" }}>Batteri nu och prognos med planerade aktiviteter kommande sju dagar</span></summary>
         <details className="px-5 pb-3 text-sm"><summary className="cursor-pointer">Så räknas batteriet</summary><p className="mt-2" style={{color: "var(--ink-secondary)"}}>Uppskattad planering utifrån registrerat deltagande och kallelser i alla lag. Speltiden delas jämnt mellan utespelarna; träning uppskattas till 60 minuter. Cuper räknas separat. Annan idrott och saknad närvaro ingår inte. Öppna en matchs trupputtagning för att prova en extra match eller ett lån. 100 % motsvarar alltid spelarens justerade maxkapacitet.</p></details>
         {inputs.values().next().value?.sourceWarning && <p className="px-5 pb-3 text-sm" style={{color:"var(--warning)"}}>{inputs.values().next().value?.sourceWarning}</p>}
-        <p className="px-4 pb-2 space-battery-legend"><i aria-hidden="true"/>Nu <i aria-hidden="true"/>Prognos: lägst kommande 7 dagar · uppskattning</p>
+        <p className="px-4 pb-2 space-battery-legend"><i aria-hidden="true"/>Lägst <i aria-hidden="true"/>Till nuvarande nivå · prognos 7 dagar</p>
         <div className="bsk-link-list">{sortedPlayerLoads.length ? sortedPlayerLoads.map(player => <Link key={player.playerId} href={`/spelare/${player.playerId}`} className="bsk-link-row space-battery-row">
           <MatchSpaceBar label={player.name} forecast={player.space}/>
         </Link>) : <p className="p-5" style={{ color: "var(--ink-secondary)" }}>Inga spelare att visa.</p>}</div>
