@@ -194,3 +194,7 @@ Commit 4dd76baf21411722979c8a4aacd9d1f71032731d publicerad via godkänd körning
 ## Cupavgränsning publicerad – 2026-09-11
 
 Webbcommit 17096239e72236f17355ed0c368820e722465c73 publicerad via https://github.com/Xoz/bskapp/actions/runs/34569810915 (godkänd). Föregående filterkorrigering 79fd8a01 publicerad via godkänd körning 34569683867. 189 tester inklusive PostgreSQL före slutlig JSON-korrigering, riktade tester efter den samt deployens tester, bygge och hälsokontroller godkända. Produktions-SQL och inloggad spelarlista/profil verifierade: Adele 22 matcher i Gul, 26 alla lag utan cuper; batteriet laddar. Listans hjälptext anger nu att cuper räknas separat. 41 cupmatcher och 21 verifierade äldre felklassade cupmatcher undantas. Historik bevarad. Worker exclude-cups-20260911 (61f7bfcb) aktiverad, timer active. Lokal testdatabas borttagen. Se CUP_EXCLUSION_2026-09-11.md för källor, match-id:n, backup och drift.
+
+## Spelarlistans totaler över alla lag publicerade – 2026-09-11
+
+Commit b0d1fbf2 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34570052878. Typkontroll, deployens tester/bygge/hälsokontroller samt skarp SQL och inloggad spelarlista verifierade. Karolina visar nu 7 spelade matcher och 9 matchkallelser även med Gul som spelarfilter. Fem av de sju matcherna hör till Grön. Cuper fortsatt undantagna; statistiken i listan gäller innevarande år. Inga deltaganden, kallelser eller lagkopplingar ändrades.
