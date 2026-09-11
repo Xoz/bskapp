@@ -1,3 +1,5 @@
+import SelectionPolicyForm from "@/components/SelectionPolicyForm";
+import {getSelectionEvidence} from "@/lib/selection/data";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole, canAccessPlayer } from "@/lib/auth";
@@ -44,6 +46,7 @@ export default async function PlayerPage({ params, searchParams }: {
   const canViewPrivate = user.permissions.includes("view_private_player_data");
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
+  const policyEvidence = canSetSelectionPreferences ? (await getSelectionEvidence([playerId])).get(playerId) : null;
   const statsQuery = playerDirectoryStatsQuery([playerId], today, null);
   const historyQuery = playerMatchHistoryQuery(playerId, today);
   const earlierHistoryQuery = playerMatchHistoryQuery(playerId, today, "earlier");
@@ -116,6 +119,7 @@ export default async function PlayerPage({ params, searchParams }: {
         </div>
       </section>
 
+      {policyEvidence && <SelectionPolicyForm playerId={playerId} evidence={policyEvidence} />}
       {matchSpace && <MatchSpaceProfile key={matchSpace.capacity} playerId={playerId} input={matchSpace} canEdit={canSetSelectionPreferences} />}
 
       {canViewPrivate && <section className="core-panel core-form-panel" aria-labelledby="followup-title">

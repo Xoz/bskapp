@@ -13,6 +13,7 @@ export default async function MatchSelection({ workspace }: { workspace: Workspa
   const saveAction = saveDevelopmentSelection.bind(null, workspace.activity.id);
 
   const matchId=workspace.activity.match_id;
+  const resolvedLevel=workspace.candidates[0]?.selectionEvidence?.target?.level ?? workspace.activity.competition_level;
   const sourceRow=matchId==null?null:await get<{value:string}>("SELECT value FROM settings WHERE key=?",[lineupKey(matchId)]);
   const jobRow=matchId==null?null:await get<{value:string}>("SELECT value FROM settings WHERE key=?",[outboxKey(matchId)]);
   const source:SourceLineup|null=sourceRow?JSON.parse(sourceRow.value):null;
@@ -25,10 +26,10 @@ export default async function MatchSelection({ workspace }: { workspace: Workspa
           <div>
             <p className="core-kicker">
               <span>{workspace.activity.activity_date}{workspace.activity.start_time ? ` · ${workspace.activity.start_time}` : ""}</span>
-              {workspace.activity.competition_level && (
-                <span className="selection-match-level" data-level={workspace.activity.competition_level}>
-                  <strong>{sanktanLevelLabel(workspace.activity.competition_level)}</strong>
-                  <small>Sanktan {workspace.activity.competition_level}</small>
+              {resolvedLevel && (
+                <span className="selection-match-level" data-level={resolvedLevel}>
+                  <strong>{sanktanLevelLabel(resolvedLevel)}</strong>
+                  <small>Sanktan {resolvedLevel}</small>
                 </span>
               )}
             </p>
@@ -56,7 +57,7 @@ export default async function MatchSelection({ workspace }: { workspace: Workspa
         canPublish={Boolean(source)&&job?.state!=="running"&&job?.state!=="queued"}
         candidates={workspace.candidates}
         sourceTeam={workspace.activity.source_team}
-        matchLevel={workspace.activity.competition_level}
+        matchLevel={resolvedLevel}
         callupSummary={{
           accepted: Number(workspace.activity.accepted_callup_count),
           declined: Number(workspace.activity.declined_callup_count),

@@ -1,4 +1,5 @@
 "use server";
+import {checkSelectionDraft} from "./selection/save";
 
 import crypto from "crypto";
 import {selectionDraftStatements} from "./selectionDraft";
@@ -298,6 +299,7 @@ export async function saveDevelopmentSelection(activityId: string, formData: For
   const selected = new Set(formData.getAll("selected_player").map(Number).filter((id) => accessibleIds.has(id)));
   if (activity.match_id == null) return;
   const matchId=activity.match_id;
+  await checkSelectionDraft(matchId,accessiblePlayers.filter(p=>selected.has(p.id)).map(p=>({id:p.id,position:String(formData.get(`position_${p.id}`)??p.preferred_position_primary??p.position??"")})),formData.get("selection_review_ack")==="1");
   const statements=selectionDraftStatements(matchId,accessiblePlayers.filter(player=>selected.has(player.id)).map(player=>({
     playerId:player.id,position:String(formData.get(`position_${player.id}`)??player.position??"").trim().slice(0,40),
   })));

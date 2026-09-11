@@ -1,3 +1,5 @@
+import {assessSelection,selectionSpace,type Evidence} from "./selection/rules";
+import type {SpaceInput} from "./matchSpace";
 import { assessMatchLoad } from "./matchCapacity";
 import { spaceLabels, type SpaceLevel } from "./matchSpace";
 
@@ -19,6 +21,9 @@ export type SelectionSupport = {
 export type RecommendationCallupStatus = "accepted" | "declined" | "pending" | null;
 
 export type RecommendationCandidate = {
+  selectionEvidence?: Evidence;
+  matchSpace?: SpaceInput;
+  position?: string;
   spaceLevel?: SpaceLevel;
   id: number;
   name: string;
@@ -41,6 +46,7 @@ export type SelectionRecommendation = {
   yellowCount: number;
   fillerCount: number;
   targetSize: number;
+  warnings?: string[];
 };
 
 /**
@@ -124,6 +130,16 @@ function fairnessOrder(matchLevel: number | null) {
     };
     const levelDiff = loadRank(left) - loadRank(right);
     if (levelDiff !== 0) return levelDiff;
+    if(left.selectionEvidence && right.selectionEvidence && left.matchSpace && right.matchSpace) {
+      const a=assessSelection(left.selectionEvidence,left.matchSpace),b=assessSelection(right.selectionEvidence,right.matchSpace);
+      const training=a.training.rank-b.training.rank;
+      if(training)return training;
+      const fairness=(a.history.opportunities+a.history.planned)-(b.history.opportunities+b.history.planned);
+      if(fairness)return fairness;
+      const fit=levelFit(left,matchLevel).rank-levelFit(right,matchLevel).rank;
+      if(fit)return fit;
+      return a.history.played-b.history.played || left.name.localeCompare(right.name,"sv");
+    }
     const loadDiff = left.windowMatchCount - right.windowMatchCount;
     if (loadDiff !== 0) return loadDiff;
     const fitDiff = levelFit(left, matchLevel).rank - levelFit(right, matchLevel).rank;
@@ -157,15 +173,38 @@ export function recommendYellowSelection(input: {
     selectedIds.push(candidate.id);
     reasons[candidate.id] = reason;
   };
-  // Ja-svarade kallelser och redan manuellt valda okallade spelare är fasta.
-  // Nej/inväntar får aldrig flyttas in i truppen av förslaget.
+  // Ja-svar och befintliga manuella val är fasta. Kallelsesvar ändras aldrig.
+  // Nya förslag läggs bara till bland spelare som ännu inte har en kallelse.
   input.candidates
     .filter((candidate) => candidate.currentCallupStatus === "accepted"
-      || (candidate.currentCallupStatus === null && candidate.currentlySelected))
+      || candidate.currentlySelected)
     .sort((left, right) => left.name.localeCompare(right.name, "sv"))
     .forEach((candidate) => add(candidate, candidate.currentCallupStatus === "accepted" ? "Kallad och svarat ja" : "Redan vald"));
 
+  const eligible = (candidate:RecommendationCandidate,count:number) => !candidate.selectionEvidence || !!candidate.matchSpace && assessSelection(candidate.selectionEvidence,selectionSpace(candidate.matchSpace,candidate.id,candidate.position??"",count)).automatic;
+  const explain = (candidate:RecommendationCandidate) => candidate.selectionEvidence && candidate.matchSpace ? assessSelection(candidate.selectionEvidence,selectionSpace(candidate.matchSpace,candidate.id,candidate.position??"",targetSize)).reasons.join(" · ") : "";
+  const fixed = new Set(selectedIds);
+  const finish = ():SelectionRecommendation => {
+    // Ett ofullständigt förslag ger längre speltid. Kontrollera därför igen
+    // efter urvalet tills samtliga nya spelare fortfarande är möjliga.
+    let changed=true;
+    while(changed){changed=false;for(const id of [...selectedIds]){
+      const c=input.candidates.find(c=>c.id===id)!;
+      if(!fixed.has(id)&&!eligible(c,Math.max(1,selectedIds.filter(id=>input.candidates.find(p=>p.id===id)?.currentCallupStatus!=="declined").length))){selectedIds.splice(selectedIds.indexOf(id),1);selected.delete(id);delete reasons[id];changed=true;}
+    }}
+    const playingCount=Math.max(1,selectedIds.filter(id=>input.candidates.find(c=>c.id===id)?.currentCallupStatus!=="declined").length);
+    for(const id of selectedIds){const c=input.candidates.find(c=>c.id===id)!;
+      if(!fixed.has(id)&&c.selectionEvidence&&c.matchSpace)reasons[id]=assessSelection(c.selectionEvidence,selectionSpace(c.matchSpace,c.id,c.position??"",playingCount)).reasons.join(" · ");
+    }
+    const warnings:string[]=[];
+    if(selectedIds.length<targetSize)warnings.push(`${targetSize-selectedIds.length} platser återstår – kontrollera inlån och tränarval`);
+    if(selectedIds.length>targetSize)warnings.push(`Fler än ${targetSize} redan valda eller ja-svarande; ingen har tagits bort`);
+    if(input.candidates.some(c=>c.position!==undefined)&&!input.candidates.some(c=>selected.has(c.id)&&/^(målvakt|malvakt|gk)$/i.test(c.position??"")))warnings.push('Målvakt saknas i förslaget');
+    const yellowCount=selectedIds.filter(id=>input.candidates.find(c=>c.id===id)?.primaryTeamName==='Gul').length;
+    return {selectedIds,reasons,yellowCount,fillerCount:selectedIds.length-yellowCount,targetSize,warnings};
+  };
   const selectable = input.candidates
+    .filter(candidate=>eligible(candidate,targetSize))
     .filter((candidate) => candidate.spaceLevel !== "high")
     .filter((candidate) => candidate.currentCallupStatus === null)
     .filter((candidate) => candidate.selectionEligible)
@@ -175,26 +214,23 @@ export function recommendYellowSelection(input: {
     .filter((candidate) => candidate.primaryTeamName === "Gul" && levelFit(candidate, input.matchLevel).safe)
     .sort(fairnessOrder(input.matchLevel));
 
+  if(!input.candidates.some(c=>selected.has(c.id)&&/^(målvakt|malvakt|gk)$/i.test(c.position??"")) && selected.size<targetSize) {
+    const keeper=yellow.find(c=>/^(målvakt|malvakt|gk)$/i.test(c.position??""));
+    if(keeper)add(keeper,`Målvakt · ${explain(keeper)}`);
+  }
   if (input.sourceTeam === "Grön") {
     for (const candidate of yellow) {
       if (selected.size >= targetSize) break;
       const fit = levelFit(candidate, input.matchLevel);
-      add(candidate, `Rättvist Gul-lån · ${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
+      add(candidate, explain(candidate) || `Rättvist Gul-lån · ${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
     }
-    const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
-    return {
-      selectedIds,
-      reasons,
-      yellowCount,
-      fillerCount: selectedIds.length - yellowCount,
-      targetSize,
-    };
+    return finish();
   }
 
   for (const candidate of yellow) {
     if (selected.size >= targetSize) break;
     const fit = levelFit(candidate, input.matchLevel);
-    add(candidate, `${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
+    add(candidate, explain(candidate) || `${candidate.recentMatchCount} spelade, ${candidate.upcomingMatchCount} kommande · ${fit.label}`);
   }
 
   const fillers = ["F15", "Grön"];
@@ -214,12 +250,5 @@ export function recommendYellowSelection(input: {
     }
   }
 
-  const yellowCount = selectedIds.filter((id) => input.candidates.find((candidate) => candidate.id === id)?.primaryTeamName === "Gul").length;
-  return {
-    selectedIds,
-    reasons,
-    yellowCount,
-    fillerCount: selectedIds.length - yellowCount,
-    targetSize,
-  };
+  return finish();
 }

@@ -8,6 +8,7 @@ export type SpaceEvent = {
 export type SpaceInput = { sourceWarning?: string; capacity: number; now: number; events: SpaceEvent[]; target?: SpaceEvent };
 export type SpaceForecast = {
   capacity: number; current: number; before: number; after: number; lowest: number;
+  lowestRatio: number; // Oavrundad andel för beslut nära en gräns.
   level: SpaceLevel; conflict: boolean; nextAffected: string | null; estimated: boolean;
 };
 export const spaceLabels: Record<SpaceLevel, string> = { normal: "Gott utrymme", maximum: "Begränsat utrymme", high: "Prioritera vila" };
@@ -56,7 +57,7 @@ export function forecastMatchSpace(input: SpaceInput, targetMinutes?: number): S
   if (!Number.isFinite(lowest)) lowest = current;
   const level: SpaceLevel = conflict || lowest < capacity * MATCH_SPACE.reserve ? "high" : lowest < capacity * MATCH_SPACE.caution ? "maximum" : "normal";
   const display = (n: number) => Math.round(Math.max(0, Math.min(capacity, n)));
-  return { capacity, current: display(current), before: display(before), after: display(after), lowest: display(lowest), level, conflict, nextAffected,
+  return { capacity, lowestRatio: lowest / capacity, current: display(current), before: display(before), after: display(after), lowest: display(lowest), level, conflict, nextAffected,
     estimated: events.length === 0 || events.some(e => e.estimated) };
 }
 

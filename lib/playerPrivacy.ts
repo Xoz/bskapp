@@ -24,6 +24,7 @@ export async function exportPlayerData(playerId: number, actor: string) {
     exportedAt: new Date().toISOString(),
     player,
     matchSpaceCapacity: (await get<{value: string}>("SELECT value FROM settings WHERE key = ?", [`match_space_capacity:${playerId}`]))?.value ?? "100",
+    selectionPolicy: (await get<{value:string}>("SELECT value FROM settings WHERE key = ?", [`selection_policy:${playerId}`]))?.value ?? null,
     evaluations,
     evaluationScores,
     selfEvaluations,
@@ -47,6 +48,7 @@ export async function erasePlayerData(playerId: number, actor: string): Promise<
     { sql: "DELETE FROM attendance_events WHERE player_id = ?", args: [playerId] },
     { sql: "DELETE FROM activity_log WHERE subject = ?", args: [player.name] },
     { sql: "DELETE FROM settings WHERE key = ?", args: [`match_space_capacity:${playerId}`] },
+    { sql: "DELETE FROM settings WHERE key = ?", args: [`selection_policy:${playerId}`] },
     { sql: "DELETE FROM players WHERE id = ?", args: [playerId] },
     { sql: "INSERT INTO activity_log (coach_name,action,subject) VALUES (?, 'Raderade spelaruppgifter', ?)", args: [actor, `player:${playerId}`] },
   ]);

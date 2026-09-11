@@ -6,10 +6,13 @@ import { batteryPercent, forecastMatchSpace, spaceLabels, type SpaceInput } from
 import { selectionPositionRank } from "@/lib/positions";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
+import {assessSelection,selectionSpace,type Evidence} from "@/lib/selection/rules";
+
 const POSITIONS = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 const SELECTION_GRID = "2rem minmax(12rem, 1fr) 6.5rem 7.5rem 6rem 6.5rem 8.25rem";
 
 type Candidate = {
+  selectionEvidence?: Evidence;
   matchSpace?: SpaceInput;
   player: {
     id: number;
@@ -55,11 +58,21 @@ export default function SelectionEditor({
   canPublish?: boolean;
   sourceRevision?: string;
 }) {
+  const [saveError,setSaveError]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [reviewAck,setReviewAck]=useState(false);
   const [scenarioMinutes, setScenarioMinutes] = useState<Record<number, number>>({});
-  const forecasts = useMemo(() => new Map(candidates.map(candidate => [candidate.player.id, candidate.matchSpace ? forecastMatchSpace(candidate.matchSpace, scenarioMinutes[candidate.player.id]) : null])), [candidates, scenarioMinutes]);
+
   const [openedSourceRevision]=useState(sourceRevision);
   const [selectedIds, setSelectedIds] = useState(() => new Set(candidates.filter((candidate) => candidate.selected).map((candidate) => candidate.player.id)));
   const [positions, setPositions] = useState(() => Object.fromEntries(candidates.map((candidate) => [candidate.player.id, candidate.player.preferred_position_primary || candidate.player.position || ""])) as Record<number, string>);
+  const simulations = useMemo(()=>new Map(candidates.map(c=>{
+    const count=Math.max(callupSummary.accepted,candidates.filter(p=>selectedIds.has(p.player.id)&&p.currentCallupStatus!=="declined").length+(selectedIds.has(c.player.id)?0:1),1);
+    const space=c.matchSpace?selectionSpace(c.matchSpace,c.player.id,positions[c.player.id]??"",count,scenarioMinutes[c.player.id]):null;
+    return [c.player.id,space];
+  })),[candidates,selectedIds,positions,scenarioMinutes,callupSummary.accepted]);
+  const forecasts=useMemo(()=>new Map(candidates.map(c=>[c.player.id,simulations.get(c.player.id)?forecastMatchSpace(simulations.get(c.player.id)!):null])),[candidates,simulations]);
+  const assessments=useMemo(()=>new Map(candidates.map(c=>[c.player.id,c.selectionEvidence&&simulations.get(c.player.id)?assessSelection(c.selectionEvidence,simulations.get(c.player.id)!):null])),[candidates,simulations]);
   const [teamFilter, setTeamFilter] = useState<string>("Alla");
   const [recommendationReasons, setRecommendationReasons] = useState<Record<number, string>>({});
   const [recommendationSummary, setRecommendationSummary] = useState<SelectionRecommendation | null>(null);
@@ -70,12 +83,12 @@ export default function SelectionEditor({
     [candidates, selectedIds]
   );
   const warnings = useMemo(
-    () => squadBalanceWarnings(selected.map((candidate) => ({
+    () => [...squadBalanceWarnings(selected.map((candidate) => ({
       spaceLevel: forecasts.get(candidate.player.id)?.level,
       recentMatchCount: candidate.recentMatchCount,
       upcomingMatchCount: candidate.upcomingMatchCount,
-    }))),
-    [selected, forecasts]
+    }))), ...selected.flatMap(c=>(assessments.get(c.player.id)?.blocks??[]).map(reason=>`${c.player.name}: ${reason}`))],
+    [selected, forecasts, assessments]
   );
   const teamOptions = useMemo(() => {
     const unique = new Set<string>();
@@ -126,6 +139,7 @@ export default function SelectionEditor({
       return next;
     });
     setRecommendationSummary(null);
+    setReviewAck(false);
   }
 
   function applyRecommendation() {
@@ -134,12 +148,15 @@ export default function SelectionEditor({
       sourceTeam,
       targetSize: 9,
       candidates: candidates.map((candidate) => ({
+        selectionEvidence: candidate.selectionEvidence,
+        matchSpace: candidate.matchSpace,
+        position: positions[candidate.player.id],
         id: candidate.player.id,
         name: candidate.player.name,
         teamNames: candidate.teams.map((team) => team.name),
         primaryTeamName: candidate.primaryTeam?.name ?? null,
         windowMatchCount: candidate.windowMatchCount,
-        spaceLevel: forecasts.get(candidate.player.id)?.level,
+        spaceLevel: candidate.matchSpace ? forecastMatchSpace(selectionSpace(candidate.matchSpace,candidate.player.id,positions[candidate.player.id]??"",9)).level : undefined,
       recentMatchCount: candidate.recentMatchCount,
         upcomingMatchCount: candidate.upcomingMatchCount,
         lastSelectedDate: candidate.lastSelectedDate,
@@ -192,7 +209,8 @@ export default function SelectionEditor({
         )}
       </section>
 
-      <form action={action} className="selection-workspace">
+      <details className="text-sm"><summary className="cursor-pointer">Regler för uttagningsförslag</summary><p className="mt-2">Förslaget gäller nio spelare. Högst två matcher samma dag med godkänd nivåkombination och minst 60 % batteri. 40–59 % kräver ditt aktiva val. Tidsmarginal: 15 min på samma plats, annars 60 min; restiden är ett antagande. Befintliga val och ja-svar bevaras.</p></details>
+      <form action={async form=>{setSaving(true);setSaveError("");try{await action(form);}catch(error){setSaveError(error instanceof Error?error.message:"Kunde inte spara uttagningen.");}finally{setSaving(false);}}} className="selection-workspace">
         <PilotStartField />
         <input type="hidden" name="source_revision" value={openedSourceRevision}/>
         {selected.map(c=><span key={c.player.id}><input type="hidden" name="selected_player" value={c.player.id}/><input type="hidden" name={`position_${c.player.id}`} value={positions[c.player.id]??""}/></span>)}
@@ -234,6 +252,7 @@ export default function SelectionEditor({
             <p>
               <strong>Förslag klart</strong>
               <span>{recommendationSummary.selectedIds.length} spelare · {recommendationSummary.yellowCount} Gul · {recommendationSummary.fillerCount} utfyllnad</span>
+              {recommendationSummary.warnings?.map(w=><span key={w}>{w}</span>)}
             </p>
             <button type="button" onClick={undoRecommendation}>Ångra</button>
           </div>
@@ -255,6 +274,7 @@ export default function SelectionEditor({
                 const recommendationReason = recommendationReasons[candidate.player.id];
                 const teamNames = candidate.teams.length > 0 ? candidate.teams.map((team) => team.name).join(", ") : "Ingen lagkoppling";
                 const forecast = forecasts.get(candidate.player.id);
+                const assessment = assessments.get(candidate.player.id);
                 return (
               <li
                 key={candidate.player.id}
@@ -274,6 +294,7 @@ export default function SelectionEditor({
                     <span className="selection-player-copy">
                       <span className="selection-player-name">{candidate.player.name}</span>
                       {recommendationReason && <small className="selection-player-reason">{recommendationReason}</small>}
+                      {assessment && <span className="block text-xs mt-1">{assessment.training.label}<br/>{assessment.history.offered} erbjudna · {assessment.history.played} spelade · {assessment.history.declined} nej (4 veckor)</span>}
                     </span>
                     <span className="flex flex-wrap gap-1">
                       {selectedForMatch && <span className="selection-player-status selection-player-status-manual">Uttagen</span>}
@@ -319,16 +340,24 @@ export default function SelectionEditor({
                     </label>
                   )}
                 </div>
+                {assessment && <details className="px-4 pb-3 text-sm">
+                  <summary className="cursor-pointer">{assessment.blocks.length?'Kräver tränarbedömning':'Visa uttagningsunderlag'}</summary>
+                  <ul className="mt-2 space-y-1">{[...assessment.blocks,...assessment.reasons,...assessment.cautions].map((text,i)=><li key={i}>{text}</li>)}</ul>
+                  <p className="mt-2">Ordinarie träningar före uttagningen. Extraträning påverkar endast batteriet. Nej-svar ger ingen automatisk rätt till kompensationsmatcher.</p>
+                  <a className="underline" href={`/spelare/${candidate.player.id}#uttagningsregler`}>Ändra nivåkombinationer eller undanta giltig frånvaro</a>
+                </details>}
               </li>
                 );
               })}
             </ul>
           </div>
         </div>
+        <p role="alert" className="text-sm">{saveError}</p>
+        {selected.some(c=>(assessments.get(c.player.id)?.blocks.length??0)>0) && <label className="flex gap-2 items-start text-sm p-3"><input name="selection_review_ack" value="1" type="checkbox" checked={reviewAck} onChange={e=>setReviewAck(e.target.checked)}/>Jag har granskat varningarna och väljer dessa spelare aktivt. Fler än två matcher eller dubbelmatch under 40 % kan inte läggas till.</label>}
         <div className="selection-footer">
           <span>{selected.length} spelare valda</span>
-          <button type="submit" name="intent" value="save" className="btn-secondary selection-save-button">Spara utkast</button>
-          {canPublish && <button type="submit" name="intent" value="publish" disabled={selected.length===0} className="btn-primary selection-save-button">Skicka till Svenska Lag →</button>}
+          <button type="submit" name="intent" value="save" disabled={saving} className="btn-secondary selection-save-button">Spara utkast</button>
+          {canPublish && <button type="submit" name="intent" value="publish" disabled={saving||selected.length===0} className="btn-primary selection-save-button">Skicka till Svenska Lag →</button>}
         </div>
       </form>
     </>

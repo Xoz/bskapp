@@ -1,3 +1,5 @@
+import {getSelectionEvidence} from "./selection/data";
+import type {Evidence as SelectionEvidence} from "./selection/rules";
 import { regularMatchSql } from "./regularMatches";
 import { matchCompetitionLevelSql } from "./sanktanLevel";
 import "server-only";
@@ -471,6 +473,7 @@ export async function getActivityDetail(activityId: string): Promise<{
 }
 
 export type SelectionCandidate = PlayerCoreSummary & {
+  selectionEvidence?: SelectionEvidence;
   matchSpace: SpaceInput;
   selected: boolean;
   selectedLastEight: number;
@@ -649,7 +652,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
       ...ids,
     ]
   );
-  const matchSpaces = await getMatchSpaceInputs(ids, detail.activity.match_id);
+  const [matchSpaces,selectionEvidence] = await Promise.all([getMatchSpaceInputs(ids, detail.activity.match_id),getSelectionEvidence(ids, detail.activity.match_id)]);
   const history = new Map(rows.map((row) => [row.player_id, row]));
   const hasSyncedCallups = Number(detail.activity.accepted_callup_count)
     + Number(detail.activity.declined_callup_count)
@@ -677,6 +680,7 @@ export async function getSelectionWorkspace(activityId: string): Promise<{
     return {
       ...summary,
       matchSpace: matchSpaces.get(summary.player.id)!,
+      selectionEvidence: selectionEvidence.get(summary.player.id),
       selected: row?.decision === "selected",
       selectedLastEight: Number(row?.selected_last_eight ?? 0),
       selectedLastThree: Number(row?.selected_last_three ?? 0),

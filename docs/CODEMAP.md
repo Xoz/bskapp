@@ -276,3 +276,10 @@ Matchutvärdering 1–5: `components/MatchEvaluationForm.tsx` + `match-ratings.c
 
 
 Spelarprofil 2026-09-11: `components/player-profile.css` avgränsar kompakt mobilutseende. `lib/playerProfile.ts` delar `profileFocus`, `playerListContext` och `playerTrainingStatsQuery`. `lib/playerDirectoryStats.ts` delar matchurval mellan listans/profilens antal och `playerMatchHistoryQuery` (aktuellt/tidigare år). `scripts/check-player-profile.mts` verifierar flöde och åtkomst med lokala exempel. Se `docs/PLAYER_PROFILE_2026-09-11.md`.
+
+## Uttagningsmotor 2026-09-11
+
+- `lib/selection/rules.ts`: träningsprioritet, erbjudna matchmöjligheter, individuella nivåpar, tidsmarginaler och gemensam batteriprognos. `selectionSupport.ts` fyller nio platser med Gul först och kontrollerar om ett mindre förslag fortfarande fungerar.
+- `lib/selection/{reader,data}.ts`: fyra senaste ordinarie träningar, fyra veckors matcher över lag och behörighetskontrollerat underlag till profil/uttagning. `actions.ts`: versionskontrollerad spelarpolicy i settings; `save.ts`: färska kontroller av nya uttagningsval.
+- `components/SelectionPolicyForm.tsx`: nivåpar, otillgänglighetsperiod och frånvaroundantag på spelarprofilen. `SelectionEditor.tsx`: motiveringar, dynamisk speltid och aktivt tränarval. Settings-prefix `selection_policy:` ingår i `playerPrivacy.ts`.
+- `lib/matchSpace.ts`: `lowestRatio` ger oavrundad marginal för regelbeslut; procentvisningen är oförändrad. Tester i `lib/selection/*.test.ts`; beslut, begränsningar och återgång i `docs/SELECTION_ENGINE.md`.
