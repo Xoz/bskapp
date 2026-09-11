@@ -1,121 +1,148 @@
-import { getMatchSpaceInputs } from "@/lib/matchSpaceData";
-import MatchSpaceProfile from "@/components/MatchSpaceProfile";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getCurrentUser, isStaffRole } from "@/lib/auth";
+import { getCurrentUser, isStaffRole, canAccessPlayer } from "@/lib/auth";
+import { all } from "@/lib/db";
 import { getPlayerCore } from "@/lib/developmentCore";
 import { closeDevelopmentGoal, savePlayerSelectionPreferences } from "@/lib/coreActions";
 import { getLatestDevelopmentCheckpoint, getPlayerConversations, getPlayerSkillStatuses } from "@/lib/queries";
-import { swedishToday } from "@/lib/dates";
-import TreeConversationForm from "@/components/TreeConversationForm";
+import { swedishToday, swedishDateOffset } from "@/lib/dates";
+import { getMatchSpaceInputs } from "@/lib/matchSpaceData";
+import { playerDirectoryStatsQuery, playerMatchHistoryQuery, type PlayerMatchHistoryRow } from "@/lib/playerDirectoryStats";
+import { profileFocus, playerListContext, playerTrainingStatsQuery, type PlayerTrainingStats } from "@/lib/playerProfile";
 import { prepareTreeConversation } from "@/lib/treeConversation";
-import Avatar from "@/components/Avatar";
-import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
-import { IconArrowLeft } from "@/components/Icons";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 import { getPlayerMatchEvaluationTrend } from "@/lib/matchEvaluation";
+import { totalProgress, STATUS_LABEL } from "@/lib/skillTrappan";
+import Avatar from "@/components/Avatar";
+import { IconArrowLeft } from "@/components/Icons";
+import MatchSpaceProfile from "@/components/MatchSpaceProfile";
+import TreeConversationForm from "@/components/TreeConversationForm";
+import PlayerSelectionPreferencesForm from "@/components/PlayerSelectionPreferencesForm";
 import MatchEvaluationTrend from "@/components/MatchEvaluationTrend";
-import { totalProgress } from "@/lib/skillTrappan";
+import "@/components/player-profile.css";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Spelarprofil" };
 function formatMatchDate(value: string | Date) {
-  const date = value instanceof Date
-    ? value
-    : new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
-  return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" })
-    .format(date);
+  const date = value instanceof Date ? value : new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  return new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Stockholm" }).format(date);
 }
+const matchTypeLabels: Record<string, string> = { seriespel: "Sanktan", traningsmatch: "Träningsmatch" };
+const evidenceLabels = { shown: "Visat i spel", practicing: "Tränar på", revisit: "Att följa upp" };
 
 export default async function PlayerPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ mal?: string; samtal?: string }>;
+  searchParams: Promise<{ mal?: string; samtal?: string; bedomning?: string; lag?: string; q?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
-  const { id } = await params;
-  const playerId = Number(id);
-  if (!Number.isInteger(playerId)) notFound();
+  if (!user.permissions.includes("view_players")) redirect("/idag?behorighet=saknas");
+  const playerId = Number((await params).id);
+  if (!Number.isInteger(playerId) || playerId < 1 || !(await canAccessPlayer(playerId))) notFound();
+  const today = swedishToday();
+  const year = today.slice(0, 4);
   const canViewPrivate = user.permissions.includes("view_private_player_data");
-  const [core, matchEvaluationTrend, skillStatuses, latestDevelopmentUpdate, conversations] = await Promise.all([
-    getPlayerCore(playerId),
-    getPlayerMatchEvaluationTrend(playerId),
-    getPlayerSkillStatuses(playerId),
-    getLatestDevelopmentCheckpoint(playerId),
-    canViewPrivate ? getPlayerConversations(playerId) : Promise.resolve([]),
-  ]);
-  if (!core) notFound();
-  const matchSpace = (await getMatchSpaceInputs([playerId])).get(playerId)!;
-  const { mal, samtal } = await searchParams;
-  const { summary, goalHistory, matchHistory } = core;
   const canEdit = user.permissions.includes("manage_evaluations");
   const canSetSelectionPreferences = user.permissions.includes("manage_squads");
+  const statsQuery = playerDirectoryStatsQuery([playerId], today, null);
+  const historyQuery = playerMatchHistoryQuery(playerId, today);
+  const earlierHistoryQuery = playerMatchHistoryQuery(playerId, today, "earlier");
+  const trainingQuery = playerTrainingStatsQuery(playerId, today);
+  const [core, matchEvaluationTrend, skillStatuses, latestDevelopmentUpdate, conversations, matchSpaces, statsRows, matchHistory, trainingRows, earlierMatches] = await Promise.all([
+    getPlayerCore(playerId), getPlayerMatchEvaluationTrend(playerId), getPlayerSkillStatuses(playerId),
+    getLatestDevelopmentCheckpoint(playerId), canViewPrivate ? getPlayerConversations(playerId) : Promise.resolve([]),
+    getMatchSpaceInputs([playerId]),
+    all<{ match_count: number; callup_count: number }>(statsQuery.sql, statsQuery.args),
+    all<PlayerMatchHistoryRow>(historyQuery.sql, historyQuery.args),
+    all<PlayerTrainingStats>(trainingQuery.sql, trainingQuery.args),
+    all<PlayerMatchHistoryRow>(earlierHistoryQuery.sql, earlierHistoryQuery.args),
+  ]);
+  if (!core) notFound();
+  const { mal, samtal, bedomning, lag, q } = await searchParams;
+  const context = playerListContext(lag, q);
+  const profileHref = (extra: string) => `/spelare/${playerId}?${context ? `${context}&` : ""}${extra}`;
+  const { summary, goalHistory, observations } = core;
+  const stats = statsRows[0];
+  const training = trainingRows[0];
+  const matchSpace = matchSpaces.get(playerId);
   const savePreferences = savePlayerSelectionPreferences.bind(null, playerId);
   const conversationPreparation = prepareTreeConversation(latestDevelopmentUpdate?.id ?? null, latestDevelopmentUpdate?.date ?? null, latestDevelopmentUpdate?.skills ?? []);
   const positionSummary = summary.player.preferred_position_primary || summary.player.position || "";
   const normalLevel = sanktanLevelLabel(Number(summary.player.preferred_level_primary));
   const challengeLevel = sanktanLevelLabel(Number(summary.player.preferred_level_secondary));
-  const levelSummary = normalLevel
-    ? `Normal: ${normalLevel}${challengeLevel ? ` · Utmaning: ${challengeLevel}` : ""}`
-    : "";
+  const levelSummary = [normalLevel && `Matchnivå: ${normalLevel}`, challengeLevel && `Utmaning: ${challengeLevel}`].filter(Boolean).join(" · ");
   const assessmentMeta = summary.player.level_assessed_at
     ? `Senast bedömd ${formatMatchDate(summary.player.level_assessed_at)}${summary.player.level_assessed_by ? ` av ${summary.player.level_assessed_by}` : ""}`
     : "Ingen daterad nivåbedömning ännu";
   const treeProgress = totalProgress(skillStatuses);
-  const activeTreeSteps = Object.values(skillStatuses).filter((status) => status === "training" || status === "almost").length;
-  const hasTreeStatus = Object.keys(skillStatuses).length > 0;
+  const focus = profileFocus(skillStatuses, latestDevelopmentUpdate?.skills ?? []);
+  const latestConversation = conversations[0];
+  const recentObservations = canViewPrivate ? observations.slice(0, 3) : [];
+  const teamsPlayed = [...new Set(matchHistory.map(match => match.source_team || "Utan lagkoppling"))];
 
   return (
-    <div className="core-page">
-      <Link href="/spelare" className="inline-flex items-center gap-1.5 body-small" style={{ color: "var(--ink-secondary)" }}>
-        <IconArrowLeft width={15} height={15} /> Alla spelare
+    <div className="core-page player-profile">
+      <Link href={`/spelare${context ? `?${context}` : ""}#spelare-${playerId}`} className="profile-back">
+        <IconArrowLeft width={16} height={16} /> Alla spelare
       </Link>
-      <header className="core-panel p-5 md:p-6 flex items-center gap-5 flex-wrap">
-        <Avatar name={summary.player.name} jersey={summary.player.jersey_number} size={58} />
-        <div className="flex-1 min-w-48">
-          <p className="core-kicker">Utvecklingsprofil</p><h1 className="core-title">{summary.player.name}</h1>
-          <div className="core-statline">
-            <span>{summary.trainingCount} träningar</span>
-            <span title={summary.hasSanktanSync ? `Gul ${summary.sanktanGulCount} · Grön ${summary.sanktanGronCount}` : undefined}>
-              {summary.matchCount} {summary.hasSanktanSync ? "Sanktanmatcher" : "matcher"}
-            </span>
-            <span>{summary.callupCount} kallelser</span>
+      <header className="profile-header">
+        <Avatar name={summary.player.name} jersey={summary.player.jersey_number} size={48} />
+        <div className="profile-identity">
+          <h1>{summary.player.name}</h1>
+          <div className="profile-facts">
+            {summary.teams.map(team => <span key={team.id} className="core-team-tag" data-team-tone={team.name === "Gul" ? "yellow" : team.name === "Grön" ? "green" : "blue"}>{team.name}</span>)}
+            {positionSummary ? <span>{positionSummary}</span> : canSetSelectionPreferences ? <Link href={profileHref("bedomning=1#bedomning")}>Ange position</Link> : <span>Position ej angiven</span>}
           </div>
-          <div className="player-profile-quickfacts">
-            {summary.teams.map((team) => <span key={team.id} className="core-team-tag" data-team-tone={team.name === "Gul" ? "yellow" : team.name === "Grön" ? "green" : "blue"}>{team.name}</span>)}
-            <span>{positionSummary ? `Position: ${positionSummary}` : "Position saknas"}</span>
-            <span>{levelSummary ? `Nivå: ${levelSummary}` : "Nivå saknas"}</span>
-          </div>
+          <p className="profile-meta">{levelSummary || "Matchnivå ej bedömd"}</p>
         </div>
-        <Link href={`/spelare/${playerId}/utveckling`} className="btn-secondary btn-sm">Utvecklingsträd</Link>
       </header>
 
-      <MatchSpaceProfile key={matchSpace.capacity} playerId={playerId} input={matchSpace} canEdit={canSetSelectionPreferences} />
-
-      <section className="core-panel core-form-panel">
-        <div className="core-section-head">
-          <div>
-            <p className="core-kicker">Utvecklingsträd</p>
-            <h2 className="core-section-title mt-2">Långsiktig utvecklingsbild</h2>
-          </div>
-          <Link href={`/spelare/${playerId}/utveckling`} className="btn-primary btn-sm">Öppna trädet</Link>
+      <section className="core-panel core-form-panel profile-focus" aria-labelledby="focus-title">
+        <div className="profile-section-heading">
+          <h2 id="focus-title">{focus.explicit ? "Aktuellt fokus" : focus.skills.length ? "Färdigheter i arbete" : "Aktuellt fokus"}</h2>
+          <span className="profile-meta">Utvecklingsträdet</span>
         </div>
-        <p className="body-small max-w-2xl" style={{ color: "var(--ink-secondary)" }}>
-          Följ spelarens färdigheter över tid och håll aktuellt fokus samlat på ett ställe.
-        </p>
-        <div className="core-statline">
-          <span>{hasTreeStatus ? `${activeTreeSteps} steg i arbete` : "Trädet är inte påbörjat"}</span>
-          {hasTreeStatus && <span>{treeProgress.done} av {treeProgress.total} steg behärskade</span>}
-          <span>{latestDevelopmentUpdate ? `Senast uppdaterat ${latestDevelopmentUpdate.date}` : "Ingen sparad historik"}</span>
+        {focus.skills.length ? <div className="profile-focus-list">{focus.skills.map(skill => (
+          <article key={skill.id}>
+            <h3>{skill.title}</h3>
+            <p className="profile-meta">{STATUS_LABEL[skillStatuses[skill.id] || "not_started"]}</p>
+            <p>{skill.nextStep}</p>
+          </article>
+        ))}</div> : <p className="profile-empty">Inget fokus valt ännu. Öppna trädet för att beskriva nuläget och välja nästa steg.</p>}
+        {canViewPrivate && latestDevelopmentUpdate?.focus_note && <p className="profile-note">{latestDevelopmentUpdate.focus_note}</p>}
+        <div className="profile-focus-footer">
+          <Link href={`/spelare/${playerId}/utveckling${context ? `?${context}` : ""}`} className="btn-primary btn-sm">Öppna utvecklingsträdet</Link>
+          <p className="profile-meta">{latestDevelopmentUpdate ? `Utvecklingsbild ${formatMatchDate(latestDevelopmentUpdate.date)}` : "Ingen sparad utvecklingsbild"}{treeProgress.done > 0 ? ` · ${treeProgress.done} steg behärskade` : ""}</p>
         </div>
       </section>
 
-      {canViewPrivate && canEdit && <Link href={`/spelare/${playerId}?samtal=forbered#samtal`} className="btn-secondary">Förbered samtal från trädet</Link>}
+      {matchSpace && <MatchSpaceProfile key={matchSpace.capacity} playerId={playerId} input={matchSpace} canEdit={canSetSelectionPreferences} />}
 
-      {canViewPrivate && <details className="core-panel core-form-panel scroll-mt-24" id="samtal" open={Boolean(samtal)}>
+      {canViewPrivate && <section className="core-panel core-form-panel" aria-labelledby="followup-title">
+        <div className="profile-section-heading"><h2 id="followup-title">Senaste observationer och uppföljning</h2></div>
+        {recentObservations.length ? <div className="profile-observations">{recentObservations.map(observation => <article key={observation.id}>
+          <p className="profile-meta">{formatMatchDate(observation.activity_date)} · {observation.activity_title}</p>
+          <h3>{observation.goal_title || evidenceLabels[observation.evidence]}</h3>
+          {observation.note && <p className="profile-note">{observation.note}</p>}
+          <p className="profile-meta">{observation.coach_name || "Tränare"} · {evidenceLabels[observation.evidence]}</p>
+        </article>)}</div> : <p className="profile-empty">Inga observationer registrerade ännu.</p>}
+        {observations.length > 3 && <details className="profile-details"><summary>Visa tidigare observationer ({observations.length - 3})</summary>
+          {observations.slice(3).map(observation => <article className="profile-history-row" key={observation.id}><p className="profile-meta">{formatMatchDate(observation.activity_date)} · {observation.activity_title}</p><h3>{observation.goal_title || evidenceLabels[observation.evidence]}</h3><p className="profile-note">{observation.note}</p></article>)}
+        </details>}
+        <div className="profile-next-step">
+          <h3>Överenskommelse från senaste samtalet</h3>
+          {latestConversation ? <>
+            <p className="profile-note">{latestConversation.agreed_actions || "Ingen överenskommelse noterades."}</p>
+            <p className="profile-meta">Samtal {formatMatchDate(latestConversation.conversation_date)}{latestConversation.follow_up_on ? ` · Uppföljningsdatum ${formatMatchDate(latestConversation.follow_up_on)}` : " · Inget uppföljningsdatum valt"}</p>
+          </> : <p className="profile-empty">Inget spelarsamtal sparat ännu.</p>}
+          {canEdit && <Link href={profileHref("samtal=forbered#samtal")} className="btn-secondary btn-sm">Förbered spelarsamtal</Link>}
+        </div>
+      </section>}
+
+      {canViewPrivate && <details className="core-panel core-form-panel profile-conversations" id="samtal" open={Boolean(samtal)}>
         <summary className="core-section-head cursor-pointer list-none">
           <div>
-            <p className="core-kicker">Spelarsamtal</p>
-            <h2 className="core-section-title mt-2">Samtal och överenskommelser</h2>
+            <h2 className="core-section-title">Samtal och överenskommelser</h2>
           </div>
           <div className="flex items-center gap-3">
             <span className="core-section-note">{conversations.length} sparade</span>
@@ -131,7 +158,7 @@ export default async function PlayerPage({ params, searchParams }: {
         {conversations.length > 0 && (
           <div className="space-y-3 mt-5">
             {conversations.map((conversation) => (
-              <article key={conversation.id} className="core-panel p-4">
+              <article key={conversation.id} className="profile-history-row">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <h3>{formatMatchDate(conversation.conversation_date)}</h3>
                   <span className="caption" style={{ color: "var(--ink-muted)" }}>
@@ -150,9 +177,41 @@ export default async function PlayerPage({ params, searchParams }: {
         )}
       </details>}
 
-      <details className="core-panel core-form-panel">
+
+      <MatchEvaluationTrend data={matchEvaluationTrend} />
+
+      <section className="core-panel core-form-panel" aria-labelledby="stats-title">
+        <div className="profile-section-heading"><h2 id="stats-title">Deltagande {year}</h2><span className="profile-meta">Alla lag · utan cuper</span></div>
+        <dl className="profile-stats">
+          <div><dt>Träningar</dt><dd>{training.training_count}</dd></div>
+          <div><dt>Spelade matcher</dt><dd>{stats.match_count}</dd></div>
+          <div><dt>Matchkallelser</dt><dd>{stats.callup_count}</dd></div>
+        </dl>
+        <details className="profile-details"><summary>Vad räknas och vilka lag?</summary>
+          <p className="profile-meta">Matchantal avser registrerat deltagande till och med idag. Matchkallelser omfattar årets tidigare och kommande matcher med ja, nej eller obesvarat. Uttagning är inte ett kallelsesvar. Cuper och inställda eller borttagna matcher ingår inte. Träningar avser registrerad närvaro till och med igår. Historiken kan vara ofullständig.</p>
+          <ul className="profile-breakdown">{teamsPlayed.map(team => <li key={team}>{team}: {matchHistory.filter(match => (match.source_team || "Utan lagkoppling") === team).length} spelade matcher</li>)}</ul>
+        </details>
+        <div className="profile-next-step">
+          <h3>Träningsnärvaro · senaste 28 dagarna</h3>
+          <p className="profile-meta">{formatMatchDate(swedishDateOffset(-28))}–{formatMatchDate(swedishDateOffset(-1))}</p>
+          {training.recent_present + training.recent_absent + training.recent_unknown > 0 ? <>
+            <p className="profile-attendance"><strong>{training.recent_present}</strong> närvarande · <strong>{training.recent_absent}</strong> frånvarande · <strong>{training.recent_unknown}</strong> ej registrerade</p>
+            <p className="profile-meta">Pass med registrerat deltagande eller kallelse för spelaren. Kallelsesvar räknas inte som närvaro.</p>
+          </> : <p className="profile-empty">Inga pass med deltagande eller kallelse registrerade under perioden.</p>}
+        </div>
+        <details className="profile-details"><summary>Spelade matcher {year} ({matchHistory.length})</summary>
+          {matchHistory.length ? <div className="profile-match-list">{matchHistory.map(match => <Link key={match.id} href={`/matcher/${match.id}`} className="profile-history-row">
+            <span><strong>{match.opponent}</strong><small>{formatMatchDate(match.date)} · {matchTypeLabels[match.match_type] || "Match"} · {match.source_team || "Utan lagkoppling"}</small></span><span aria-hidden>›</span>
+          </Link>)}</div> : <p className="profile-empty">Inga spelade matcher registrerade i år.</p>}
+        </details>
+        {earlierMatches.length > 0 && <details className="profile-details"><summary>Matcher från tidigare år ({earlierMatches.length})</summary>
+          <div className="profile-match-list">{earlierMatches.map(match => <Link key={match.id} href={`/matcher/${match.id}`} className="profile-history-row"><span><strong>{match.opponent}</strong><small>{formatMatchDate(match.date)} · {matchTypeLabels[match.match_type] || "Match"} · {match.source_team || "Utan lagkoppling"}</small></span><span aria-hidden>›</span></Link>)}</div>
+        </details>}
+      </section>
+
+      <details id="bedomning" className="core-panel core-form-panel" open={bedomning === "1"}>
         <summary className="core-section-head cursor-pointer list-none">
-          <div><p className="core-kicker">Tränarbedömning</p><h2 className="core-section-title mt-2">Primär position och Sanktan-nivå</h2></div>
+          <div><h2 className="core-section-title">Position och matchnivå</h2></div>
           <div className="flex items-center gap-3"><span className="core-section-note">{positionSummary || "Position saknas"} · {levelSummary || "Nivå saknas"}</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
         </summary>
         {canSetSelectionPreferences ? (
@@ -204,34 +263,7 @@ export default async function PlayerPage({ params, searchParams }: {
 
       {goalHistory.some((goal) => goal.status !== "active") && <details className="core-panel core-form-panel"><summary className="font-semibold cursor-pointer list-none flex items-center justify-between"><span>Tidigare mål</span><span aria-hidden="true" style={{ color: "var(--ink-muted)" }}>⌄</span></summary><div className="space-y-2 mt-4">{goalHistory.filter((goal) => goal.status !== "active").map((goal) => <p key={goal.id} className="body-small"><span className="badge mr-2">{goal.status === "achieved" ? "Uppnått" : "Pausat"}</span>{goal.title}</p>)}</div></details>}
 
-      <MatchEvaluationTrend data={matchEvaluationTrend} />
 
-      <details className="core-panel core-form-panel">
-        <summary className="core-section-head cursor-pointer list-none">
-          <div><p className="core-kicker">Sanktan</p><h2 className="core-section-title mt-2">Spelade matcher</h2></div>
-          <div className="flex items-center gap-3"><span className="core-section-note">{matchHistory.length} spelade</span><span aria-hidden="true" className="text-xl leading-none" style={{ color: "var(--ink-muted)" }}>⌄</span></div>
-        </summary>
-        {matchHistory.length ? (
-          <div className="core-list core-list-2 mt-4">
-            {matchHistory.map((match) => (
-              <article key={match.external_id} className="core-panel p-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="core-team-tag" data-team-tone={match.source_team === "Gul" ? "yellow" : "green"}>{match.source_team}</span>
-                  {match.level && <span className="badge">Sanktan {sanktanLevelLabel(match.level)}</span>}
-                  <span className="caption ml-auto" style={{ color: "var(--ink-muted)" }}>{match.home_away === "home" ? "Hemma" : "Borta"}</span>
-                </div>
-                <h3 className="mt-3">{match.opponent}</h3>
-                <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
-                  {formatMatchDate(match.match_date)}{match.start_time ? ` · ${match.start_time}` : ""}
-                </p>
-                {match.location && <p className="caption mt-1" style={{ color: "var(--ink-muted)" }}>{match.location}</p>}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="core-panel p-5 mt-4"><p className="body-small" style={{ color: "var(--ink-secondary)" }}>Inga spelade Sanktanmatcher registrerade.</p></div>
-        )}
-      </details>
     </div>
   );
 }

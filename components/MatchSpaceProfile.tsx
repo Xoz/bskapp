@@ -9,14 +9,13 @@ export default function MatchSpaceProfile({ playerId, input, canEdit }: {playerI
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const forecast = forecastMatchSpace(input);
-  return <section className="core-panel p-5 space-y-3">
-    <h2 className="core-section-title">Matchutrymme</h2>
-    {input.sourceWarning && <p className="text-sm" style={{color:"var(--warning)"}}>{input.sourceWarning}</p>}
+  return <section className="core-panel core-form-panel profile-battery">
+    <div className="profile-section-heading"><h2 className="core-section-title">Matchutrymme</h2><span className="profile-meta">Beräknat · kommande 7 dagar</span></div>
     <MatchSpaceBar forecast={forecast}/>
-    <p className="space-battery-legend"><i aria-hidden="true"/>Lägst <i aria-hidden="true"/>Till nuvarande nivå · prognos 7 dagar</p>
-    <details className="text-sm"><summary className="cursor-pointer">Beräkning och individuell justering</summary>
+    <div className="profile-battery-tools"><details className="profile-details"><summary>Så beräknas det</summary>
     <p className="mt-3 mb-3" style={{color: "var(--ink-secondary)"}}>Fullt batteri visas alltid som 100 %. Justeringen anger kapacitet jämfört med standard (100 %). Ett större batteri förbrukar en mindre andel vid samma speltid. Utespelarna delar lika på speltiden, målvakten får full matchtid. Träningar uppskattas till 60 minuter. Historiken omfattar 28 dagar med antaget fullt batteri från början. Cuper, andra idrotter och saknad närvaro ingår inte.</p>
-    {canEdit && <form onSubmit={event => {
+    </details>
+    {canEdit && <details className="profile-details"><summary>Justera kapacitet</summary><form onSubmit={event => {
       event.preventDefault(); setMessage("");
       const form = new FormData(); form.set("capacity", String(capacity));
       startTransition(async () => { try { await saveMatchSpaceCapacity(playerId, form); setMessage("Kapaciteten är uppdaterad."); } catch (error) { setMessage(error instanceof Error ? error.message : "Det gick inte att spara."); } });
@@ -26,7 +25,7 @@ export default function MatchSpaceProfile({ playerId, input, canEdit }: {playerI
       </label>
       <button type="submit" className="btn-secondary btn-sm" disabled={pending}>{pending ? "Sparar…" : "Spara kapacitet"}</button>
       <span role="status">{message}</span>
-    </form>}
-    </details>
+    </form></details>}
+    </div>
   </section>;
 }

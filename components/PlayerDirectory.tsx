@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
+import { playerListContext } from "@/lib/playerProfile";
 import Avatar from "@/components/Avatar";
 import { sanktanLevelLabel } from "@/lib/sanktanLevel";
 
@@ -32,8 +33,8 @@ function preferenceSummary(player: PlayerDirectoryItem) {
   ].filter(Boolean).join(" · ");
 }
 
-export default function PlayerDirectory({ players }: { players: PlayerDirectoryItem[] }) {
-  const [query, setQuery] = useState("");
+export default function PlayerDirectory({ players, team, initialQuery = "" }: { players: PlayerDirectoryItem[]; team: string; initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase("sv"));
   const visiblePlayers = useMemo(() => {
     if (!deferredQuery) return players;
@@ -56,6 +57,7 @@ export default function PlayerDirectory({ players }: { players: PlayerDirectoryI
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            maxLength={100}
             placeholder="Namn, position eller nivå"
             autoComplete="off"
           />
@@ -66,7 +68,7 @@ export default function PlayerDirectory({ players }: { players: PlayerDirectoryI
       {visiblePlayers.length > 0 ? (
         <div className="player-directory-list">
           {visiblePlayers.map((player) => (
-            <Link key={player.id} href={`/spelare/${player.id}`} className="player-directory-row">
+            <Link key={player.id} id={`spelare-${player.id}`} href={`/spelare/${player.id}?${playerListContext(team, query)}`} className="player-directory-row">
               <Avatar name={player.name} jersey={player.jersey} size={38} />
               <div className="player-directory-main">
                 <div className="player-directory-name-row">

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import postgres from 'postgres';
-import { playerDirectoryStatsQuery } from './playerDirectoryStats';
+import { playerDirectoryStatsQuery, playerMatchHistoryQuery } from './playerDirectoryStats';
 
 describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('spelarlistans matchstatistik', () => {
   it('avgränsar år och lag, utesluter cuper samt skiljer kallelse från uttagning', async () => {
@@ -11,7 +11,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('spelarlistans matchsta
         CREATE TEMP TABLE matches(id int, date text, finished int, cancelled int, group_id int);
         CREATE TEMP TABLE settings(key text,value text);
         INSERT INTO settings VALUES('unrelated_text','inte JSON');
-        ALTER TABLE matches ADD COLUMN match_type text DEFAULT 'seriespel', ADD COLUMN cup_name text DEFAULT '';
+        ALTER TABLE matches ADD COLUMN opponent text DEFAULT 'Exempelmotstånd', ADD COLUMN match_type text DEFAULT 'seriespel', ADD COLUMN cup_name text DEFAULT '';
         CREATE TEMP TABLE match_players(match_id int, player_id int);
         CREATE TEMP TABLE match_roster(match_id int, player_id int, callup_status text);
         INSERT INTO groups VALUES(1,'Gul','subgroup',NULL),(2,'Cup','matchgroup',1),(3,'Grön','subgroup',NULL),(4,'Cupfinal','matchgroup',2);
@@ -31,6 +31,13 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('spelarlistans matchsta
         let index = 0;
         return sql.unsafe(query.sql.replace(/\?/g, () => `$${++index}`), query.args);
       };
+      const history = async (period: "current" | "earlier" = "current") => {
+        const query = playerMatchHistoryQuery(1, '2026-09-10', period); let index = 0;
+        return sql.unsafe(query.sql.replace(/\?/g, () => `$${++index}`), query.args);
+      };
+      expect((await history()).map(row => row.id)).toEqual([9, 7, 4, 1]);
+      expect((await history("earlier")).map(row => row.id)).toEqual([5]);
+      expect((await history()).length).toBe((await read(null))[0].match_count);
       expect(await read('Gul')).toEqual([{ player_id: 1, match_count: 2, callup_count: 2 }]);
       expect(await read('Grön')).toEqual([{ player_id: 1, match_count: 1, callup_count: 1 }]);
       expect(await read(null)).toEqual([{ player_id: 1, match_count: 4, callup_count: 4 }]);
@@ -44,9 +51,12 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('spelarlistans matchsta
       await sql`INSERT INTO settings VALUES('svenskalag_match_metadata:1','{"scope":"cup"}')`;
       expect((await read('Gul'))[0].match_count).toBe(1);
       expect((await read('Gul'))[0].callup_count).toBe(1);
+      expect((await history()).map(row => row.id)).not.toContain(1);
+      expect((await history()).length).toBe((await read(null))[0].match_count);
       await sql`DELETE FROM settings`;
       await sql`UPDATE matches SET match_type='traningsmatch' WHERE id=1`;
       expect((await read('Gul'))[0].match_count).toBe(2);
+      expect((await history()).find(row => row.id === 1)?.match_type).toBe('traningsmatch');
     } finally {
       await sql.end();
     }

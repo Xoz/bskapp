@@ -15,13 +15,14 @@ const TEAM_TONES: Record<string, "yellow" | "green" | "blue"> = { Gul: "yellow",
 const UNASSIGNED_TEAM = "utan-lag";
 
 export default async function PlayersPage({ searchParams }: {
-  searchParams: Promise<{ lag?: string | string[] }>;
+  searchParams: Promise<{ lag?: string | string[]; q?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || !isStaffRole(user.primaryRole)) redirect("/mina-spelare");
   if (!user.permissions.includes("view_players")) redirect("/idag?behorighet=saknas");
   const players = await getPlayerCoreSummaries();
-  const requestedTeam = (await searchParams).lag;
+  const queryParams = await searchParams;
+  const requestedTeam = queryParams.lag;
   const teamNames = [...new Set(players.flatMap(({ teams }) => teams.map((team) => team.name)))].sort((a, b) => {
     const aRank = TEAM_ORDER.indexOf(a);
     const bRank = TEAM_ORDER.indexOf(b);
@@ -94,7 +95,7 @@ export default async function PlayersPage({ searchParams }: {
         {" "}Registrerade spelade matcher till och med idag. Matchkallelser omfattar även kommande matcher och alla svar (ja, nej och obesvarat).
         {" "}Cuper räknas separat och ingår inte här. Inställda och borttagna matcher ingår inte. Siffrorna bygger på importerade uppgifter; historiken kan vara ofullständig.
       </p>
-      <PlayerDirectory players={visiblePlayers.map(({ player, teams, goals }) => ({
+      <PlayerDirectory team={selectedTeam || "alla"} initialQuery={typeof queryParams.q === "string" ? queryParams.q.slice(0, 100) : ""} players={visiblePlayers.map(({ player, teams, goals }) => ({
         id: player.id,
         name: player.name,
         jersey: player.jersey_number,
