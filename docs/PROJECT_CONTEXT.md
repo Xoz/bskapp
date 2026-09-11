@@ -555,3 +555,8 @@ Sparad matchplan öppnas som kompakt läsvy: mindre statisk plan, formation, avb
 ## Gemensam matchnivå – 2026-09-11
 
 Rättar att Idag bara kände igen numeriska nivåer medan Matcher bara kände igen text-id. Båda tolkar nu samma fem nivåer via LEVELS. Aktivitetslista, aktivitetsdetalj, uttagningslista och matchhistorik använder gemensam SQL-översättning till Svenska Lag-skalan; matchlistans level() accepterar också numeriska strängar. Inga lagrade matchnivåer ändras. Regressionstest verifierar samtliga nivåer i båda format samt tomma/ogiltiga värden mot PostgreSQL.
+
+
+## Matchnivåer publicerade och verifierade – 2026-09-11
+
+Commit 78a2a121ced0be404092a8518e9a98f20215dec7 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34569895315. 203 lokala tester inklusive PostgreSQL samt typkontroll godkända. Deployens tester, produktionsbygge och hälsokontroller godkända. Inloggad kontroll av Idag och Matcher visar AIK FF 2 (id 7) som Medel och Örby IS Blå från Medel (id 149) som Svår i båda vyerna. Användaren benämnde den andra matchen Örebro; den aktuella matchen i Idag är Örby. Ingen matchdata ändrad. Tillfällig lokal testdatabas borttagen.
