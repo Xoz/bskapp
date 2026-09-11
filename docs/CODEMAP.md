@@ -259,3 +259,5 @@ Terminologi 2026-09-10: `matchRosterLabel` benämner selected-underlaget Lagupps
 `lib/matchSpaceMinutes.ts`: `sharedMatchMinutes` delar utespelarnas matchtid; `matchSpaceGoalkeeper` identifierar målvakt från matchposition och profil. Används av `matchSpaceData.ts` för både historik och prognos. Tester i `matchSpaceMinutes.test.ts` samt databasprovet `matchSpaceData.test.ts`.
 
 `lib/svenskalag/matchMetadata.ts`: klassificering/validering/läsning av tävlings-id, matchtyp och spelform; settings `svenskalag_match_metadata:<matchId>`. `scripts/svenskalag/check-match-types.ts` provhämtar Gul/Grön utan verksamhetsskrivningar. Cupplan i `docs/CUP_PLAN.md`.
+
+Matchplanens spartransport: `lib/matchPlan/client.ts` → `app/api/matches/[id]/plan/route.ts` → befintlig `lib/matchPlan/actions.ts`. Fast POST-adress utan byggberoende action-id, samma origin krävs; behörighet, truppvalidering och revisionsskydd ligger kvar i serverfunktionen.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { saveMatchPlan } from '@/lib/matchPlan/actions';
+import { persistMatchPlan } from '@/lib/matchPlan/client';
 import { emptyMatchPlan, IDEA_FIELDS, MATCH_FORMATIONS, type MatchPlan } from '@/lib/matchPlan/model';
 import './match-plan.css';
 
@@ -66,7 +66,7 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
     setMessage('');
     startTransition(async () => {
       try {
-        const result = await saveMatchPlan(matchId, revision, plan);
+        const result = await persistMatchPlan(matchId, revision, plan);
         if (result.error) setMessage(result.error);
         else if (result.revision) { setRevision(result.revision); setSaved(JSON.stringify(plan)); setMessage('Matchplanen är sparad.'); }
       } catch { setMessage('Kunde inte spara. Dina ändringar finns kvar här. Försök igen.'); }
