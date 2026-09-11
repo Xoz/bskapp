@@ -1,4 +1,5 @@
 import "server-only";
+import { sharedMatchMinutes, matchSpaceGoalkeeper, type MatchSpaceParticipant } from "./matchSpaceMinutes";
 import { GREEN_STATUS_KEY, type SyncStatus } from "./svenskalag/model";
 import { all, get } from "./db";
 import { canAccessGroup, canAccessPlayer, getCurrentUser } from "./auth";
@@ -38,18 +39,23 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
       WHERE pa.match_id=m.id AND pp.player_id=p.id AND pp.attendance_status='present'))`;
   const [settings, matches, trainings] = await Promise.all([
     all<{key: string; value: string}>(`SELECT key, value FROM settings WHERE key IN (${marks})`, ids.map(capacityKey)),
-    all<{player_id: number; id: number; date: string; start_time: string | null; opponent: string; duration: number; minutes: number | null; played: boolean}>(`
+    all<MatchSpaceParticipant & {id: number; date: string; start_time: string | null; opponent: string; duration: number; played: boolean}>(`
       SELECT p.id AS player_id, m.id, m.date, m.start_time, m.opponent,
-        m.periods * m.period_minutes AS duration, mp.minutes,
+        m.periods * m.period_minutes AS duration,
+        p.preferred_position_primary, p.position, mr.selected_position,
+        (SELECT pp.position FROM development_activities pa
+          JOIN development_activity_participation pp ON pp.activity_id=pa.id
+          WHERE pa.match_id=m.id AND pp.player_id=p.id AND pp.attendance_status='present'
+            AND pp.position <> '' ORDER BY pp.updated_at DESC LIMIT 1) AS attendance_position,
         (${participated} AND (m.finished=1 OR m.date < ?)) AS played
       FROM players p JOIN matches m ON m.date BETWEEN ? AND ? AND m.cancelled=0
       LEFT JOIN match_players mp ON mp.match_id=m.id AND mp.player_id=p.id
       LEFT JOIN match_roster mr ON mr.match_id=m.id AND mr.player_id=p.id
-      WHERE p.id IN (${marks}) AND (
+      WHERE (
         (${participated} AND (m.finished=1 OR m.date < ?))
         OR (m.finished=0 AND m.date >= ? AND mr.callup_status IS DISTINCT FROM 'declined'
           AND (mr.selection_status='selected' OR mr.callup_status IN ('accepted','pending'))))
-      ORDER BY m.date, m.start_time, m.id`, [swedishDate(new Date(now)), from, to, ...ids, swedishDate(new Date(now)), swedishDate(new Date(now))]),
+      ORDER BY m.date, m.start_time, m.id`, [swedishDate(new Date(now)), from, to, swedishDate(new Date(now)), swedishDate(new Date(now))]),
     all<{player_id: number; id: string; activity_date: string; start_time: string | null; title: string; played: boolean}>(`
       SELECT DISTINCT ON (p.id, da.activity_date, da.start_time, da.group_id)
         p.id AS player_id, da.id, da.activity_date, da.start_time, da.title,
@@ -61,21 +67,30 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
         ap.attendance_status='present' OR (da.activity_date >= ? AND ac.attendance_status IN ('present','unknown') AND ap.attendance_status IS DISTINCT FROM 'absent'))
       ORDER BY p.id, da.activity_date, da.start_time, da.group_id, played DESC, da.id`, [from, to, ...ids, swedishDate(new Date(now))]),
   ]);
+  // Alla deltagare behövs i nämnaren, även när bara en spelarprofil efterfrågas.
+  const matchIds = [...new Set([...matches.map(m => m.id), ...(target ? [target.id] : [])])];
+  const plans = matchIds.length ? await all<{key:string; value:string}>(
+    `SELECT key,value FROM settings WHERE key IN (${matchIds.map(() => "?").join(",")})`, matchIds.map(id => `match_plan:${id}`)) : [];
+  const planById = new Map(plans.map(p => [Number(p.key.split(":")[1]), p.value]));
+  const participants = new Map(matchIds.map(id => [id, matches.filter(m => m.id === id)]));
+  const keeperById = new Map(matchIds.map(id => [id, matchSpaceGoalkeeper(participants.get(id)!, planById.get(id))]));
   const capacities = new Map(settings.map(row => [row.key, Number(row.value)]));
   const result = new Map<number, SpaceInput>(ids.map(id => {
     const capacity = capacities.get(capacityKey(id)) ?? 100;
     return [id, { sourceWarning, capacity: validCapacity(capacity) ? capacity : 100, now, events: [], target: target ? {
       id: `match:${target.id}`, title: `Mot ${target.opponent}`, start: targetStart, duration: target.periods * target.period_minutes,
-      minutes: target.periods * target.period_minutes, kind: "match", planned: true, estimated: true,
+      minutes: sharedMatchMinutes(target.periods * target.period_minutes,
+        participants.get(target.id)!.length + (participants.get(target.id)!.some(p => p.player_id === id) ? 0 : 1),
+        keeperById.get(target.id) === id), kind: "match", planned: true, estimated: true,
     } : undefined }];
   }));
   for (const row of matches) {
+    if (!result.has(row.player_id)) continue;
     const start = swedishWallClockToEpoch(row.date, row.start_time || "12:00");
     if (!row.played && start < now) continue;
-    const hasMinutes = row.played && Number(row.minutes) > 0;
     const event: SpaceEvent = { id: `match:${row.id}`, title: `Mot ${row.opponent}`, start,
-      duration: row.duration, minutes: hasMinutes ? Math.min(Number(row.minutes), row.duration) : row.duration,
-      kind: "match", planned: !row.played, estimated: !hasMinutes || !row.start_time };
+      duration: row.duration, minutes: sharedMatchMinutes(row.duration, participants.get(row.id)!.length, keeperById.get(row.id) === row.player_id),
+      kind: "match", planned: !row.played, estimated: true };
     result.get(row.player_id)!.events.push(event);
   }
   for (const row of trainings) {
@@ -83,6 +98,13 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
     if (!row.played && start < now) continue;
     result.get(row.player_id)!.events.push({id: `training:${row.id}`, title: row.title, start,
       duration: 60, minutes: 60, kind: "training", planned: !row.played, estimated: true});
+  }
+  for (const [id, input] of result) {
+    const relevant = matches.filter(m => m.player_id === id).map(m => m.id);
+    if (target) relevant.push(target.id);
+    if (relevant.some(matchId => keeperById.get(matchId) == null)) {
+      input.sourceWarning = [input.sourceWarning, "Målvakt saknas eller är otydlig i någon match. Speltiden uppskattas med en reserverad målvaktsplats; kontrollera matchens positioner."].filter(Boolean).join(" ");
+    }
   }
   return result;
 }

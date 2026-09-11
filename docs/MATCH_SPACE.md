@@ -18,9 +18,21 @@ avvikande kapacitet i produktion. Samma återhämtningstakt gäller alla.
 
 ## Underlag och begränsningar
 
-`match_players` ger faktiskt deltagande. Positiva `minutes` används; noll
-är idag också standard för okänd speltid och behandlas därför som okänd,
-med hela matchlängden som uppskattning. Detta kan överskatta belastningen.
+Speltiden för batteriet delas jämnt mellan närvarande utespelare:
+7v7 = 6 × 60 / (antal deltagare − 1), 9v9 = 8 × 75 / (antal deltagare − 1).
+Målvakten får hela matchtiden. Max är alltid matchens längd. Kortare cupmatcher
+behåller registrerad längd och sex utespelarplatser. Appen saknar separat
+spelformsfält; exakt 75 minuters registrerad matchlängd identifierar tills vidare
+9v9. Övriga längder räknas med sex utespelarplatser.
+
+Detta är batteriets uppskattning även när äldre statistik har ett minutvärde;
+statistikens minuter ändras inte. Alla kanoniska deltagare räknas i nämnaren,
+även på en enskild spelarprofil och över laggränser. Rättad frånvaro räknas bort.
+Målvakt identifieras via närvaroposition, matchplan, uttagningsposition och sist
+primär profilposition. Tvetydig/saknad målvakt ger underlagsvarning och en
+reserverad målvaktsplats i uppskattningen; ingen godtycklig spelare utses.
+Vid ett hypotetiskt lån läggs kandidaten till antalet exakt en gång.
+
 Planerade matcher hämtas från `match_roster`: accepted/pending eller selected,
 men ett explicit declined utesluts även om selected ligger kvar. Inställda
 matcher utesluts. Alla spelarens lag räknas, inklusive cupmatcher.
@@ -62,7 +74,7 @@ Tidskrock ger varning även med stort batteri.
 Enhetstest: kapaciteter, dygnsvila, täta/utspridda matcher, framtid kontra nu,
 deduplicering, efterföljande egen match, kortare speltid, tidskrock, negativ
 balans, träning och svensk sommartid. PostgreSQL-test använder temporära tabeller
-för faktisk/okänd tid, nej/inställt/pending, sparande/återläsning, oförändrade
+för jämnt delad tid, hela deltagarantalet, 7v7/9v9, målvakt, nej/inställt/pending, sparande/återläsning, oförändrade
 kallelser samt nekad läs-/skrivåtkomst. Lokalt browserprov med exempelspelare
 verifierar sparande, omladdning, scenario och mobilvy.
 

@@ -508,3 +508,7 @@ importerade, nio med sparad närvaro; ett registrerat Ella-deltagande hos Grön
 hittat. Inga dubbla stabila käll-id:n i Grön. Aktivitet 20028813 har en olöst
 spelarkoppling och ger därför underlagsvarning. Den ersätter inte bekräftade
 deltaganden med antaganden. Guls startsida visar fortsatt endast Gulmatcher.
+
+## Jämnt delad speltid i batteriet – 2026-09-11
+
+Beslut: utespelarna delar lika på 6 × 60 minuter i 7v7 och 8 × 75 minuter i 9v9, med en målvakt som får full matchtid. Batteriet räknar om historik och prognos från hela matchens deltagarantal. 75 minuters matchlängd identifierar 9v9 tills separat spelform finns; kortare cupmatcher behåller sin längd. Målvaktsposition prioriteras från matchunderlag, annars profil; saknad/tvetydig målvakt ger varning. Statistikminuter och Svenska Lag ändras inte. 178 tester med PostgreSQL och produktionsbygge godkända lokalt. Se docs/MATCH_SPACE.md.

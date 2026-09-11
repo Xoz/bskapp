@@ -294,7 +294,7 @@ export default function SelectionEditor({
                       {forecast.conflict && <p>Krockar med annan aktivitet.</p>}
                       {forecast.nextAffected && <p>Låg marginal vid {forecast.nextAffected}.</p>}
                       <label className="block mt-2">Prova speltid (min)
-                        <input aria-label={`Prova speltid för ${candidate.player.name}`} type="number" min={0} max={candidate.matchSpace?.target?.duration ?? 60} value={scenarioMinutes[candidate.player.id] ?? candidate.matchSpace?.target?.minutes ?? 60} className="input w-full" onChange={event => setScenarioMinutes(current => ({ ...current, [candidate.player.id]: Math.max(0, Math.min(candidate.matchSpace?.target?.duration ?? 60, Number(event.target.value))) }))} />
+                        <input aria-label={`Prova speltid för ${candidate.player.name}`} type="number" min={0} step="any" max={candidate.matchSpace?.target?.duration ?? 60} value={scenarioMinutes[candidate.player.id] ?? Math.round((candidate.matchSpace?.target?.minutes ?? 60) * 10) / 10} className="input w-full" onChange={event => setScenarioMinutes(current => ({ ...current, [candidate.player.id]: Math.max(0, Math.min(candidate.matchSpace?.target?.duration ?? 60, Number(event.target.value))) }))} />
                       </label>
                       <p>Uppskattning. Speltiden är endast en simulering.</p>
                     </details> : "Underlag saknas"}
