@@ -10,6 +10,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('spelarlistans matchsta
         CREATE TEMP TABLE players(id int);
         CREATE TEMP TABLE matches(id int, date text, finished int, cancelled int, group_id int);
         CREATE TEMP TABLE settings(key text,value text);
+        INSERT INTO settings VALUES('unrelated_text','inte JSON');
         ALTER TABLE matches ADD COLUMN match_type text DEFAULT 'seriespel', ADD COLUMN cup_name text DEFAULT '';
         CREATE TEMP TABLE match_players(match_id int, player_id int);
         CREATE TEMP TABLE match_roster(match_id int, player_id int, callup_status text);

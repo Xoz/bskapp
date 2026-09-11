@@ -6,7 +6,8 @@ export function regularMatchSql(alias = 'm'): string {
     AND NULLIF(trim(${alias}.cup_name), '') IS NULL
     AND NOT EXISTS (SELECT 1 FROM settings cup_meta
       WHERE cup_meta.key = 'svenskalag_match_metadata:' || ${alias}.id::text
-        AND cup_meta.value::jsonb->>'scope' = 'cup')
+        AND CASE WHEN cup_meta.key = 'svenskalag_match_metadata:' || ${alias}.id::text
+          THEN cup_meta.value::jsonb->>'scope' = 'cup' ELSE false END)
     AND NOT EXISTS (
       WITH RECURSIVE ancestors AS (
         SELECT id, parent_id, group_type FROM groups WHERE id = ${alias}.group_id
