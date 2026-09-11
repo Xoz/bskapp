@@ -271,3 +271,6 @@ Matchnivåer: `lib/levels.ts` tolkar text-id och Svenska Lag-siffror 1–5. `lib
 
 Hermes MCP/lån: `integrations/hermes-bsk/` är den privata, skrivskyddade adaptern. `laneunderlag` läser `/api/hermes/loans` med separat VPS-token. `lib/hermes/{loans,loanModel,loanAuth}.ts` verifierar kontobindning, lagåtkomst, kandidatmedlemskap, åtaganden och procentprognos. `lib/matchSpaceReader.ts` innehåller gemensam dataläsning för appens behörighetswrapper `matchSpaceData.ts` och låneservicen. Se `docs/HERMES_LOAN_AUDIT.md` och integrationens README för drift, tester och återgång.
 `lib/hermes/loanAnswer.ts` formar låneverktygets färdiga svenska `answerText` och räknade kategorier. Hermes återger den för att undvika omräkning av antal eller omskrivning av ja-svar till faktisk närvaro.
+
+
+Spelarprofil 2026-09-11: `components/player-profile.css` avgränsar kompakt mobilutseende. `lib/playerProfile.ts` delar `profileFocus`, `playerListContext` och `playerTrainingStatsQuery`. `lib/playerDirectoryStats.ts` delar matchurval mellan listans/profilens antal och `playerMatchHistoryQuery` (aktuellt/tidigare år). `scripts/check-player-profile.mts` verifierar flöde och åtkomst med lokala exempel. Se `docs/PLAYER_PROFILE_2026-09-11.md`.

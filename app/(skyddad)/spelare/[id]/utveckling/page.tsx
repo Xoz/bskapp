@@ -1,3 +1,4 @@
+import { playerListContext } from "@/lib/playerProfile";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
@@ -23,7 +24,7 @@ export default async function PlayerDevelopmentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ sparad?: string }>;
+  searchParams: Promise<{ sparad?: string; lag?: string; q?: string }>;
 }) {
   const role = await getRole();
   if (role !== "coach") redirect("/matcher");
@@ -40,6 +41,7 @@ export default async function PlayerDevelopmentPage({
     getLatestSelfEval(player.id),
     searchParams,
   ]);
+  const listContext = playerListContext(query.lag, query.q);
   const checkpointSkills = new Map(
     await Promise.all(checkpoints.map(async (checkpoint) => [checkpoint.id, await getDevelopmentCheckpointSkills(checkpoint.id)] as const))
   );
@@ -51,7 +53,7 @@ export default async function PlayerDevelopmentPage({
   return (
     <div className="core-page max-w-4xl">
       <Link
-        href={`/spelare/${player.id}`}
+        href={`/spelare/${player.id}${listContext ? `?${listContext}` : ""}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[var(--primary)]"
         style={{ color: "var(--ink-secondary)", fontFamily: "var(--font-display)" }}
       >

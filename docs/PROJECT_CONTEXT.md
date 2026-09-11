@@ -584,3 +584,8 @@ Modellprov med den konfigurerade kimi-k2.6 och motstridig tidigare assistenthist
 Tidsmarginalen är ett synligt antagande (30 min samling + 30 min resa + 10 min pauser), inte verifierad restid. Underlaget varnar fortsatt för Gröns olösta personkoppling och osäker målvaktsfördelning. Kallelser och matchplaner ändrades inte. Full plan och verifieringsverktyg finns i docs/HERMES_LOAN_AUDIT.md och integrations/hermes-bsk/README.md.
 
 Slutligt modellprov godkänt: faktisk mcp__bsk__laneunderlag-dispatch med målmatch-id verifierad, och modellsvar matchar MCP answerText exakt bortsett från hämtningstid. Provet använde motstridig tidigare assistenthistorik och den ordinarie konfigurerade modellen.
+
+
+## Förbättrad spelarprofil – 2026-09-11
+
+Genomförd i separat arbetskopia enligt användarens mål: kompakt identitet, faktiskt trädfokus först, en trädlänk, matchutrymme utan underlagsvarning per spelare, observationer/samtalsuppföljning och rättvisande matchbedömningsetiketter. Årsstatistik delas med spelarlistan; faktisk matchtyp, tryckbar lagfördelning, äldre historik och tydlig 28-dagarsnärvaro. Retur till listan behåller lag/sökning och spelarankare. Behörigheter bevarade. Befintligt opublicerat observationsarbete i ursprungskatalogen lämnat orört. 213 tester inklusive PostgreSQL och lokalt produktionsbygge godkända; Playwright på fyra bredder, mörkt läge och behörighetsgränser. Publicering återstår. Se docs/PLAYER_PROFILE_2026-09-11.md.
