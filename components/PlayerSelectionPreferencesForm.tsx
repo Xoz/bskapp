@@ -5,9 +5,11 @@ import { isValidChallengeLevel, normalizeChallengeLevel } from "@/lib/playerLeve
 
 const POSITIONS = ["Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"];
 const LEVELS = [
+  { value: "1", label: "Extra svår" },
   { value: "2", label: "Svår" },
   { value: "3", label: "Medel" },
   { value: "4", label: "Lätt" },
+  { value: "5", label: "Extra lätt" },
 ];
 
 type Props = {

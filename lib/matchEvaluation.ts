@@ -23,7 +23,7 @@ export function matchEvaluationIsOpen(
 
 export type MatchEvaluationPlayer = {
   id: number; name: string; jersey_number: number | null; level: string;
-  self_comparison: SelfComparison | null; match_impact: MatchImpact | null; reason_tag: string; skipped: number;
+  self_comparison: SelfComparison | null; match_impact: MatchImpact | null; reason_tag: string; skipped: number; rating: number | null; rating_comment: string;
 };
 export type MatchEvaluationWorkspace = {
   match: { id: number; opponent: string; date: string; start_time: string | null; level: string; home_away: string; activity_id: string | null };
@@ -33,18 +33,18 @@ export async function getMatchEvaluationWorkspace(matchId: number, contributorTy
   const match = await get<MatchEvaluationWorkspace["match"]>(
     `SELECT m.id, m.opponent, m.date, m.start_time, m.level, m.home_away,
             (SELECT da.id FROM development_activities da WHERE da.match_id = m.id ORDER BY da.id LIMIT 1) AS activity_id
-     FROM matches m WHERE m.id = ?`,
+     FROM matches m WHERE m.id = ? AND m.cancelled = 0`,
     [matchId]
   );
   if (!match) return null;
   const roster = await resolveMatchRoster(matchId);
-  if (!roster || roster.players.length === 0) return { match, players: [] };
+  if (!roster || roster.source !== "played" || roster.players.length === 0) return { match, players: [] };
   const rosterIds = roster.players.map((player) => player.id);
   const marks = rosterIds.map(() => "?").join(", ");
   const players = await all<MatchEvaluationPlayer>(
     `SELECT p.id, p.name, p.jersey_number,
-            CASE p.preferred_level_primary WHEN '2' THEN 'svar' WHEN '3' THEN 'medel' WHEN '4' THEN 'latt' ELSE '' END AS level,
-            e.self_comparison, e.match_impact,
+            CASE p.preferred_level_primary WHEN '1' THEN 'extra_svar' WHEN '5' THEN 'extra_latt' WHEN '2' THEN 'svar' WHEN '3' THEN 'medel' WHEN '4' THEN 'latt' ELSE '' END AS level,
+            e.self_comparison, e.match_impact, e.rating, e.rating_comment,
             COALESCE(e.reason_tag, '') AS reason_tag, COALESCE(e.skipped, 0) AS skipped
      FROM players p
      LEFT JOIN match_player_evaluations e ON e.match_id = ? AND e.player_id = p.id
@@ -77,7 +77,7 @@ export async function getPublicEvaluationWorkspace(token: string): Promise<(Matc
 }
 export async function getMatchEvaluationStatus(matchId: number) {
   const roster = await resolveMatchRoster(matchId);
-  if (!roster || roster.players.length === 0) return { total: 0, evaluated: 0, contributors: 0 };
+  if (!roster || roster.source !== "played" || roster.players.length === 0) return { total: 0, evaluated: 0, contributors: 0 };
   const rosterIds = roster.players.map((player) => player.id);
   const marks = rosterIds.map(() => "?").join(", ");
   const result = await get<{ evaluated: number; contributors: number }>(
@@ -104,7 +104,7 @@ export async function getPendingMatchEvaluations(limit = 6): Promise<{ id: numbe
      FROM matches m
      JOIN development_activities da ON da.match_id = m.id
      JOIN groups g ON g.id = da.group_id
-     WHERE m.date BETWEEN ? AND ?
+     WHERE m.date BETWEEN ? AND ? AND m.cancelled = 0
        AND da.external_source = 'svenskalag_sanktan'
        AND lower(g.name) = 'gul'
      ORDER BY m.date DESC, m.id DESC
@@ -126,8 +126,8 @@ export async function getPendingMatchEvaluation(): Promise<null | { id: number; 
 }
 
 export type MatchEvaluationTrendPoint = {
-  match_id: number; date: string; opponent: string; self_comparison: SelfComparison;
-  match_impact: MatchImpact; disagreement: boolean; contributor_count: number;
+  match_id: number; date: string; opponent: string; self_comparison: SelfComparison | null;
+  match_impact: MatchImpact | null; rating: number | null; match_level: string; rating_comment: string; disagreement: boolean; contributor_count: number;
 };
 const SELF_VALUE: Record<SelfComparison, number> = { below: -1, usual: 0, above: 1 };
 const IMPACT_VALUE: Record<MatchImpact, number> = { struggled: -1, held: 0, influenced: 1 };
@@ -139,23 +139,33 @@ function consensusKey<T extends string>(values: T[], scores: Record<T, number>):
   })[0];
 }
 export async function getPlayerMatchEvaluationTrend(playerId: number): Promise<MatchEvaluationTrendPoint[]> {
-  const rows = await all<{ match_id: number; date: string; opponent: string; self_comparison: SelfComparison; match_impact: MatchImpact }>(
-    `SELECT e.match_id, m.date, m.opponent, e.self_comparison, e.match_impact
+  const rows = await all<{ match_id: number; date: string; opponent: string; self_comparison: SelfComparison | null; match_impact: MatchImpact | null; rating: number | null; match_level: string; rating_comment: string; group_id: number | null }>(
+    `SELECT e.match_id, m.date, m.opponent, e.self_comparison, e.match_impact, e.rating, e.match_level_snapshot AS match_level, e.rating_comment, m.group_id
      FROM match_player_evaluations e JOIN matches m ON m.id = e.match_id
-     WHERE e.player_id = ? AND COALESCE(e.skipped, 0) = 0
+     WHERE e.player_id = ? AND COALESCE(e.skipped, 0) = 0 AND m.cancelled = 0
      ORDER BY m.date DESC, m.id DESC, e.id`, [playerId]
   );
   const grouped = new Map<number, typeof rows>();
-  for (const row of rows) grouped.set(row.match_id, [...(grouped.get(row.match_id) ?? []), row]);
-  return [...grouped.values()].slice(0, 12).map((group) => {
-    const self = group.map((row) => row.self_comparison);
-    const impact = group.map((row) => row.match_impact);
+  const access = new Map<number | null, boolean>();
+  for (const row of rows) {
+    if (!access.has(row.group_id)) access.set(row.group_id, await canAccessGroup(row.group_id));
+    if (!access.get(row.group_id)) continue;
+    grouped.set(row.match_id, [...(grouped.get(row.match_id) ?? []), row]);
+  }
+  return [...grouped.values()].map((group) => {
+    const self = group.map((row) => row.self_comparison).filter((v): v is SelfComparison => v !== null);
+    const impact = group.map((row) => row.match_impact).filter((v): v is MatchImpact => v !== null);
     const selfSpread = Math.max(...self.map((v) => SELF_VALUE[v])) - Math.min(...self.map((v) => SELF_VALUE[v]));
     const impactSpread = Math.max(...impact.map((v) => IMPACT_VALUE[v])) - Math.min(...impact.map((v) => IMPACT_VALUE[v]));
+    const ratings = group.filter(row => row.rating != null);
+    const matchLevels = new Set(ratings.map(row => row.match_level));
     return {
       match_id: group[0].match_id, date: group[0].date, opponent: group[0].opponent,
-      self_comparison: consensusKey(self, SELF_VALUE), match_impact: consensusKey(impact, IMPACT_VALUE),
-      disagreement: selfSpread >= 2 || impactSpread >= 2, contributor_count: group.length,
+      self_comparison: self.length ? consensusKey(self, SELF_VALUE) : null, match_impact: impact.length ? consensusKey(impact, IMPACT_VALUE) : null,
+      rating: ratings.length ? ratings.reduce((n, row) => n + row.rating!, 0) / ratings.length : null,
+      match_level: matchLevels.size === 1 ? ratings[0].match_level : "",
+      rating_comment: group.map(row => row.rating_comment).filter(Boolean).join(" · "),
+      disagreement: selfSpread >= 2 || impactSpread >= 2 || (ratings.length > 1 && Math.max(...ratings.map(row => row.rating!)) - Math.min(...ratings.map(row => row.rating!)) >= 2), contributor_count: ratings.length || group.length,
     };
   });
 }

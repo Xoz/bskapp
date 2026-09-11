@@ -1,90 +1,35 @@
 "use client";
-
-import { useState } from "react";
-import {
-  IMPACT_LABELS, MATCH_IMPACTS, REASON_LABELS, REASON_TAGS,
-  SELF_COMPARISONS, SELF_LABELS, type MatchImpact, type SelfComparison,
-} from "@/lib/matchEvaluationTypes";
-
-type WebMatchEvaluationPlayer = {
-  id: number;
-  name: string;
-  jerseyNumber: number | null;
-  level: string;
-  selfComparison: string | null;
-  matchImpact: string | null;
-  reasonTag: string;
-  skipped: boolean;
-};
-
-type MatchContext = {
-  ourScore: number | null;
-  opponentScore: number | null;
-  hasLiveData: boolean;
-  coachComment: string;
-};
-
-type Answer = {
-  self: SelfComparison | null;
-  impact: MatchImpact | null;
-  reason: string;
-  skipped: boolean;
-};
-
-const isHandled = (answer: Answer | undefined) =>
-  Boolean(answer?.skipped || (answer?.self && answer?.impact));
-
-export default function MatchEvaluationForm({
-  players,
-  matchContext,
-  saveAction,
-}: {
-  players: WebMatchEvaluationPlayer[];
-  matchContext?: MatchContext;
-  saveAction: (formData: FormData) => Promise<void>;
+import { useState, useTransition } from "react";
+import { RATING_LABELS } from "@/lib/matchRating";
+import { levelLabel } from "@/lib/levels";
+import './match-ratings.css';
+type Player = { id: number; name: string; rating?: number | null; ratingComment?: string; selfComparison?: string | null };
+type MatchContext = { ourScore: number | null; opponentScore: number | null; hasLiveData: boolean; coachComment: string };
+export default function MatchEvaluationForm({ players, matchContext, matchLevel, saveAction }: {
+  players: Player[]; matchContext?: MatchContext; matchLevel?: string; saveAction: (data: FormData) => Promise<void>;
 }) {
-  const [answers, setAnswers] = useState<Record<number, Answer>>(() =>
-    Object.fromEntries(players.map((player) => [player.id, {
-      self: player.selfComparison as SelfComparison | null,
-      impact: player.matchImpact as MatchImpact | null,
-      reason: player.reasonTag,
-      skipped: player.skipped,
-    }]))
-  );
-  const [activeIndex, setActiveIndex] = useState(() => {
-    const firstUnfinished = players.findIndex((player) => !isHandled({
-      self: player.selfComparison as SelfComparison | null,
-      impact: player.matchImpact as MatchImpact | null,
-      reason: player.reasonTag,
-      skipped: player.skipped,
-    }));
-    return firstUnfinished >= 0 ? firstUnfinished : Math.max(0, players.length - 1);
-  });
-
-  const player = players[activeIndex];
-  const answer = player ? answers[player.id] : undefined;
-  const handled = players.filter((item) => isHandled(answers[item.id])).length;
-  const skipped = players.filter((item) => answers[item.id]?.skipped).length;
-  const allHandled = handled === players.length;
-  const isLast = activeIndex === players.length - 1;
-
-  const update = (change: Partial<Answer>) => {
-    if (!player) return;
-    setAnswers((current) => ({
-      ...current,
-      [player.id]: { ...current[player.id], ...change, skipped: false },
-    }));
-  };
-  const skipPlayer = () => {
-    if (!player) return;
-    setAnswers((current) => ({
-      ...current,
-      [player.id]: { self: null, impact: null, reason: "", skipped: true },
-    }));
-    if (!isLast) setActiveIndex((current) => current + 1);
-  };
-
-  return <form action={saveAction} className="space-y-4">
+  const [answers, setAnswers] = useState<Record<number, number | null>>(() => Object.fromEntries(players.map(p => [p.id, p.rating ?? null])));
+  const [error, setError] = useState('');
+  const [pending, startTransition] = useTransition();
+  const rated = Object.values(answers).filter(v => v != null).length;
+  return <form action={data => { setError(''); startTransition(async () => { try { await saveAction(data); } catch (e) {
+    if (e instanceof Error && e.message === 'NEXT_REDIRECT') throw e;
+    setError(e instanceof Error ? e.message : 'Kunde inte spara. Dina val finns kvar.');
+  } }); }} className="space-y-4">
+    <section className="core-panel rating-panel">
+      <div className="rating-heading"><div><h2 className="core-section-title">Deltagarnas prestation</h2><p className="body-small">Matchnivå: <strong>{levelLabel(matchLevel) || 'Ej angiven'}</strong></p></div><span className="badge">{rated} av {players.length} bedömda</span></div>
+      {!levelLabel(matchLevel) && <p className="body-small mt-2">Ange matchens svårighetsgrad på matchsidan före bedömningen för att poängen ska kunna ge nivåunderlag.</p>}
+      <p className="body-small mt-3">Välj en poäng per spelare. Tom rad betyder ej bedömd. Tryck på valt tal igen för att rensa.</p>
+      <details className="mt-3"><summary className="body-small cursor-pointer">Så fungerar skalan 1–5</summary><ol className="mt-2 space-y-1">{RATING_LABELS.map((label, i) => <li key={label}><strong>{i + 1}</strong> · {label}</li>)}</ol><p className="body-small mt-2">Bedöm prestationen på matchens svårighetsgrad. 3 betyder att spelaren klarade nivån.</p></details>
+      <div className="rating-grid-head" aria-hidden="true"><span>Spelare</span>{RATING_LABELS.map((_, i) => <span key={i}>{i + 1}</span>)}</div>
+      {players.map(p => <div className="rating-player" key={p.id}>
+        <div className="rating-row"><strong className="rating-name">{p.name}</strong>{RATING_LABELS.map((label, i) => <button type="button" key={label} aria-label={`${p.name}: ${i + 1} – ${label}`} aria-pressed={answers[p.id] === i + 1} className="rating-choice" onClick={() => setAnswers(a => ({ ...a, [p.id]: a[p.id] === i + 1 ? null : i + 1 }))}>{i + 1}</button>)}</div>
+        <input type="hidden" name={`rating_${p.id}`} value={answers[p.id] ?? ''} disabled={Boolean(p.selfComparison && p.rating == null && answers[p.id] == null)} />
+        {p.selfComparison && p.rating == null && <p className="caption">Äldre bedömning finns kvar. Välj en poäng för att ersätta den.</p>}
+        <details className="rating-comment"><summary>Kommentar{p.ratingComment ? ' · finns' : ', frivilligt'}</summary><textarea className="input mt-2" name={`comment_${p.id}`} aria-label={`Kommentar för ${p.name}`} maxLength={1000} rows={2} defaultValue={p.ratingComment ?? ''} /></details>
+      </div>)}
+      {!players.length && <p className="body-small mt-4">Inga registrerade deltagare. Registrera deltagande innan du bedömer spelarna.</p>}
+    </section>
     {matchContext && (
     <section className="core-panel core-form-panel space-y-5">
       <div>
@@ -112,76 +57,8 @@ export default function MatchEvaluationForm({
     </section>
     )}
 
-    {player && answer && <>
-    <section className="core-panel overflow-hidden">
-      <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="core-kicker mb-1">Spelare {activeIndex + 1} av {players.length}</p>
-          <p className="body-small"><strong>{handled} hanterade</strong>{skipped > 0 ? ` · ${skipped} överhoppade` : ""}</p>
-        </div>
-        <span className={`badge ${allHandled ? "badge-primary" : ""}`}>{allHandled ? "Klart" : "Pågår"}</span>
-      </div>
-      <div className="grid gap-1 px-4 pb-4 sm:px-5" style={{ gridTemplateColumns: `repeat(${players.length}, minmax(0, 1fr))` }} aria-hidden="true">
-        {players.map((item, index) => <span key={item.id} className="h-1 rounded-full" style={{
-          background: index === activeIndex ? "var(--accent)" : isHandled(answers[item.id]) ? "var(--success)" : "var(--border)",
-        }} />)}
-      </div>
-    </section>
 
-    <article className="core-panel core-form-panel">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="body-small mb-1" style={{ color: "var(--ink-secondary)" }}>Spelare {activeIndex + 1}</p>
-          <h2 className="core-section-title">{player.name}</h2>
-        </div>
-        {player.jerseyNumber != null && <span className="badge">#{player.jerseyNumber}</span>}
-      </div>
-
-      {answer.skipped ? <div className="mt-6 rounded-2xl p-5 text-center" style={{ background: "var(--elevated)", border: "1px solid var(--border)" }}>
-        <p className="font-semibold">Spelaren hoppas över</p>
-        <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>Ingen bedömning sparas för den här spelaren.</p>
-        <button type="button" className="btn-secondary mt-4" onClick={() => update({})}>Bedöm spelaren istället</button>
-      </div> : <>
-        <fieldset className="mt-6">
-          <legend className="label mb-3">Jämfört med sin vanliga nivå</legend>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">{SELF_COMPARISONS.map((value) =>
-            <button key={value} type="button" aria-pressed={answer.self === value}
-              className={`${answer.self === value ? "btn-primary" : "btn-secondary"} min-h-12 w-full whitespace-normal`}
-              onClick={() => update({ self: value })}>{SELF_LABELS[value]}</button>)}</div>
-        </fieldset>
-        <fieldset className="mt-5">
-          <legend className="label mb-3">På den här matchnivån</legend>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">{MATCH_IMPACTS.map((value) =>
-            <button key={value} type="button" aria-pressed={answer.impact === value}
-              className={`${answer.impact === value ? "btn-primary" : "btn-secondary"} min-h-12 w-full whitespace-normal`}
-              onClick={() => update({ impact: value })}>{IMPACT_LABELS[value]}</button>)}</div>
-        </fieldset>
-        <label className="block mt-5"><span className="label">Orsakstagg, frivilligt</span>
-          <select className="input mt-2" value={answer.reason} onChange={(event) => update({ reason: event.target.value })}>
-            {REASON_TAGS.map((value) => <option key={value} value={value}>{REASON_LABELS[value]}</option>)}
-          </select></label>
-        <button type="button" className="btn-secondary w-full mt-5" onClick={skipPlayer}>Hoppa över spelaren</button>
-        <p className="text-center body-small mt-2" style={{ color: "var(--ink-secondary)" }}>Använd om spelaren exempelvis blev skadad eller inte går att bedöma.</p>
-      </>}
-    </article>
-
-    {players.map((item) => {
-      const itemAnswer = answers[item.id];
-      return <div key={item.id} hidden>
-        <input type="hidden" name={`self_${item.id}`} value={itemAnswer.self ?? ""} />
-        <input type="hidden" name={`impact_${item.id}`} value={itemAnswer.impact ?? ""} />
-        <input type="hidden" name={`reason_${item.id}`} value={itemAnswer.reason} />
-        <input type="hidden" name={`skip_${item.id}`} value={itemAnswer.skipped ? "1" : "0"} />
-      </div>;
-    })}
-
-    <div className="core-panel p-3 grid grid-cols-2 gap-2 sticky bottom-3 z-10">
-      <button className="btn-secondary" type="button" disabled={activeIndex === 0}
-        onClick={() => setActiveIndex((current) => Math.max(0, current - 1))}>Föregående</button>
-      {isLast ? <button className="btn-primary" type="submit" disabled={!allHandled}>Spara utvärdering</button> :
-        <button className="btn-primary" type="button" disabled={!isHandled(answer)}
-          onClick={() => setActiveIndex((current) => Math.min(players.length - 1, current + 1))}>Nästa spelare</button>}
-    </div>
-    </>}
+    {error && <p role="alert" className="core-panel p-4">{error}</p>}
+    {players.length > 0 && <div className="rating-save core-panel p-3"><span className="body-small">{rated} bedömda · {players.length - rated} ej bedömda</span><button className="btn-primary" type="submit" disabled={pending}>{pending ? 'Sparar…' : 'Spara utvärdering'}</button></div>}
   </form>;
 }

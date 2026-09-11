@@ -24,7 +24,7 @@ const EVIDENCE_VALUES = ["shown", "practicing", "revisit"] as const;
 const CHALLENGE_VALUES = ["safe", "balanced", "challenging"] as const;
 const GOAL_STATUS_VALUES = ["achieved", "paused"] as const;
 const POSITION_VALUES = ["", "Målvakt", "Back", "Mittfält", "Vänsterkant", "Högerkant", "Anfall"] as const;
-const SANKTAN_LEVEL_VALUES = ["", "2", "3", "4"] as const;
+const SANKTAN_LEVEL_VALUES = ["", "1", "2", "3", "4", "5"] as const;
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, values: readonly T[]): T | null {
   const candidate = String(value ?? "") as T;

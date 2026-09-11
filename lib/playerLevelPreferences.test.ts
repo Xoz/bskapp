@@ -4,6 +4,9 @@ import { isValidChallengeLevel, normalizeChallengeLevel } from "./playerLevelPre
 describe("spelarens Sanktan-nivåer", () => {
   it("tillåter bara en utmaningsnivå som är svårare än normalnivån", () => {
     expect(isValidChallengeLevel("3", "2")).toBe(true);
+    expect(isValidChallengeLevel("2", "1")).toBe(true);
+    expect(isValidChallengeLevel("5", "4")).toBe(true);
+    expect(isValidChallengeLevel("1", "2")).toBe(false);
     expect(isValidChallengeLevel("4", "3")).toBe(true);
     expect(isValidChallengeLevel("4", "2")).toBe(true);
     expect(isValidChallengeLevel("2", "3")).toBe(false);

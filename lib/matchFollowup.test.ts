@@ -9,6 +9,12 @@ const answer = (playerId: number, handled: boolean) => ({
 });
 
 describe("matchuppföljning", () => {
+  it("räknar nya poäng och tomma överhoppade rader utan äldre skalvärden", () => {
+    expect(shouldCloseMatchFollowup([1,2], [], [
+      { ...answer(1, false), rating: 5 }, { ...answer(2, false), rating: null, skipped: true },
+    ], false)).toBe(true);
+    expect(shouldCloseMatchFollowup([1], [], [{ ...answer(1, false), rating: null }], false)).toBe(false);
+  });
   it("stänger när alla spelare har bedömts eller hoppats över", () => {
     expect(shouldCloseMatchFollowup(
       [1, 2],

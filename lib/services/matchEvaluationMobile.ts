@@ -1,4 +1,6 @@
 import "server-only";
+import { ratingStatement } from "../matchRating";
+import { matchEvaluationIsOpen } from "../matchEvaluation";
 
 import { batch, all, get, logActivity, type SqlArgs } from "../db";
 import type { CurrentUser } from "../auth";
@@ -38,10 +40,14 @@ export type MobileMatchEvaluationWorkspace = {
     matchImpact: string | null;
     reasonTag: string;
     skipped: boolean;
+    rating: number | null;
+    ratingComment: string;
   }[];
 };
 
 export type MobileMatchEvaluationAnswer = {
+  rating?: number | null;
+  ratingComment?: string;
   playerId: number;
   selfComparison: string | null;
   matchImpact: string | null;
@@ -115,6 +121,7 @@ export async function getMobileMatchEvaluation(
       matchImpact: player.match_impact,
       reasonTag: player.reason_tag,
       skipped: Boolean(player.skipped),
+      rating: player.rating, ratingComment: player.rating_comment,
     })),
   };
 }
@@ -143,6 +150,7 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
                 <= now() AT TIME ZONE 'Europe/Stockholm'
          )
        )
+       AND m.cancelled = 0
        AND m.evaluation_closed_at IS NULL
        AND EXISTS (
          SELECT 1
@@ -160,7 +168,7 @@ export async function listMobileMatchEvaluations(actor: CurrentUser): Promise<Mo
   );
   const summaries = await Promise.all(matches.map(async (match) => {
     const workspace = await getMobileMatchEvaluation(actor, match.id);
-    const handled = workspace.players.filter((player) => player.skipped || (player.selfComparison && player.matchImpact)).length;
+    const handled = workspace.players.filter((player) => player.skipped || player.rating != null || (player.selfComparison && player.matchImpact)).length;
     return {
       id: match.id,
       opponent: match.opponent,
@@ -182,6 +190,7 @@ export async function saveMobileMatchEvaluation(
   context?: MobileMatchEvaluationContext
 ): Promise<MobileMatchEvaluationWorkspace> {
   const workspace = await getMobileMatchEvaluation(actor, matchId);
+  if (!matchEvaluationIsOpen(workspace.match.date, workspace.match.startTime)) throw new DevelopmentServiceError("invalid", "Matchen är inte klar för utvärdering.", 400);
   const evaluationContext = context ?? {
     ourScore: workspace.match.ourScore,
     opponentScore: workspace.match.opponentScore,
@@ -215,6 +224,11 @@ export async function saveMobileMatchEvaluation(
     const player = byPlayer.get(answer.playerId);
     if (!player || seen.has(answer.playerId)) throw new DevelopmentServiceError("invalid", "Ogiltigt spelarunderlag.", 400);
     seen.add(answer.playerId);
+    if (answer.rating !== undefined) {
+      statements.push(ratingStatement(matchId, player.id, "coach", String(actor.id), answer.rating, answer.ratingComment ?? "", workspace.match.level));
+      acceptedAnswers.push({ ...answer, skipped: answer.rating === null });
+      continue;
+    }
     const hasPartialAssessment = !answer.skipped && Boolean(answer.selfComparison || answer.matchImpact);
     if (hasPartialAssessment && (!answer.selfComparison || !answer.matchImpact)) {
       if (evaluationContext.completeWithoutPlayerEvaluations === true) continue;
@@ -231,7 +245,7 @@ export async function saveMobileMatchEvaluation(
               (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot, skipped)
             VALUES (?, ?, 'coach', ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(match_id, player_id, contributor_type, contributor_id) DO UPDATE SET
-              self_comparison = excluded.self_comparison, match_impact = excluded.match_impact,
+              self_comparison = excluded.self_comparison, match_impact = excluded.match_impact, rating = NULL, rating_comment = '',
               reason_tag = excluded.reason_tag, player_level_snapshot = excluded.player_level_snapshot,
               match_level_snapshot = excluded.match_level_snapshot, skipped = excluded.skipped, updated_at = now()`,
       args: [
@@ -251,6 +265,7 @@ export async function saveMobileMatchEvaluation(
     workspace.players.map((player) => player.id),
     workspace.players.map((player) => ({
       playerId: player.id,
+      rating: player.rating,
       selfComparison: player.selfComparison,
       matchImpact: player.matchImpact,
       skipped: player.skipped,

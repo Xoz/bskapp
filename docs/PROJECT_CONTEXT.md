@@ -584,3 +584,7 @@ Modellprov med den konfigurerade kimi-k2.6 och motstridig tidigare assistenthist
 Tidsmarginalen är ett synligt antagande (30 min samling + 30 min resa + 10 min pauser), inte verifierad restid. Underlaget varnar fortsatt för Gröns olösta personkoppling och osäker målvaktsfördelning. Kallelser och matchplaner ändrades inte. Full plan och verifieringsverktyg finns i docs/HERMES_LOAN_AUDIT.md och integrations/hermes-bsk/README.md.
 
 Slutligt modellprov godkänt: faktisk mcp__bsk__laneunderlag-dispatch med målmatch-id verifierad, och modellsvar matchar MCP answerText exakt bortsett från hämtningstid. Provet använde motstridig tidigare assistenthistorik och den ordinarie konfigurerade modellen.
+
+## Matchutvärdering 1–5 – 2026-09-11
+
+Implementerat isolerat i `codex/match-ratings` (`../bsk-match-ratings`). Gemensam deltagarlista med fem val och kommentar. Poäng på matchens nivå, minst fem matcher per nivå, viktat snitt 3 etablerar och 4 föreslår nästa nivå. 180 dagar, halverad vikt efter 60 dagar, en vikt per match. Äldre svar bevaras utan automatisk omvandling. Tränarinställningen stöder alla fem matchnivåerna. Inte publicerat. Sammanfoga särskilt `MatchEvaluationTrend.tsx` med pågående profilförbättring; ingen profilroute ändrad här. Se MATCH_RATINGS.md.

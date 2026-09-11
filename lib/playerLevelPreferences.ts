@@ -1,4 +1,4 @@
-export const SANKTAN_PLAYER_LEVELS = ["2", "3", "4"] as const;
+export const SANKTAN_PLAYER_LEVELS = ["1", "2", "3", "4", "5"] as const;
 
 export function isSanktanPlayerLevel(value: string): boolean {
   return SANKTAN_PLAYER_LEVELS.some((level) => level === value);

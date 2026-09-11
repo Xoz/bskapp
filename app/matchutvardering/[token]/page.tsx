@@ -16,9 +16,10 @@ export default async function PublicMatchEvaluationPage({ params, searchParams }
   return <main className="flex-1 p-4 sm:p-6 max-w-3xl w-full mx-auto" style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}>
     <header className="core-header"><div className="core-header-copy"><p className="core-kicker">Matchutvärdering · {workspace.invite.label}</p>
       <h1 className="core-title">{workspace.match.opponent}</h1>
-      <p className="core-lead">{workspace.match.date} · Bedöm en spelare i taget eller hoppa över om hon inte går att bedöma.</p></div></header>
+      <p className="core-lead">{workspace.match.date} · Bedöm deltagarna 1–5 på matchens svårighetsgrad.</p></div></header>
     {sparad && <div className="core-panel p-4 mb-4"><p className="body-small">Tack, utvärderingen är sparad. Länken kan användas igen för att justera svar.</p></div>}
     {workspace.players.length ? <MatchEvaluationForm players={workspace.players.map((player) => ({
+      rating: player.rating, ratingComment: player.rating_comment,
       id: player.id,
       name: player.name,
       jerseyNumber: player.jersey_number,
@@ -27,7 +28,7 @@ export default async function PublicMatchEvaluationPage({ params, searchParams }
       matchImpact: player.match_impact,
       reasonTag: player.reason_tag,
       skipped: Boolean(player.skipped),
-    }))} saveAction={save} /> :
+    }))} matchLevel={workspace.match.level} saveAction={save} /> :
       <div className="core-panel p-6"><p>Det finns inga registrerade deltagare att utvärdera.</p></div>}
   </main>;
 }

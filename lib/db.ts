@@ -1461,6 +1461,21 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
   { id: "0022-svenskalag-cancelled", run: async () => {
     await getClient().unsafe("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0 CHECK (cancelled IN (0,1))");
   } },
+  { id: "0024-match-ratings", run: async () => {
+    await getClient().unsafe("ALTER TABLE players DROP CONSTRAINT players_assessed_level_check");
+    await getClient().unsafe("ALTER TABLE players DROP CONSTRAINT players_challenge_level_check");
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_assessed_level_check CHECK (preferred_level_primary IN ('', '1', '2', '3', '4', '5'))");
+    await getClient().unsafe("ALTER TABLE players ADD CONSTRAINT players_challenge_level_check CHECK (preferred_level_secondary = '' OR (preferred_level_primary IN ('1','2','3','4','5') AND preferred_level_secondary IN ('1','2','3','4','5') AND preferred_level_secondary::int < preferred_level_primary::int))");
+    await getClient().unsafe("COMMENT ON COLUMN players.preferred_level_primary IS 'Tränarbedömd matchnivå: 1 extra svår, 2 svår, 3 medel, 4 lätt, 5 extra lätt'");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ADD COLUMN rating INTEGER CHECK (rating BETWEEN 1 AND 5)");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations ADD COLUMN rating_comment TEXT NOT NULL DEFAULT '' CHECK (length(rating_comment) <= 1000)");
+    await getClient().unsafe("ALTER TABLE match_player_evaluations DROP CONSTRAINT match_player_evaluations_answer_check");
+    await getClient().unsafe(`ALTER TABLE match_player_evaluations ADD CONSTRAINT match_player_evaluations_answer_check CHECK (
+      (skipped=1 AND self_comparison IS NULL AND match_impact IS NULL AND rating IS NULL)
+      OR (skipped=0 AND rating IS NOT NULL AND self_comparison IS NULL AND match_impact IS NULL)
+      OR (skipped=0 AND rating IS NULL AND self_comparison IS NOT NULL AND match_impact IS NOT NULL)
+    )`);
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;

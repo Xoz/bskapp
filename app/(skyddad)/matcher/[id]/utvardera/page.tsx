@@ -31,10 +31,11 @@ export default async function EvaluateMatchPage({ params, searchParams }: {
     <Link href={`/matcher/${matchId}`} className="inline-flex items-center gap-1.5 body-small" style={{ color: "var(--ink-secondary)" }}>
       <IconArrowLeft width={15} height={15} /> Till matchen</Link>
     <header className="core-header"><div className="core-header-copy"><p className="core-kicker">Matchutvärdering</p>
-      <h1 className="core-title">{match.opponent}</h1><p className="core-lead">Bedöm en spelare i taget. Om en spelare inte går att bedöma kan du hoppa över henne.</p></div></header>
+      <h1 className="core-title">{match.opponent}</h1><p className="core-lead">Alla deltagare på samma sida. Bedöm prestationen 1–5 på matchens svårighetsgrad.</p></div></header>
     {sparad === "matchinfo" && <div className="core-panel p-4"><p className="body-small">Resultat och tränarkommentar är sparade.</p></div>}
     <MatchEvaluationForm
       players={workspace.players}
+      matchLevel={workspace.match.level}
       matchContext={{
         ourScore: workspace.match.ourScore,
         opponentScore: workspace.match.opponentScore,

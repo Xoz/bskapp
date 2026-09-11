@@ -1,4 +1,5 @@
 "use server";
+import { ratingStatement } from "./matchRating";
 import {selectionDraftGuardStatements} from "./selectionDraft";
 
 import crypto from "crypto";
@@ -36,7 +37,7 @@ import {
   type ImportedCallupPlayer,
   type ImportedCallupTotals,
 } from "./callupSync";
-import { evaluationTokenHash, getMatchEvaluationWorkspace } from "./matchEvaluation";
+import { matchEvaluationIsOpen, evaluationTokenHash, getMatchEvaluationWorkspace } from "./matchEvaluation";
 import { isMatchImpact, isReasonTag, isSelfComparison } from "./matchEvaluationTypes";
 import { importSvenskaLagCallupWorkbooks } from "./services/callupWorkbookImport";
 import { getMobileMatchEvaluation, saveMobileMatchEvaluation } from "./services/matchEvaluationMobile";
@@ -949,9 +950,15 @@ async function persistMatchEvaluations(matchId: number, contributorType: "coach"
   const match = await get<{ level: string }>("SELECT level FROM matches WHERE id = ?", [matchId]);
   if (!match) return 0;
   const workspace = await getMatchEvaluationWorkspace(matchId, contributorType, contributorId);
-  const players = workspace?.players ?? [];
+  if (!workspace || !matchEvaluationIsOpen(workspace.match.date, workspace.match.start_time)) throw new Error("Matchen är inte klar för utvärdering.");
+  const players = workspace.players;
   const statements: { sql: string; args: (string | number | null)[] }[] = [];
   for (const player of players) {
+    if (formData.has(`rating_${player.id}`)) {
+      const value = String(formData.get(`rating_${player.id}`));
+      statements.push(ratingStatement(matchId, player.id, contributorType, contributorId, value === "" ? null : Number(value), String(formData.get(`comment_${player.id}`) ?? ""), match.level));
+      continue;
+    }
     const skipped = String(formData.get(`skip_${player.id}`) ?? "") === "1";
     const selfComparison = String(formData.get(`self_${player.id}`) ?? "");
     const matchImpact = String(formData.get(`impact_${player.id}`) ?? "");
@@ -963,7 +970,7 @@ async function persistMatchEvaluations(matchId: number, contributorType: "coach"
               (match_id, player_id, contributor_type, contributor_id, self_comparison, match_impact, reason_tag, player_level_snapshot, match_level_snapshot, skipped)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(match_id, player_id, contributor_type, contributor_id) DO UPDATE SET
-              self_comparison=excluded.self_comparison, match_impact=excluded.match_impact,
+              self_comparison=excluded.self_comparison, match_impact=excluded.match_impact, rating=NULL, rating_comment='',
               reason_tag=excluded.reason_tag, player_level_snapshot=excluded.player_level_snapshot,
               match_level_snapshot=excluded.match_level_snapshot, skipped=excluded.skipped, updated_at=now()`,
       args: [matchId, player.id, contributorType, contributorId,
@@ -988,6 +995,7 @@ export async function saveCoachMatchEvaluations(matchId: number, formData: FormD
   };
   const answers = contextOnly ? [] : workspace.players.map((player) => ({
     playerId: player.id,
+    ...(formData.has(`rating_${player.id}`) ? { rating: String(formData.get(`rating_${player.id}`)) === "" ? null : Number(formData.get(`rating_${player.id}`)), ratingComment: String(formData.get(`comment_${player.id}`) ?? "") } : {}),
     selfComparison: String(formData.get(`self_${player.id}`) ?? "") || null,
     matchImpact: String(formData.get(`impact_${player.id}`) ?? "") || null,
     reasonTag: String(formData.get(`reason_${player.id}`) ?? ""),

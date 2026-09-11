@@ -1,12 +1,13 @@
 export type MatchFollowupAnswer = {
   playerId: number;
+  rating?: number | null;
   selfComparison: string | null;
   matchImpact: string | null;
   skipped: boolean;
 };
 
 function handled(answer: MatchFollowupAnswer): boolean {
-  return answer.skipped || Boolean(answer.selfComparison && answer.matchImpact);
+  return answer.skipped || answer.rating != null || Boolean(answer.selfComparison && answer.matchImpact);
 }
 
 export function shouldCloseMatchFollowup(
