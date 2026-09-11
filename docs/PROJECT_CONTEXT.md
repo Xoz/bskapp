@@ -604,3 +604,12 @@ Kodcommit a7d07bc7e1ad0e1cfbdc0fe94b6484d3740f4d50 publicerad via godkänd körn
 Inloggad produktion verifierad på dator och 390 px: kompakt identitet, fokus först, trädlänk och kompakt batteri utan spelarvarning. Profil och lista har nu samma match- och kallelseantal; matchernas lagfördelning öppnas med tryck. Sökning/lag/spelarankare bevaras vid återgång. Inga verkliga kapaciteter, kallelser, närvaroposter, bedömningar eller samtal ändrades vid kontrollen. Tillfälliga lokala testdatabaser och dev-server borttagna/stoppade.
 
 Leveransens rena arbetskopia finns i BSK/bsk-profile-improvements, branch codex/player-profile-improvements. Ursprungskatalogens pågående observations-/offlinearbete har bevarats; denna release använder den publicerade utvecklingskärnans observationer. Se docs/PLAYER_PROFILE_2026-09-11.md.
+
+
+## Matchutvärdering och nivåunderlag publicerat – 2026-09-11
+
+Sammanfogad med den publicerade spelarprofilen. Kodcommit 94fca86166d6ac8ea90deac34322a74f2c93d34a, godkänd publicering https://github.com/Xoz/bskapp/actions/runs/34593106649. Huvudändring och migration 0024 publicerades i 31984b8bc477 via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34593017678; backup /opt/bsk/backups/main-31984b8bc477.Ni4ItG. Slutcommit justerar matchsidans hjälptext.
+
+216 lokala tester inklusive PostgreSQL godkända, fyra befintliga opt-in-tester överhoppade. Produktionsbygge och browserprov av sammanslagen profil, 320/390/744 px, poäng/kommentar, sparande/återläsning/rensning, äldre svar och inbjudningsbehörighet godkända. Deployens tester, bygge, migration, datagranskning och hälsokontroller passerade.
+
+Inloggad produktion kontrollerad: Årsta-matchens tio deltagare visas samtidigt med fem poängval och korrekt matchnivå; profilens nya ordning/fokus/batteri bevarade och nivåunderlaget visas med tydligt tomt underlag innan nya poäng finns. Ingen verklig bedömning, matchplan eller spelarinställning ändrad i kontrollen. Tillfällig lokal testdatabas borttagen och testserver stoppad. Tidigare status om ej sammanfogad/ej publicerad är ersatt. Ursprungskatalogens separata observationsarbete är fortsatt orört.

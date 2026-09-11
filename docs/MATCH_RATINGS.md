@@ -39,3 +39,12 @@ Profilförbättringen ändrar också `components/MatchEvaluationTrend.tsx`. Vid 
 `scripts/test-match-ratings.mjs` kör mot separat lokal databas `bsk_match_ratings_test` och produktionsserver på 3026 med testhemligheten `bsk-match-rating-local-test`. Skapar och städar egna exempelspelare, deltagande, matcher och bedömare. Provar 320/390/744 px, sparande/återläsning/rensning, äldre svar, nivåprofil och publik utvärdering inklusive återkallad länk. Inga produktionsuppgifter används.
 
 Verifierat 2026-09-11: 213 tester godkända inklusive PostgreSQL (fyra befintliga opt-in-tester överhoppade), TypeScript, produktionsbygge och hela browserprovet inklusive bevarande av äldre svar. Ingen produktionspublicering. Den separata testdatabasen användes enbart för exempeldata.
+
+
+## Matchutvärdering och nivåunderlag publicerat – 2026-09-11
+
+Sammanfogad med den publicerade spelarprofilen. Kodcommit 94fca86166d6ac8ea90deac34322a74f2c93d34a, godkänd publicering https://github.com/Xoz/bskapp/actions/runs/34593106649. Huvudändring och migration 0024 publicerades i 31984b8bc477 via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34593017678; backup /opt/bsk/backups/main-31984b8bc477.Ni4ItG. Slutcommit justerar matchsidans hjälptext.
+
+216 lokala tester inklusive PostgreSQL godkända, fyra befintliga opt-in-tester överhoppade. Produktionsbygge och browserprov av sammanslagen profil, 320/390/744 px, poäng/kommentar, sparande/återläsning/rensning, äldre svar och inbjudningsbehörighet godkända. Deployens tester, bygge, migration, datagranskning och hälsokontroller passerade.
+
+Inloggad produktion kontrollerad: Årsta-matchens tio deltagare visas samtidigt med fem poängval och korrekt matchnivå; profilens nya ordning/fokus/batteri bevarade och nivåunderlaget visas med tydligt tomt underlag innan nya poäng finns. Ingen verklig bedömning, matchplan eller spelarinställning ändrad i kontrollen. Tillfällig lokal testdatabas borttagen och testserver stoppad. Tidigare status om ej sammanfogad/ej publicerad är ersatt. Ursprungskatalogens separata observationsarbete är fortsatt orört.
