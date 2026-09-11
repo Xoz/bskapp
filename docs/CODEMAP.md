@@ -266,3 +266,5 @@ Matchplanens spartransport: `lib/matchPlan/client.ts` → `app/api/matches/[id]/
 
 
 Matchnivåer: `lib/levels.ts` tolkar text-id och Svenska Lag-siffror 1–5. `lib/sanktanLevel.ts` delar etiketter och `matchCompetitionLevelSql` för aktivitetsvyerna i `developmentCore.ts`. `lib/sanktanLevel.test.ts` verifierar båda lagringsformaten och samstämmighet mellan Idag och Matcher mot PostgreSQL.
+
+2026-09-11: Batteriets visning är procent av individuell kapacitet (0–100 %), via batteryPercent i lib/matchSpace.ts. components/MatchSpaceBar.tsx och match-space-bar.css delar kompakt stapel: grönt nuläge och guld prognos (lägst sju dagar) i samma stapel, med numeriska värden. Idag, profil, matchprognos och uttagningsvärden använder procent. Profilens beräkning/kapacitetsjustering ligger i details; justeringen anges i procent av standardkapacitet. Intern simulering och sparade kapaciteter ändras inte.

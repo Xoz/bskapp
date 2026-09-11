@@ -59,3 +59,9 @@ export function forecastMatchSpace(input: SpaceInput, targetMinutes?: number): S
   return { capacity, current: display(current), before: display(before), after: display(after), lowest: display(lowest), level, conflict, nextAffected,
     estimated: events.length === 0 || events.some(e => e.estimated) };
 }
+
+/** Visningen normaliseras mot spelarens egen kapacitet, alltid 0–100 %. */
+export function batteryPercent(value: number, capacity: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(capacity) || capacity <= 0) return 0;
+  return Math.round(Math.max(0, Math.min(100, value / capacity * 100)));
+}

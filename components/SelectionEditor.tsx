@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PilotStartField from "@/components/PilotStartField";
-import { forecastMatchSpace, spaceLabels, type SpaceInput } from "@/lib/matchSpace";
+import { batteryPercent, forecastMatchSpace, spaceLabels, type SpaceInput } from "@/lib/matchSpace";
 import { selectionPositionRank } from "@/lib/positions";
 import { recommendYellowSelection, squadBalanceWarnings, type SelectionRecommendation } from "@/lib/selectionSupport";
 
@@ -289,8 +289,8 @@ export default function SelectionEditor({
                   </span>
                   <div className="text-sm" style={{ color: forecast?.level === "high" ? "var(--danger)" : forecast?.level === "maximum" ? "var(--warning)" : "var(--ink-secondary)" }}>
                     {forecast ? <details>
-                      <summary className="cursor-pointer"><strong>{forecast.after}/{forecast.capacity}</strong><br />{spaceLabels[forecast.level]}</summary>
-                      <p className="mt-2">Inför: {forecast.before} · Efter: {forecast.after} · Lägst därefter: {forecast.lowest}</p>
+                      <summary className="cursor-pointer"><strong>{batteryPercent(forecast.after, forecast.capacity)}%</strong><br />{spaceLabels[forecast.level]}</summary>
+                      <p className="mt-2">Inför: {batteryPercent(forecast.before, forecast.capacity)} % · Efter: {batteryPercent(forecast.after, forecast.capacity)} % · Lägst därefter: {batteryPercent(forecast.lowest, forecast.capacity)} %</p>
                       {forecast.conflict && <p>Krockar med annan aktivitet.</p>}
                       {forecast.nextAffected && <p>Låg marginal vid {forecast.nextAffected}.</p>}
                       <label className="block mt-2">Prova speltid (min)

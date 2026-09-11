@@ -1,5 +1,6 @@
+import MatchSpaceBar from "@/components/MatchSpaceBar";
 import { getMatchSpaceInputs } from "@/lib/matchSpaceData";
-import { forecastMatchSpace, spaceLabels } from "@/lib/matchSpace";
+import { forecastMatchSpace } from "@/lib/matchSpace";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
@@ -36,9 +37,12 @@ export default async function TodayPage() {
       </section>
       {canPlayers && <details id="belastning" className="core-panel">
         <summary className="p-5 cursor-pointer"><strong>Matchutrymme · Gulspelare</strong><span className="block text-sm mt-1" style={{ color: "var(--ink-secondary)" }}>Batteri nu och prognos med planerade aktiviteter kommande sju dagar</span></summary>
-        <p className="px-5 pb-4 text-sm" style={{color: "var(--ink-secondary)"}}>Uppskattad planering utifrån registrerat deltagande och kallelser i alla lag. Saknad speltid räknas som hela matchen; träning som 60 minuter. Annan idrott och saknad närvaro ingår inte. Öppna en matchs trupputtagning för att prova en extra match eller ett lån.</p>
+        <details className="px-5 pb-3 text-sm"><summary className="cursor-pointer">Så räknas batteriet</summary><p className="mt-2" style={{color: "var(--ink-secondary)"}}>Uppskattad planering utifrån registrerat deltagande och kallelser i alla lag. Speltiden delas jämnt mellan utespelarna; träning uppskattas till 60 minuter. Cuper räknas separat. Annan idrott och saknad närvaro ingår inte. Öppna en matchs trupputtagning för att prova en extra match eller ett lån. 100 % motsvarar alltid spelarens justerade maxkapacitet.</p></details>
         {inputs.values().next().value?.sourceWarning && <p className="px-5 pb-3 text-sm" style={{color:"var(--warning)"}}>{inputs.values().next().value?.sourceWarning}</p>}
-        <div className="bsk-link-list">{sortedPlayerLoads.length ? sortedPlayerLoads.map((player) => <Link key={player.playerId} href={`/spelare/${player.playerId}`} className="bsk-link-row"><span className="min-w-0 flex-1"><strong>{player.name}</strong><small>Lägst {player.space.lowest}/{player.space.capacity} med planerade aktiviteter</small><progress style={{accentColor: "var(--primary)", height: "0.5rem"}} className="w-full" aria-label={`Matchutrymme nu för ${player.name}`} value={player.space.current} max={player.space.capacity} /></span><span className="text-right"><strong className="tabular-nums">{player.space.current}/{player.space.capacity} nu</strong><small style={{ color: player.space.level === "high" ? "var(--danger)" : player.space.level === "maximum" ? "var(--warning)" : "var(--ink-secondary)" }}>{spaceLabels[player.space.level]}</small><small>Uppskattning</small></span></Link>) : <p className="p-5" style={{ color: "var(--ink-secondary)" }}>Inga spelare att visa.</p>}</div>
+        <p className="px-4 pb-2 space-battery-legend"><i aria-hidden="true"/>Nu <i aria-hidden="true"/>Prognos: lägst kommande 7 dagar · uppskattning</p>
+        <div className="bsk-link-list">{sortedPlayerLoads.length ? sortedPlayerLoads.map(player => <Link key={player.playerId} href={`/spelare/${player.playerId}`} className="bsk-link-row space-battery-row">
+          <MatchSpaceBar label={player.name} forecast={player.space}/>
+        </Link>) : <p className="p-5" style={{ color: "var(--ink-secondary)" }}>Inga spelare att visa.</p>}</div>
       </details>}
     </div>
   );
