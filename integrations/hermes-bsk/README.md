@@ -322,3 +322,7 @@ utskick. Gamla match-/träningsrapporter är oförändrade.
 Återgång: ta bort laneunderlag ur privata allowlist, återställ föregående
 MCP-länk och BSK-instruktion, ladda om privata gatewayen. Ta bort tokenfilen
 för att även omedelbart stänga endpointen. Ingen databasåterställning behövs.
+
+Manuellt modellprov: `verify_model_loans.py --question 'Vilka från Gul kan lånas ut till Grön imorgon?'`. Kör med Hermes befintliga Pythonmiljö på VPS. Endast BSK-verktyg aktiveras, långtidsminne/bakgrundsgranskning och sessionspersistens stängs av. Provet innehåller motstridig tidigare assistenthistorik. Det kräver ett verkligt laneunderlag-anrop (även genom tool_call-bryggan) och skriver svaret för manuell semantisk granskning. Ingen mottagare eller utskicksfunktion finns i provet.
+
+Låneunderlaget innehåller även `answerText`, en deterministiskt formad svensk svarstext från `lib/hermes/loanAnswer.ts`, samt `categoryCounts`. Privata Hermes instrueras att återge answerText ordagrant när målmatchen är vald. Detta tillkom efter modellprovet: även med korrekta rådata räknade modellen fel antal och blandade ja-svar/uttagning. Strukturerade kandidatdata behålls för spårbarhet.

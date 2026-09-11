@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {loanCandidate,type LoanMatch} from './loanModel';
 import {validLoanToken} from './loanAuth';
+import {loanAnswer} from './loanAnswer';
 import type {SpaceInput} from '../matchSpace';
 const now=Date.parse('2026-09-11T06:00:00Z');
 const target:LoanMatch={id:171,date:'2026-09-12',start_time:'10:15',opponent:'Exempel',location:'B',group_id:6,group_name:'Grön',duration:60,regular:true,callup_status:null,selection_status:null};
@@ -31,6 +32,12 @@ describe('låneunderlag',()=>{
  });
  it('nekad kallelse övertrumfar selected',()=>{
  expect(loanCandidate(input,[{...target,id:7,callup_status:'declined',selection_status:'selected'}],target).commitments).toHaveLength(0);
+ });
+ it('svarstext räknar kategorier och beskriver ja som planerat',()=>{
+ const blocked={name:'Exempel A',...loanCandidate(input,[{...target,id:7,start_time:'09:00',callup_status:'accepted'}],target)};
+ const available={name:'Exempel B',...loanCandidate(input,[{...target,id:8,date:'2026-09-11',callup_status:'accepted'}],target)};
+ const answer=loanAnswer(target,[blocked,available],'2026-09-11 09:00');
+ expect(answer).toContain('planeringsantagandet (1)');expect(answer).toContain('kontrolleras (1)');expect(answer).toContain('har tackat ja – planerat deltagande');
  });
  it('token kräver exakt giltig separat hemlighet',()=>{
  const secret='a'.repeat(64);expect(validLoanToken(`Bearer ${secret}`,secret)).toBe(true);

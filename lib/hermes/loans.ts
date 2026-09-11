@@ -1,4 +1,5 @@
 import 'server-only';
+import {loanAnswer} from './loanAnswer';
 import {all,get} from '../db';
 import {loadCurrentUserById,isStaffRole} from '../auth';
 import {loadMatchSpaceInputs} from '../matchSpaceReader';
@@ -34,7 +35,10 @@ export async function readLoans(binding:LoanBinding,targetId?:number,now=Date.no
   const coverage=sync.map(r=>{try{const v=JSON.parse(r.value);return {source:r.key,state:v.state,lastSuccess:v.lastSuccess,unmatchedCount:v.unmatched?.length??0};}catch{return {source:r.key,state:'unknown'};}});
   const incomplete=coverage.length<2||coverage.some(s=>s.state!=='ok'||s.unmatchedCount||!s.lastSuccess||!Number.isFinite(Date.parse(s.lastSuccess))||now-Date.parse(s.lastSuccess)>26*3600000);
   if(incomplete) for(const input of inputs.values()) input.sourceWarning=[input.sourceWarning,'Synkens täckning är inte fullständig eller aktuell; kontrollera innan lån.'].filter(Boolean).join(' ');
+  const candidates=players.map(p=>({...p,...loanCandidate(inputs.get(p.id)!,rows.filter(r=>r.player_id===p.id),target)}));
   return {...common,target,coverage,assumedMargin:LOAN_MARGIN,
+    answerText:loanAnswer(target,candidates,common.fetchedAtSwedish),
+    categoryCounts:Object.fromEntries([...new Set(candidates.map(c=>c.category))].map(k=>[k,candidates.filter(c=>c.category===k).length])),
     instructions:'Commitments är kallelser/uttagningar, ALDRIG bevis att en match är spelad. Beskriv accepted som har tackat ja, särskilt isFuture=true. Ingen registrerad match betyder bara att ingen finns i underlaget. Tider anges i Europe/Stockholm; använd fetchedAtSwedish. Endast dessa spelare tillhör källaget. Ja till en annan match gäller även utan uttagningsmarkering. Inget kallelsesvar bevisar ledighet till en ny match. Samling, pauser och restid är uttryckliga planeringsantaganden, inte verifierade tider. Cuper räknas separat men kan blockera kalendern. Batteri är planeringsstöd, inte prestationsbetyg.',
-    candidates:players.map(p=>({...p,...loanCandidate(inputs.get(p.id)!,rows.filter(r=>r.player_id===p.id),target)}))};
+    candidates};
 }
