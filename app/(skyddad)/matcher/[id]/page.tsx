@@ -135,7 +135,7 @@ export default async function MatchPage({ params, searchParams }: {
       {isYellowMatch && evaluationOpen && canManageEvaluations && <section className="core-panel p-5" aria-label="Efter matchen">
         <p className="core-kicker">Efter matchen</p>
         <h2 className="mt-2">Följ upp spelarnas insats</h2>
-        <p className="body-small mt-2">Bedöm en spelare i taget. Du kan hoppa över den du inte hunnit se.</p>
+        <p className="body-small mt-2">Bedöm alla deltagare i samma lista med poäng 1–5 på matchens nivå. Lämna raden tom om spelaren inte går att bedöma.</p>
         <Link href={`/matcher/${match.id}/utvardera`} className="btn-primary mt-4">Utvärdera matchen</Link>
       </section>}
 
