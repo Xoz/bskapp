@@ -544,3 +544,7 @@ Skarp synk klar 07.27 Stockholm: Gul 29 aktiviteter, 16 cupmatcher överhoppade,
 ## 2026-09-11 – matchplanens sparande över publiceringar
 
 AIK-användarens sparfel spårat till serverloggen 07.33 Stockholm: action-id 7031be… hörde till saveMatchPlan i föregående release 630345ca, men aktuell release var ac1bbafb. MatchPlanEditor använder nu en fast POST /api/matches/[id]/plan via lib/matchPlan/client.ts. Befintlig serverfunktion behåller behörighet, gruppåtkomst, ja-svar och atomiskt revisionsskydd. API kräver samma origin (proxy via requestOrigin) och JSON. Klienten kräver korrekt nästa revision innan sparbekräftelse; fel behåller aktuell uppställning. Inga verksamhetsdata ändras av driftsättningen. Redan öppna gamla klienter måste laddas om en gång; deras osparade uppställning finns endast i den öppna sidan och får inte utlovas återställd automatiskt.
+
+## 2026-09-11 – kompakt sparad matchplan
+
+Sparad matchplan öppnas som kompakt läsvy: mindre statisk plan, formation, avbytare och spelidé som text utan formulär. Redigera öppnar befintlig editor; lyckat sparande återgår till översikten. Avbryt återställer senaste sparade plan. Osparade nya planer öppnas direkt för redigering. Inga ändringar av matchdata eller spartransport.

@@ -26,6 +26,7 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
   matchId: number; initialPlan: MatchPlan; initialRevision: number; players: Player[]; editable: boolean;
 }) {
   const [plan, setPlan] = useState(initialPlan);
+  const [editing, setEditing] = useState(initialRevision === 0);
   const [revision, setRevision] = useState(initialRevision);
   const [saved, setSaved] = useState(JSON.stringify(initialPlan));
   const [active, setActive] = useState(0);
@@ -68,10 +69,48 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
       try {
         const result = await persistMatchPlan(matchId, revision, plan);
         if (result.error) setMessage(result.error);
-        else if (result.revision) { setRevision(result.revision); setSaved(JSON.stringify(plan)); setMessage('Matchplanen är sparad.'); }
+        else if (result.revision) { setRevision(result.revision); setSaved(JSON.stringify(plan)); setMessage('Matchplanen är sparad.'); setEditing(false); }
       } catch { setMessage('Kunde inte spara. Dina ändringar finns kvar här. Försök igen.'); }
     });
   }
+
+  if (!editing && revision > 0) return <section className="core-panel match-plan match-plan-summary" id="matchplan" aria-labelledby="match-plan-title">
+    <header className="match-plan-heading">
+      <div><h2 id="match-plan-title">Matchplan <span className="match-plan-formation">{plan.formation}</span></h2>
+        <p className="body-small" role="status">{message || 'Sparad matchplan'}</p></div>
+      {editable && <button type="button" className="btn-secondary" onClick={() => { setEditing(true); setMessage(''); }}>Redigera</button>}
+    </header>
+    <div className="match-plan-summary-grid">
+      <div>
+        <div className="match-plan-pitch" aria-label={`Formation ${plan.formation}, anfallsriktning uppåt`}>
+          <svg className="match-plan-lines" viewBox="0 0 100 130" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="3" y="3" width="94" height="124" rx="1"/><path d="M3 65H97"/><circle cx="50" cy="65" r="12"/>
+            <rect x="25" y="3" width="50" height="20"/><rect x="25" y="107" width="50" height="20"/>
+            <rect x="40" y="0" width="20" height="3"/><rect x="40" y="127" width="20" height="3"/>
+          </svg>
+          <span className="match-plan-direction">↑ Anfallsriktning</span>
+          {plan.spots.map((s, i) => {
+            const player = s.playerId === null ? null : byId.get(s.playerId);
+            const name = player?.name ?? (s.playerId ? 'Ej tillgänglig' : ROLE_LABELS[fm.slots[i].role]);
+            return <div key={i} className="match-plan-spot" data-empty={!player}
+              style={{ left: `${s.x * 100}%`, top: `${s.y * 100}%` }} title={name}
+              aria-label={`${ROLE_LABELS[fm.slots[i].role]}: ${name}`}>
+              <PlayerShirt number={player?.jersey_number ?? (i === 0 ? 'MV' : '•')} goalkeeper={i === 0} empty={!player}/>
+              <span className="match-plan-name">{player ? shortName(player.name) : name}</span>
+            </div>;
+          })}
+        </div>
+        {reserves.length > 0 && <p className="match-plan-summary-bench"><strong>Avbytare</strong> {reserves.map(p => p.name).join(', ')}</p>}
+        {missing && <p role="alert" className="body-small">Truppen har ändrats. Kontrollera spelare markerade ”Ej tillgänglig”.</p>}
+      </div>
+      <dl className="match-plan-summary-ideas">
+        {IDEA_FIELDS.filter(f => plan.ideas[f.key].trim()).map(f => <div key={f.key}>
+          <dt>{f.label}</dt><dd>{plan.ideas[f.key]}</dd>
+        </div>)}
+        {!IDEA_FIELDS.some(f => plan.ideas[f.key].trim()) && <div><dt>Spelidé</dt><dd>Ingen spelidé tillagd ännu.</dd></div>}
+      </dl>
+    </div>
+  </section>;
 
   return <section className="core-panel match-plan" id="matchplan" aria-labelledby="match-plan-title">
     <header className="match-plan-heading">
@@ -142,6 +181,9 @@ export default function MatchPlanEditor({ matchId, initialPlan, initialRevision,
       </div>
     </fieldset>
     <footer className="match-plan-footer">
+      {editable && revision > 0 && <button type="button" className="btn-secondary" disabled={pending} onClick={() => {
+        setPlan(JSON.parse(saved) as MatchPlan); setMessage(''); setEditing(false);
+      }}>Avbryt</button>}
       {editable && <button type="button" className="btn-primary" disabled={pending || missing || (!dirty && revision > 0)} onClick={save}>{pending ? 'Sparar…' : 'Spara matchplan'}</button>}
       <p className="body-small" role="status">{message || (dirty ? 'Osparade ändringar' : revision ? 'Sparad matchplan' : 'Ingen matchplan sparad ännu')}</p>
     </footer>
