@@ -618,3 +618,10 @@ Inloggad produktion kontrollerad: Årsta-matchens tio deltagare visas samtidigt 
 ## Uttagningsmotor publicerad – 2026-09-11
 
 Regler och implementation finns i docs/SELECTION_ENGINE.md. Huvudcommit 8fc967e782b93835c3da883410f4bc1c86fc6467 publicerades och verifierades inloggat. 236 lokala tester godkända, fyra befintliga villkorade tester överhoppade; typkontroll, produktionsbygge och UI-prov godkända. Adele (13) och Ava (11) har sparat nivåpar Svår + Medel; Nova (24) kräver tränarval för dubbelmatch. Inga verkliga kallelser eller matchuttagningar ändrades i kontrollen. Motorn arbetar matchvis med andra sparade åtaganden. Tillfällig lokal testdatabas borttagen. Uppföljning c673c28a visar Gul från start och saknad målvakt i balansindikatorn. Ursprunglig arbetskopias pågående arbete är orört.
+
+
+## Batteriet omkalibrerat för träning och dubbelmatch – 2026-09-11
+
+Användaren fastställde efter Österåker-provet att alla ska kunna träna och spela två matcher utan batterivarningar. Aktivitetskostnaden sänks från 0,5/0,25 till 0,1/0,05 poäng per match-/träningsminut i den gemensamma modellen. Kapaciteter och återhämtning bevaras. Basveckan med tre 60-minutersträningar och två fulla 75-minutersmatcher samma dag passerar för samtliga kapaciteter 50–150, även målvakt. Separata nivåpar, tidskrockar och högst två matcher per dag kvarstår.
+
+Skrivskyddad kontroll mot aktuell Österåker-planering ger normal batterinivå för alla tolv Gul-spelare. Adele och Ava passerar dubbelmatch; sju andra har kvar nivåparsbedömning. Inga spelarinställningar, uttagningar eller kallelser ändrade. 238 tester med PostgreSQL godkända, fyra befintliga villkorade överhoppade, typkontroll och produktionsbygge godkända. Detaljer i docs/MATCH_SPACE.md och docs/SELECTION_ENGINE.md.

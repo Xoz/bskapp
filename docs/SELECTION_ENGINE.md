@@ -93,3 +93,7 @@ Slutlig lokal kontroll: 236 tester godkända, fyra befintliga villkorade tester
 överhoppade. Typkontroll och produktionsbygge godkända. Skrivskyddad körning
 av nya läsmodellen mot produktion verifierade tolv Gulspelare, de fyra
 ordinarie passen och matchnivå från serieinformation.
+
+## Batterikalibrering 2026-09-11
+
+Efter Österåker-provet fastställde användaren att ordinarie träningar och två matcher ska fungera utan batterivarning. Den gemensamma batterimodellen har omkalibrerats enligt docs/MATCH_SPACE.md (0,1 per matchminut, 0,05 per träningsminut). Detta ersätter tidigare simuleringars batteriprocent. Samma beräkning används vid förslag, visning och sparande. Godkända individuella nivåpar, tidskontroll och tvåmatchergräns kvarstår; ändringen tillåter inte automatiskt varje nivåkombination.

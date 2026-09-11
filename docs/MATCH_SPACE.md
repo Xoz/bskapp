@@ -6,11 +6,11 @@ tränare med `manage_squads` och spelaråtkomst kan ställa 50–150 heltalspoä
 på spelarprofilen (exempelvis 80 eller 125). Inga individer har tilldelats
 avvikande kapacitet i produktion. Samma återhämtningstakt gäller alla.
 
-## Startvärden v1
+## Aktuella värden v2 – 2026-09-11
 
 - Återhämtning: 20 poäng per faktiskt dygn utanför aktivitetsintervall, högst
   individuell kapacitet. Större batteri ger inte snabbare återhämtning.
-- Match: 0,5 poäng per spelminut. Träning: 0,25 poäng per minut.
+- Match: 0,1 poäng per spelminut. Träning: 0,05 poäng per minut.
 - Reserv: 40 % av individuell kapacitet. Under reserv eller tidskrock ger
   ”Prioritera vila”. Under 60 % ger ”Begränsat utrymme”; annars ”Gott utrymme”.
 - Detta är justerbara kodkonstanter för en första planeringsmodell, inte
@@ -141,3 +141,7 @@ Synkförbättring 2026-09-11: verifierad spelform i `svenskalag_match_metadata:<
 2026-09-11: Cuper hanteras separat och ingår inte i ordinarie matchantal, kallelser eller matchutrymme/batteri. `lib/regularMatches.ts` delar SQL-filtret mellan spelarlista, profiler, statistik och uttagningsstöd (webb/mobil). Typ cup, cupnamn, cupens matchgrupper/undergrupper och verifierad cupmetadata undantas. Synken märker endast redan kända cupmatcher med metadata för filtret; inga cupmatcher importeras och inga deltaganden raderas.
 
 2026-09-11: Batteriets visning är procent av individuell kapacitet (0–100 %), via batteryPercent i lib/matchSpace.ts. components/MatchSpaceBar.tsx och match-space-bar.css delar kompakt stapel: grönt nuläge och guld prognos (lägst sju dagar) i samma stapel, med numeriska värden. Idag, profil, matchprognos och uttagningsvärden använder procent. Profilens beräkning/kapacitetsjustering ligger i details; justeringen anges i procent av standardkapacitet. Intern simulering och sparade kapaciteter ändras inte.
+
+## Omkalibrering efter uttagningsprov – 2026-09-11
+
+Användaren kräver att ordinarie träningar och två matcher kan ingå utan batterivarning. Aktivitetskostnaderna har sänkts till en femtedel; individuell kapacitet, återhämtning och procentgränser kvarstår. Testad basvecka: tre träningar à 60 minuter och två fulla matcher à 75 minuter samma dag (även målvakt), med den sista träningen samma dag. Samtliga tillåtna kapaciteter 50–150 ger minst 60 procent och normal batterinivå. Detta är en vald planeringskalibrering, inte uppmätt fysiologi. Extra belastning räknas fortfarande och tidskrockar visas separat. Nivåpar och högst två matcher per dag är fortsatt separata uttagningsregler.

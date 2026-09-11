@@ -41,7 +41,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("matchutrymme med datab
     expect(inputs.get(1)!.events[0].minutes).toBe(60);
     expect(inputs.get(2)!.events[0].minutes).toBe(60);
     expect(inputs.get(2)!.events[0].estimated).toBe(true);
-    expect(forecastMatchSpace(inputs.get(1)!).after).toBeLessThanOrEqual(70);
+    expect(forecastMatchSpace(inputs.get(1)!).after).toBeLessThanOrEqual(94);
   });
   it("låter rättad källnärvaro gå före bevarad statistik",async()=>{
     await sql`INSERT INTO settings VALUES('svenskalag_presence:1','{}')`;

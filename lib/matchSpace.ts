@@ -1,5 +1,5 @@
-/** Tränarens planeringsmodell v1. Poängen är antaganden, inte uppmätt ork. */
-export const MATCH_SPACE = { defaultCapacity: 100, recoveryPerDay: 20, matchPerMinute: 0.5, trainingPerMinute: 0.25, reserve: 0.4, caution: 0.6 } as const;
+/** Tränarens planeringsmodell v2. Poängen är antaganden, inte uppmätt ork. */
+export const MATCH_SPACE = { defaultCapacity: 100, recoveryPerDay: 20, matchPerMinute: 0.1, trainingPerMinute: 0.05, reserve: 0.4, caution: 0.6 } as const;
 export type SpaceLevel = "normal" | "maximum" | "high";
 export type SpaceEvent = {
   id: string; title: string; start: number; duration: number; minutes: number;

@@ -12,7 +12,9 @@ const start=Date.parse('2026-09-18T15:30Z');
 const e:Evidence={asOf:'2026-09-11',revision:'',policy:{...emptyPolicy(),pairs:['2+3']},training:[],target:{id:1,date:'2026-09-18',time:'17:30',duration:60,location:'Exempelplan',level:3},matches:[{id:2,date:'2026-09-18',time:'18:45',duration:60,location:'Exempelplan',level:2,reply:'accepted',selected:false,played:false}]};
 const space:SpaceInput={now:start-7*86400000,capacity:100,target:{id:'match:1',title:'Exempel',start,duration:60,minutes:45,kind:'match',planned:true,estimated:true},events:[{id:'match:2',title:'Exempel',start:start+75*60000,duration:60,minutes:45,kind:'match',planned:true,estimated:true}]};
 beforeEach(()=>{vi.mocked(getSelectionEvidence).mockResolvedValue(new Map([[1,structuredClone(e)]]));vi.mocked(getMatchSpaceInputs).mockResolvedValue(new Map([[1,structuredClone(space)]]));vi.mocked(all).mockResolvedValue([]);});
-it('kräver ett uttryckligt tränarval för en ny dubbelmatch 40–59 procent',async()=>{
+it('kräver ett uttryckligt tränarval vid kvarvarande hög tidigare belastning',async()=>{
+ const loaded=structuredClone(space);loaded.events.push({...loaded.events[0],id:'training:heavy',kind:'training',start:start-600*60000,duration:600,minutes:600});
+ vi.mocked(getMatchSpaceInputs).mockResolvedValue(new Map([[1,loaded]]));
  await expect(checkSelectionDraft(1,[{id:1,position:'Back'}],false)).rejects.toThrow('tränarbedömning');
  await expect(checkSelectionDraft(1,[{id:1,position:'Back'}],true)).resolves.toBeUndefined();
 });
@@ -24,3 +26,5 @@ it('bevarar befintlig uttagning när nytt underlag varnar',async()=>{
  vi.mocked(all).mockResolvedValue([{player_id:1}]);
  await expect(checkSelectionDraft(1,[{id:1,position:'Målvakt'}],false)).resolves.toBeUndefined();
 });
+
+it('sparar normal dubbelmatch utan extra batterigodkännande',async()=>{await expect(checkSelectionDraft(1,[{id:1,position:'Målvakt'}],false)).resolves.toBeUndefined();});
