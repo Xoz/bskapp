@@ -190,3 +190,7 @@ Commit 179f056df52ff7e1f8b92169a32a0495eab70115 publicerad via godkänd körning
 ## Kompakt matchplan publicerad – 2026-09-11
 
 Commit 4dd76baf21411722979c8a4aacd9d1f71032731d publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34567345585. Typkontroll och deployens tester/bygge/hälsokontroller godkända. AIK:s sparade 1-1-4-1 och alla spelidétexter verifierade i inloggad översikt på dator och 390 px mobilbredd. Redigera → tillfällig textändring → Avbryt återställer originalet. Ingen matchdata skriven i verifieringen. Mobilöversikten har 270 px plan och kompakt löptext; formuläret öppnas separat via Redigera.
+
+## Cupavgränsning publicerad – 2026-09-11
+
+Webbcommit 17096239e72236f17355ed0c368820e722465c73 publicerad via https://github.com/Xoz/bskapp/actions/runs/34569810915 (godkänd). Föregående filterkorrigering 79fd8a01 publicerad via godkänd körning 34569683867. 189 tester inklusive PostgreSQL före slutlig JSON-korrigering, riktade tester efter den samt deployens tester, bygge och hälsokontroller godkända. Produktions-SQL och inloggad spelarlista/profil verifierade: Adele 22 matcher i Gul, 26 alla lag utan cuper; batteriet laddar. Listans hjälptext anger nu att cuper räknas separat. 41 cupmatcher och 21 verifierade äldre felklassade cupmatcher undantas. Historik bevarad. Worker exclude-cups-20260911 (61f7bfcb) aktiverad, timer active. Lokal testdatabas borttagen. Se CUP_EXCLUSION_2026-09-11.md för källor, match-id:n, backup och drift.
