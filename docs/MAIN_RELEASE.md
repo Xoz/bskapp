@@ -202,3 +202,7 @@ Commit b0d1fbf2 publicerad via godkänd körning https://github.com/Xoz/bskapp/a
 ## Procentbatteri publicerat – 2026-09-11
 
 Commit c4cfdf86 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34570684190. Typkontroll, 11 riktade procent-/simuleringstester samt deployens tester, bygge och hälsokontroller godkända. Inloggad Idag-översikt visuellt verifierad med kompakta rader och gemensam grön/guld-stapel; Adele visar 100 % nu och 65 % som lägst. Profilen visar samma värden och hopfälld beräkning/justering. Kapacitet 80/125 verifierad i procenttester utan att ändra spelares inställningar. Befintliga varningar om olösta Grön-kopplingar och otydlig målvakt kvarstår och visas.
+
+## Batteri på en rad publicerat – 2026-09-11
+
+Commit 4c2ba43e publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34571235679 (föregående f76cea9b via 34571112391). Typkontroll och deployens tester, bygge och hälsokontroller godkända. Inloggad datorvy visuellt kontrollerad. Vid 390 px ryms alla tolv rader utan horisontellt överflöde; höjd 44–45 px mot tidigare 76 px. Namn, stapel och procent ligger på en rad. Grön lägstanivå och dämpade diagonala streck fram till nuläget ersätter guldprognosen. Ingen beräkning eller spelardata ändrad.
