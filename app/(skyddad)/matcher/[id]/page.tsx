@@ -1,3 +1,4 @@
+import { matchMetadataKey, readMatchMetadata } from "@/lib/svenskalag/matchMetadata";
 import {all, getSetting} from "@/lib/db";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -58,6 +59,7 @@ export default async function MatchPage({ params, searchParams }: {
   const isYellowMatch = matchGroup?.name === "Gul";
   const evaluationOpen = matchEvaluationIsOpen(match.date, match.start_time);
   const selectionHref = `/matcher/${match.id}/laguttagning`;
+  const matchMetadata = readMatchMetadata(await getSetting(matchMetadataKey(match.id)));
   const savedPlan = role === "coach" ? readMatchPlan(await getSetting(`match_plan:${match.id}`)) : null;
   const planPlayers = players.filter(player => planPlayerRows.some(row => row.player_id === player.id));
   // Föräldrarapporteringen öppnar automatiskt 60 min före avspark (svensk tid).
@@ -96,6 +98,11 @@ export default async function MatchPage({ params, searchParams }: {
                 </span>
               </>
             )}
+          </p>
+          <p className="body-small mt-1" style={{ color: "var(--ink-secondary)" }}>
+            {match.match_type === "traningsmatch" ? "Träningsmatch" : match.match_type === "cup" ? "Cup" : "Sanktan"}
+            {matchMetadata?.format ? ` · ${matchMetadata.format} mot ${matchMetadata.format}` : ""}
+            {` · ${match.periods * match.period_minutes} min (${match.periods} × ${match.period_minutes})`}
           </p>
         </div>
         {role === "coach" && (
@@ -146,14 +153,17 @@ export default async function MatchPage({ params, searchParams }: {
         </nav>
       )}
 
-      {role === "coach" && <MatchPlanEditor
+      {role === "coach" && (matchMetadata?.format === 9 ? <section id="matchplan" className="core-panel p-5">
+        <h2 className="core-section-title">Matchplan · 9 mot 9</h2>
+        <p className="body-small mt-2">Formationsplanering är ännu inte tillgänglig för 9 mot 9. Speltid och matchutrymme räknas för nio spelare på planen.</p>
+      </section> : <MatchPlanEditor
         key={match.id}
         matchId={match.id}
         initialPlan={savedPlan?.document ?? emptyMatchPlan(match.formation)}
         initialRevision={savedPlan?.revision ?? 0}
         players={planPlayers.map(({ id, name, jersey_number }) => ({ id, name, jersey_number }))}
         editable={canManageSquads}
-      />}
+      />)}
 
       {/* Matchsammanställning – totaler, synlig för båda roller */}
       {matchPlayers.length > 0 && (() => {
