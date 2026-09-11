@@ -613,3 +613,8 @@ Sammanfogad med den publicerade spelarprofilen. Kodcommit 94fca86166d6ac8ea90dea
 216 lokala tester inklusive PostgreSQL godkända, fyra befintliga opt-in-tester överhoppade. Produktionsbygge och browserprov av sammanslagen profil, 320/390/744 px, poäng/kommentar, sparande/återläsning/rensning, äldre svar och inbjudningsbehörighet godkända. Deployens tester, bygge, migration, datagranskning och hälsokontroller passerade.
 
 Inloggad produktion kontrollerad: Årsta-matchens tio deltagare visas samtidigt med fem poängval och korrekt matchnivå; profilens nya ordning/fokus/batteri bevarade och nivåunderlaget visas med tydligt tomt underlag innan nya poäng finns. Ingen verklig bedömning, matchplan eller spelarinställning ändrad i kontrollen. Tillfällig lokal testdatabas borttagen och testserver stoppad. Tidigare status om ej sammanfogad/ej publicerad är ersatt. Ursprungskatalogens separata observationsarbete är fortsatt orört.
+
+
+## Uttagningsmotor publicerad – 2026-09-11
+
+Regler och implementation finns i docs/SELECTION_ENGINE.md. Huvudcommit 8fc967e782b93835c3da883410f4bc1c86fc6467 publicerades och verifierades inloggat. 236 lokala tester godkända, fyra befintliga villkorade tester överhoppade; typkontroll, produktionsbygge och UI-prov godkända. Adele (13) och Ava (11) har sparat nivåpar Svår + Medel; Nova (24) kräver tränarval för dubbelmatch. Inga verkliga kallelser eller matchuttagningar ändrades i kontrollen. Motorn arbetar matchvis med andra sparade åtaganden. Tillfällig lokal testdatabas borttagen. Uppföljning c673c28a visar Gul från start och saknad målvakt i balansindikatorn. Ursprunglig arbetskopias pågående arbete är orört.
