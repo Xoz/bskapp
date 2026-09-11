@@ -283,3 +283,5 @@ Spelarprofil 2026-09-11: `components/player-profile.css` avgränsar kompakt mobi
 - `lib/selection/{reader,data}.ts`: fyra senaste ordinarie träningar, fyra veckors matcher över lag och behörighetskontrollerat underlag till profil/uttagning. `actions.ts`: versionskontrollerad spelarpolicy i settings; `save.ts`: färska kontroller av nya uttagningsval.
 - `components/SelectionPolicyForm.tsx`: nivåpar, otillgänglighetsperiod och frånvaroundantag på spelarprofilen. `SelectionEditor.tsx`: motiveringar, dynamisk speltid och aktivt tränarval. Settings-prefix `selection_policy:` ingår i `playerPrivacy.ts`.
 - `lib/matchSpace.ts`: `lowestRatio` ger oavrundad marginal för regelbeslut; procentvisningen är oförändrad. Tester i `lib/selection/*.test.ts`; beslut, begränsningar och återgång i `docs/SELECTION_ENGINE.md`.
+
+`selection/rules.ts`: `allowedDoublePairs` utvidgar godkända nivåpar till lättare kombinationer; `toggleDoublePair` håller profilens kryssrutor konsekventa vid markering och avmarkering. Samma regel används för äldre sparade inställningar och automatförslag.

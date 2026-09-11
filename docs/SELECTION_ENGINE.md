@@ -97,3 +97,10 @@ ordinarie passen och matchnivå från serieinformation.
 ## Batterikalibrering 2026-09-11
 
 Efter Österåker-provet fastställde användaren att ordinarie träningar och två matcher ska fungera utan batterivarning. Den gemensamma batterimodellen har omkalibrerats enligt docs/MATCH_SPACE.md (0,1 per matchminut, 0,05 per träningsminut). Detta ersätter tidigare simuleringars batteriprocent. Samma beräkning används vid förslag, visning och sparande. Godkända individuella nivåpar, tidskontroll och tvåmatchergräns kvarstår; ändringen tillåter inte automatiskt varje nivåkombination.
+
+
+## Nivåpar omfattar lättare matcher – 2026-09-11
+
+Användaren fastställde att Svår + Svår tillåter alla kombinationer. Godkännanden gäller nedåt per match efter sortering: Svår + Medel tillåter alla utom Svår + Svår; Svår + Lätt tillåter även Medel + Lätt och Lätt + Lätt, men inte Medel + Medel. Medel + Medel tillåter Medel + Lätt och Lätt + Lätt. Ingen markering kräver fortsatt tränarbedömning.
+
+Gemensam regel i läsning, validering och uttagningsmotor gäller även tidigare sparade godkännanden utan omsparande/migration. Profilen markerar lättare kombinationer direkt. Avmarkering tar bort de svårare godkännanden som annars skulle återaktivera rutan; Rensa kombinationer tömmer allt. Spelarens vanliga matchnivå och övriga uttagningskontroller ändras inte.

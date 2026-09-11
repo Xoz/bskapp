@@ -67,7 +67,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)('uttagningsunderlag och
   const before=await sql`SELECT * FROM match_roster ORDER BY match_id`;
   const f=new FormData();f.append('pair','2+3');f.set('revision','');
   const r=await saveSelectionPolicy(1,f);expect(r.ok).toBe(true);
-  expect((await getSelectionEvidence([1])).get(1)!.policy.pairs).toEqual(['2+3']);
+  expect((await getSelectionEvidence([1])).get(1)!.policy.pairs).toEqual(['2+3','2+4','3+3','3+4','4+4']);
   expect((await saveSelectionPolicy(1,f)).ok).toBe(false);
   f.set('revision',r.revision!);f.delete('pair');expect((await saveSelectionPolicy(1,f)).ok).toBe(true);
   expect(await sql`SELECT * FROM match_roster ORDER BY match_id`).toEqual(before);

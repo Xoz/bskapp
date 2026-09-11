@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {emptyPolicy,trainingPriority,historySummary,assessSelection,timeCompatible,validatePolicy,selectionSpace,type Evidence,type MatchEvidence} from './rules';
+import {allowedDoublePairs,toggleDoublePair,readPolicy,emptyPolicy,trainingPriority,historySummary,assessSelection,timeCompatible,validatePolicy,selectionSpace,type Evidence,type MatchEvidence} from './rules';
 import {recommendYellowSelection,type RecommendationCandidate} from '../selectionSupport';
 import type {SpaceInput} from '../matchSpace';
 const match=(id:number,more:Partial<MatchEvidence>={}):MatchEvidence=>({id,date:'2026-09-10',time:'17:30',location:'Exempelplan',duration:60,level:3,played:false,reply:null,selected:false,...more});
@@ -85,3 +85,27 @@ it('validerar inställningar och kalenderdatum',()=>{
  expect(()=>validatePolicy({...emptyPolicy(),pairs:['3+2']})).toThrow();
  expect(()=>validatePolicy({...emptyPolicy(),unavailableFrom:'2026-02-30',unavailableTo:'2026-03-02'})).toThrow();
 });
+
+ describe('nivåkombinationer omfattar lättare matcher',()=>{
+  it('Svår + Svår omfattar alla sex, även från äldre sparad policy',()=>{
+   expect(allowedDoublePairs(['2+2'])).toEqual(['2+2','2+3','2+4','3+3','3+4','4+4']);
+   expect(readPolicy(JSON.stringify({...emptyPolicy(),pairs:['2+2']})).pairs).toHaveLength(6);
+  });
+  it('jämför båda matcherna och höjer aldrig en godkänd nivå',()=>{
+   expect(allowedDoublePairs(['2+3'])).toEqual(['2+3','2+4','3+3','3+4','4+4']);
+   expect(allowedDoublePairs(['2+4'])).toEqual(['2+4','3+4','4+4']);
+   expect(allowedDoublePairs(['3+3'])).toEqual(['3+3','3+4','4+4']);
+   expect(allowedDoublePairs(['4+4'])).toEqual(['4+4']);
+   expect(allowedDoublePairs([])).toEqual([]);
+  });
+  it('markering fyller lättare rutor, avmarkering tar bort beroende godkännanden',()=>{
+   const all=toggleDoublePair([],'2+2',true);
+   expect(all).toHaveLength(6);
+   expect(toggleDoublePair(all,'3+3',false)).toEqual(['2+4','3+4','4+4']);
+   expect(toggleDoublePair(all,'4+4',false)).toEqual([]);
+  });
+  it('automatförslaget använder även ett högre godkännande direkt',()=>{
+   const e=evidence({policy:{...emptyPolicy(),pairs:['2+2']},matches:[match(2,{date:'2026-09-18',time:'18:45',reply:'accepted',level:2})]});
+   expect(assessSelection(e,space()).blocks).not.toContain('Nivåkombinationen kräver tränarbedömning');
+  });
+ });

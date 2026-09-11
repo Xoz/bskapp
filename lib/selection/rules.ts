@@ -4,6 +4,19 @@ import { sanktanLevelLabel } from '../sanktanLevel';
 
 export const pairKey = (a: number, b: number) => [a, b].sort((x,y)=>x-y).join('+');
 export const DOUBLE_PAIRS = [2,3,4].flatMap(a=>[2,3,4].filter(b=>b>=a).map(b=>({key:pairKey(a,b),label:`${sanktanLevelLabel(a)} + ${sanktanLevelLabel(b)}`})));
+/** Lägre siffra är svårare. Jämför båda matcherna efter sortering. */
+function coversPair(granted:string,requested:string) {
+  const [a,b]=granted.split('+').map(Number),[x,y]=requested.split('+').map(Number);
+  return a<=x && b<=y;
+}
+export function allowedDoublePairs(pairs:string[]):string[] {
+  return DOUBLE_PAIRS.filter(pair=>pairs.some(grant=>DOUBLE_PAIRS.some(p=>p.key===grant)&&coversPair(grant,pair.key))).map(p=>p.key);
+}
+/** Avmarkering tar också bort svårare godkännanden som skulle återaktivera rutan. */
+export function toggleDoublePair(pairs:string[],key:string,checked:boolean):string[] {
+  if(!DOUBLE_PAIRS.some(p=>p.key===key))return allowedDoublePairs(pairs);
+  return checked?allowedDoublePairs([...pairs,key]):allowedDoublePairs(pairs).filter(grant=>!coversPair(grant,key));
+}
 export type Policy = { pairs: string[]; excusedTraining: string[]; excusedMatches: number[]; unavailableFrom: string; unavailableTo: string };
 export const emptyPolicy = (): Policy => ({pairs:[],excusedTraining:[],excusedMatches:[],unavailableFrom:'',unavailableTo:''});
 export const policyKey = (id:number) => `selection_policy:${id}`;
@@ -15,7 +28,7 @@ export function validatePolicy(value: unknown): Policy {
     ||!Array.isArray(p.excusedMatches)||p.excusedMatches.length>100||p.excusedMatches.some(id=>!Number.isInteger(id)||id<1)
     ||typeof p.unavailableFrom!=='string'||typeof p.unavailableTo!=='string'
     ||((p.unavailableFrom||p.unavailableTo)&&(!validDate(p.unavailableFrom)||!validDate(p.unavailableTo)||p.unavailableFrom>p.unavailableTo))) throw Error('Kontrollera nivåkombinationer och datum.');
-  return {pairs:[...new Set(p.pairs)].sort(),excusedTraining:[...new Set(p.excusedTraining)].sort(),excusedMatches:[...new Set(p.excusedMatches)].sort((a,b)=>a-b),unavailableFrom:p.unavailableFrom,unavailableTo:p.unavailableTo};
+  return {pairs:allowedDoublePairs(p.pairs),excusedTraining:[...new Set(p.excusedTraining)].sort(),excusedMatches:[...new Set(p.excusedMatches)].sort((a,b)=>a-b),unavailableFrom:p.unavailableFrom,unavailableTo:p.unavailableTo};
 }
 export function readPolicy(raw?:string):Policy {if(!raw)return emptyPolicy();return validatePolicy(JSON.parse(raw));}
 export type Training = {id:string;date:string;status:'present'|'absent'|'unknown';excused?:boolean};
@@ -65,7 +78,7 @@ export function assessSelection(e:Evidence,space:SpaceInput,minutes?:number) {
   if(sameDay.length===1){
     const other=sameDay[0],pair=e.target?.level&&other.level?pairKey(e.target.level,other.level):null;
     reasons.push(pair?`${sanktanLevelLabel(e.target!.level)} + ${sanktanLevelLabel(other.level)} samma dag`:'Dubbelmatch med okänd nivå');
-    if(!pair||!e.policy.pairs.includes(pair))blocks.push('Nivåkombinationen kräver tränarbedömning');
+    if(!pair||!allowedDoublePairs(e.policy.pairs).includes(pair))blocks.push('Nivåkombinationen kräver tränarbedömning');
     const timing=timeCompatible(e.target,other);
     if(timing!==true)blocks.push(timing===null?'Plats eller tid saknas för dubbelmatch':'För kort tid mellan matcherna');
     // Lägsta marginal från den första av dagens matcher, även om målmatchen är sist.

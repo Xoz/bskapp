@@ -625,3 +625,10 @@ Regler och implementation finns i docs/SELECTION_ENGINE.md. Huvudcommit 8fc967e7
 Användaren fastställde efter Österåker-provet att alla ska kunna träna och spela två matcher utan batterivarningar. Aktivitetskostnaden sänks från 0,5/0,25 till 0,1/0,05 poäng per match-/träningsminut i den gemensamma modellen. Kapaciteter och återhämtning bevaras. Basveckan med tre 60-minutersträningar och två fulla 75-minutersmatcher samma dag passerar för samtliga kapaciteter 50–150, även målvakt. Separata nivåpar, tidskrockar och högst två matcher per dag kvarstår.
 
 Skrivskyddad kontroll mot aktuell Österåker-planering ger normal batterinivå för alla tolv Gul-spelare. Adele och Ava passerar dubbelmatch; sju andra har kvar nivåparsbedömning. Inga spelarinställningar, uttagningar eller kallelser ändrade. 238 tester med PostgreSQL godkända, fyra befintliga villkorade överhoppade, typkontroll och produktionsbygge godkända. Detaljer i docs/MATCH_SPACE.md och docs/SELECTION_ENGINE.md.
+
+
+## Nivåpar omfattar lättare matcher – 2026-09-11
+
+Användaren fastställde att Svår + Svår tillåter alla kombinationer. Godkännanden gäller nedåt per match efter sortering: Svår + Medel tillåter alla utom Svår + Svår; Svår + Lätt tillåter även Medel + Lätt och Lätt + Lätt, men inte Medel + Medel. Medel + Medel tillåter Medel + Lätt och Lätt + Lätt. Ingen markering kräver fortsatt tränarbedömning.
+
+Gemensam regel i läsning, validering och uttagningsmotor gäller även tidigare sparade godkännanden utan omsparande/migration. Profilen markerar lättare kombinationer direkt. Avmarkering tar bort de svårare godkännanden som annars skulle återaktivera rutan; Rensa kombinationer tömmer allt. Spelarens vanliga matchnivå och övriga uttagningskontroller ändras inte.
