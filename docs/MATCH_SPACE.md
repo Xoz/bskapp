@@ -31,7 +31,10 @@ statistikens minuter ändras inte. Alla kanoniska deltagare räknas i nämnaren,
 Målvakt identifieras via närvaroposition, matchplan, uttagningsposition och sist
 primär profilposition. Tvetydig/saknad målvakt ger underlagsvarning och en
 reserverad målvaktsplats i uppskattningen; ingen godtycklig spelare utses.
-Vid ett hypotetiskt lån läggs kandidaten till antalet exakt en gång.
+Inför matcher baseras fördelningen på ja-svarande. Om inga ja-svar finns ännu
+används det planerade underlaget som uppskattning. Vid ett hypotetiskt lån
+läggs kandidaten till antalet exakt en gång. Uttagna/obesvarade kandidater
+minskar därför inte speltiden för en redan bekräftad trupp.
 
 Planerade matcher hämtas från `match_roster`: accepted/pending eller selected,
 men ett explicit declined utesluts även om selected ligger kvar. Inställda

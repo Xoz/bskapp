@@ -54,6 +54,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("matchutrymme med datab
     await sql`INSERT INTO players(id,active,preferred_position_primary) SELECT n,1,CASE WHEN n=3 THEN 'Målvakt' ELSE '' END FROM generate_series(3,10) n`;
     await sql`INSERT INTO match_players SELECT 1,n,0 FROM generate_series(3,8) n`;
     await sql`INSERT INTO match_roster(match_id,player_id,callup_status) SELECT 2,n,'accepted' FROM generate_series(2,8) n`;
+    await sql`INSERT INTO match_roster(match_id,player_id,selection_status,callup_status) VALUES(2,9,'selected',NULL),(2,10,NULL,'pending')`;
     try {
       let inputs=await getMatchSpaceInputs([1,3],2);
       expect(inputs.get(1)!.events[0].minutes).toBeCloseTo(360/7);
@@ -61,7 +62,7 @@ describe.skipIf(!process.env.BSK_SYNC_TEST_DATABASE_URL)("matchutrymme med datab
       expect(inputs.get(1)!.target!.minutes).toBeCloseTo(360/7);
       expect((await getMatchSpaceInputs([9],2)).get(9)!.target!.minutes).toBe(45);
       await sql`UPDATE matches SET period_minutes=25 WHERE id=2`;
-      await sql`INSERT INTO match_roster(match_id,player_id,callup_status) VALUES(2,9,'accepted'),(2,10,'accepted')`;
+      await sql`UPDATE match_roster SET callup_status='accepted' WHERE match_id=2 AND player_id IN (9,10)`;
       inputs=await getMatchSpaceInputs([1,3],2);
       expect(inputs.get(1)!.target!.duration).toBe(75);
       expect(inputs.get(1)!.target!.minutes).toBeCloseTo(600/9);

@@ -39,10 +39,10 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
       WHERE pa.match_id=m.id AND pp.player_id=p.id AND pp.attendance_status='present'))`;
   const [settings, matches, trainings] = await Promise.all([
     all<{key: string; value: string}>(`SELECT key, value FROM settings WHERE key IN (${marks})`, ids.map(capacityKey)),
-    all<MatchSpaceParticipant & {id: number; date: string; start_time: string | null; opponent: string; duration: number; played: boolean}>(`
+    all<MatchSpaceParticipant & {id: number; date: string; start_time: string | null; opponent: string; duration: number; played: boolean; callup_status: string | null}>(`
       SELECT p.id AS player_id, m.id, m.date, m.start_time, m.opponent,
         m.periods * m.period_minutes AS duration,
-        p.preferred_position_primary, p.position, mr.selected_position,
+        p.preferred_position_primary, p.position, mr.selected_position, mr.callup_status,
         (SELECT pp.position FROM development_activities pa
           JOIN development_activity_participation pp ON pp.activity_id=pa.id
           WHERE pa.match_id=m.id AND pp.player_id=p.id AND pp.attendance_status='present'
@@ -72,16 +72,24 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
   const plans = matchIds.length ? await all<{key:string; value:string}>(
     `SELECT key,value FROM settings WHERE key IN (${matchIds.map(() => "?").join(",")})`, matchIds.map(id => `match_plan:${id}`)) : [];
   const planById = new Map(plans.map(p => [Number(p.key.split(":")[1]), p.value]));
-  const participants = new Map(matchIds.map(id => [id, matches.filter(m => m.id === id)]));
-  const keeperById = new Map(matchIds.map(id => [id, matchSpaceGoalkeeper(participants.get(id)!, planById.get(id))]));
+  const participants = new Map(matchIds.map(id => {
+    const rows = matches.filter(m => m.id === id);
+    const confirmed = rows.filter(m => m.played || m.callup_status === "accepted");
+    return [id, confirmed.length ? confirmed : rows];
+  }));
+  const estimate = (matchId:number, playerId:number, duration:number) => {
+    const rows = participants.get(matchId)!;
+    const included = rows.some(p => p.player_id === playerId);
+    const candidate = matches.find(m => m.id === matchId && m.player_id === playerId);
+    const keeper = matchSpaceGoalkeeper(!included && candidate ? [...rows,candidate] : rows, planById.get(matchId));
+    return {minutes:sharedMatchMinutes(duration, rows.length + (included ? 0 : 1), keeper === playerId), keeper};
+  };
   const capacities = new Map(settings.map(row => [row.key, Number(row.value)]));
   const result = new Map<number, SpaceInput>(ids.map(id => {
     const capacity = capacities.get(capacityKey(id)) ?? 100;
     return [id, { sourceWarning, capacity: validCapacity(capacity) ? capacity : 100, now, events: [], target: target ? {
       id: `match:${target.id}`, title: `Mot ${target.opponent}`, start: targetStart, duration: target.periods * target.period_minutes,
-      minutes: sharedMatchMinutes(target.periods * target.period_minutes,
-        participants.get(target.id)!.length + (participants.get(target.id)!.some(p => p.player_id === id) ? 0 : 1),
-        keeperById.get(target.id) === id), kind: "match", planned: true, estimated: true,
+      minutes: estimate(target.id, id, target.periods * target.period_minutes).minutes, kind: "match", planned: true, estimated: true,
     } : undefined }];
   }));
   for (const row of matches) {
@@ -89,7 +97,7 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
     const start = swedishWallClockToEpoch(row.date, row.start_time || "12:00");
     if (!row.played && start < now) continue;
     const event: SpaceEvent = { id: `match:${row.id}`, title: `Mot ${row.opponent}`, start,
-      duration: row.duration, minutes: sharedMatchMinutes(row.duration, participants.get(row.id)!.length, keeperById.get(row.id) === row.player_id),
+      duration: row.duration, minutes: estimate(row.id, row.player_id, row.duration).minutes,
       kind: "match", planned: !row.played, estimated: true };
     result.get(row.player_id)!.events.push(event);
   }
@@ -102,7 +110,7 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
   for (const [id, input] of result) {
     const relevant = matches.filter(m => m.player_id === id).map(m => m.id);
     if (target) relevant.push(target.id);
-    if (relevant.some(matchId => keeperById.get(matchId) == null)) {
+    if (relevant.some(matchId => estimate(matchId, id, 60).keeper == null)) {
       input.sourceWarning = [input.sourceWarning, "Målvakt saknas eller är otydlig i någon match. Speltiden uppskattas med en reserverad målvaktsplats; kontrollera matchens positioner."].filter(Boolean).join(" ");
     }
   }
