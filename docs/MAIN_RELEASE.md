@@ -198,3 +198,7 @@ Webbcommit 17096239e72236f17355ed0c368820e722465c73 publicerad via https://githu
 ## Spelarlistans totaler över alla lag publicerade – 2026-09-11
 
 Commit b0d1fbf2 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34570052878. Typkontroll, deployens tester/bygge/hälsokontroller samt skarp SQL och inloggad spelarlista verifierade. Karolina visar nu 7 spelade matcher och 9 matchkallelser även med Gul som spelarfilter. Fem av de sju matcherna hör till Grön. Cuper fortsatt undantagna; statistiken i listan gäller innevarande år. Inga deltaganden, kallelser eller lagkopplingar ändrades.
+
+## Procentbatteri publicerat – 2026-09-11
+
+Commit c4cfdf86 publicerad via godkänd körning https://github.com/Xoz/bskapp/actions/runs/34570684190. Typkontroll, 11 riktade procent-/simuleringstester samt deployens tester, bygge och hälsokontroller godkända. Inloggad Idag-översikt visuellt verifierad med kompakta rader och gemensam grön/guld-stapel; Adele visar 100 % nu och 65 % som lägst. Profilen visar samma värden och hopfälld beräkning/justering. Kapacitet 80/125 verifierad i procenttester utan att ändra spelares inställningar. Befintliga varningar om olösta Grön-kopplingar och otydlig målvakt kvarstår och visas.
