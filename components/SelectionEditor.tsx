@@ -73,7 +73,7 @@ export default function SelectionEditor({
   })),[candidates,selectedIds,positions,scenarioMinutes,callupSummary.accepted]);
   const forecasts=useMemo(()=>new Map(candidates.map(c=>[c.player.id,simulations.get(c.player.id)?forecastMatchSpace(simulations.get(c.player.id)!):null])),[candidates,simulations]);
   const assessments=useMemo(()=>new Map(candidates.map(c=>[c.player.id,c.selectionEvidence&&simulations.get(c.player.id)?assessSelection(c.selectionEvidence,simulations.get(c.player.id)!):null])),[candidates,simulations]);
-  const [teamFilter, setTeamFilter] = useState<string>("Alla");
+  const [teamFilter, setTeamFilter] = useState<string>(() => candidates.some(c => c.teams.some(t => t.name === "Gul")) ? "Gul" : "Alla");
   const [recommendationReasons, setRecommendationReasons] = useState<Record<number, string>>({});
   const [recommendationSummary, setRecommendationSummary] = useState<SelectionRecommendation | null>(null);
   const [selectionBeforeRecommendation, setSelectionBeforeRecommendation] = useState<Set<number> | null>(null);
@@ -87,8 +87,8 @@ export default function SelectionEditor({
       spaceLevel: forecasts.get(candidate.player.id)?.level,
       recentMatchCount: candidate.recentMatchCount,
       upcomingMatchCount: candidate.upcomingMatchCount,
-    }))), ...selected.flatMap(c=>(assessments.get(c.player.id)?.blocks??[]).map(reason=>`${c.player.name}: ${reason}`))],
-    [selected, forecasts, assessments]
+    }))), ...(selected.length > 0 && !selected.some(c => /^(målvakt|malvakt|gk)$/i.test(positions[c.player.id] ?? "")) ? ["Målvakt saknas i uttagningen"] : []), ...selected.flatMap(c=>(assessments.get(c.player.id)?.blocks??[]).map(reason=>`${c.player.name}: ${reason}`))],
+    [selected, forecasts, assessments, positions]
   );
   const teamOptions = useMemo(() => {
     const unique = new Set<string>();
