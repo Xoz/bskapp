@@ -13,6 +13,7 @@ export default async function SvenskaLagSyncStatus() {
     <div><p className="core-kicker">Lag Gul</p><h2 className="font-semibold mt-2">Svenska Lag</h2></div>
     <p>{stale ? "Senaste hämtningen avbröts. Tidigare data ligger kvar." : status?.message ?? "Automatisk hämtning är inte ansluten ännu."}</p>
     <p className="body-small" style={{color:"var(--ink-secondary)"}}>Kallelser, svar och registrerad närvaro hämtas direkt. Dina uttagningsbeslut ändras inte.</p>
+    {Boolean(status?.skippedCups) && <p className="caption">{status?.skippedCups} cupmatcher lämnade utanför denna synk. Cupstöd är planerat separat.</p>}
     {status?.lastSuccess && <p className="caption">Senast uppdaterat: {dateLabel(status.lastSuccess)}</p>}
     {status?.unmatched?.length ? <details><summary className="cursor-pointer">{status.unmatched.length} kopplingar att granska</summary><ul className="mt-2">{status.unmatched.map((text,i)=><li key={i}>{text}</li>)}</ul></details> : null}
     {request ? <p role="status">Hämtning beställd. Arbetaren kontrollerar kön varje minut.</p> : <form action={requestSvenskaLagSync}><button className="btn-secondary" disabled={!status || (status.state==="running" && !stale)}>Hämta nu</button></form>}

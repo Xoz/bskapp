@@ -526,3 +526,9 @@ Appen visar underlagsvarning vid saknad/tvetydig målvakt. 75 minuters
 registrerad matchlängd identifierar 9v9 tills ett separat spelformsfält finns.
 Ingen ändring av närvaro, statistikminuter, kapacitet eller kallelser gjordes
 vid verifieringen. Tillfällig lokal testdatabas borttagen.
+
+## Synk av Sanktan/träningsmatch och spelform – 2026-09-11
+
+Användaren godkänner genomförande inom Sanktan och träningsmatcher. Collector läser tävlingslänkens stabila id/namn och explicit 7v7/9v9 i namn eller matchbeskrivning. Fem verifierade Sanktan-id:n för Gul/Grön 2026 stöds; nya/okända tävlingar och motstridig spelform flaggas och lämnas orörda. Träningsmatch identifieras från tävlingsnamnet. Utan explicit spelform används lagets standard 7v7, märkt default. Matchtyp och 3 × 20/25 min uppdateras på befintliga match-id:n enligt användarens 60/75-minutersregel. Tävlingsmetadata sparas i settings och batteriet använder explicit format före äldre längdfallback.
+
+Identifierade cuper hoppas över helt i denna hämtning: ingen historisk cupimport eller cupklassificering. Befintliga cupdata raderas inte. Namn med Cup/Cupen prioriteras före Friendly/träningsmatch. Okända namn får aldrig automatiskt Sanktan. Ordinarie synkfönster −28/+14 dagar kvarstår; ingen bred säsongsimport. Verifiering: 183 tester med PostgreSQL, Playwright-fixturer för båda lagen och produktionsbygge godkända. Skarp provhämtning och driftsättning verifieras separat.

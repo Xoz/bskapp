@@ -1,3 +1,4 @@
+import { validMatchMetadata, type MatchMetadata } from "./matchMetadata";
 /** Filfri transport. Endast data som behövs i lagappen följer med. */
 export const TEAM_PATH = "/bollstanassk-fotboll-f2014-gul";
 export const TEAM_PATHS = { Gul: TEAM_PATH, Grön: "/bollstanassk-fotboll-f2014-gron" } as const;
@@ -8,7 +9,7 @@ export type Reply = "accepted" | "declined" | "pending";
 export type ActivitySnapshot = {
   sourceId: string; url: string; date: string; time: string; title: string;
   kind: "match" | "training";
-  match?: {opponent:string;homeAway:"home"|"away";location?:string};
+  match?: {opponent:string;homeAway:"home"|"away";location?:string;metadata?:MatchMetadata};
   lineup?: string[];
   cancelled?: boolean;
   callups: { name: string; status: Reply }[];
@@ -39,6 +40,7 @@ export function validateSnapshot(items: ActivitySnapshot[], today: string, team:
     if(a.cancelled!==undefined&&typeof a.cancelled!=="boolean") throw new Error("Ogiltig matchstatus");
     if(a.match && (a.kind!=="match"||!a.match.opponent?.trim()||a.match.opponent.length>250||!["home","away"].includes(a.match.homeAway))) throw new Error("Ogiltig matchdata");
     if(a.match?.location!==undefined&&(typeof a.match.location!=="string"||a.match.location.length>300)) throw new Error("Ogiltig spelplats");
+    if(a.match?.metadata!==undefined && !validMatchMetadata(a.match.metadata)) throw new Error("Ogiltig tävlingsmetadata");
     if(a.lineup && (a.kind!=="match"||a.date<today||!Array.isArray(a.lineup)||a.lineup.length>40||a.lineup.some(n=>typeof n!=="string"||!n.trim()||n.length>150)||new Set(a.lineup.map(nameKey)).size!==a.lineup.length)) throw new Error("Ogiltig laguppställning");
     if (!a.title?.trim() || a.title.length > 300 || !["match", "training"].includes(a.kind)) throw new Error("Okänd aktivitet");
     if (!Array.isArray(a.callups) || a.callups.length > 200) throw new Error("Ogiltiga kallelser");
@@ -56,7 +58,7 @@ export function validateSnapshot(items: ActivitySnapshot[], today: string, team:
 export type SyncStatus = {
   state: "running" | "ok" | "error" | "login_required";
   startedAt: string; finishedAt?: string; lastSuccess?: string;
-  message: string; activities?: number; unmatched?: string[];
+  message: string; activities?: number; skippedCups?: number; unknownMatches?: number; unmatched?: string[];
 };
 export const STATUS_KEY = "svenskalag_sync_status";
 export const REQUEST_KEY = "svenskalag_sync_request";

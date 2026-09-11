@@ -257,3 +257,5 @@ Rättat 2026-09-10: `matchPlan/players.ts` använder nu ENBART accepted; tidigar
 Terminologi 2026-09-10: `matchRosterLabel` benämner selected-underlaget Laguppställning, faktiskt spelade Deltog. Matchdetaljens separata Trupp läser accepted via matchPlanPlayersSql. Definitionerna finns i AGENTS.md och guiden; äldre nativeetiketter är anpassade men native distribution är fortsatt pausad.
 
 `lib/matchSpaceMinutes.ts`: `sharedMatchMinutes` delar utespelarnas matchtid; `matchSpaceGoalkeeper` identifierar målvakt från matchposition och profil. Används av `matchSpaceData.ts` för både historik och prognos. Tester i `matchSpaceMinutes.test.ts` samt databasprovet `matchSpaceData.test.ts`.
+
+`lib/svenskalag/matchMetadata.ts`: klassificering/validering/läsning av tävlings-id, matchtyp och spelform; settings `svenskalag_match_metadata:<matchId>`. `scripts/svenskalag/check-match-types.ts` provhämtar Gul/Grön utan verksamhetsskrivningar. Cupplan i `docs/CUP_PLAN.md`.

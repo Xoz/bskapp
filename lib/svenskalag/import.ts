@@ -1,10 +1,11 @@
+import { matchMetadataKey } from "./matchMetadata";
 import type postgres from "postgres";
 import {lineupKey,draftKey} from "./outbox";
 import { nameKey, validateSnapshot, type ActivitySnapshot, type SyncTeam } from "./model";
 
 /** Hela hämtningen valideras före transaktionen. Inga schemaändringar i arbetaren. */
 export async function applySnapshot(sql: ReturnType<typeof postgres>, items: ActivitySnapshot[], today: string, dryRun = false, team: SyncTeam = "Gul") {
-  if (team === "Grön" && items.length === 0) return {activities:0, unmatched:[] as string[]};
+  if (team === "Grön" && items.length === 0) return {activities:0, skippedCups:0, unknownMatches:0, unmatched:[] as string[]};
   validateSnapshot(items, today, team);
   if (team === "Grön" && items.some(a => a.kind !== "match" || a.lineup)) throw new Error("Grön importerar endast matchuppgifter, svar och närvaro");
   return sql.begin(async tx => {
@@ -26,8 +27,12 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
     for (const name of leaderNames) ignoredNames.add(nameKey(name));
     const unmatched: string[] = [];
     const write=async(key:string,value:unknown)=>{await tx`INSERT INTO settings(key,value) VALUES(${key},${JSON.stringify(value)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value`;};
-    let activities = 0;
+    let activities = 0, skippedCups = 0, unknownMatches = 0;
     for (const a of items) {
+      if (a.match?.metadata?.scope === "cup") { skippedCups++; continue; }
+      if (a.match?.metadata?.scope === "unknown") {
+        unknownMatches++; unmatched.push(`Match ${a.sourceId}: tävling eller spelform behöver verifieras (${a.match.metadata.competitionName || "saknas"})`); continue;
+      }
       const key = a.kind === "match" ? `sanktan:${a.sourceId}` : `svenskalag:activity:${a.sourceId}`;
       let rows = Array.from(await tx`SELECT id, match_id FROM development_activities WHERE external_key = ${key} AND group_id = ${groupId}`);
       // Svenska Lag skapar och uppdaterar matchens grunddata med stabilt käll-id.
@@ -45,6 +50,12 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
         if(!dryRun&&rows.length===1) {
           await tx`DELETE FROM settings WHERE key=${`svenskalag_removed:${rows[0].match_id}`}`;
           await tx`UPDATE matches SET date=${a.date},start_time=${a.time},opponent=${a.match.opponent},home_away=${a.match.homeAway},location=COALESCE(${a.match.location??null},location),cancelled=${a.cancelled?1:0} WHERE id=${rows[0].match_id} AND group_id=${groupId}`;
+          if (a.match.metadata?.scope === "supported") {
+            const meta=a.match.metadata;
+            // 7v7/9v9 och 60/75 minuter är lagets beslutade standarder.
+            await tx`UPDATE matches SET match_type=${meta.matchType},periods=3,period_minutes=${meta.format===9?25:20} WHERE id=${rows[0].match_id} AND group_id=${groupId}`;
+            await write(matchMetadataKey(rows[0].match_id), {...meta,fetchedAt:new Date().toISOString()});
+          }
           await tx`UPDATE development_activities SET activity_date=${a.date},start_time=${a.time},title=${a.title} WHERE match_id=${rows[0].match_id}`;
         }
       }
@@ -126,7 +137,7 @@ export async function applySnapshot(sql: ReturnType<typeof postgres>, items: Act
           VALUES (${activity.id}, ${id}, 'present', 'svenskalag_browser') ON CONFLICT (activity_id, player_id) DO UPDATE SET attendance_status = excluded.attendance_status, source = excluded.source`;
       }
     }
-    if (!activities) throw new Error("Ingen aktivitet kunde kopplas säkert");
-    return { activities, unmatched: unmatched.slice(0, 30) };
+    if (!activities && !skippedCups && !unknownMatches) throw new Error("Ingen aktivitet kunde kopplas säkert");
+    return { activities, skippedCups, unknownMatches, unmatched: unmatched.slice(0, 30) };
   });
 }

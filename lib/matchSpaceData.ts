@@ -1,3 +1,4 @@
+import { matchMetadataKey, readMatchMetadata } from "./svenskalag/matchMetadata";
 import "server-only";
 import { sharedMatchMinutes, matchSpaceGoalkeeper, type MatchSpaceParticipant } from "./matchSpaceMinutes";
 import { GREEN_STATUS_KEY, type SyncStatus } from "./svenskalag/model";
@@ -71,6 +72,9 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
   const matchIds = [...new Set([...matches.map(m => m.id), ...(target ? [target.id] : [])])];
   const plans = matchIds.length ? await all<{key:string; value:string}>(
     `SELECT key,value FROM settings WHERE key IN (${matchIds.map(() => "?").join(",")})`, matchIds.map(id => `match_plan:${id}`)) : [];
+  const metadata = matchIds.length ? await all<{key:string;value:string}>(
+    `SELECT key,value FROM settings WHERE key IN (${matchIds.map(()=>"?").join(",")})`,matchIds.map(matchMetadataKey)) : [];
+  const formatById = new Map(metadata.map(row=>[Number(row.key.split(":")[1]),readMatchMetadata(row.value)?.format ?? undefined]));
   const planById = new Map(plans.map(p => [Number(p.key.split(":")[1]), p.value]));
   const participants = new Map(matchIds.map(id => {
     const rows = matches.filter(m => m.id === id);
@@ -82,7 +86,7 @@ export async function getMatchSpaceInputs(playerIds: number[], targetMatchId?: n
     const included = rows.some(p => p.player_id === playerId);
     const candidate = matches.find(m => m.id === matchId && m.player_id === playerId);
     const keeper = matchSpaceGoalkeeper(!included && candidate ? [...rows,candidate] : rows, planById.get(matchId));
-    return {minutes:sharedMatchMinutes(duration, rows.length + (included ? 0 : 1), keeper === playerId), keeper};
+    return {minutes:sharedMatchMinutes(duration, rows.length + (included ? 0 : 1), keeper === playerId, formatById.get(matchId)), keeper};
   };
   const capacities = new Map(settings.map(row => [row.key, Number(row.value)]));
   const result = new Map<number, SpaceInput>(ids.map(id => {

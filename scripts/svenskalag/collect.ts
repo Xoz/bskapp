@@ -1,3 +1,4 @@
+import { classifyMatch } from "../../lib/svenskalag/matchMetadata";
 import type { BrowserContext, Page } from "playwright";
 import {readLineup} from "./lineup";
 import { ORIGIN, TEAM_PATH, TEAM_PATHS, type SyncTeam, dayOffset, sourceUrl, validateSnapshot, type ActivitySnapshot, type Reply } from "../../lib/svenskalag/model";
@@ -78,7 +79,17 @@ export async function collect(context: BrowserContext, today: string, team: Sync
       const homeAway=/^Bollstanäs SK(?: |$)/.test(teams[0])?'home':'away';
       const location=page.locator('.game-info p.text-muted');
       if(await location.count()>1) throw new Error('Spelplatsen kunde inte verifieras');
-      match={homeAway,opponent:teams[homeAway==='home'?1:0].trim(),location:await location.count()?(await location.innerText()).trim():''};
+      const competition = await page.locator('.game-info a[href*="/matcher?"]').evaluateAll(links => links.map(a => ({name:a.textContent?.trim() || "",url:(a as HTMLAnchorElement).href})));
+      if (competition.length > 1) throw new Error('Tävlingen kunde inte verifieras');
+      const competitionUrl = competition[0] ? sourceUrl(competition[0].url,teamPath) : null;
+      const competitionId = competitionUrl ? new URL(competitionUrl).hash.match(/^#id=(\d+)$/)?.[1] ?? null : null;
+      const description = (await page.locator('#event-match-details .break-long-words').allTextContents()).join(' ');
+      const metadata = classifyMatch(competitionId,competition[0]?.name || "",description);
+      match={metadata,homeAway,opponent:teams[homeAway==='home'?1:0].trim(),location:await location.count()?(await location.innerText()).trim():''};
+    }
+    if (match?.metadata?.scope !== undefined && match.metadata.scope !== 'supported') {
+      results.push({...entry,match,callups:[],totals:{accepted:0,declined:0,pending:0},attendance:null});
+      continue;
     }
     if(entry.cancelled) {results.push({...entry,match,callups:[],totals:{accepted:0,declined:0,pending:0},attendance:null});continue;}
     const totals = {accepted:0, declined:0, pending:0};

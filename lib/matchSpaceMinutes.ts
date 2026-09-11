@@ -8,11 +8,11 @@ export type MatchSpaceParticipant = {
   position: string | null;
 };
 
-/** 75 minuter identifierar 9v9 tills matcherna har ett separat spelformsfält.
+/** Synkad spelform prioriteras; äldre matcher använder längden som fallback.
  * Kortare cupmatcher behåller sin registrerade längd och sex utespelarplatser. */
-export function sharedMatchMinutes(duration: number, participants: number, goalkeeper: boolean): number {
+export function sharedMatchMinutes(duration: number, participants: number, goalkeeper: boolean, format?: 7 | 9): number {
   if (goalkeeper || participants <= 1) return duration;
-  const outfieldSlots = duration === 75 ? 8 : 6;
+  const outfieldSlots = (format ?? (duration === 75 ? 9 : 7)) - 1;
   return Math.min(duration, outfieldSlots * duration / (participants - 1));
 }
 

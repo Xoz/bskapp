@@ -135,3 +135,5 @@ Appen visar underlagsvarning vid saknad/tvetydig målvakt. 75 minuters
 registrerad matchlängd identifierar 9v9 tills ett separat spelformsfält finns.
 Ingen ändring av närvaro, statistikminuter, kapacitet eller kallelser gjordes
 vid verifieringen. Tillfällig lokal testdatabas borttagen.
+
+Synkförbättring 2026-09-11: verifierad spelform i `svenskalag_match_metadata:<id>` används före längdfallback. Sanktan/träningsmatcher uppdateras inom ordinarie synkfönster. Cupstöd och historisk cupimport är avgränsade enligt CUP_PLAN.md.

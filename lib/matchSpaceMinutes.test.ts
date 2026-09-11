@@ -12,6 +12,10 @@ describe("jämn fördelning av speltid",()=>{
     expect(sharedMatchMinutes(75,n,false)).toBeCloseTo(600/(n-1));
     expect(sharedMatchMinutes(75,n,true)).toBe(75);
   });
+  it("låter explicit spelform gå före matchlängd",()=>{
+    expect(sharedMatchMinutes(60,10,false,9)).toBeCloseTo(480/9);
+    expect(sharedMatchMinutes(75,10,false,7)).toBe(50);
+  });
   it("bevarar korta cupmatcher och ger aldrig mer än full matchtid",()=>{
     expect(sharedMatchMinutes(20,9,false)).toBe(15);
     for(const n of [0,1,2,6,7]) expect(sharedMatchMinutes(60,n,false)).toBe(60);

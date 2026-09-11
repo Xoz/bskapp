@@ -64,7 +64,7 @@ async function main() {
         greenStatus.finishedAt=new Date().toISOString();
         if (!process.argv.includes("--dry-run")) await write(GREEN_STATUS_KEY,greenStatus);
         if(!process.argv.includes("--dry-run")&&outbound) await processOutbox(sql,context,snapshot,today);
-        status.state="ok"; status.activities=imported.activities; status.unmatched=imported.unmatched;
+        status.state="ok"; status.activities=imported.activities; status.skippedCups=imported.skippedCups; status.unknownMatches=imported.unknownMatches; status.unmatched=imported.unmatched;
         status.message=process.argv.includes("--dry-run") ? "Provkörning klar, inget importerat" : "Svenska Lag är uppdaterat";
         if (!process.argv.includes("--dry-run")) status.lastSuccess=new Date().toISOString();
         finished=true;
