@@ -75,11 +75,28 @@ class ScheduleTests(unittest.TestCase):
          'selected':[{'player_id':1,'name':'Test A'},{'player_id':2,'name':'Test B'}]},'named_counts_match_source':True,'truncated':False}
         lineup=[{'player_id':1,'selected_position':'GK','lineup_x':.5,'lineup_y':.9}]
         text=format_report(match,replies,lineup,'2-3-1',NOW)
-        self.assertIn('Sparad startuppställning:',text)
-        self.assertIn('Test A (GK) – Ja',text)
-        self.assertIn('Test B – Nej',text)
-        self.assertIn('Tackat ja men inte uttagna: Test C',text)
-        self.assertIn('1 uttagna saknar ja-svar',text)
+        self.assertIn('Trupp: 2 spelare (tackat ja).',text)
+        self.assertIn('Sparad start (2-3-1): Test A (GK)',text)
+        self.assertIn('Övriga i truppen: Test C',text)
+        self.assertNotIn('Test B',text)
+        self.assertNotIn('uttagna',text.lower())
+        # A declined player saved on the pitch must never appear as a starter.
+        lineup.append({'player_id':2,'lineup_x':.2,'lineup_y':.3})
+        text=format_report(match,replies,lineup,'2-3-1',NOW)
+        self.assertIn('1 i sparad start saknar ja-svar',text)
+        self.assertNotIn('Test B',text)
+        # Incomplete source data must not claim that the known names are the whole squad.
+        replies.update(named_counts_match_source=False,source_counts={'accepted':4})
+        text=format_report(match,replies,[],'',NOW)
+        self.assertIn('Kända ja-svar: 2',text)
+        self.assertIn('Källan anger 4 ja-svar',text)
+        self.assertNotIn('Trupp: 2',text)
+        replies['players']['accepted']=[]
+        replies['players']['pending']=[{'player_id':4,'name':'Test D'}]
+        text=format_report(match,replies,[],'',NOW)
+        self.assertIn('Inga bekräftade spelare',text)
+        self.assertIn('1 obesvarade',text)
+        self.assertNotIn('Test D',text)
 
     def test_z_native_hermes_job_registration_isolated(self):
         sys.path.insert(0,'/usr/local/lib/hermes-agent')

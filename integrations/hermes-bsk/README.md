@@ -201,11 +201,11 @@ avsparkstid; otydlig/saknad tid ger en privat varning när listan ändras.
 `match_report.py` hämtar färska BSK-uppgifter vid utskicket och skriver färdig
 svensk text. `no_agent=True` levererar texten utan språkmodell; tom stdout är tyst.
 
-Rapporten innehåller sparad formation/startuppställning, övriga uttagna,
-ja/nej/obesvarat per uttagen samt alla namngivna kallelsesvar. Placering på planen
-kräver sparade x/y-koordinater. Utan sådan data står det att startuppställning
-saknas. Uttagna utan ja-svar markeras för kontroll av reservbehov; ingen reserv
-kallas automatiskt. Bristande namntäckning/källtotaler redovisas.
+Rapporten är ett kort planeringsunderlag med antal ja-svar och spelarnamn.
+Sparad start visar endast spelare som tackat ja; övriga ja-svar visas separat.
+Placering kräver sparade x/y-koordinater. Saknad start, sparade startspelare utan
+ja-svar och bristande namntäckning markeras kort. Inga listor över uttagna eller
+nej-svar; obesvarade visas bara som antal utanför truppen. Ingen reserv kallas.
 
 `lineups.sql` körs efter `callups.sql` och lägger till två skyddade läsvyer;
 matchvyn utesluter nu inställda matcher. Kräver aktuell BSK-databas med
@@ -328,3 +328,7 @@ för att även omedelbart stänga endpointen. Ingen databasåterställning behö
 Manuellt modellprov: `verify_model_loans.py --question 'Vilka från Gul kan lånas ut till Grön imorgon?'`. Kör med Hermes befintliga Pythonmiljö på VPS. Endast BSK-verktyg aktiveras, långtidsminne/bakgrundsgranskning och sessionspersistens stängs av. Provet innehåller motstridig tidigare assistenthistorik. Det kräver ett verkligt laneunderlag-anrop (även genom tool_call-bryggan) och skriver svaret för manuell semantisk granskning. Ingen mottagare eller utskicksfunktion finns i provet.
 
 Låneunderlaget innehåller även `answerText`, en deterministiskt formad svensk svarstext från `lib/hermes/loanAnswer.ts`, samt `categoryCounts`. Privata Hermes instrueras att återge answerText ordagrant när målmatchen är vald. Detta tillkom efter modellprovet: även med korrekta rådata räknade modellen fel antal och blandade ja-svar/uttagning. Strukturerade kandidatdata behålls för spårbarhet.
+
+### Matchrapportens innehåll 2026-09-21
+
+Kort planeringsunderlag: tid/plats, antal ja-svar och spelarnamn. Sparad start visas bara för spelare som tackat ja, med övriga ja-svar separat. Inga listor över uttagna, nej-svar eller kallelser. Obesvarade anges enbart som antal utanför truppen. En sparad start med spelare utan ja-svar och ofullständiga namnunderlag flaggas kort. Oförändrad utskickstid och träningsrapport.
