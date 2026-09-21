@@ -1,0 +1,12 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({read:vi.fn(),write:vi.fn(),file:vi.fn()}));
+vi.mock('node:fs/promises',()=>({readFile:mocks.file}));
+vi.mock('./writes',()=>({writeContext:mocks.read,executeWrite:mocks.write}));
+vi.mock('../services/development',()=>({DevelopmentServiceError:class extends Error {status=400;}}));
+import {GET,POST} from '../../app/api/hermes/write/route';
+const token='x'.repeat(64);
+beforeEach(()=>{vi.clearAllMocks();mocks.file.mockResolvedValue(JSON.stringify({token,enabled:true,userId:1,sourceGroupId:1}));});
+it('does not invoke services without the dedicated token',async()=>{const r=await POST(new Request('https://test/api/hermes/write',{method:'POST',body:'{}'}));expect(r.status).toBe(401);expect(mocks.write).not.toHaveBeenCalled();});
+it('context is read only and private',async()=>{mocks.read.mockResolvedValue({revision:'abc'});const r=await GET(new Request('https://test/api/hermes/write?kind=result&id=1',{headers:{Authorization:'Bearer '+token}}));expect(r.status).toBe(200);expect(r.headers.get('Cache-Control')).toBe('private, no-store');expect(mocks.write).not.toHaveBeenCalled();});
+it('rejects malformed and oversized bodies before service execution',async()=>{for(const body of ['{','x'.repeat(20001)]){const r=await POST(new Request('https://test/api/hermes/write',{method:'POST',headers:{Authorization:'Bearer '+token},body}));expect([400,413]).toContain(r.status);}expect(mocks.write).not.toHaveBeenCalled();});
+it('hides internal errors and preserves uncertain-result language',async()=>{mocks.write.mockRejectedValue(new Error('private database connection'));const r=await POST(new Request('https://test/api/hermes/write',{method:'POST',headers:{Authorization:'Bearer '+token},body:'{}'}));expect(r.status).toBe(500);const body=await r.text();expect(body).not.toContain('private database');expect(body).toContain('samma kommando-ID');});

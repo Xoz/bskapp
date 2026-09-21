@@ -209,8 +209,8 @@ class Integration(unittest.TestCase):
         async def check():
             async with Client(server.mcp) as c:
                 listed=(await c.list_tools()).tools
-                self.assertEqual(len(listed),9)
-                self.assertTrue(all(t.annotations.read_only_hint for t in listed))
+                self.assertEqual(len(listed),14)
+                self.assertEqual(sum(not t.annotations.read_only_hint for t in listed),4)
                 for name,args in [('status',{}),('hitta_spelare',{}),('matcher',{'fran':'2026-01-01','till':'2026-01-31'}),('spelarutveckling',{'spelar_id':1}),('traningsnarvaro',{'fran':'2026-01-01','till':'2026-01-31'}),('traningspass',{}),('aktiviteter',{'fran':'2026-01-01','till':'2026-01-31'}),('kallelsesvar',{'aktivitets_id':'match:1'})]:
                     result=await c.call_tool(name,args)
                     self.assertFalse(result.is_error,name)

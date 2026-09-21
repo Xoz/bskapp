@@ -1,3 +1,5 @@
+> Uppdatering 2026-09-21: de nio befintliga läsverktygen kompletteras med `las_skrivunderlag` och fyra avgränsade skrivverktyg via separat kontobundet HTTP-API. DB-inloggningen förblir skrivskyddad. Se [skrivstödet](../../docs/HERMES_WRITES.md) för behörigheter, kvitton, tester och drift. Äldre beskrivningar av hela kopplingen som enbart läsande gäller inte den nya konfigurationen.
+
 # BSK i Hermes
 
 Privat, lokalt MCP-gränssnitt till huvudappens PostgreSQL. Hermes svarar i den

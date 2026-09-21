@@ -7,6 +7,8 @@
 // tidigare mot Turso/libSQL, så actions.ts/queries.ts/live.ts är oförändrade.
 
 import postgres from "postgres";
+import { AsyncLocalStorage } from "node:async_hooks";
+const transactionContext = new AsyncLocalStorage<postgres.TransactionSql>();
 import { pendingSchemaMigrationIds } from "./schemaMigrations";
 
 export type SqlArgs = (string | number | boolean | null)[];
@@ -1476,6 +1478,13 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
       OR (skipped=0 AND rating IS NULL AND self_comparison IS NOT NULL AND match_impact IS NOT NULL)
     )`);
   } },
+  { id: "0026-hermes-write-receipts", run: async () => {
+    await getClient().unsafe(`CREATE TABLE IF NOT EXISTS hermes_write_receipts (
+      user_id INTEGER NOT NULL REFERENCES users(id), command_id UUID NOT NULL,
+      request_hash TEXT NOT NULL, receipt JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY(user_id, command_id))`);
+    await getClient().unsafe("REVOKE ALL ON hermes_write_receipts FROM PUBLIC");
+  } },
 ];
 const LEGACY_BASELINE_VERSION = "2026-08-19-sanktan-callups-v4";
 const MIGRATION_LOCK_KEYS = [118119812, 2014] as const;
@@ -1541,7 +1550,7 @@ function ready(): Promise<void> {
 
 export async function all<T>(sqlText: string, args: SqlArgs = []): Promise<T[]> {
   await ready();
-  const rows = await getClient().unsafe(toPositional(sqlText), args as never[]);
+  const rows = await (transactionContext.getStore() ?? getClient()).unsafe(toPositional(sqlText), args as never[]);
   return rows as unknown as T[];
 }
 
@@ -1552,7 +1561,7 @@ export async function get<T>(sqlText: string, args: SqlArgs = []): Promise<T | u
 
 export async function run(sqlText: string, args: SqlArgs = []): Promise<Record<string, unknown>[]> {
   await ready();
-  const rows = await getClient().unsafe(toPositional(sqlText), args as never[]);
+  const rows = await (transactionContext.getStore() ?? getClient()).unsafe(toPositional(sqlText), args as never[]);
   return rows as unknown as Record<string, unknown>[];
 }
 
@@ -1560,11 +1569,20 @@ export async function run(sqlText: string, args: SqlArgs = []): Promise<Record<s
 export async function batch(statements: { sql: string; args?: SqlArgs }[]): Promise<void> {
   await ready();
   if (statements.length === 0) return;
-  await getClient().begin(async (tx) => {
-    for (const s of statements) {
-      await tx.unsafe(toPositional(s.sql), (s.args ?? []) as never[]);
-    }
+  await transaction(async () => {
+    for (const s of statements) await run(s.sql, s.args ?? []);
   });
+}
+
+/** Runs service reads, nested batches and audit writes on the same connection. */
+export async function transaction<T>(work: () => Promise<T>): Promise<T> {
+  await ready();
+  if (transactionContext.getStore()) return work();
+  let result!: T;
+  await getClient().begin(async tx => {
+    result = await transactionContext.run(tx, work);
+  });
+  return result;
 }
 
 // ---- Inställningar ----
