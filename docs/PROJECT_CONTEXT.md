@@ -637,3 +637,7 @@ Gemensam regel i läsning, validering och uttagningsmotor gäller även tidigare
 ## Referensvecka cirka 50 procent – 2026-09-11
 
 Användaren preciserade batterimålet till ordinarie träningar plus en match lördag och en söndag. Standardreferens kapacitet 100, tre 60-minutersträningar och 45 spelminuter i vardera helgmatchen ger cirka 51 procent. Matchkostnad 0,75, träningskostnad 0,25 poäng/minut; återhämtning 20/dygn. Under 50 procent ökar matchkostnaden kontinuerligt upp till 50 procent extra vid noll. Under 50 varnar nu även enkelmatchens uttagning och kräver aktivt tränarval. Det ersätter tidigare 60-procentsgräns och föregående alltför låga aktivitetskostnader. Även under 40 procent kan lågt batteri godkännas genom aktivt tränarval; tidigare absolut batterispärr är ersatt av varning. Högst två matcher per dag, tid och nivåpar kvarstår. Full målvaktstid och täta matcher kan ge lägre prognos än referensveckan. Se docs/MATCH_SPACE.md för exakt scenario och beräkning.
+
+## 2026-09-21 – Hermes skrivstöd
+
+Implementerat på användarens begäran: avgränsat kontobundet skriv-API för laguttagning, matchkommentar, privat utvecklingsanteckning och matchresultat. Befintliga appregler återanvänds. Transaktion, versionskontroll och kvitton skyddar mot delskrivning, inaktuellt underlag och dubbla återförsök. Inga kallelser eller andra meddelanden skickas. Rapporter tas efter detta arbete och ändras inte nu. Drift- och verifieringsdetaljer: docs/HERMES_WRITES.md.

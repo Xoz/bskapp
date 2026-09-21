@@ -9,7 +9,7 @@ async def main():
         async with ClientSession(r,w) as session:
             await session.initialize()
             tools=(await session.list_tools()).tools
-            assert len(tools)==9 and all(t.annotations.read_only_hint for t in tools)
+            assert len(tools)==14 and sum(not t.annotations.read_only_hint for t in tools)==4
             async def call(name,args):
                 result=await session.call_tool(name,args)
                 assert not result.is_error, name+' failed'

@@ -285,3 +285,5 @@ Spelarprofil 2026-09-11: `components/player-profile.css` avgränsar kompakt mobi
 - `lib/matchSpace.ts`: `lowestRatio` ger oavrundad marginal för regelbeslut; procentvisningen är oförändrad. Tester i `lib/selection/*.test.ts`; beslut, begränsningar och återgång i `docs/SELECTION_ENGINE.md`.
 
 `selection/rules.ts`: `allowedDoublePairs` utvidgar godkända nivåpar till lättare kombinationer; `toggleDoublePair` håller profilens kryssrutor konsekventa vid markering och avmarkering. Samma regel används för äldre sparade inställningar och automatförslag.
+
+Hermes skrivstöd: `lib/hermes/{writeModel,writes}.ts`, `app/api/hermes/write/route.ts` och `integrations/hermes-bsk/server.py` hanterar laguttagning, privata kommentarer och resultat via kontobundet API. `lib/db.ts:transaction` delar transaktion mellan befintliga serviceläsningar/-skrivningar; migration `0026-hermes-write-receipts` ger återförsöksskydd. Se `docs/HERMES_WRITES.md`. Tester: `writeModel.test.ts`, `writeRoute.test.ts`, `writeIntegration.test.ts` och `integrations/hermes-bsk/test_writes.py`.
