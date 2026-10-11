@@ -3,6 +3,7 @@ import { ratingStatement } from "./matchRating";
 import {selectionDraftGuardStatements} from "./selectionDraft";
 
 import crypto from "crypto";
+import { parseCupDraft } from "./cupDraft";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -897,18 +898,13 @@ export async function saveCupSquad(formData: FormData) {
 
 export async function addCup(formData: FormData) {
   await requirePermission("manage_matches");
-  const cupName = String(formData.get("cup_name") ?? "").trim();
+  const draft = parseCupDraft(formData);
+  if ("error" in draft) return draft;
+  const { cupName, matches } = draft;
   const level = String(formData.get("level") ?? "");
-  if (!cupName) return;
   const groupId = await ensureCupMatchGroup(cupName, Number(formData.get("group_id")) || null);
 
-  const matchCount = Number(formData.get("match_count") ?? 0);
-  for (let i = 0; i < matchCount; i++) {
-    const opponent = String(formData.get(`opponent_${i}`) ?? "").trim();
-    const date = String(formData.get(`date_${i}`) ?? "").trim();
-    const time = String(formData.get(`time_${i}`) ?? "").trim();
-    const homeAway = String(formData.get(`home_away_${i}`) ?? "home");
-    if (!opponent || !date) continue;
+  for (const { opponent, date, time, homeAway } of matches) {
     await run(
       "INSERT INTO matches (date, start_time, opponent, home_away, match_type, level, cup_name, cup_phase, group_id) VALUES (?, ?, ?, ?, 'cup', ?, ?, 'group', ?)",
       [date, time || null, opponent, homeAway, level, cupName, groupId]

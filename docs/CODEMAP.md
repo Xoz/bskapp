@@ -295,3 +295,5 @@ Hermes skrivstöd: `lib/hermes/{writeModel,writes}.ts`, `app/api/hermes/write/ro
 - `macos/build.sh`, `macos/Resources/`: lokalt sandboxat, ad hoc-signerat app-paket. Krav och verifiering i `macos/README.md`.
 - `app/api/auth/desktop/exchange/route.ts`: JSON POST byter native-engångskod + PKCE mot Secure/HttpOnly-webbcookies utan extra enhetstokens.
 - `lib/mobileAuth.ts`: `exchangeDesktopAuthCode` använder befintliga auth-tabeller, ingen migration. `lib/desktopAuth.test.ts` testar PKCE, engångskod, nekad åtkomst och cookies.
+
+2026-10-11 Mac-QA: `lib/cupDraft.ts` validerar hela cupformuläret innan `addCup` skapar en grupp eller match. `lib/cupDraft.test.ts` testar datum, tider, antal och ofullständiga rader. Cupformuläret visar servervalideringsfel och kräver motståndare/datum.

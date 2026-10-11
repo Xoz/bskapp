@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { addCup } from "@/lib/actions";
 import { LEVELS } from "@/lib/levels";
 import { IconArrowLeft, IconPlus } from "@/components/Icons";
@@ -9,6 +9,9 @@ import { IconArrowLeft, IconPlus } from "@/components/Icons";
 const EMPTY_MATCH = { opponent: "", date: "", time: "", home_away: "home" as const };
 
 export default function NewCupPage() {
+  const [result, submit, pending] = useActionState(
+    async (_previous: { error: string } | null, data: FormData) => addCup(data), null
+  );
   const [matches, setMatches] = useState([{ ...EMPTY_MATCH }, { ...EMPTY_MATCH }, { ...EMPTY_MATCH }]);
 
   function addMatch() {
@@ -35,8 +38,9 @@ export default function NewCupPage() {
         </p>
       </div>
 
-      <form action={addCup} className="space-y-6">
+      <form action={submit} className="space-y-6">
         <input type="hidden" name="match_count" value={matches.length} />
+        {result?.error && <p role="alert" className="card p-4" style={{ color: "var(--danger)" }}>{result.error}</p>}
 
         <div className="card p-5 md:p-6 space-y-4">
           <h2 className="font-semibold">Cupinformation</h2>
@@ -87,6 +91,7 @@ export default function NewCupPage() {
                     <input
                       id={`opponent_${i}`}
                       name={`opponent_${i}`}
+                      required
                       placeholder="Laget namn"
                       className="input"
                     />
@@ -103,6 +108,7 @@ export default function NewCupPage() {
                     <input
                       id={`date_${i}`}
                       name={`date_${i}`}
+                      required
                       type="date"
                       className="input"
                     />
@@ -132,7 +138,7 @@ export default function NewCupPage() {
         </div>
 
         <div className="flex gap-3 flex-wrap items-center">
-          <button type="submit" className="btn-primary px-6">Skapa cup</button>
+          <button type="submit" disabled={pending} className="btn-primary px-6">{pending ? "Skapar…" : "Skapa cup"}</button>
           <Link href="/matcher" className="btn-secondary">Avbryt</Link>
         </div>
       </form>
