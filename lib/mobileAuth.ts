@@ -120,7 +120,7 @@ async function consumeNativeAuthCode(code: string, verifier: string): Promise<nu
   if (!candidate || !verifierMatchesChallenge(verifier, candidate.code_challenge)) return null;
   const rows = await run(
     `UPDATE mobile_auth_codes SET consumed_at = now()
-     WHERE code_hash = ? AND consumed_at IS NULL
+     WHERE code_hash = ? AND consumed_at IS NULL AND expires_at > now()
      RETURNING user_id`,
     [tokenHash(code)]
   );
@@ -176,6 +176,13 @@ export async function exchangeNativeAuthCode(input: {
   const user = await loadCurrentUserById(userId);
   if (!user) return null;
   return { tokens: await issueSession(userId, input.deviceId, input.deviceName.trim()), user };
+}
+
+// Samma engångskod och PKCE-skydd som mobilappen, men ingen enhetstoken
+// skapas: Mac-klienten använder därefter webbens ordinarie cookies.
+export async function exchangeDesktopAuthCode(code: string, codeVerifier: string): Promise<CurrentUser | null> {
+  const userId = await consumeNativeAuthCode(code, codeVerifier);
+  return userId ? loadCurrentUserById(userId) : null;
 }
 
 export async function resolveMobileAccessToken(token: string): Promise<CurrentUser | null> {

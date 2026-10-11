@@ -6,7 +6,8 @@
 
 Stack: Next.js 16 (App Router, server actions), React 19, Supabase/Postgres (via `postgres`-paketet), Recharts, Tailwind v4.
 
-Aktuell produkt är enbart webbappen; native/iOS-referenser nedan beskriver äldre
+Webbappen är den publicerade produkten. `macos/` innehåller en lokal Mac-klient
+för samma webb, data och inloggning. Native/iOS-referenser nedan beskriver äldre
 kod och är inte en aktiv leveransplan. Matchlistans lagfilter tar med lagets
 underordnade cupgrupper utan att ändra matchernas grupptillhörighet.
 
@@ -287,3 +288,10 @@ Spelarprofil 2026-09-11: `components/player-profile.css` avgränsar kompakt mobi
 `selection/rules.ts`: `allowedDoublePairs` utvidgar godkända nivåpar till lättare kombinationer; `toggleDoublePair` håller profilens kryssrutor konsekventa vid markering och avmarkering. Samma regel används för äldre sparade inställningar och automatförslag.
 
 Hermes skrivstöd: `lib/hermes/{writeModel,writes}.ts`, `app/api/hermes/write/route.ts` och `integrations/hermes-bsk/server.py` hanterar laguttagning, privata kommentarer och resultat via kontobundet API. `lib/db.ts:transaction` delar transaktion mellan befintliga serviceläsningar/-skrivningar; migration `0026-hermes-write-receipts` ger återförsöksskydd. Se `docs/HERMES_WRITES.md`. Tester: `writeModel.test.ts`, `writeRoute.test.ts`, `writeIntegration.test.ts` och `integrations/hermes-bsk/test_writes.py`.
+
+## Mac-app (2026-10-11)
+
+- `macos/Package.swift`, `macos/Sources/BSKMac/BSKMac.swift`: SwiftUI/WebKit med BSK och Spelarutveckling, delad session, Google via macOS autentiseringsfönster, filimport/export.
+- `macos/build.sh`, `macos/Resources/`: lokalt sandboxat, ad hoc-signerat app-paket. Krav och verifiering i `macos/README.md`.
+- `app/api/auth/desktop/exchange/route.ts`: JSON POST byter native-engångskod + PKCE mot Secure/HttpOnly-webbcookies utan extra enhetstokens.
+- `lib/mobileAuth.ts`: `exchangeDesktopAuthCode` använder befintliga auth-tabeller, ingen migration. `lib/desktopAuth.test.ts` testar PKCE, engångskod, nekad åtkomst och cookies.
