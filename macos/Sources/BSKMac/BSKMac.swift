@@ -249,13 +249,15 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     private func authenticate(_ url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "se.bsk2014.app") { callback, error in
                 Task { @MainActor in self.authSession = nil }
                 if let callback { continuation.resume(returning: callback) }
                 else { continuation.resume(throwing: error ?? LoginError.failed) }
             }
             session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = true
             authSession = session
             if !session.start() { authSession = nil; continuation.resume(throwing: LoginError.failed) }
         }

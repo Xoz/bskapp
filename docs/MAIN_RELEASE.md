@@ -240,3 +240,19 @@ Sammanfogad med den publicerade spelarprofilen. Kodcommit 94fca86166d6ac8ea90dea
 216 lokala tester inklusive PostgreSQL godkända, fyra befintliga opt-in-tester överhoppade. Produktionsbygge och browserprov av sammanslagen profil, 320/390/744 px, poäng/kommentar, sparande/återläsning/rensning, äldre svar och inbjudningsbehörighet godkända. Deployens tester, bygge, migration, datagranskning och hälsokontroller passerade.
 
 Inloggad produktion kontrollerad: Årsta-matchens tio deltagare visas samtidigt med fem poängval och korrekt matchnivå; profilens nya ordning/fokus/batteri bevarade och nivåunderlaget visas med tydligt tomt underlag innan nya poäng finns. Ingen verklig bedömning, matchplan eller spelarinställning ändrad i kontrollen. Tillfällig lokal testdatabas borttagen och testserver stoppad. Tidigare status om ej sammanfogad/ej publicerad är ersatt. Ursprungskatalogens separata observationsarbete är fortsatt orört.
+
+
+## Mac-inloggning publicerad 2026-10-11
+
+Servercommit `5d956eee9c3f6684fcf97e3cd32e4a5dbe0e1dd8`, godkänd körning
+https://github.com/Xoz/bskapp/actions/runs/38137023264. Release
+`/opt/bsk/releases/5d956eee9c3f.7taj4m`, backup
+`/opt/bsk/backups/main-5d956eee9c3f.RbY5U3`.
+241 tester, produktionsbygge, datamodellsgranskning och hälsokontroller passerade;
+35 DB-beroende tester överhoppade. Ingen migration tillkom.
+JSON POST `/api/auth/desktop/exchange` förbrukar native-engångskod med PKCE och
+sätter ordinarie Secure/HttpOnly-webbcookies. Google-start 200, ogiltig kod 401
+och fel innehållstyp 415 verifierade i produktion utan session på nekade anrop.
+Inloggad Mac-klient och kvarvarande session efter omstart verifierade för Idag
+och Utvecklingsträd. Inga spelaruppgifter ändrades. Lokala pågående
+webbändringar ingick inte i denna release. Filflöden och skrivprov återstår.

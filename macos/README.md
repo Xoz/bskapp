@@ -43,3 +43,18 @@ bevarad session samt utloggning. Skapa inte testuppgifter för riktiga spelare.
 Fullständigt inloggat produktionsflöde är ännu inte verifierat.
 
 Säkerhetstester: `npm test -- --run lib/desktopAuth.test.ts lib/mobileAuth.test.ts`.
+
+## Publicerat och verifierat 2026-10-11
+
+Serverstödet publicerades som `5d956eee9c3f6684fcf97e3cd32e4a5dbe0e1dd8`.
+GitHub Actions körning `38137023264` passerade: 241 tester, produktionsbygge,
+datamodellsgranskning, backup och hälsokontroller. 35 DB-tester hoppades över.
+Produktionskontroll: login 200, ogiltig kod 401 utan cookies, fel innehållstyp
+415 utan cookies, native Google-start 200 med rätt Google-domän.
+Mac-appen visade inloggad Idag och Utvecklingsträd med samma session efter
+omstart. Inga spelaruppgifter ändrades vid kontrollen. Filimport/export och
+fullständigt skrivprov mellan klienter återstår.
+
+Mac-klienten aktiverar sitt fönster före inloggningen och använder en separat
+systemstyrd webbläsarsession för Google. Den sparade BSK-sessionen finns kvar
+i WebKit mellan appstarter.
