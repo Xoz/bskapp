@@ -29,12 +29,25 @@ final class BrowserTests: XCTestCase {
         let model = BrowserModel(loadInitialPage: false, dataStore: .nonPersistent())
         model.setWorkflowStage(for: "/matcher/12/utvardera")
         XCTAssertEqual(model.workflowStage, .review)
-        model.workflowStage = .perform
+        model.chooseWorkflowStage(.perform)
         model.setWorkflowStage(for: "/matcher/12")
         XCTAssertEqual(model.workflowStage, .perform)
         model.setWorkflowStage(for: "/matcher/12/laguttagning")
         XCTAssertEqual(model.workflowStage, .prepare)
         model.setWorkflowStage(for: "/matcher/13")
+        XCTAssertEqual(model.workflowStage, .prepare)
+    }
+
+    func testDelayedMatchDataSelectsSuggestedStageWithoutOverridingManualChoice() {
+        let model = BrowserModel(loadInitialPage: false, dataStore: .nonPersistent())
+        model.setWorkflowStage(for: "/matcher/214")
+        model.applySuggestedWorkflowStage(.review)
+        XCTAssertEqual(model.workflowStage, .review)
+        model.chooseWorkflowStage(.perform)
+        model.applySuggestedWorkflowStage(.review)
+        XCTAssertEqual(model.workflowStage, .perform)
+        model.setWorkflowStage(for: "/matcher/215")
+        model.applySuggestedWorkflowStage(.prepare)
         XCTAssertEqual(model.workflowStage, .prepare)
     }
 

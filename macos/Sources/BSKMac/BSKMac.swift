@@ -30,6 +30,12 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published var progress: Double = 0
     @Published var hasLoaded = false
     @Published var darkAppearance = false
+    @Published var practice: Practice?
+    @Published var practiceLoading = false
+    @Published var practiceError: String?
+    private var practiceTask: Task<Void, Never>?
+    private var practiceGeneration = UUID()
+    var showPractice: Bool { signedIn && (currentPath == "/traning" || currentPath == "/utveckling") }
     @Published var workspace: Workspace?
     @Published var workspaceLoading = false
     @Published var workspaceError: String?
@@ -37,6 +43,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     private var workspaceTask: Task<Void, Never>?
     private var workspaceGeneration = UUID()
     private var workflowMatchID: Int?
+    private var workflowStageChosen = false
     private var lastReportedPlanSaved = false
     private var lastReportedPath = ""
     var showWorkbench: Bool { signedIn && currentPath == "/idag" && availablePaths.contains("/matcher") }
@@ -125,7 +132,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         if signedIn && previouslySignedIn && (pathChanged || (planSaved && !lastReportedPlanSaved)) { refreshWorkspace() }
         lastReportedPlanSaved = planSaved
         if !signedIn {
-            workflowMatchID = nil
+            practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil; practiceError = nil; practiceLoading = false
             workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
             workspaceError = nil; workspaceLoading = false
         } else if !previouslySignedIn { refreshWorkspace() }
@@ -135,6 +142,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         let id = WorkflowMatch.matchID(in: path)
         if id != workflowMatchID {
             workflowMatchID = id
+            workflowStageChosen = false
             workflowStage = currentWorkflowMatch?.stage ?? .prepare
         }
         if path.hasSuffix("/utvardera") { workflowStage = .review }
@@ -142,7 +150,43 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         else if path.hasSuffix("/laguttagning") || path.hasSuffix("/matchutrymme") { workflowStage = .prepare }
     }
 
+    func chooseWorkflowStage(_ stage: WorkflowStage) {
+        workflowStageChosen = true
+        workflowStage = stage
+    }
+
+    func applySuggestedWorkflowStage(_ stage: WorkflowStage) {
+        if !workflowStageChosen { workflowStage = stage }
+    }
+
+    func refreshPractice() {
+        practiceTask?.cancel()
+        let generation = UUID(); practiceGeneration = generation
+        guard signedIn else { practice = nil; practiceLoading = false; return }
+        guard showPractice else { return }
+        practiceLoading = true; practiceError = nil
+        practiceTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await webView.callAsyncJavaScript("""
+                    if (location.origin !== origin) throw new Error('origin');
+                    const response = await fetch('/api/desktop/practice', {cache:'no-store', credentials:'same-origin', redirect:'error'});
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return await response.text();
+                    """, arguments: ["origin": Self.baseURL.absoluteString], in: nil, contentWorld: .page)
+                guard !Task.isCancelled, generation == practiceGeneration, signedIn, let json = result as? String else { return }
+                practice = try JSONDecoder().decode(Practice.self, from: Data(json.utf8))
+                practiceLoading = false
+            } catch {
+                guard !Task.isCancelled, generation == practiceGeneration, signedIn else { return }
+                practice = nil; practiceLoading = false
+                practiceError = "Informationen kunde inte hämtas. Kontrollera anslutningen och försök igen."
+            }
+        }
+    }
+
     func refreshWorkspace() {
+        refreshPractice()
         guard signedIn, availablePaths.contains("/matcher") else { return }
         workspaceTask?.cancel()
         let generation = UUID(); workspaceGeneration = generation
@@ -163,6 +207,9 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
                 workspace = try JSONDecoder().decode(Workspace.self, from: Data(json.utf8))
                 workspaceLoading = false
                 setWorkflowStage(for: currentPath)
+                if let match = currentWorkflowMatch, currentPath == "/matcher/\(match.id)" {
+                    applySuggestedWorkflowStage(match.stage)
+                }
                 if currentWorkflowMatch != nil {
                     webView.evaluateJavaScript("document.documentElement.dataset.bskWorkflow = 'true'", completionHandler: nil)
                 }
@@ -182,6 +229,8 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func signOut() {
+        practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil
+        workflowMatchID = nil; workflowStageChosen = false
         workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
         webView.evaluateJavaScript("document.querySelector('.bsk-header-actions form')?.requestSubmit()", completionHandler: nil)
     }
