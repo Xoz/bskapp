@@ -1627,3 +1627,14 @@ export async function getRecentActivity(limit = 10): Promise<ActivityEntry[]> {
     [limit]
   );
 }
+
+// Additive transaction entrypoint for native commands; existing callers are unchanged.
+export async function desktopTransaction<T>(work: (query: <R>(sql: string, args?: SqlArgs) => Promise<R[]>) => Promise<T>): Promise<T> {
+  await ready();
+  const result = await getClient().begin(async tx => {
+    await tx.unsafe('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+    return await work(async <R>(text: string, args: SqlArgs = []) =>
+      await tx.unsafe(toPositional(text), args as never[]) as unknown as R[]);
+  });
+  return result as T;
+}

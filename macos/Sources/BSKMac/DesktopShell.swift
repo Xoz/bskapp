@@ -46,7 +46,9 @@ struct BSKMacApp: App {
     var body: some Scene {
         WindowGroup {
             DesktopShell(browser: browser)
-                .frame(minWidth: 880, minHeight: 620)
+                .background(NativeWindowGuard(browser: browser))
+                .onAppear { appDelegate.browser = browser }
+                .frame(minWidth: browser.nativeEditor == nil ? 880 : 1100, minHeight: 620)
                 .preferredColorScheme(browser.darkAppearance ? .dark : .light)
                 .environment(\.locale, Locale(identifier: "sv_SE"))
         }
@@ -64,10 +66,10 @@ struct BSKMacApp: App {
                 Button("Utveckling") { browser.open("/utveckling") }.keyboardShortcut("5")
                     .disabled(!browser.availablePaths.contains("/spelare"))
                 Button("Uppdatera") { browser.reload() }.keyboardShortcut("r")
-                Button("Tillbaka") { browser.webView.goBack() }.keyboardShortcut("[", modifiers: .command)
-                    .disabled(!browser.canGoBack)
+                Button("Tillbaka") { browser.goBack() }.keyboardShortcut("[", modifiers: .command)
+                    .disabled(!browser.canGoBack && browser.nativeEditor == nil)
                 Button("Framåt") { browser.webView.goForward() }.keyboardShortcut("]", modifiers: .command)
-                    .disabled(!browser.canGoForward)
+                    .disabled(!browser.canGoForward || browser.nativeEditor != nil)
                 Divider()
                 Button("Verktyg och konto") { browser.showAccount() }.disabled(!browser.signedIn)
             }
@@ -94,11 +96,12 @@ struct DesktopShell: View {
             VStack(spacing: 0) {
                 topbar
                 if let match = browser.currentWorkflowMatch { MatchWorkflowBar(browser: browser, match: match) }
-                if browser.signedIn { PracticeWorkflowBar(browser: browser) }
+                if browser.signedIn && browser.nativeEditor == nil { PracticeWorkflowBar(browser: browser) }
                 ZStack(alignment: .top) {
-                    BrowserView(model: browser).opacity((browser.showWorkbench || browser.showPractice) ? 0 : 1).accessibilityHidden(browser.showWorkbench || browser.showPractice)
+                    BrowserView(model: browser).opacity((browser.showWorkbench || browser.showPractice || browser.nativeEditor != nil) ? 0 : 1).accessibilityHidden(browser.showWorkbench || browser.showPractice || browser.nativeEditor != nil)
                     if browser.showWorkbench { WorkbenchView(browser: browser) }
-                    if browser.showPractice { PracticeView(browser: browser).id(browser.currentPath) }
+                    if browser.showPractice && browser.nativeEditor == nil { PracticeView(browser: browser).id(browser.currentPath) }
+                    if let editor = browser.nativeEditor { NativeEditorView(browser: browser, session: editor).id(ObjectIdentifier(editor)) }
                     if browser.loading {
                         GeometryReader { proxy in
                             Rectangle().fill(Studio.gold)
@@ -245,10 +248,10 @@ struct DesktopShell: View {
                 Image(systemName: "sidebar.left")
             }.buttonStyle(ChromeButtonStyle()).help("Visa eller dölj sidomenyn")
             HStack(spacing: 4) {
-                Button { browser.webView.goBack() } label: { Image(systemName: "chevron.left") }
-                    .disabled(!browser.canGoBack)
+                Button { browser.goBack() } label: { Image(systemName: "chevron.left") }
+                    .disabled(!browser.canGoBack && browser.nativeEditor == nil)
                 Button { browser.webView.goForward() } label: { Image(systemName: "chevron.right") }
-                    .disabled(!browser.canGoForward)
+                    .disabled(!browser.canGoForward || browser.nativeEditor != nil)
             }.buttonStyle(ChromeButtonStyle())
             Rectangle().fill(Studio.line).frame(width: 1, height: 17)
             Text("Arbetsyta").foregroundStyle(Studio.muted)
@@ -325,5 +328,10 @@ struct BrowserView: NSViewRepresentable {
 
 @MainActor
 final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    weak var browser: BrowserModel?
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if browser?.hasConfirmedClose == true { return .terminateNow }
+        return browser?.confirmLeavingEditor() == false ? .terminateCancel : .terminateNow
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

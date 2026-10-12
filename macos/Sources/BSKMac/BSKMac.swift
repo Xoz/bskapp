@@ -30,6 +30,8 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published var progress: Double = 0
     @Published var hasLoaded = false
     @Published var darkAppearance = false
+    @Published var nativeEditor: NativeEditorSession?
+    var hasConfirmedClose = false
     @Published var practice: Practice?
     @Published var practiceLoading = false
     @Published var practiceError: String?
@@ -88,9 +90,9 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
             },
             webView.observe(\.url, options: [.new]) { [weak self] view, _ in
                 Task { @MainActor in
-                    guard let url = view.url, url.host == Self.baseURL.host else { return }
-                    self?.currentPath = url.path
-                    self?.setWorkflowStage(for: url.path)
+                    guard let self, self.nativeEditor == nil, let url = view.url, url.host == Self.baseURL.host else { return }
+                    self.currentPath = url.path
+                    self.setWorkflowStage(for: url.path)
                 }
             },
             webView.observe(\.isLoading, options: [.new]) { [weak self] view, _ in
@@ -109,6 +111,9 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     func open(_ path: String) {
         guard let url = URL(string: path, relativeTo: Self.baseURL)?.absoluteURL,
               url.scheme == Self.baseURL.scheme, url.host == Self.baseURL.host, url.port == Self.baseURL.port else { return }
+        guard confirmLeavingEditor() else { return }
+        if signedIn, let route = NativeRoute.parse(url) { activateEditor(route); return }
+        nativeEditor?.invalidate(); nativeEditor = nil
         error = nil
         webView.load(URLRequest(url: url))
     }
@@ -118,8 +123,8 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
               message.frameInfo.securityOrigin.host == Self.baseURL.host,
               message.frameInfo.securityOrigin.protocol == Self.baseURL.scheme,
               let body = message.body as? [String: Any] else { return }
-        if let path = body["path"] as? String { currentPath = String(path.prefix(300)) }
-        if let title = body["title"] as? String { pageTitle = String(title.prefix(100)) }
+        if nativeEditor == nil, let path = body["path"] as? String { currentPath = String(path.prefix(300)) }
+        if nativeEditor == nil, let title = body["title"] as? String { pageTitle = String(title.prefix(100)) }
         if let user = body["user"] as? String { userName = String(user.prefix(80)) }
         let previouslySignedIn = signedIn
         signedIn = body["signedIn"] as? Bool ?? false
@@ -132,6 +137,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         if signedIn && previouslySignedIn && (pathChanged || (planSaved && !lastReportedPlanSaved)) { refreshWorkspace() }
         lastReportedPlanSaved = planSaved
         if !signedIn {
+            nativeEditor?.invalidate(); nativeEditor = nil
             practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil; practiceError = nil; practiceLoading = false
             workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
             workspaceError = nil; workspaceLoading = false
@@ -223,12 +229,37 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func reload() {
+        if let editor = nativeEditor {
+            guard confirmLeavingEditor() else { return }
+            activateEditor(editor.route); return
+        }
         error = nil
         if webView.url != nil { webView.reload() }
         else { open(Self.baseURL.scheme == "http" ? "/api/auth/dev" : "/idag") }
     }
 
+    func confirmLeavingEditor() -> Bool {
+        guard let editor = nativeEditor else { return true }
+        if editor.busy { return false }
+        guard editor.dirty else { return true }
+        let alert = NSAlert(); alert.messageText = "Lämna det osparade utkastet?"
+        alert.informativeText = editor.uncertain ? "Sparsvaret saknas. Återförsök sparandet innan du lämnar, eller lämna och kontrollera den sparade versionen senare." : "Välj Stanna för att fortsätta eller spara. Lämna utkastet tar bort dina osparade ändringar."
+        alert.addButton(withTitle: "Stanna"); alert.addButton(withTitle: "Lämna utkastet")
+        if alert.runModal() == .alertSecondButtonReturn { editor.clearDraft(); return true }
+        return false
+    }
+    func activateEditor(_ route: NativeRoute) {
+        nativeEditor?.invalidate(); nativeEditor = NativeEditorSession(route)
+        currentPath = route.kind == "training" ? "/traning/\(route.key)" : "/spelare/\(route.key)" + (route.kind == "checkpoint" ? "/utveckling/avstamning" : "")
+        pageTitle = route.title; error = nil; loading = false
+    }
+    func goBack() {
+        if let editor = nativeEditor { open(editor.route.destination) }
+        else { webView.goBack() }
+    }
     func signOut() {
+        guard confirmLeavingEditor() else { return }
+        nativeEditor?.invalidate(); nativeEditor = nil
         practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil
         workflowMatchID = nil; workflowStageChosen = false
         workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
@@ -248,6 +279,10 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
                  decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
         if url.scheme == Self.baseURL.scheme, url.host == Self.baseURL.host, url.port == Self.baseURL.port {
+            if signedIn, action.targetFrame?.isMainFrame == true, let route = NativeRoute.parse(url) {
+                if confirmLeavingEditor() { activateEditor(route) }
+                decisionHandler(.cancel); return
+            }
             if url.path == "/api/auth/google" {
                 decisionHandler(.cancel)
                 Task { await signIn() }
