@@ -299,3 +299,5 @@ Hermes skrivstöd: `lib/hermes/{writeModel,writes}.ts`, `app/api/hermes/write/ro
 2026-10-11 Mac-QA: `lib/cupDraft.ts` validerar hela cupformuläret innan `addCup` skapar en grupp eller match. `lib/cupDraft.test.ts` testar datum, tider, antal och ofullständiga rader. Cupformuläret visar servervalideringsfel och kräver motståndare/datum.
 
 Mac-arbetsflöde 0.004: `macos/Sources/BSKMac/Workflow.swift` ger native arbetsbord och matchens Förbered/Genomför/Följ upp. `lib/desktop/{workflow,workspace}.ts` och `app/api/desktop/workspace/route.ts` ger begränsad, sessionsautentiserad GET med no-store och befintlig gruppåtkomst. Tester i `lib/desktop/{workflow,workspace}.test.ts`. Webbens sidor och befintliga skrivregler ändras inte; inga nya tabeller.
+
+Mac 0.006: `macos/Sources/BSKMac/Practice.swift` ger native träningslista, övningsvis genomförande och sökbar utvecklingsöversikt. `app/api/desktop/practice/route.ts` och `lib/desktop/practice.ts` läser ägarfiltrerade träningspass samt gruppfiltrerade spelare; privata datum kräver separat behörighet. Befintliga webbformulär sparar fortsatt till samma databas; webbens gränssnitt ändras inte.

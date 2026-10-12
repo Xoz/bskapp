@@ -32,3 +32,21 @@ Detta steg separerar arbetsbordet och matchflödet. Redigeringsformulär är for
 Serverunderlaget publicerat i `cfbc75b49c2195d1f7599af7b364f7548584b061`. Körning 38210739173 passerade: 265 tester, produktionsbygge och hälsokontroller (35 DB-tester överhoppade i servermiljön). Produktions-GET utan session verifierad: 401 samt private/no-store.
 
 Mac 0.004 byggd, lokal signatur verifierad och paket kopierat till outputs/bsk-mac/BSK-Mac.zip. Release-binären saknar debugnyckeln för lokal QA. Sista visuella produktionsprovet kunde inte köras eftersom datorn låstes; den visuella kontrollen och skrivflödena ovan genomfördes i riktig Mac-app mot syntetisk databas.
+
+## Slutlig visuell produktionskontroll 2026-10-12
+
+Efter upplåsning kontrollerades arbetsbordets tomläge, historisk match, native-stegen, utvärderingsformuläret, träning, utveckling och återgång med kortkommando mot bsk2014.se. Mörkt tema, sidomeny och dubbleringsfri matchnavigation kontrollerades visuellt. Inga formulär fylldes i eller sparades och inga riktiga spelaruppgifter ändrades.
+
+En klientmiss upptäcktes för äldre matcher som hämtas först efter öppning: startsteget kunde bli Förbered i stället för Följ upp. Rättat i 0.005, med regressionsprov för fördröjda data och manuellt stegval. Sju native-tester passerade. Samma server/databas och webbgränssnitt används; klienträttningen kräver ingen serverändring.
+
+Slutprovet av 0.005 mot produktionen passerade: historisk match öppnas automatiskt på Följ upp, ett manuellt valt Genomför behålls vid omladdning, sessionen finns kvar efter omstart och appen lämnades på Arbetsbord. Paketet i outputs/bsk-mac/BSK-Mac.zip är uppdaterat. Rättningen är lokal i Mac-klienten; ingen serverrelease eller verksamhetsskrivning gjordes i denna kontroll.
+
+## Native träning och utveckling 0.006 · 2026-10-12
+
+Mac har egna SwiftUI-översikter för träning och spelarutveckling. Träning går från personliga sparade pass till en genomförandevy med instruktioner, ordning och minuter per övning, sedan vidare till utvecklingsuppföljning. Ritningar och redigering öppnas i befintlig redigerare. Övningsval är tillfälligt och registrerar inte genomförande eller närvaro.
+
+Utveckling har spelarsökning och vägar till utvecklingsbild, avstämning, samtal och profilhistorik. Senaste avstämning, samtal och senaste samtalets uppföljningsdatum visas endast med privatläsbehörighet. Formulären och deras sparlogik återanvänds. Native återgång visas över formulären. Återgång till översikten hämtar den sparade informationen igen.
+
+GET `/api/desktop/practice` är ett separat läs-API med befintlig session, roll- och gruppbehörighet. Träningspass filtreras på ägare. Inga nya tabeller eller skrivvägar; inga ändringar i webbens sidor eller komponenter. API returnerar inte kontaktuppgifter, privata spelartexter eller delningstokens. Träningslistan visar de 100 senast uppdaterade personliga passen.
+
+Verifierat i isolerad lokal databas med syntetiska uppgifter: träningslista, instruktioner, sökning och länk till avstämning. Automatiska prov täcker obehörig åtkomst, ägar- och gruppavgränsning, privata datum samt enbart SELECT-frågor.

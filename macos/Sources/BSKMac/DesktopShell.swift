@@ -94,9 +94,11 @@ struct DesktopShell: View {
             VStack(spacing: 0) {
                 topbar
                 if let match = browser.currentWorkflowMatch { MatchWorkflowBar(browser: browser, match: match) }
+                if browser.signedIn { PracticeWorkflowBar(browser: browser) }
                 ZStack(alignment: .top) {
-                    BrowserView(model: browser).opacity(browser.showWorkbench ? 0 : 1).accessibilityHidden(browser.showWorkbench)
+                    BrowserView(model: browser).opacity((browser.showWorkbench || browser.showPractice) ? 0 : 1).accessibilityHidden(browser.showWorkbench || browser.showPractice)
                     if browser.showWorkbench { WorkbenchView(browser: browser) }
+                    if browser.showPractice { PracticeView(browser: browser).id(browser.currentPath) }
                     if browser.loading {
                         GeometryReader { proxy in
                             Rectangle().fill(Studio.gold)
