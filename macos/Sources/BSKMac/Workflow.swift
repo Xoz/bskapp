@@ -58,107 +58,91 @@ struct WorkflowMatch: Decodable, Identifiable {
 }
 
 struct WorkbenchView: View {
-    @ObservedObject var browser: BrowserModel
-    private let columns = [GridItem(.adaptive(minimum: 295), spacing: 18, alignment: .top)]
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("DITT ARBETSBORD").font(.system(size: 10, weight: .semibold)).tracking(2.5).foregroundStyle(Studio.muted)
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Nära laget. Redo för veckan.").font(.system(size: 36, weight: .regular, design: .serif)).foregroundStyle(Studio.ink)
-                        Spacer()
-                        if browser.workspaceLoading { ProgressView().controlSize(.small) }
+    @ObservedObject var browser:BrowserModel
+    @State private var selected:Int?
+    private var reviewing:Bool { browser.currentPath=="/uppfoljning" }
+    private var matches:[WorkflowMatch] { (browser.workspace?.matches ?? []).filter{reviewing ? $0.stage == .review:$0.stage != .review} }
+    var body:some View {
+        HSplitView {
+            VStack(spacing:0) {
+                HStack { Text(reviewing ? "Senaste matcher":"Kommande matcher").font(.headline); Spacer(); if browser.workspaceLoading{ProgressView().controlSize(.mini)} }.padding(16)
+                Divider()
+                List(selection:$selected) {
+                    ForEach(matches){match in
+                        VStack(alignment:.leading,spacing:5) {
+                            Text(match.title).fontWeight(.medium)
+                            Text([match.date,match.team].joined(separator:" · ")).font(.caption).foregroundStyle(Studio.muted)
+                            if reviewing {Text(match.reviewStatus).font(.caption).foregroundStyle(Studio.muted)}
+                        }.padding(.vertical,5).tag(match.id)
                     }
-                    Text("Förbered nästa aktivitet, genomför med en tydlig plan och följ upp spelarnas utveckling.")
-                        .font(.system(size: 13)).foregroundStyle(Studio.muted).fixedSize(horizontal: false, vertical: true)
-                }
-                if let failure = browser.workspaceError {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Arbetsbordet kunde inte uppdateras", systemImage: "wifi.exclamationmark").font(.headline)
-                        Text(failure).font(.system(size: 13)).foregroundStyle(Studio.muted)
-                        Button("Försök igen") { browser.refreshWorkspace() }.buttonStyle(.bordered)
-                    }.padding(22).frame(maxWidth: .infinity, alignment: .leading).background(Studio.line.opacity(0.3), in: RoundedRectangle(cornerRadius: 14))
-                }
-                if let workspace = browser.workspace {
-                    let pending = workspace.matches.filter { $0.stage == .review && $0.total > 0 && $0.evaluated < $0.total }
-                    if !pending.isEmpty {
-                        sectionHeading("Ta med lärdomarna vidare", subtitle: "Matcher från de senaste sju dagarna som har utvärderingar kvar.")
-                        LazyVGrid(columns: columns, spacing: 18) { ForEach(pending.prefix(3)) { match in matchCard(match, review: true) } }
-                    }
-                    let upcoming = workspace.matches.filter { $0.stage != .review }
-                    sectionHeading("Nästa på planen", subtitle: "Kommande matcher i de lag du har tillgång till.")
-                    if upcoming.isEmpty {
-                        emptyCard("Inga kommande matcher", detail: "Du kan fortfarande planera träning eller följa upp spelarnas utveckling.")
+                }.listStyle(.inset).scrollContentBackground(.hidden)
+                if matches.isEmpty { Text(reviewing ? "Inga matcher från de senaste sju dagarna.":"Inga kommande matcher.").font(.callout).foregroundStyle(Studio.muted).padding() }
+                Divider()
+                Button("Alla matcher"){browser.open("/matcher")}.buttonStyle(.borderless).padding(12)
+            }.frame(minWidth:240,idealWidth:285,maxWidth:360).background(Studio.surface)
+            ScrollView {
+                VStack(alignment:.leading,spacing:24) {
+                    HStack { Text(reviewing ? "Uppföljning":"Förberedelser").font(.title2).fontWeight(.semibold); Spacer() }
+                    if let error=browser.workspaceError { Label(error,systemImage:"wifi.exclamationmark").font(.callout);Button("Försök igen"){browser.refreshWorkspace()} }
+                    if let match=matches.first(where:{$0.id==selected}) {
+                        VStack(alignment:.leading,spacing:12) {
+                            Text(match.title).font(.title3).fontWeight(.semibold)
+                            Text(match.subtitle).font(.callout).foregroundStyle(Studio.muted)
+                            Divider()
+                            if reviewing {
+                                Label(match.reviewStatus,systemImage:"checklist")
+                                ProgressView(value:Double(match.evaluated),total:Double(max(match.total,1))).tint(Studio.accent)
+                                Button("Öppna utvärdering"){browser.open("/matcher/\(match.id)/utvardera")}
+                            } else {
+                                LabeledContent("Laguppställning",value:"\(match.selected) uttagna")
+                                LabeledContent("Ja-svar",value:"\(match.accepted) spelare")
+                                LabeledContent("Matchplan",value:match.planSaved ? "Sparad":"Återstår")
+                                HStack { Button("Laguppställning"){browser.open("/matcher/\(match.id)/laguttagning")};Button("Matchplan"){browser.open("/matcher/\(match.id)")} }
+                            }
+                        }.editorPanel()
                     } else {
-                        LazyVGrid(columns: columns, spacing: 18) { ForEach(upcoming) { match in matchCard(match) } }
+                        Label(reviewing ? "Välj en match för att utvärdera och följa upp.":"Välj en match för att förbereda laget och matchplanen.",systemImage:reviewing ? "checklist":"rectangle.stack").foregroundStyle(Studio.muted).font(.callout)
                     }
-                    HStack(alignment: .top, spacing: 18) {
-                        if workspace.canTrain {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Label("Nästa träning börjar här", systemImage: "figure.soccer").font(.system(size: 18, weight: .regular, design: .serif))
-                                Text("Samla övningar och ritningar till ett pass som går att använda på planen.").font(.system(size: 12)).foregroundStyle(Studio.muted)
-                                ForEach(workspace.training) { plan in
-                                    Button { browser.open("/traning/\(plan.id)") } label: {
-                                        HStack { Text(plan.title).lineLimit(1); Spacer(); Text(plan.date.isEmpty ? "Utan datum" : plan.date).foregroundStyle(Studio.muted); Image(systemName: "arrow.up.right") }
-                                    }.buttonStyle(.plain).font(.system(size: 12)).padding(.vertical, 5)
-                                }
-                                Button("Planera träningspass") { browser.open("/traning/nytt") }.buttonStyle(.bordered)
-                            }.workbenchPanel()
-                        }
-                        if workspace.canPlayers {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Label("Se varje spelares nästa steg", systemImage: "leaf").font(.system(size: 18, weight: .regular, design: .serif))
-                                Text("Följ utvecklingsbilden och förbered nästa samtal. Låt spelarnas fokus vägleda planeringen.").font(.system(size: 12)).foregroundStyle(Studio.muted)
-                                Button("Öppna spelarutveckling") { browser.open("/utveckling") }.buttonStyle(.bordered)
-                                Button("Till spelarregistret") { browser.open("/spelare") }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Studio.muted)
-                            }.workbenchPanel()
-                        }
-                    }
-                    HStack {
-                        Text("Sparad information från lagets gemensamma databas").font(.system(size: 10)).foregroundStyle(Studio.muted)
-                        Spacer()
-                        Button("Alla matcher och historik") { browser.open("/matcher") }.buttonStyle(.plain).font(.system(size: 12, weight: .medium))
-                    }
-                } else if browser.workspaceError == nil {
-                    ProgressView("Hämtar din arbetsvecka…").padding(40).frame(maxWidth: .infinity)
-                }
-            }.padding(36).frame(maxWidth: 1250, alignment: .leading).frame(maxWidth: .infinity)
-        }.background(Studio.paper)
+                    if reviewing { followup } else { preparation }
+                }.padding(24).frame(maxWidth:880,alignment:.leading).frame(maxWidth:.infinity)
+            }.frame(minWidth:360)
+        }.background(Studio.paper).onAppear{selected=matches.first?.id}.onChange(of:matches.map(\.id)){_,ids in if !ids.contains(selected ?? -1){selected=ids.first}}
     }
-    private func sectionHeading(_ title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 24, weight: .regular, design: .serif)).foregroundStyle(Studio.ink)
-            Text(subtitle).font(.system(size: 12)).foregroundStyle(Studio.muted)
+    private var preparation:some View {
+        VStack(alignment:.leading,spacing:18) {
+            if browser.practice?.canTrain == true {
+                HStack { Text("Träningsplanering").font(.headline);Spacer();Button("Nytt pass",systemImage:"plus"){browser.open("/traning/nytt")} }
+                if let plans=browser.practice?.plans, !plans.isEmpty {
+                    ForEach(plans.prefix(5)){plan in
+                        Button{browser.open("/traning/\(plan.id)")}label:{HStack{VStack(alignment:.leading,spacing:4){Text(plan.title);Text("\(plan.date.isEmpty ? "Utan datum":plan.date) · \(plan.duration) min").font(.caption).foregroundStyle(Studio.muted)};Spacer();Image(systemName:"chevron.right")}}.buttonStyle(.plain).padding(.vertical,7)
+                        Divider()
+                    }
+                } else {Text("Skapa ett pass eller välj övningar i träningsbiblioteket.").font(.callout).foregroundStyle(Studio.muted)}
+                Button("Öppna träningspass"){browser.open("/traning")}.buttonStyle(.borderless)
+            }
+            if browser.practice?.canPlayers == true {
+                Divider();Text("Inför spelarsamtalet").font(.headline)
+                Text("Läs utvecklingsbilden och tidigare överenskommelser innan ni träffas.").font(.callout).foregroundStyle(Studio.muted)
+                Button("Välj spelare för samtal"){browser.open("/samtal")}
+            }
+            Divider()
+            HStack { Label("Offlineunderlag",systemImage:"arrow.down.circle");Spacer();Button("Granska nedladdning och synk"){OfflineStore.shared.panel=true} }.font(.callout)
         }
     }
-    private func emptyCard(_ title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 9) { Text(title).font(.system(size: 15, weight: .medium)); Text(detail).font(.system(size: 12)).foregroundStyle(Studio.muted) }.workbenchPanel()
-    }
-    private func matchCard(_ match: WorkflowMatch, review: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Label(match.stage.title, systemImage: match.stage.symbol).font(.system(size: 10, weight: .semibold)).textCase(.uppercase).tracking(1.3)
-                Spacer(); Text(match.team).font(.system(size: 10)).foregroundStyle(Studio.muted)
-            }.foregroundStyle(Studio.ink)
-            VStack(alignment: .leading, spacing: 8) {
-                Text(match.title).font(.system(size: 22, weight: .regular, design: .serif)).fixedSize(horizontal: false, vertical: true)
-                Text([match.date, match.time ?? "", match.location].filter { !$0.isEmpty }.joined(separator: " · ")).font(.system(size: 11)).foregroundStyle(Studio.muted)
+    private var followup:some View {
+        VStack(alignment:.leading,spacing:16) {
+            Text("Spelarnas nästa steg").font(.headline)
+            if let practice=browser.practice,practice.canPrivate {
+                let due=practice.players.filter{$0.followup.map{$0<=practice.today} ?? false}
+                if due.isEmpty {Text("Inga samtalsuppföljningar har förfallit.").font(.callout).foregroundStyle(Studio.muted)}
+                ForEach(due){player in
+                    HStack {VStack(alignment:.leading,spacing:4){Text(player.name);Text("Följ upp \(player.followup ?? "")").font(.caption).foregroundStyle(Studio.muted)};Spacer();Button("Visa samtal"){browser.open("/spelare/\(player.id)?omrade=samtal")}}
+                    Divider()
+                }
             }
-            Rectangle().fill(Studio.line).frame(height: 1)
-            if review {
-                Text(match.reviewStatus).font(.system(size: 12)).foregroundStyle(Studio.muted)
-                ProgressView(value: Double(match.evaluated), total: Double(max(match.total, 1))).tint(Studio.forest)
-            } else {
-                Label("\(match.selected) uttagna · \(match.accepted) tackat ja", systemImage: "person.2").font(.system(size: 12)).foregroundStyle(Studio.muted)
-                Label(match.planSaved ? "Matchplan sparad" : "Matchplan återstår att spara", systemImage: match.planSaved ? "checkmark.circle" : "circle").font(.system(size: 12)).foregroundStyle(Studio.muted)
-            }
-            HStack {
-                Button(match.next.title) { browser.open(match.next.path) }.buttonStyle(.borderedProminent).tint(Studio.forest)
-                Spacer(minLength: 4)
-                Button { browser.open("/matcher/\(match.id)") } label: { Image(systemName: "arrow.up.right") }.buttonStyle(.plain).help("Öppna matchens arbetsflöde")
-            }.font(.system(size: 12))
-        }.workbenchPanel()
+            HStack {Button("Gör en avstämning"){browser.open("/utveckling")};Button("Spelarsamtal"){browser.open("/samtal")}}
+            Text("Efter träningen: stäm av de färdigheter du har underlag för och välj nästa fokus.").font(.callout).foregroundStyle(Studio.muted)
+        }
     }
 }
 
@@ -168,19 +152,19 @@ struct MatchWorkflowBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
-                Text(match.title).font(.system(size: 22, weight: .regular, design: .serif)).lineLimit(1)
+                Text(match.title).font(.system(size: 22, weight: .regular, design: .default)).lineLimit(1)
                 Spacer()
                 Text(match.subtitle).font(.system(size: 10)).foregroundStyle(Studio.muted).lineLimit(1)
                 if browser.workspaceLoading { ProgressView().controlSize(.mini) }
             }
             HStack(spacing: 8) {
                 ForEach(Array(WorkflowStage.allCases.enumerated()), id: \.element.id) { index, stage in
-                    Button { browser.workflowStage = stage } label: {
+                    Button { browser.chooseWorkflowStage(stage) } label: {
                         HStack(spacing: 8) {
                             Text(String(index + 1)).font(.system(size: 10, weight: .semibold)).frame(width: 20, height: 20).background(Studio.line.opacity(0.5), in: Circle())
                             Text(stage.title).font(.system(size: 12, weight: .medium))
                         }.padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(browser.workflowStage == stage ? Studio.forest : .clear, in: RoundedRectangle(cornerRadius: 9))
+                            .background(browser.workflowStage == stage ? Studio.control : .clear, in: RoundedRectangle(cornerRadius: 9))
                             .foregroundStyle(browser.workflowStage == stage ? Color.white : Studio.muted)
                     }.buttonStyle(.plain).accessibilityAddTraits(browser.workflowStage == stage ? [.isSelected] : [])
                 }

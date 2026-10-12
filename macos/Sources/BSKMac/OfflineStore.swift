@@ -82,7 +82,7 @@ struct OfflinePanel:View {
     @State private var reviewing:OfflineStore.Command?
     var body:some View{
         VStack(alignment:.leading,spacing:20){
-            HStack{Text("Redo även utan nät").font(.system(size:28,design:.serif));Spacer();Button("Stäng"){store.panel=false}}
+            HStack{Text("Redo även utan nät").font(.system(size:28,design:.default));Spacer();Button("Stäng"){store.panel=false}}
             Text("Ladda ned före träningen eller matchen. Underlaget lagras krypterat på denna Mac och kan öppnas offline i upp till sju dagar. Utloggning låser offlineåtkomsten.").font(.callout).foregroundStyle(Studio.muted)
             Toggle("Arbeta med nedladdat underlag offline",isOn:Binding(get:{store.offline},set:{store.offline=$0;store.manualOffline=$0})).disabled(!store.canResume)
             HStack{Button("Ladda ned arbetsunderlag"){Task{await browser.prepareOffline()}}.disabled(store.syncing || store.offline);Button("Synka väntande ändringar"){Task{await browser.syncOffline()}}.disabled(store.syncing || store.pending.isEmpty)}

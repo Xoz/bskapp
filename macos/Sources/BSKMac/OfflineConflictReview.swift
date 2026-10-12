@@ -12,7 +12,7 @@ struct OfflineConflictReview:View {
     @State private var busy=false
     var body:some View {
         VStack(alignment:.leading,spacing:18){
-            Text("Granska innan du synkar").font(.system(size:27,design:.serif))
+            Text("Granska innan du synkar").font(.system(size:27,design:.default))
             Text(command.title).font(.headline)
             ScrollView{VStack(alignment:.leading,spacing:18){
                 VStack(alignment:.leading,spacing:8){Text("Ditt lokala utkast").font(.headline);Text(localDetails ?? command.summary).textSelection(.enabled)}.editorPanel()
