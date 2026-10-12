@@ -24,7 +24,7 @@ struct PracticeView: View {
     @State private var search = ""
     @State private var selectedPlan: String?
     @State private var exercise = 0
-    private var development: Bool { browser.currentPath == "/utveckling" }
+    private var development: Bool { browser.currentPath != "/traning" }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {

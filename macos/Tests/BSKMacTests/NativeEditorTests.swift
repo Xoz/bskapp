@@ -54,6 +54,8 @@ final class NativeEditorTests: XCTestCase {
     }
     func testLostSaveResponseRestoresDraftAndRetriesExactPayloadAcrossSessions() async throws {
         let browser = BrowserModel(loadInitialPage: false, dataStore: .nonPersistent()); browser.signedIn = true
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString);defer{try? FileManager.default.removeItem(at:root)}
+        let offlineStore=OfflineStore(root:root)
         let scope = "qa-" + UUID().uuidString
         let planID = UUID().uuidString
         func initial(_ revision: Int) throws -> Data {
@@ -62,7 +64,7 @@ final class NativeEditorTests: XCTestCase {
         }
         let firstLoad = try initial(0), secondLoad = try initial(1)
         var firstBody: Data?
-        let first = NativeEditorSession(.training(planID)) { _, body in
+        let first = NativeEditorSession(.training(planID),offlineStore:offlineStore) { _, body in
             if let body { firstBody = body; throw URLError(.networkConnectionLost) }
             return firstLoad
         }
@@ -71,7 +73,7 @@ final class NativeEditorTests: XCTestCase {
         XCTAssertTrue(first.uncertain); XCTAssertTrue(first.dirty); XCTAssertTrue(first.locked)
         first.storeDraft()
         var replayBody: Data?
-        let second = NativeEditorSession(.training(planID)) { _, body in
+        let second = NativeEditorSession(.training(planID),offlineStore:offlineStore) { _, body in
             if let body { replayBody = body; return Data("{\"revision\":1}".utf8) }
             return secondLoad
         }

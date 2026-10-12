@@ -23,7 +23,11 @@ struct NativeTrainingEditor: View {
                             Button { selected = block.id } label: {
                                 HStack { Text("\(offset + 1)").foregroundStyle(Studio.muted); Text(block.diagram.title).lineLimit(2); Spacer(); Text("\(block.minutes) min").foregroundStyle(Studio.muted) }
                                     .font(.system(size: 12)).padding(12).background(selected == block.id ? Studio.line : Studio.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.plain).draggable(block.id)
+                            .dropDestination(for:String.self){items,_ in
+                                guard let id=items.first,let from=session.plan.blocks.firstIndex(where:{$0.id==id}),let to=session.plan.blocks.firstIndex(where:{$0.id==block.id}),from != to else{return false}
+                                let moved=session.plan.blocks.remove(at:from);session.plan.blocks.insert(moved,at:to);selected=moved.id;return true
+                            }
                         }
                     }
                 }

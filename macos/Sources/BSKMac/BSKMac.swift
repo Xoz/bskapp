@@ -17,6 +17,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         #endif
         return URL(string: "https://bsk2014.se")!
     }()
+    var validatedOfflineScope:String?
     @Published var loading = false
     @Published var signingIn = false
     @Published var canGoBack = false
@@ -31,13 +32,17 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published var hasLoaded = false
     @Published var darkAppearance = false
     @Published var nativeEditor: NativeEditorSession?
+    @Published var nativeWorkday: WorkdaySession?
+    @Published var commandPalette = false
+    @Published var nativeOverview = false
+    var showMatchDirectory:Bool{signedIn && nativeOverview && currentPath=="/matcher"}
     var hasConfirmedClose = false
     @Published var practice: Practice?
     @Published var practiceLoading = false
     @Published var practiceError: String?
     private var practiceTask: Task<Void, Never>?
     private var practiceGeneration = UUID()
-    var showPractice: Bool { signedIn && (currentPath == "/traning" || currentPath == "/utveckling") }
+    var showPractice: Bool { signedIn && (currentPath == "/traning" || currentPath == "/utveckling" || currentPath == "/spelare") }
     @Published var workspace: Workspace?
     @Published var workspaceLoading = false
     @Published var workspaceError: String?
@@ -90,7 +95,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
             },
             webView.observe(\.url, options: [.new]) { [weak self] view, _ in
                 Task { @MainActor in
-                    guard let self, self.nativeEditor == nil, let url = view.url, url.host == Self.baseURL.host else { return }
+                    guard let self, self.nativeEditor == nil, self.nativeWorkday == nil, !self.nativeOverview, let url = view.url, url.host == Self.baseURL.host else { return }
                     self.currentPath = url.path
                     self.setWorkflowStage(for: url.path)
                 }
@@ -112,9 +117,15 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         guard let url = URL(string: path, relativeTo: Self.baseURL)?.absoluteURL,
               url.scheme == Self.baseURL.scheme, url.host == Self.baseURL.host, url.port == Self.baseURL.port else { return }
         guard confirmLeavingEditor() else { return }
-        if signedIn, let route = NativeRoute.parse(url) { activateEditor(route); return }
+        if signedIn, let route = NativeRoute.parse(url) { nativeWorkday?.invalidate(); nativeWorkday=nil; activateEditor(route); return }
+        if signedIn, let route = WorkdayRoute.parse(url) { activateWorkday(route); return }
         nativeEditor?.invalidate(); nativeEditor = nil
-        error = nil
+        nativeWorkday?.invalidate(); nativeWorkday = nil
+        if signedIn,["/idag","/traning","/utveckling","/spelare","/matcher"].contains(url.path){
+            nativeOverview=true;currentPath=url.path;pageTitle=["/idag":"Arbetsbord","/traning":"Mina träningspass","/utveckling":"Utvecklingsträd","/spelare":"Spelare","/matcher":"Matcher"][url.path] ?? "Arbetsyta";error=nil;loading=false;refreshWorkspace();return
+        }
+        if OfflineStore.shared.offline{error="Den här vyn kräver uppkoppling. Dina nedladdade native-vyer finns kvar.";return}
+        nativeOverview=false;error = nil
         webView.load(URLRequest(url: url))
     }
 
@@ -123,8 +134,8 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
               message.frameInfo.securityOrigin.host == Self.baseURL.host,
               message.frameInfo.securityOrigin.protocol == Self.baseURL.scheme,
               let body = message.body as? [String: Any] else { return }
-        if nativeEditor == nil, let path = body["path"] as? String { currentPath = String(path.prefix(300)) }
-        if nativeEditor == nil, let title = body["title"] as? String { pageTitle = String(title.prefix(100)) }
+        if nativeEditor == nil && nativeWorkday == nil && !nativeOverview, let path = body["path"] as? String { currentPath = String(path.prefix(300)) }
+        if nativeEditor == nil && nativeWorkday == nil && !nativeOverview, let title = body["title"] as? String { pageTitle = String(title.prefix(100)) }
         if let user = body["user"] as? String { userName = String(user.prefix(80)) }
         let previouslySignedIn = signedIn
         signedIn = body["signedIn"] as? Bool ?? false
@@ -137,11 +148,15 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         if signedIn && previouslySignedIn && (pathChanged || (planSaved && !lastReportedPlanSaved)) { refreshWorkspace() }
         lastReportedPlanSaved = planSaved
         if !signedIn {
+            validatedOfflineScope=nil
+            OfflineStore.shared.lock()
             nativeEditor?.invalidate(); nativeEditor = nil
+        nativeWorkday?.invalidate(); nativeWorkday = nil
+            nativeOverview=false
             practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil; practiceError = nil; practiceLoading = false
             workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
             workspaceError = nil; workspaceLoading = false
-        } else if !previouslySignedIn { refreshWorkspace() }
+        } else if !previouslySignedIn { refreshWorkspace(); Task { await establishOfflineIdentity() } }
     }
 
     func setWorkflowStage(for path: String) {
@@ -169,19 +184,14 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         practiceTask?.cancel()
         let generation = UUID(); practiceGeneration = generation
         guard signedIn else { practice = nil; practiceLoading = false; return }
-        guard showPractice else { return }
+        guard availablePaths.contains("/spelare") || availablePaths.contains("/traning") else { return }
         practiceLoading = true; practiceError = nil
         practiceTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let result = try await webView.callAsyncJavaScript("""
-                    if (location.origin !== origin) throw new Error('origin');
-                    const response = await fetch('/api/desktop/practice', {cache:'no-store', credentials:'same-origin', redirect:'error'});
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    return await response.text();
-                    """, arguments: ["origin": Self.baseURL.absoluteString], in: nil, contentWorld: .page)
-                guard !Task.isCancelled, generation == practiceGeneration, signedIn, let json = result as? String else { return }
-                practice = try JSONDecoder().decode(Practice.self, from: Data(json.utf8))
+                let data=try await desktopRequest("",endpoint:"practice")
+                guard !Task.isCancelled,generation==practiceGeneration,signedIn else{return}
+                practice=try JSONDecoder().decode(Practice.self,from:data)
                 practiceLoading = false
             } catch {
                 guard !Task.isCancelled, generation == practiceGeneration, signedIn else { return }
@@ -201,16 +211,10 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         workspaceTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let path = "/api/desktop/workspace" + (matchID.map { "?match=\($0)" } ?? "")
-                let result = try await webView.callAsyncJavaScript("""
-                    if (location.origin !== origin) throw new Error('origin');
-                    const response = await fetch(path, {cache: 'no-store', credentials: 'same-origin', redirect: 'error'});
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    return await response.text();
-                    """, arguments: ["path": path, "origin": Self.baseURL.absoluteString], in: nil, contentWorld: .page)
-                guard !Task.isCancelled, generation == workspaceGeneration, signedIn,
-                      let json = result as? String else { return }
-                workspace = try JSONDecoder().decode(Workspace.self, from: Data(json.utf8))
+                let query=matchID.map{"?match=\($0)"} ?? ""
+                let data=try await desktopRequest(query,endpoint:"workspace")
+                guard !Task.isCancelled,generation==workspaceGeneration,signedIn else{return}
+                workspace=try JSONDecoder().decode(Workspace.self,from:data)
                 workspaceLoading = false
                 setWorkflowStage(for: currentPath)
                 if let match = currentWorkflowMatch, currentPath == "/matcher/\(match.id)" {
@@ -229,6 +233,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func reload() {
+        if let page=nativeWorkday { guard confirmLeavingEditor() else{return};activateWorkday(page.route);return }
         if let editor = nativeEditor {
             guard confirmLeavingEditor() else { return }
             activateEditor(editor.route); return
@@ -239,6 +244,10 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func confirmLeavingEditor() -> Bool {
+        if let page=nativeWorkday {
+            if page.busy{return false}
+            if page.dirty{let alert=NSAlert();alert.messageText="Lämna ditt lokala utkast?";alert.informativeText="Välj Stanna för att fortsätta eller spara ändringarna.";alert.addButton(withTitle:"Stanna");alert.addButton(withTitle:"Lämna utkastet");if alert.runModal() == .alertSecondButtonReturn{page.clearDraft();return true};return false}
+        }
         guard let editor = nativeEditor else { return true }
         if editor.busy { return false }
         guard editor.dirty else { return true }
@@ -248,18 +257,27 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         if alert.runModal() == .alertSecondButtonReturn { editor.clearDraft(); return true }
         return false
     }
+    func activateWorkday(_ route:WorkdayRoute) {
+        nativeOverview=false
+        nativeEditor?.invalidate();nativeEditor=nil;nativeWorkday?.invalidate();nativeWorkday=WorkdaySession(route)
+        currentPath=route.kind == "player" ? "/spelare/\(route.key)":"/matcher/\(route.key)";pageTitle=route.title;error=nil;loading=false
+    }
     func activateEditor(_ route: NativeRoute) {
+        nativeOverview=false
         nativeEditor?.invalidate(); nativeEditor = NativeEditorSession(route)
         currentPath = route.kind == "training" ? "/traning/\(route.key)" : "/spelare/\(route.key)" + (route.kind == "checkpoint" ? "/utveckling/avstamning" : "")
         pageTitle = route.title; error = nil; loading = false
     }
     func goBack() {
-        if let editor = nativeEditor { open(editor.route.destination) }
+        if let page=nativeWorkday{open(page.route.kind == "player" ? "/utveckling":"/matcher")}
+        else if let editor = nativeEditor { open(editor.route.destination) }
         else { webView.goBack() }
     }
     func signOut() {
         guard confirmLeavingEditor() else { return }
+        OfflineStore.shared.lock()
         nativeEditor?.invalidate(); nativeEditor = nil
+        nativeWorkday?.invalidate(); nativeWorkday = nil
         practiceGeneration = UUID(); practiceTask?.cancel(); practice = nil
         workflowMatchID = nil; workflowStageChosen = false
         workspaceGeneration = UUID(); workspaceTask?.cancel(); workspace = nil
@@ -282,6 +300,9 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
             if signedIn, action.targetFrame?.isMainFrame == true, let route = NativeRoute.parse(url) {
                 if confirmLeavingEditor() { activateEditor(route) }
                 decisionHandler(.cancel); return
+            }
+            if signedIn, action.targetFrame?.isMainFrame == true, let route=WorkdayRoute.parse(url) {
+                if confirmLeavingEditor(){activateWorkday(route)};decisionHandler(.cancel);return
             }
             if url.path == "/api/auth/google" {
                 decisionHandler(.cancel)
@@ -360,6 +381,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { report(error) }
     private func report(_ failure: Error) {
         guard (failure as NSError).code != NSURLErrorCancelled else { return }
+        if resumeOffline(){return}
         error = "Kunde inte ansluta till BSK. Kontrollera internetanslutningen och försök igen."
     }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
