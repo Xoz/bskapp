@@ -48,7 +48,7 @@ struct BSKMacApp: App {
             DesktopShell(browser: browser)
                 .background(NativeWindowGuard(browser: browser))
                 .onAppear { appDelegate.browser = browser }
-                .frame(minWidth: browser.nativeEditor == nil ? 880 : 1100, minHeight: 620)
+                .frame(minWidth: browser.nativeEditor?.route.kind == "training" ? 1000 : 880, minHeight: 620)
                 .preferredColorScheme(browser.darkAppearance ? .dark : .light)
                 .environment(\.locale, Locale(identifier: "sv_SE"))
         }
@@ -67,10 +67,12 @@ struct BSKMacApp: App {
                     .disabled(!browser.availablePaths.contains("/spelare"))
                 Button("Uppdatera") { browser.reload() }.keyboardShortcut("r")
                 Button("Tillbaka") { browser.goBack() }.keyboardShortcut("[", modifiers: .command)
-                    .disabled(!browser.canGoBack && browser.nativeEditor == nil)
+                    .disabled(!browser.canGoBack && browser.nativeEditor == nil && browser.nativeWorkday == nil)
                 Button("Framåt") { browser.webView.goForward() }.keyboardShortcut("]", modifiers: .command)
-                    .disabled(!browser.canGoForward || browser.nativeEditor != nil)
+                    .disabled(!browser.canGoForward || browser.nativeEditor != nil || browser.nativeWorkday != nil)
                 Divider()
+                Button("Sök och gå till…") { browser.commandPalette=true }.keyboardShortcut("k")
+                Button("Offline och synk") { OfflineStore.shared.panel=true }.keyboardShortcut("o",modifiers:[.command,.shift])
                 Button("Verktyg och konto") { browser.showAccount() }.disabled(!browser.signedIn)
             }
         }
@@ -86,6 +88,7 @@ private func canOpen(_ destination: Destination, _ browser: BrowserModel) -> Boo
 struct DesktopShell: View {
     @ObservedObject var browser: BrowserModel
     @State private var sidebarVisible = true
+    @ObservedObject private var offlineStore=OfflineStore.shared
     @State private var accountMenuOpen = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
@@ -95,12 +98,14 @@ struct DesktopShell: View {
             }
             VStack(spacing: 0) {
                 topbar
-                if let match = browser.currentWorkflowMatch { MatchWorkflowBar(browser: browser, match: match) }
-                if browser.signedIn && browser.nativeEditor == nil { PracticeWorkflowBar(browser: browser) }
+                if browser.nativeWorkday == nil, let match = browser.currentWorkflowMatch { MatchWorkflowBar(browser: browser, match: match) }
+                if browser.signedIn && browser.nativeEditor == nil && browser.nativeWorkday == nil { PracticeWorkflowBar(browser: browser) }
                 ZStack(alignment: .top) {
-                    BrowserView(model: browser).opacity((browser.showWorkbench || browser.showPractice || browser.nativeEditor != nil) ? 0 : 1).accessibilityHidden(browser.showWorkbench || browser.showPractice || browser.nativeEditor != nil)
+                    BrowserView(model: browser).opacity((browser.showWorkbench || browser.showPractice || browser.showMatchDirectory || browser.nativeEditor != nil || browser.nativeWorkday != nil) ? 0 : 1).accessibilityHidden(browser.showWorkbench || browser.showPractice || browser.showMatchDirectory || browser.nativeEditor != nil || browser.nativeWorkday != nil)
                     if browser.showWorkbench { WorkbenchView(browser: browser) }
-                    if browser.showPractice && browser.nativeEditor == nil { PracticeView(browser: browser).id(browser.currentPath) }
+                    if browser.showMatchDirectory { NativeMatchDirectory(browser:browser) }
+                    if browser.showPractice && browser.nativeEditor == nil && browser.nativeWorkday == nil { PracticeView(browser: browser).id(browser.currentPath) }
+                    if let page = browser.nativeWorkday { NativeWorkdayView(browser: browser, session: page).id(ObjectIdentifier(page)) }
                     if let editor = browser.nativeEditor { NativeEditorView(browser: browser, session: editor).id(ObjectIdentifier(editor)) }
                     if browser.loading {
                         GeometryReader { proxy in
@@ -112,11 +117,15 @@ struct DesktopShell: View {
                     if browser.signingIn { signInOverlay }
                     if let error = browser.error { errorCard(error).padding(28) }
                 }
+                OfflineStatusBar(browser:browser)
                 footer
             }.background(Studio.paper)
         }
         .background(Studio.paper)
         .tint(Studio.forest)
+        .sheet(isPresented:$browser.commandPalette){NativeCommandPalette(browser:browser)}
+        .sheet(isPresented:$offlineStore.panel){OfflinePanel(browser:browser)}
+        .task{while !Task.isCancelled{try? await Task.sleep(for:.seconds(30));if browser.signedIn,offlineStore.offline,!offlineStore.manualOffline,!offlineStore.syncing{browser.webView.reload();await browser.establishOfflineIdentity();if !offlineStore.offline{await browser.syncOffline()}}}}
     }
 
     private var sidebar: some View {
@@ -249,9 +258,9 @@ struct DesktopShell: View {
             }.buttonStyle(ChromeButtonStyle()).help("Visa eller dölj sidomenyn")
             HStack(spacing: 4) {
                 Button { browser.goBack() } label: { Image(systemName: "chevron.left") }
-                    .disabled(!browser.canGoBack && browser.nativeEditor == nil)
+                    .disabled(!browser.canGoBack && browser.nativeEditor == nil && browser.nativeWorkday == nil)
                 Button { browser.webView.goForward() } label: { Image(systemName: "chevron.right") }
-                    .disabled(!browser.canGoForward || browser.nativeEditor != nil)
+                    .disabled(!browser.canGoForward || browser.nativeEditor != nil || browser.nativeWorkday != nil)
             }.buttonStyle(ChromeButtonStyle())
             Rectangle().fill(Studio.line).frame(width: 1, height: 17)
             Text("Arbetsyta").foregroundStyle(Studio.muted)
@@ -275,6 +284,7 @@ struct DesktopShell: View {
             Spacer()
             if browser.error != nil { Text("Anslutning saknas") }
             else if browser.loading { Text("Hämtar…") }
+            else if OfflineStore.shared.offline { Text("Arbetar offline") }
             else if browser.signedIn { Text("Ansluten till " + (BrowserModel.baseURL.host ?? "BSK")) }
             else { Text("Bollstanäs SK") }
         }

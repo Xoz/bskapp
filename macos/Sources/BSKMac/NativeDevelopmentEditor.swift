@@ -21,15 +21,16 @@ struct NativeDateField: View {
     }
 }
 struct NativeNoteField: View {
+    @Environment(\.isEnabled) private var isEnabled
     let title: String
     @Binding var text: String
     let limit: Int
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack { Text(title).font(.system(size: 13, weight: .medium)); Spacer(); Text("\(text.count)/\(limit)").font(.system(size: 10)).foregroundStyle(text.count > limit ? .red : Studio.muted) }
-            TextEditor(text: $text).font(.system(size: 13)).scrollContentBackground(.hidden).padding(10).frame(minHeight: 85)
+            Group { if isEnabled { TextEditor(text: $text) } else { Text(text.isEmpty ? "–" : text).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.topLeading) } }.font(.system(size: 13)).scrollContentBackground(.hidden).padding(10).frame(minHeight: 85)
                 .background(Studio.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8)).overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Studio.line))
-                .accessibilityLabel(title)
+                .accessibilityLabel(title).accessibilityValue(text)
         }
     }
 }

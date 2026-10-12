@@ -303,3 +303,10 @@ Mac-arbetsflöde 0.004: `macos/Sources/BSKMac/Workflow.swift` ger native arbetsb
 Mac 0.006: `macos/Sources/BSKMac/Practice.swift` ger native träningslista, övningsvis genomförande och sökbar utvecklingsöversikt. `app/api/desktop/practice/route.ts` och `lib/desktop/practice.ts` läser ägarfiltrerade träningspass samt gruppfiltrerade spelare; privata datum kräver separat behörighet. Befintliga webbformulär sparar fortsatt till samma databas; webbens gränssnitt ändras inte.
 
 Mac 0.007: `macos/Sources/BSKMac/Native{Editor,TrainingEditor,DiagramEditor,DevelopmentEditor}.swift` ger native träningsstudio, ritningsyta, avstämning och spelarsamtal. `app/api/desktop/editor/route.ts` och `lib/desktop/editor.ts` ger sessions-/ursprungs-/behörighetskontrollerad läsning och sparning. Träningspass/samtal återanvänder befintliga skrivkommandon; avstämningar använder befintliga tabeller i den nya additiva `desktopTransaction`-hjälparen i `lib/db.ts`. Inga schema- eller webbgränssnittsändringar. Native/API-tester och lokalt QA-prov i `scripts/test-desktop-native.mjs`.
+
+Native arbetsdag/offline: mål och verifieringsplan i `docs/MAC_NATIVE_WORKDAY.md`. Implementation sker separat från webbens gränssnitt.
+`lib/desktop/workday.ts` och `app/api/desktop/workday/route.ts`: native spelarprofil/matchunderlag samt transaktionella matchkommandon med versionsfingeravtryck och användaravgränsade kvitton i befintliga settings. Återanvänder uttagningskontroll, matchplan och matchutvärdering; inga nya tabeller eller webbsidor.
+
+- Mac native arbetsdag: `macos/Sources/BSKMac/NativeWorkday.swift`, `NativePlayerProfile.swift`, `NativeMatchWorkspace.swift` — spelarprofil och matchens fyra arbetssteg.
+- Mac offline/kommandon: `OfflineStore.swift`, `OfflineConflictReview.swift`, `NativeCommands.swift` — användarbunden krypterad cache, beständig sparkö, konfliktgranskning, nedladdning/synk och kommandopalett.
+- Verifiering: `lib/desktop/workday.test.ts`, `scripts/test-desktop-workday.mjs`, `macos/Tests/BSKMacTests/OfflineStoreTests.swift`. Omfattning och offlinegränser: `docs/MAC_NATIVE_WORKDAY.md`.
