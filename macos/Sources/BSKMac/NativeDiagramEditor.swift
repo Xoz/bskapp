@@ -15,7 +15,7 @@ struct NativePitch: View {
         Canvas { context, size in
             context.scaleBy(x: size.width / 1000, y: size.height / 700)
             for band in 0..<10 {
-                context.fill(Path(CGRect(x: 0, y: band * 70, width: 1000, height: 70)), with: .color(Color(trainingHex: band % 2 == 0 ? "#17633f" : "#1b6a45")))
+                context.fill(Path(CGRect(x: 0, y: band * 70, width: 1000, height: 70)), with: .color(Color(trainingHex: band % 2 == 0 ? "#292929" : "#2d2d2d")))
             }
             context.stroke(Path(roundedRect: CGRect(x: 30, y: 30, width: 940, height: 640), cornerRadius: 4), with: .color(.white.opacity(0.35)), lineWidth: 2)
             for object in diagram.objects.sorted(by: { $0.arrow && !$1.arrow }) { render(object, in: &context) }

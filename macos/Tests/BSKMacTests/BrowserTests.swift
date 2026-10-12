@@ -68,6 +68,30 @@ final class BrowserTests: XCTestCase {
         }
     }
 
+    func testEditorRemembersOriginatingWorkflow() {
+        let model=BrowserModel(loadInitialPage:false,dataStore:.nonPersistent())
+        model.signedIn=true
+        model.currentPath="/samtal"
+        model.activateEditor(.conversation(7))
+        XCTAssertEqual(model.editorReturnPath,"/samtal")
+        model.nativeEditor=nil
+        model.currentPath="/uppfoljning"
+        model.activateWorkday(.match(12,"evaluation"))
+        XCTAssertEqual(model.workdayReturnPath,"/uppfoljning")
+    }
+
+    func testPrimaryWorkflowsRespectAvailableAreas() {
+        let model=BrowserModel(loadInitialPage:false,dataStore:.nonPersistent())
+        model.availablePaths=["/traning"]
+        XCTAssertTrue(canOpen(Destination.workspace[0],model))
+        XCTAssertFalse(canOpen(Destination.workspace[1],model))
+        XCTAssertFalse(canOpen(Destination.workspace[2],model))
+        model.availablePaths=["/spelare"]
+        XCTAssertTrue(Destination.workspace.allSatisfy{canOpen($0,model)})
+        model.availablePaths=[]
+        XCTAssertFalse(Destination.workspace.contains{canOpen($0,model)})
+    }
+
     func testLastWindowClosureTerminatesSoAppCanReopen() {
         XCTAssertTrue(MacAppDelegate().applicationShouldTerminateAfterLastWindowClosed(NSApplication.shared))
     }

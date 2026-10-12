@@ -19,134 +19,71 @@ struct DevelopmentPlayer: Decodable, Identifiable {
     let checkpoint, conversation, followup: String?
 }
 
-struct PracticeView: View {
-    @ObservedObject var browser: BrowserModel
-    @State private var search = ""
-    @State private var selectedPlan: String?
-    @State private var exercise = 0
-    private var development: Bool { browser.currentPath != "/traning" }
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 9) {
-                        Text(development ? "VARJE SPELARES NÄSTA STEG" : "FRÅN IDÉ TILL TRÄNINGSPLAN").font(.system(size: 10, weight: .semibold)).tracking(2).foregroundStyle(Studio.muted)
-                        Text(development ? "Utveckling börjar med att se." : "En tydlig plan. Mer tid på planen.").font(.system(size: 32, design: .serif))
-                    }
-                    Spacer()
-                    Button { browser.refreshPractice() } label: { Image(systemName: "arrow.clockwise") }.help("Hämta senast sparade information")
-                }
-                if browser.practiceLoading { ProgressView("Hämtar sparad information…") }
-                if let error = browser.practiceError { Text(error).foregroundStyle(Studio.muted) }
-                if let data = browser.practice {
-                    if development && data.canPlayers { players(data) } else if !development && data.canTrain { training(data) } else { Text("Du saknar behörighet till den här arbetsytan.") }
-                }
-            }.padding(36).frame(maxWidth: 1200, alignment: .leading).frame(maxWidth: .infinity)
-        }.background(Studio.paper).foregroundStyle(Studio.ink)
-    }
-    @ViewBuilder private func training(_ data: Practice) -> some View {
-        HStack {
-            Text("Dina sparade pass").font(.system(size: 22, design: .serif))
-            Spacer()
-            Button("Planera nytt pass") { browser.open("/traning/nytt") }.buttonStyle(.borderedProminent).tint(Studio.forest)
-        }
-        Text("Planera i redigeraren. Genomför ett sparat pass övning för övning. Följ sedan upp spelarnas lärande.").font(.system(size: 13)).foregroundStyle(Studio.muted)
-        if let plan = data.plans.first(where: { $0.id == selectedPlan }) {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack { Text(plan.title).font(.system(size: 26, design: .serif)); Spacer(); Button("Stäng passet") { selectedPlan = nil } }
-                Text("Sparad version · \(plan.duration) minuter · \(plan.countLabel)").foregroundStyle(Studio.muted)
-                if plan.blocks.indices.contains(exercise) {
-                    let block = plan.blocks[exercise]
-                    Text("ÖVNING \(exercise + 1) AV \(plan.blocks.count) · \(block.minutes) MIN").font(.system(size: 11, weight: .semibold)).tracking(1.5)
-                    Text(block.title).font(.system(size: 30, design: .serif))
-                    Text(block.notes.isEmpty ? "Inga instruktioner har sparats för övningen." : block.notes).font(.system(size: 16)).textSelection(.enabled)
-                    HStack {
-                        Button("Föregående") { exercise -= 1 }.disabled(exercise == 0)
-                        Button("Nästa övning") { exercise += 1 }.disabled(exercise + 1 >= plan.blocks.count)
-                        Spacer()
-                        Button("Öppna ritning och redigerare") { browser.open("/traning/\(plan.id)") }
-                    }
-                } else { Text("Passet saknar övningar. Lägg till dem i redigeraren.") }
+struct PracticeView:View {
+    @ObservedObject var browser:BrowserModel
+    @State private var search=""
+    @State private var player:Int?
+    @State private var plan:String?
+    private var training:Bool {browser.currentPath=="/traning"}
+    private var conversations:Bool {browser.currentPath=="/samtal"}
+    private var players:[DevelopmentPlayer] {(browser.practice?.players ?? []).filter{search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)}}
+    private var plans:[PracticePlan] {(browser.practice?.plans ?? []).filter{search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)}}
+    var body:some View {
+        HSplitView {
+            VStack(spacing:0) {
+                HStack {Text(training ? "Träningspass":conversations ? "Spelarsamtal":"Spelare").font(.headline);Spacer();if browser.practiceLoading{ProgressView().controlSize(.mini)}}.padding(16)
+                TextField(training ? "Sök pass":"Sök spelare",text:$search).textFieldStyle(.roundedBorder).padding(.horizontal,12).padding(.bottom,12)
                 Divider()
-                Button("Följ upp i spelarutveckling") { browser.open("/utveckling") }.disabled(!data.canPlayers)
-                Text("Övningsvalet gäller bara den här vyn. Ingen närvaro eller genomförandestatus registreras.").font(.system(size: 11)).foregroundStyle(Studio.muted)
-            }.practicePanel()
-        }
-        if data.plans.isEmpty { Text("Inga sparade pass ännu. Börja med att planera ditt första pass.").practicePanel() }
-        ForEach(data.plans) { plan in
-            HStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(plan.title).font(.system(size: 20, design: .serif))
-                    Text("\(plan.date.isEmpty ? "Utan datum" : plan.date) · \(plan.duration) min · \(plan.countLabel)").font(.system(size: 12)).foregroundStyle(Studio.muted)
+                if training {
+                    List(selection:$plan){ForEach(plans){p in VStack(alignment:.leading,spacing:5){Text(p.title).fontWeight(.medium);Text("\(p.date.isEmpty ? "Utan datum":p.date) · \(p.duration) min").font(.caption).foregroundStyle(Studio.muted)}.padding(.vertical,5).tag(p.id)}}.listStyle(.inset).scrollContentBackground(.hidden)
+                } else {
+                    List(selection:$player){ForEach(players){p in VStack(alignment:.leading,spacing:5){Text(p.name).fontWeight(.medium);if browser.practice?.canPrivate==true {Text(conversations ? "Samtal: \(p.conversation ?? "Inte registrerat")":"Avstämning: \(p.checkpoint ?? "Inte registrerat")").font(.caption).foregroundStyle(Studio.muted);if let date=p.followup,conversations{Text("Följ upp \(date)").font(.caption).foregroundStyle(Studio.muted)}}}.padding(.vertical,5).tag(p.id)}}.listStyle(.inset).scrollContentBackground(.hidden)
                 }
-                Spacer()
-                Button("Planera") { browser.open("/traning/\(plan.id)") }
-                Button("Genomför") { selectedPlan = plan.id; exercise = 0 }.buttonStyle(.borderedProminent).tint(Studio.forest)
-            }.practicePanel()
-        }
+                Divider()
+                HStack {Text("\(training ? plans.count:players.count) \(training ? "pass":"spelare")").font(.caption).foregroundStyle(Studio.muted);Spacer();if training{Button("Nytt pass",systemImage:"plus"){browser.open("/traning/nytt")}}}.padding(12)
+            }.frame(minWidth:235,idealWidth:270,maxWidth:340).background(Studio.surface)
+            Group {
+                if let error=browser.practiceError {ContentUnavailableView("Underlaget kunde inte hämtas",systemImage:"wifi.exclamationmark",description:Text(error))}
+                else if training { trainingDetail }
+                else if let player,players.contains(where:{$0.id==player}) { NativePlayerInspector(browser:browser,playerID:player,initialTab:conversations ? "conversations":"development").id("\(player):\(conversations)") }
+                else {ContentUnavailableView(search.isEmpty ? "Välj en spelare":"Inga spelare matchar sökningen",systemImage:conversations ? "bubble.left.and.bubble.right":"person",description:Text(conversations ? "Utvecklingsbild, tidigare samtal och nästa överenskommelse.":"Läs utvecklingen och gör en avstämning."))}
+            }.frame(minWidth:380,maxWidth:.infinity,maxHeight:.infinity)
+        }.background(Studio.paper).foregroundStyle(Studio.ink)
+        .onAppear{player=players.first(where:{$0.id==browser.selectedPlayerID})?.id ?? players.first?.id;plan=plans.first(where:{$0.id==browser.selectedTrainingID})?.id ?? plans.first?.id}
+        .onChange(of:player){_,id in browser.selectedPlayerID=id}
+        .onChange(of:plan){_,id in browser.selectedTrainingID=id}
+        .onChange(of:players.map(\.id)){_,ids in if !ids.contains(player ?? -1){player=ids.first}}
+        .onChange(of:plans.map(\.id)){_,ids in if !ids.contains(plan ?? ""){plan=ids.first}}
     }
-    @ViewBuilder private func players(_ data: Practice) -> some View {
-        Text("Läs utvecklingsbilden → gör en avstämning → samtala → följ upp").font(.system(size: 13)).foregroundStyle(Studio.muted)
-        TextField("Sök spelare", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 380)
-        if data.canPrivate {
-            let due = data.players.filter { $0.followup.map { $0 <= data.today } ?? false }
-            if !due.isEmpty { Label("\(due.count) spelare har ett uppföljningsdatum som har passerat eller infaller idag", systemImage: "calendar").font(.system(size: 12)).foregroundStyle(Studio.muted) }
-        }
-        let visible = data.players.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
-        if visible.isEmpty { Text("Inga spelare matchar sökningen.").practicePanel() }
-        ForEach(visible) { player in
-            VStack(alignment: .leading, spacing: 16) {
-                HStack { Text(player.name).font(.system(size: 23, design: .serif)); Spacer(); Button("Läs utvecklingsbilden") { browser.open("/spelare/\(player.id)/utveckling") } }
-                if data.canPrivate {
-                    HStack(spacing: 25) {
-                        fact("Senaste avstämning", player.checkpoint)
-                        fact("Senaste samtal", player.conversation)
-                        fact("Uppföljningsdatum", player.followup)
-                    }
-                }
-                HStack {
-                    if data.canEdit {
-                        Button("Gör avstämning") { browser.open("/spelare/\(player.id)/utveckling/avstamning") }
-                        Button("Förbered samtal") { browser.open("/spelare/\(player.id)?samtal=forbered#samtal") }
-                    }
-                    Spacer()
-                    Button("Öppna profil och historik") { browser.open("/spelare/\(player.id)") }
-                }
-            }.practicePanel()
-        }
-    }
-    private func fact(_ title: String, _ date: String?) -> some View {
-        VStack(alignment: .leading, spacing: 5) { Text(title).font(.system(size: 10)).foregroundStyle(Studio.muted); Text(date ?? "Inte registrerat").font(.system(size: 12)) }
-    }
-}
-private extension View {
-    func practicePanel() -> some View {
-        padding(24).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Studio.line.opacity(0.16), in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Studio.line))
+    @ViewBuilder private var trainingDetail:some View {
+        if let p=plans.first(where:{$0.id==plan}) {
+            ScrollView {VStack(alignment:.leading,spacing:20){
+                HStack {VStack(alignment:.leading,spacing:6){Text(p.title).font(.title2).fontWeight(.semibold);Text("\(p.date.isEmpty ? "Utan datum":p.date) · \(p.duration) min · \(p.countLabel)").font(.callout).foregroundStyle(Studio.muted)};Spacer();Button("Redigera pass"){browser.open("/traning/\(p.id)")}}
+                Divider()
+                Text("Passöversikt").font(.headline)
+                ForEach(Array(p.blocks.enumerated()),id:\.element.id){index,b in HStack(alignment:.top,spacing:14){Text("\(index+1)").monospacedDigit().foregroundStyle(Studio.muted).frame(width:20);VStack(alignment:.leading,spacing:8){HStack{Text(b.title).fontWeight(.medium);Spacer();Text("\(b.minutes) min").foregroundStyle(Studio.muted)};if !b.notes.isEmpty{Text(b.notes).font(.callout).foregroundStyle(Studio.muted).textSelection(.enabled)}}}.padding(.vertical,8);Divider()}
+                if p.blocks.isEmpty{Text("Passet saknar övningar. Öppna redigeraren för att lägga till dem.").foregroundStyle(Studio.muted)}
+                if browser.practice?.canPlayers==true{Button("Följ upp spelarnas utveckling"){browser.open("/utveckling")}.buttonStyle(.borderless)}
+            }.padding(24).frame(maxWidth:900,alignment:.leading).frame(maxWidth:.infinity)}
+        } else {ContentUnavailableView("Dina träningspass",systemImage:"rectangle.stack",description:Text("Skapa ett nytt pass eller välj ett sparat pass för att granska och redigera."))}
     }
 }
 
-struct PracticeWorkflowBar: View {
-    @ObservedObject var browser: BrowserModel
-    private var training: Bool { browser.currentPath.hasPrefix("/traning/") }
-    private var playerID: Int? {
-        let parts = browser.currentPath.split(separator: "/")
-        guard parts.count >= 2, parts[0] == "spelare", let id = Int(parts[1]), id > 0 else { return nil }
-        return id
+struct NativePlayerInspector:View {
+    @ObservedObject var browser:BrowserModel
+    @StateObject private var session:WorkdaySession
+    let initialTab:String
+    init(browser:BrowserModel,playerID:Int,initialTab:String){self.browser=browser;self.initialTab=initialTab;_session=StateObject(wrappedValue:WorkdaySession(.player(playerID)))}
+    var body:some View {
+        VStack(spacing:0) {
+            if let profile=session.profile{NativePlayerProfile(browser:browser,data:profile,initialTab:initialTab)}
+            else if let error=session.error{VStack(spacing:14){ContentUnavailableView("Underlaget är inte tillgängligt",systemImage:"wifi.exclamationmark",description:Text(error));Button("Försök igen"){Task{await session.load(browser)}}}}
+            else{ProgressView("Hämtar spelarunderlag…")}
+        }.frame(maxWidth:.infinity,maxHeight:.infinity).task(id:browser.practiceRevision){await session.load(browser)}
     }
-    var body: some View {
-        if training || playerID != nil {
-            HStack(spacing: 18) {
-                Button { browser.open(training ? "/traning" : "/utveckling") } label: {
-                    Label(training ? "Träningsflödet" : "Utvecklingsflödet", systemImage: "arrow.left")
-                }.buttonStyle(.plain).font(.system(size: 12, weight: .medium))
-                Rectangle().fill(Studio.line).frame(width: 1, height: 22)
-                Text(training ? "1 Planera  →  2 Genomför  →  3 Följ upp" : "1 Läs bilden  →  2 Stäm av  →  3 Samtala  →  4 Följ upp")
-                    .font(.system(size: 11)).foregroundStyle(Studio.muted)
-                Spacer()
-            }.padding(.horizontal, 28).padding(.vertical, 15).background(Studio.paper)
-                .overlay(alignment: .bottom) { Rectangle().fill(Studio.line).frame(height: 1) }
-        }
-    }
+}
+
+struct PracticeWorkflowBar:View {
+    @ObservedObject var browser:BrowserModel
+    var body:some View {EmptyView()}
 }

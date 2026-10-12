@@ -7,7 +7,7 @@ enum NativeRoute: Equatable, Identifiable {
     var key: String { switch self { case .training(let id): id; case .checkpoint(let id), .conversation(let id): String(id) } }
     var id: String { kind + ":" + key }
     var destination: String { kind == "training" ? "/traning" : "/spelare/\(key)" }
-    var title: String { switch self { case .training: "Träningsstudio"; case .checkpoint: "Utvecklingsavstämning"; case .conversation: "Spelarsamtal" } }
+    var title: String { switch self { case .training: "Redigera träningspass"; case .checkpoint: "Utvecklingsavstämning"; case .conversation: "Spelarsamtal" } }
     static func parse(_ url: URL) -> NativeRoute? {
         let parts = url.path.split(separator: "/")
         if parts.count == 2, parts[0] == "traning", parts[1] == "nytt" || UUID(uuidString: String(parts[1])) != nil { return .training(String(parts[1])) }
@@ -299,18 +299,18 @@ struct NativeEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 18) {
-                Button { browser.open(session.route.destination) } label: { Label("Till översikten", systemImage: "arrow.left") }
-                Text(session.route.title).font(.system(size: 23, design: .serif))
+                Button { browser.open(browser.editorReturnPath ?? session.route.destination) } label: { Label("Till översikten", systemImage: "arrow.left") }
+                Text(session.route.title).font(.system(size: 15, design: .default))
                 Spacer()
                 if session.route.kind != "training" {Button{session.undoDevelopment()}label:{Image(systemName:"arrow.uturn.backward")}.disabled(!session.canUndoDevelopment).keyboardShortcut("z").help("Ångra ändring");Button{session.redoDevelopment()}label:{Image(systemName:"arrow.uturn.forward")}.disabled(!session.canRedoDevelopment).keyboardShortcut("z",modifiers:[.command,.shift]).help("Gör om ändring")}
                 if session.route.kind == "training" {Button{session.undoPlan()}label:{Image(systemName:"arrow.uturn.backward")}.disabled(!session.canUndoPlan).keyboardShortcut("z").help("Ångra ändring");Button{session.redoPlan()}label:{Image(systemName:"arrow.uturn.forward")}.disabled(!session.canRedoPlan).keyboardShortcut("z",modifiers:[.command,.shift]).help("Gör om ändring")}
                 if session.saved && !session.dirty { Label("Sparat i lagets databas", systemImage: "checkmark.circle").font(.system(size: 12)).foregroundStyle(Studio.muted) }
                 else if session.dirty { Text("Osparat utkast").font(.system(size: 12)).foregroundStyle(Studio.muted) }
                 Button(session.busy ? "Sparar…" : session.uncertain ? "Försök spara igen" : "Spara") { Task { await session.save(browser) } }
-                    .buttonStyle(.borderedProminent).tint(Studio.forest)
+                    .buttonStyle(.borderedProminent).tint(Studio.control)
                     .disabled(!session.loaded || session.busy || session.queued || (session.saved && !session.dirty) || (session.route.kind == "conversation" && session.outcome.isEmpty))
                     .keyboardShortcut("s")
-            }.padding(22).background(Studio.paper)
+            }.padding(.horizontal,16).padding(.vertical,10).background(Studio.surface)
             Divider()
             if let notice = session.notice { Text(notice).font(.system(size: 12)).padding(12) }
             if let error = session.error {
@@ -318,7 +318,7 @@ struct NativeEditorView: View {
                     Text(error).font(.system(size: 12)).textSelection(.enabled)
                     Spacer()
                     if !session.loaded { Button("Försök igen") { Task { await session.load(browser) } } }
-                }.padding(16).background(Studio.gold.opacity(0.2))
+                }.padding(16).background(Studio.accent.opacity(0.2))
             }
             if session.conflict {
                 HStack {
@@ -329,7 +329,7 @@ struct NativeEditorView: View {
             if session.uncertain { Text("Svaret kom inte fram. Försök spara igen med samma innehåll innan du fortsätter.").font(.system(size: 12)).padding(12) }
             if !session.loaded { ProgressView("Hämtar underlaget…").frame(maxWidth: .infinity, maxHeight: .infinity) }
             else if session.route.kind == "training" { NativeTrainingEditor(session: session).disabled(session.locked) }
-            else { NativeDevelopmentEditor(session: session).disabled(session.locked || (session.saved && !session.dirty)) }
+            else { NativeDevelopmentEditor(session: session,browser:browser).disabled(session.locked || (session.saved && !session.dirty)) }
         }.background(Studio.paper).foregroundStyle(Studio.ink)
             .task(id: session.route.id) { await session.load(browser) }
             .onChange(of:session.plan){old,new in session.rememberPlan(old,new)}

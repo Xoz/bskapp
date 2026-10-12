@@ -34,15 +34,21 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published var nativeEditor: NativeEditorSession?
     @Published var nativeWorkday: WorkdaySession?
     @Published var commandPalette = false
+    @Published var profileInitialTab = "development"
+    @Published var selectedPlayerID:Int?
+    @Published var selectedTrainingID:String?
+    var editorReturnPath:String?
+    var workdayReturnPath:String?
     @Published var nativeOverview = false
     var showMatchDirectory:Bool{signedIn && nativeOverview && currentPath=="/matcher"}
     var hasConfirmedClose = false
     @Published var practice: Practice?
+    @Published var practiceRevision=UUID()
     @Published var practiceLoading = false
     @Published var practiceError: String?
     private var practiceTask: Task<Void, Never>?
     private var practiceGeneration = UUID()
-    var showPractice: Bool { signedIn && (currentPath == "/traning" || currentPath == "/utveckling" || currentPath == "/spelare") }
+    var showPractice: Bool { signedIn && (currentPath == "/traning" || currentPath == "/utveckling" || currentPath == "/spelare" || currentPath == "/samtal") }
     @Published var workspace: Workspace?
     @Published var workspaceLoading = false
     @Published var workspaceError: String?
@@ -53,7 +59,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     private var workflowStageChosen = false
     private var lastReportedPlanSaved = false
     private var lastReportedPath = ""
-    var showWorkbench: Bool { signedIn && currentPath == "/idag" && availablePaths.contains("/matcher") }
+    var showWorkbench: Bool { signedIn && ["/idag", "/uppfoljning"].contains(currentPath) }
     var currentWorkflowMatch: WorkflowMatch? {
         guard signedIn, let id = WorkflowMatch.matchID(in: currentPath) else { return nil }
         return workspace?.matches.first { $0.id == id }
@@ -85,7 +91,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
         configuration.userContentController.add(WeakScriptHandler(self), name: "bskDesktop")
-        webView.underPageBackgroundColor = NSColor(red: 0.969, green: 0.965, blue: 0.949, alpha: 1)
+        webView.underPageBackgroundColor = NSColor(white:0.105,alpha:1)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
@@ -118,11 +124,11 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
               url.scheme == Self.baseURL.scheme, url.host == Self.baseURL.host, url.port == Self.baseURL.port else { return }
         guard confirmLeavingEditor() else { return }
         if signedIn, let route = NativeRoute.parse(url) { nativeWorkday?.invalidate(); nativeWorkday=nil; activateEditor(route); return }
-        if signedIn, let route = WorkdayRoute.parse(url) { activateWorkday(route); return }
+        if signedIn, let route = WorkdayRoute.parse(url) { profileInitialTab = URLComponents(url:url,resolvingAgainstBaseURL:false)?.queryItems?.contains(where:{$0.name=="omrade" && $0.value=="samtal"}) == true ? "conversations":"development"; activateWorkday(route); return }
         nativeEditor?.invalidate(); nativeEditor = nil
         nativeWorkday?.invalidate(); nativeWorkday = nil
-        if signedIn,["/idag","/traning","/utveckling","/spelare","/matcher"].contains(url.path){
-            nativeOverview=true;currentPath=url.path;pageTitle=["/idag":"Arbetsbord","/traning":"Mina träningspass","/utveckling":"Utvecklingsträd","/spelare":"Spelare","/matcher":"Matcher"][url.path] ?? "Arbetsyta";error=nil;loading=false;refreshWorkspace();return
+        if signedIn,["/idag","/uppfoljning","/samtal","/traning","/utveckling","/spelare","/matcher"].contains(url.path){
+            nativeOverview=true;currentPath=url.path;pageTitle=["/idag":"Förberedelser","/uppfoljning":"Uppföljning","/samtal":"Spelarsamtal","/traning":"Mina träningspass","/utveckling":"Utvecklingsträd","/spelare":"Spelare","/matcher":"Matcher"][url.path] ?? "Arbetsyta";error=nil;loading=false;refreshWorkspace();return
         }
         if OfflineStore.shared.offline{error="Den här vyn kräver uppkoppling. Dina nedladdade native-vyer finns kvar.";return}
         nativeOverview=false;error = nil
@@ -192,6 +198,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
                 let data=try await desktopRequest("",endpoint:"practice")
                 guard !Task.isCancelled,generation==practiceGeneration,signedIn else{return}
                 practice=try JSONDecoder().decode(Practice.self,from:data)
+                practiceRevision=UUID()
                 practiceLoading = false
             } catch {
                 guard !Task.isCancelled, generation == practiceGeneration, signedIn else { return }
@@ -258,19 +265,21 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         return false
     }
     func activateWorkday(_ route:WorkdayRoute) {
+        if showWorkbench || showPractice || showMatchDirectory {workdayReturnPath=currentPath}
         nativeOverview=false
         nativeEditor?.invalidate();nativeEditor=nil;nativeWorkday?.invalidate();nativeWorkday=WorkdaySession(route)
         currentPath=route.kind == "player" ? "/spelare/\(route.key)":"/matcher/\(route.key)";pageTitle=route.title;error=nil;loading=false
     }
     func activateEditor(_ route: NativeRoute) {
+        if showWorkbench || showPractice || showMatchDirectory {editorReturnPath=currentPath} else {editorReturnPath=route.destination}
         nativeOverview=false
         nativeEditor?.invalidate(); nativeEditor = NativeEditorSession(route)
         currentPath = route.kind == "training" ? "/traning/\(route.key)" : "/spelare/\(route.key)" + (route.kind == "checkpoint" ? "/utveckling/avstamning" : "")
         pageTitle = route.title; error = nil; loading = false
     }
     func goBack() {
-        if let page=nativeWorkday{open(page.route.kind == "player" ? "/utveckling":"/matcher")}
-        else if let editor = nativeEditor { open(editor.route.destination) }
+        if let page=nativeWorkday{open(workdayReturnPath ?? (page.route.kind == "player" ? "/utveckling":"/matcher"))}
+        else if let editor = nativeEditor { open(editorReturnPath ?? editor.route.destination) }
         else { webView.goBack() }
     }
     func signOut() {

@@ -194,17 +194,17 @@ struct NativeWorkdayView:View{
     var body:some View{
         VStack(spacing:0){
             HStack{
-                Button("Till översikten"){browser.open(session.route.kind=="player" ? "/utveckling":"/matcher")}
-                Text(session.route.title).font(.system(size:23,design:.serif));Spacer()
+                Button("Till översikten"){browser.open(browser.workdayReturnPath ?? (session.route.kind=="player" ? "/utveckling":"/matcher"))}
+                Text(session.route.title).font(.system(size:15,design:.default));Spacer()
                 if let date=session.fetchedAt {Text("Hämtat \(date.formatted(date:.omitted,time:.shortened))").font(.caption).foregroundStyle(Studio.muted)}
                 if session.dirty{Text("Lokalt utkast").font(.caption)}
                 if session.match != nil,session.tab != "squad"{Button{session.undo()}label:{Image(systemName:"arrow.uturn.backward")}.disabled(!session.canUndo).keyboardShortcut("z").help("Ångra ändring");Button{session.redo()}label:{Image(systemName:"arrow.uturn.forward")}.disabled(!session.canRedo).keyboardShortcut("z",modifiers:[.command,.shift]).help("Gör om ändring");Button(session.uncertain ? "Försök igen":"Spara"){Task{await session.save(browser)}}.keyboardShortcut("s").disabled(session.busy || session.queued || !session.dirty)}
-            }.padding(20)
+            }.padding(.horizontal,16).padding(.vertical,10)
             Divider()
-            if let error=session.error{HStack{Text(error);Spacer();Button("Försök igen"){Task{await session.load(browser)}}.disabled(session.dirty)}.font(.callout).padding(14).background(Studio.gold.opacity(0.2))}
+            if let error=session.error{HStack{Text(error);Spacer();Button("Försök igen"){Task{await session.load(browser)}}.disabled(session.dirty)}.font(.callout).padding(14).background(Studio.accent.opacity(0.2))}
             if let notice=session.notice{HStack{Text(notice);if session.queued{Button("Granska synk"){OfflineStore.shared.panel=true}}}.font(.callout).padding(10)}
             if let fresh=session.conflict{WorkdayConflictView(session:session,fresh:fresh,browser:browser)}
-            if let profile=session.profile{NativePlayerProfile(browser:browser,data:profile)}
+            if let profile=session.profile{NativePlayerProfile(browser:browser,data:profile,initialTab:browser.profileInitialTab)}
             else if let match=session.match{NativeMatchWorkspace(browser:browser,session:session,data:match)}
             else if session.busy{ProgressView("Hämtar underlaget…").frame(maxWidth:.infinity,maxHeight:.infinity)}
             else{ContentUnavailableView("Underlaget är inte tillgängligt",systemImage:"wifi.exclamationmark",description:Text("Försök igen när du är ansluten."))}
@@ -216,5 +216,5 @@ struct WorkdayConflictView:View{
     @ObservedObject var session:WorkdaySession
     let fresh:WorkdayMatch
     @ObservedObject var browser:BrowserModel
-    var body:some View{VStack(alignment:.leading,spacing:10){Text("Någon har ändrat matchunderlaget").font(.headline);Text("Ditt utkast finns kvar. Senaste laguppställningen har \(fresh.candidates.filter(\.selected).count) uttagna och matchplan revision \(fresh.plan.revision). Kopiera det du vill behålla innan du hämtar senaste versionen.").textSelection(.enabled);Button("Hämta senaste versionen…"){browser.reload()}}.font(.callout).padding(18).frame(maxWidth:.infinity,alignment:.leading).background(Studio.gold.opacity(0.15))}
+    var body:some View{VStack(alignment:.leading,spacing:10){Text("Någon har ändrat matchunderlaget").font(.headline);Text("Ditt utkast finns kvar. Senaste laguppställningen har \(fresh.candidates.filter(\.selected).count) uttagna och matchplan revision \(fresh.plan.revision). Kopiera det du vill behålla innan du hämtar senaste versionen.").textSelection(.enabled);Button("Hämta senaste versionen…"){browser.reload()}}.font(.callout).padding(18).frame(maxWidth:.infinity,alignment:.leading).background(Studio.accent.opacity(0.15))}
 }

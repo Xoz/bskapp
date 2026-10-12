@@ -35,30 +35,57 @@ struct NativeNoteField: View {
     }
 }
 struct NativeDevelopmentEditor: View {
-    @ObservedObject var session: NativeEditorSession
-    @State private var category: String?
-    private let options = [("not_started", "Ej påbörjad"), ("training", "Tränar på"), ("almost", "Nästan klar"), ("done", "Klar")]
-    var body: some View {
-        if let data = session.development {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(session.route.kind == "checkpoint" ? "SE NULÄGET. VÄLJ NÄSTA STEG." : "LYSSNA. FÖRSTÅ. KOM ÖVERENS.").font(.system(size: 10, weight: .semibold)).tracking(2).foregroundStyle(Studio.muted)
-                        Text(data.name).font(.system(size: 32, design: .serif))
-                        Text(session.route.kind == "checkpoint" ? "Ändra det du har underlag för och välj högst två fokus. Sparandet skapar en avstämning i historiken." : "Vad känns bra, och vad vill spelaren bli tryggare med?").font(.system(size: 13)).foregroundStyle(Studio.muted)
+    @ObservedObject var session:NativeEditorSession
+    @ObservedObject var browser:BrowserModel
+    @State private var category:String?
+    @State private var focusedConversation=false
+    @State private var profile:WorkdayProfile?
+    private let options=[("not_started","Ej påbörjad"),("training","Tränar på"),("almost","Nästan klar"),("done","Klar")]
+    var body:some View {
+        if let data=session.development {
+            VStack(spacing:0) {
+                HStack {
+                    VStack(alignment:.leading,spacing:5){Text(data.name).font(.title2).fontWeight(.semibold);Text(session.route.kind=="checkpoint" ? "Avstämning av spelarens utveckling":"Spelarsamtal").font(.callout).foregroundStyle(Studio.muted)}
+                    Spacer()
+                    if session.route.kind=="conversation" {Button{focusedConversation.toggle()}label:{Label("Samtalsläge",systemImage:focusedConversation ? "checkmark.circle.fill":"circle")}.buttonStyle(.bordered).accessibilityValue(focusedConversation ? "På":"Av").help("Visa en lugn samtalsyta med färre fält")}
+                }.padding(20)
+                Divider()
+                if session.route.kind=="conversation" {
+                    HSplitView {
+                        ScrollView {conversationContext(data).padding(20)}.frame(minWidth:230,idealWidth:300,maxWidth:420).background(Studio.surface)
+                        ScrollView {
+                            VStack(alignment:.leading,spacing:20) {
+                                if !focusedConversation{NativeDateField(title:"Samtalsdatum",value:$session.date);Text("Tränare: \(data.coach)").font(.caption).foregroundStyle(Studio.muted)}
+                                conversation(data)
+                            }.padding(24).frame(maxWidth:780,alignment:.leading).frame(maxWidth:.infinity)
+                        }.frame(minWidth:320)
                     }
-                    HStack(spacing: 30) {
-                        NativeDateField(title: session.route.kind == "checkpoint" ? "Avstämningsdatum" : "Samtalsdatum", value: $session.date)
-                        if session.route.kind == "checkpoint" { TextField("Tränare", text: $session.coach).textFieldStyle(.roundedBorder).frame(maxWidth: 320) }
-                        else { Text("Tränare: \(data.coach)").font(.system(size: 12)).foregroundStyle(Studio.muted) }
-                    }
-                    if session.route.kind == "checkpoint" { checkpoint(data) } else { conversation(data) }
-                }.padding(32).frame(maxWidth: 1000, alignment: .leading).frame(maxWidth: .infinity)
+                } else {
+                    ScrollView {VStack(alignment:.leading,spacing:20){HStack{NativeDateField(title:"Avstämningsdatum",value:$session.date);TextField("Tränare",text:$session.coach).textFieldStyle(.roundedBorder).frame(maxWidth:250)};checkpoint(data)}.padding(24).frame(maxWidth:1000,alignment:.leading).frame(maxWidth:.infinity)}
+                }
+            }.task(id:data.playerId){
+                if let raw=try? await browser.workdayRequest("?kind=player&id=\(data.playerId)"),let value=try? JSONDecoder().decode(WorkdayProfile.self,from:raw){profile=value}
+            }
+        }
+    }
+    private func conversationContext(_ data:NativeDevelopment)->some View {
+        VStack(alignment:.leading,spacing:20) {
+            Text("Samtalsunderlag").font(.headline)
+            if !focusedConversation || data.preparation.focus.isEmpty { Text(data.preparation.summary).font(.callout).textSelection(.enabled).fixedSize(horizontal:false,vertical:true) }
+            if !data.preparation.focus.isEmpty {
+                Divider();Text("Nuvarande fokus").font(.headline)
+                ForEach(data.preparation.focus,id:\.id){focus in VStack(alignment:.leading,spacing:6){Text(focus.title).fontWeight(.medium);Text(focus.criterion).font(.callout).foregroundStyle(Studio.muted)}}
+            }
+            if let previous=profile?.conversations.first {
+                Divider();Text("Senaste samtalet").font(.headline);Text(previous.conversation_date).font(.caption).foregroundStyle(Studio.muted)
+                if !previous.agreed_actions.isEmpty{Text("Överenskommelse").font(.subheadline).fontWeight(.medium);Text(previous.agreed_actions).font(.callout).textSelection(.enabled)}
+                if !focusedConversation,!previous.coach_summary.isEmpty{Text(previous.coach_summary).font(.callout).foregroundStyle(Studio.muted).textSelection(.enabled)}
+                if let date=previous.follow_up_on{Label("Följ upp \(date)",systemImage:"calendar").font(.caption)}
             }
         }
     }
     @ViewBuilder private func checkpoint(_ data: NativeDevelopment) -> some View {
-        HStack { Text("Utvecklingsträdet").font(.system(size: 24, design: .serif)); Spacer(); Text("\(session.focus.count)/2 fokus").font(.system(size: 12)).foregroundStyle(Studio.muted) }
+        HStack { Text("Utvecklingsträdet").font(.system(size: 18, design: .default)); Spacer(); Text("\(session.focus.count)/2 fokus").font(.system(size: 12)).foregroundStyle(Studio.muted) }
         Picker("Område", selection: $category) {
             Text("Välj område").tag(String?.none)
             ForEach(data.categories) { Text($0.name).tag(Optional($0.id)) }
@@ -76,7 +103,7 @@ struct NativeDevelopmentEditor: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("NIVÅ \(skill.level)").font(.system(size: 10, weight: .semibold)).foregroundStyle(Studio.muted)
-                            Text(skill.title).font(.system(size: 19, design: .serif))
+                            Text(skill.title).font(.system(size: 15, design: .default))
                             Text(skill.criterion).font(.system(size: 12)).foregroundStyle(Studio.muted)
                         }
                         Spacer()
@@ -101,13 +128,9 @@ struct NativeDevelopmentEditor: View {
         Color.clear.frame(height: 0).onAppear { category = data.skills.first { session.focus.contains($0.id) }?.category ?? data.categories.first?.id }
     }
     @ViewBuilder private func conversation(_ data: NativeDevelopment) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Underlag från utvecklingsträdet").font(.system(size: 23, design: .serif))
-            Text(data.preparation.summary).font(.system(size: 14)).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-        }.editorPanel()
         VStack(alignment: .leading, spacing: 15) {
-            Text("Efter samtalet").font(.system(size: 23, design: .serif))
-            Text("Välj det som stämmer. Du behöver inte skriva en sammanfattning.").font(.system(size: 12)).foregroundStyle(Studio.muted)
+            Text("Överenskommelse").font(.system(size: 18, design: .default))
+            Text("Välj nästa steg tillsammans med spelaren.").font(.system(size: 12)).foregroundStyle(Studio.muted)
             Picker("Överenskommelse", selection: $session.outcome) {
                 Text("Välj nästa steg").tag("")
                 if !data.preparation.focus.isEmpty { Text("Vi fortsätter med valt fokus").tag("continue") }
@@ -116,7 +139,10 @@ struct NativeDevelopmentEditor: View {
             }.pickerStyle(.radioGroup)
             if session.outcome == "custom" { NativeNoteField(title: "Nytt nästa steg", text: $session.agreement, limit: 4000) }
         }.editorPanel()
-        DisclosureGroup("Frivilliga noteringar och uppföljning") {
+        if focusedConversation {
+            NativeNoteField(title:"Spelarens egna ord",text:$session.perspective,limit:4000)
+        }
+        DisclosureGroup("Anteckningar och uppföljning",isExpanded:Binding(get:{!focusedConversation},set:{focusedConversation = !$0})) {
             VStack(spacing: 20) {
                 NativeNoteField(title: "Extra notering", text: $session.note, limit: 1000)
                 NativeNoteField(title: "Spelarens egna ord", text: $session.perspective, limit: 4000)
@@ -126,5 +152,5 @@ struct NativeDevelopmentEditor: View {
     }
 }
 extension View {
-    func editorPanel() -> some View { padding(22).frame(maxWidth: .infinity, alignment: .leading).background(Studio.line.opacity(0.16), in: RoundedRectangle(cornerRadius: 13)).overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(Studio.line)) }
+    func editorPanel() -> some View { padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Studio.surface, in: RoundedRectangle(cornerRadius: 7)).overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Studio.line.opacity(0.7))) }
 }

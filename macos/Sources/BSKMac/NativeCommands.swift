@@ -6,10 +6,10 @@ struct OfflineStatusBar:View {
     var body:some View{
         if browser.signedIn {
             HStack(spacing:12){
-                Label(store.offline ? "Offline · nedladdat underlag":"Ansluten till lagets databas",systemImage:store.offline ? "wifi.slash":"checkmark.icloud").font(.caption)
+                Label(store.offline ? "Offline · nedladdat underlag":"Synkat med lagets databas",systemImage:store.offline ? "wifi.slash":"checkmark.icloud").font(.caption)
                 if !store.pending.isEmpty{Text("\(store.pending.count) väntar på synk").font(.caption).fontWeight(.medium)}
                 Spacer();Button("Offline och synk"){store.panel=true}.buttonStyle(.plain).font(.caption)
-            }.padding(.horizontal,22).padding(.vertical,8).background(store.offline ? Studio.gold.opacity(0.2):Studio.line.opacity(0.2))
+            }.padding(.horizontal,22).padding(.vertical,8).background(store.offline ? Studio.accent.opacity(0.2):Studio.line.opacity(0.2))
         }
     }
 }
@@ -20,7 +20,7 @@ struct NativeCommandPalette:View {
     @FocusState private var searching:Bool
     struct Item:Identifiable{let title,path,symbol:String;var id:String{path}}
     private var items:[Item]{
-        var result=(Destination.workspace+Destination.insights).filter{browser.availablePaths.contains($0.path) || ($0.path=="/utveckling" && browser.availablePaths.contains("/spelare"))}.map{Item(title:$0.title,path:$0.path,symbol:$0.symbol)}
+        var result=(Destination.workspace+Destination.insights).filter{canOpen($0,browser)}.map{Item(title:$0.title,path:$0.path,symbol:$0.symbol)}
         result += (browser.practice?.players ?? []).map{Item(title:$0.name,path:"/spelare/\($0.id)",symbol:"person")}
         result += (browser.workspace?.matches ?? []).map{Item(title:"\($0.title) · \($0.date)",path:"/matcher/\($0.id)",symbol:"sportscourt")}
         result += (browser.practice?.plans ?? []).map{Item(title:$0.title,path:"/traning/\($0.id)",symbol:"figure.soccer")}
@@ -41,14 +41,28 @@ struct NativeCommandPalette:View {
 struct NativeMatchDirectory:View {
     @ObservedObject var browser:BrowserModel
     @State private var query=""
+    @State private var selected:Int?
+    private var matches:[WorkflowMatch]{(browser.workspace?.matches ?? []).filter{query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.team.localizedCaseInsensitiveContains(query)}}
     var body:some View {
-        ScrollView{VStack(alignment:.leading,spacing:22){
-            Text("På planen. Före och efter.").font(.system(size:32,design:.serif))
-            Text("Arbetsveckans matcher. Öppna en match för laguppställning, plan, trupp och utvärdering.").foregroundStyle(Studio.muted)
-            TextField("Sök match eller lag",text:$query).textFieldStyle(.roundedBorder)
-            let matches=(browser.workspace?.matches ?? []).filter{query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.team.localizedCaseInsensitiveContains(query)}
-            if matches.isEmpty{ContentUnavailableView("Inga matcher i arbetsveckan",systemImage:"sportscourt",description:Text("Kommande matcher och de senaste sju dagarna visas här."))}
-            ForEach(matches){match in Button{browser.open("/matcher/\(match.id)")}label:{HStack{VStack(alignment:.leading,spacing:8){Text(match.title).font(.system(size:23,design:.serif));Text(match.subtitle).font(.caption).foregroundStyle(Studio.muted)};Spacer();Text(match.stage.title);Image(systemName:"arrow.up.right")}}.buttonStyle(.plain).editorPanel()}
-        }.padding(28).frame(maxWidth:1000,alignment:.leading).frame(maxWidth:.infinity)}
+        HSplitView {
+            VStack(spacing:0){
+                HStack{Text("Matcher").font(.headline);Spacer()}.padding(16)
+                TextField("Sök match eller lag",text:$query).textFieldStyle(.roundedBorder).padding(.horizontal,12).padding(.bottom,12)
+                List(selection:$selected){ForEach(matches){match in VStack(alignment:.leading,spacing:5){Text(match.title).fontWeight(.medium);Text("\(match.date) · \(match.team)").font(.caption).foregroundStyle(Studio.muted)}.padding(.vertical,5).tag(match.id)}}.listStyle(.inset).scrollContentBackground(.hidden)
+                Text("Kommande matcher och senaste sju dagarna").font(.caption).foregroundStyle(Studio.muted).padding(12)
+            }.frame(minWidth:240,idealWidth:280,maxWidth:360).background(Studio.surface)
+            ScrollView {VStack(alignment:.leading,spacing:18){
+                if let match=matches.first(where:{$0.id==selected}){
+                    Text(match.title).font(.title2).fontWeight(.semibold)
+                    Text(match.subtitle).font(.callout).foregroundStyle(Studio.muted)
+                    Divider()
+                    LabeledContent("Laguppställning",value:"\(match.selected) uttagna")
+                    LabeledContent("Ja-svar",value:"\(match.accepted) spelare")
+                    LabeledContent("Matchplan",value:match.planSaved ? "Sparad":"Återstår")
+                    HStack{Button("Laguppställning"){browser.open("/matcher/\(match.id)/laguttagning")};Button("Matchplan"){browser.open("/matcher/\(match.id)")};Button("Trupp"){browser.open("/matcher/\(match.id)#trupp")}}
+                    Divider();Text(match.reviewStatus).foregroundStyle(Studio.muted);Button("Utvärdering"){browser.open("/matcher/\(match.id)/utvardera")}
+                }else{ContentUnavailableView("Välj en match",systemImage:"sportscourt",description:Text("Förbered matchplanen eller följ upp en spelad match. Äldre matcher finns i spelarens historik."))}
+            }.padding(24).frame(maxWidth:850,alignment:.leading).frame(maxWidth:.infinity)}.frame(minWidth:360)
+        }.onAppear{selected=matches.first?.id}.onChange(of:matches.map(\.id)){_,ids in if !ids.contains(selected ?? -1){selected=ids.first}}
     }
 }

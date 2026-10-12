@@ -53,7 +53,7 @@ struct NativeTrainingEditor: View {
                 if let index {
                     VStack(alignment: .leading, spacing: 18) {
                         HStack {
-                            TextField("Övningens namn", text: $session.plan.blocks[index].diagram.title).font(.system(size: 25, design: .serif)).textFieldStyle(.plain).padding(10).background(Studio.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
+                            TextField("Övningens namn", text: $session.plan.blocks[index].diagram.title).font(.system(size: 25, design: .default)).textFieldStyle(.plain).padding(10).background(Studio.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
                             Stepper("\(session.plan.blocks[index].minutes) min", value: $session.plan.blocks[index].minutes, in: 1...180).frame(width: 135)
                         }
                         NativeDiagramEditor(diagram: $session.plan.blocks[index].diagram).id(session.plan.blocks[index].id)
@@ -62,7 +62,7 @@ struct NativeTrainingEditor: View {
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "sportscourt").font(.system(size: 40)).foregroundStyle(Studio.muted)
-                        Text("Bygg passet runt ett tydligt fokus.").font(.system(size: 26, design: .serif))
+                        Text("Bygg passet runt ett tydligt fokus.").font(.system(size: 26, design: .default))
                         Text("Välj en övning ur banken eller börja med en tom plan.").foregroundStyle(Studio.muted)
                         Button("Öppna övningsbanken") { bankOpen = true }
                     }.frame(maxWidth: .infinity).padding(60)
@@ -106,7 +106,7 @@ struct NativeBankPicker: View {
     @State private var search = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack { Text("Övningsbanken").font(.system(size: 28, design: .serif)); Spacer(); Button("Stäng") { dismiss() } }
+            HStack { Text("Övningsbanken").font(.system(size: 28, design: .default)); Spacer(); Button("Stäng") { dismiss() } }
             TextField("Sök namn, område eller fokus", text: $search).textFieldStyle(.roundedBorder)
             ScrollView {
                 LazyVStack(spacing: 14) {
@@ -114,7 +114,7 @@ struct NativeBankPicker: View {
                         HStack(alignment: .top, spacing: 18) {
                             NativePitch(diagram: item.model, selected: nil).frame(width: 215, height: 150)
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(item.model.title).font(.system(size: 20, design: .serif))
+                                Text(item.model.title).font(.system(size: 20, design: .default))
                                 Text("\(item.players) spelare · \(item.area) · \(item.time)").font(.system(size: 12)).foregroundStyle(Studio.muted)
                                 Text(item.focus).font(.system(size: 13))
                                 Button("Lägg till i passet") { choose(item) }
