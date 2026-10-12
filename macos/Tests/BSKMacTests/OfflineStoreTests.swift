@@ -73,6 +73,19 @@ final class OfflineStoreTests:XCTestCase {
     private func matchFixture()->WorkdayMatch {
         WorkdayMatch(scope:"qa",fetchedAt:"2026-10-12T10:00:00.123Z",version:"all",versions:["plan":"p","selection":"s","evaluation":"e"],match:.init(id:1,opponent:"QA United",date:"2026-10-11",home_away:"home",location:"QA",level:"3",formation:"1-2-3-1",start_time:nil,finished:1,cancelled:0,our_score:nil,opponent_score:nil),candidates:[],roster:[],plan:.init(revision:0,document:.init(formation:"1-2-3-1",spots:[],ideas:[:])),evaluation:.init(match:.init(ourScore:nil,opponentScore:nil,hasLiveData:false,coachComment:""),players:[.init(id:7,name:"QA Player",rating:nil,ratingComment:"",skipped:false,selfComparison:"usual",matchImpact:"held",reasonTag:"effort")]),formations:[],ideaFields:[],canSelect:false,canPlan:true,canEvaluate:true)
     }
+    func testMatchDecodesUnratedPlayerWithNullComment() throws {
+        let data = try JSONEncoder().encode(matchFixture())
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Any])
+        var evaluation = try XCTUnwrap(json["evaluation"] as? [String:Any])
+        var players = try XCTUnwrap(evaluation["players"] as? [[String:Any]])
+        players[0]["ratingComment"] = NSNull()
+        evaluation["players"] = players; json["evaluation"] = evaluation
+        let decoded = try JSONDecoder().decode(WorkdayMatch.self,from:JSONSerialization.data(withJSONObject:json))
+        let session = WorkdaySession(.match(1,"evaluation"))
+        session.match = decoded
+        session.changeTab("evaluation")
+        XCTAssertEqual(session.comments[7], "")
+    }
     func testMatchUndoRedoBranchesAndQueuedChangesAreLocked() {
         let session=WorkdaySession(.match(1,"plan"));session.match=matchFixture();session.plan=session.match!.plan.document;session.resetHistory()
         session.plan?.ideas["focus"]="QA first";session.rememberEdit()

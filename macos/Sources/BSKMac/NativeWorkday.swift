@@ -67,7 +67,7 @@ struct WorkdayMatch: Codable {
     struct IdeaField:Codable,Identifiable{let key,label,placeholder:String;var id:String{key}}
     struct Evaluation:Codable{let match:MatchContext;let players:[Player]
         struct MatchContext:Codable{let ourScore,opponentScore:Int?;let hasLiveData:Bool;let coachComment:String}
-        struct Player:Codable,Identifiable{let id:Int;let name:String;let rating:Int?;let ratingComment:String;let skipped:Bool;let selfComparison,matchImpact:String?;let reasonTag:String?}
+        struct Player:Codable,Identifiable{let id:Int;let name:String;let rating:Int?;let ratingComment:String?;let skipped:Bool;let selfComparison,matchImpact:String?;let reasonTag:String?}
     }
 }
 @MainActor
@@ -135,7 +135,7 @@ final class WorkdaySession: ObservableObject {
         notice=nil;match=value;plan=value.plan.document
         selected=Set(value.candidates.filter(\.selected).map(\.id))
         positions=Dictionary(uniqueKeysWithValues:value.candidates.map{p in (p.id,value.roster.first(where:{$0.player_id==p.id})?.selected_position ?? p.position)})
-        if let e=value.evaluation{skipped=Set(e.players.filter(\.skipped).map(\.id));ratings=Dictionary(uniqueKeysWithValues:e.players.compactMap{p in p.rating.map{(p.id,$0)}});comments=Dictionary(uniqueKeysWithValues:e.players.map{($0.id,$0.ratingComment)});coachComment=e.match.coachComment;ourScore=e.match.ourScore.map(String.init) ?? "";opponentScore=e.match.opponentScore.map(String.init) ?? ""}
+        if let e=value.evaluation{skipped=Set(e.players.filter(\.skipped).map(\.id));ratings=Dictionary(uniqueKeysWithValues:e.players.compactMap{p in p.rating.map{(p.id,$0)}});comments=Dictionary(uniqueKeysWithValues:e.players.map{($0.id,$0.ratingComment ?? "")});coachComment=e.match.coachComment;ourScore=e.match.ourScore.map(String.init) ?? "";opponentScore=e.match.opponentScore.map(String.init) ?? ""}
         pending=nil;uncertain=false;queued=false;conflict=nil;commandID=UUID().uuidString;baseline=payload()
     }
     private func restoreDraft(){
