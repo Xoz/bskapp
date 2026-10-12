@@ -19,10 +19,16 @@ Mac hämtar underlaget med WebKits befintliga HttpOnly-session via same-origin f
 ## Verifiering
 
 - 245 webbtester passerade inklusive 12 nya arbetsflödes-/behörighetstester; fyra Hermes lånetester överhoppade.
-- Sex native XCTest och fem bryggtester passerade. TypeScript-kontroll passerade.
+- Sex native XCTest och sex bryggtester passerade. TypeScript-kontroll passerade.
 - Riktig Mac-app mot separat syntetisk PostgreSQL: arbetsbord, matchdag, kommande cup, fria stegbyten, truppankare, sparad matchplan med omedelbart uppdaterad native-status, utvärderingsformulär med bedömning/överhoppning och återgång till arbetsbord där färdig uppföljning försvann.
 - Riktiga spelaruppgifter ändrades inte. Extern synk och utskick kördes inte.
 
 ## Avgränsning
 
 Detta steg separerar arbetsbordet och matchflödet. Redigeringsformulär är fortsatt gemensamma; fullständig native-omskrivning av alla formulär ingår inte. Träning och spelarutveckling har tydliga ingångar men har ännu inte egna flerstegsflöden. LiveScore är fortsatt avstängt enligt befintlig feature-flagga. Opublicerade lokala observationsfunktioner följer inte med denna serverrelease. Appen är lokalt signerad för Apple Silicon/macOS 14+, inte notariserad för allmän distribution.
+
+## Publicering
+
+Serverunderlaget publicerat i `cfbc75b49c2195d1f7599af7b364f7548584b061`. Körning 38210739173 passerade: 265 tester, produktionsbygge och hälsokontroller (35 DB-tester överhoppade i servermiljön). Produktions-GET utan session verifierad: 401 samt private/no-store.
+
+Mac 0.004 byggd, lokal signatur verifierad och paket kopierat till outputs/bsk-mac/BSK-Mac.zip. Release-binären saknar debugnyckeln för lokal QA. Sista visuella produktionsprovet kunde inte köras eftersom datorn låstes; den visuella kontrollen och skrivflödena ovan genomfördes i riktig Mac-app mot syntetisk databas.

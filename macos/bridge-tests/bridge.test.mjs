@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const source = readFileSync(new URL('../Resources/DesktopBridge.js', import.meta.url), 'utf8');
-function run({ origin = 'https://bsk2014.se', topFrame = true, signedIn = true, dark = false } = {}) {
+function run({ origin = 'https://bsk2014.se', topFrame = true, signedIn = true, dark = false, planSaved = false } = {}) {
   const messages = [];
   const styles = [];
   const listeners = {};
@@ -17,6 +17,7 @@ function run({ origin = 'https://bsk2014.se', topFrame = true, signedIn = true, 
     createElement: () => ({}),
     querySelector: selector => {
       if (selector.includes('Logga ut')) return signedIn ? {} : null;
+      if (selector === '.match-plan-summary') return planSaved ? {} : null;
       if (selector === '.bsk-coach-name') return { textContent: 'Testkonto' };
       if (selector.includes('h1')) return { textContent: 'Spelare' };
       return null;
@@ -74,4 +75,9 @@ test('byter skalets utseende när befintlig temainställning ändras', () => {
   result.mutations.at(-1)();
   assert.equal(result.messages.at(-1).dark, true);
   assert.equal(result.styles.length, 1);
+});
+
+test('signalerar sparad sammanfattning utan att läsa matchplanens innehåll', () => {
+  assert.equal(run({ planSaved: false }).messages[0].planSaved, false);
+  assert.equal(run({ planSaved: true }).messages[0].planSaved, true);
 });
